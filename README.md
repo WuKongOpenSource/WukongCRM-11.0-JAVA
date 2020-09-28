@@ -9,7 +9,7 @@
 公司先后获得河南省高新技术企业、国家3A信用企业、IOS9001软件产品认证等20多项荣誉奖项。拥有50余项软件著作权。 获得20余家国内媒体报道。公司自成立以来，以高科技为起点，以技术为核心、 以完善的售后服务为后盾，秉承稳固与发展、求实与创新的精神，已为国内外上万家企业提供了服务。 在为实现企业价值最大化的过程中， 实现了自身的价值的提升，取得了最大程度的双赢合作，并获得了社会各界的广泛赞誉和认同。
 
 
-### 目录结构
+### 项目目录结构
 
 
 ``` lua
@@ -30,7 +30,7 @@
 
 ```
 
-###  主要技术栈
+###  项目中主要使用的技术栈
 
 
 | 名称                  | 版本                        | 说明 |
@@ -48,30 +48,31 @@
 | feign               | 2.2.2.RELEASE             |  服务调用        |
 
 
-### 项目架构图
+### 悟空CRM项目架构图
 
 
 ![项目架构图](https://images.gitee.com/uploads/images/2020/0910/094237_e7cb3bca_1096736.jpeg "项目架构图.jpg")
 
 
-### 使用说明
+### 安装及使用说明
 
-需配置安装以下前置文件，前置文件可在对应的官方下载。
+安装悟空CRM需安装以下前置文件，前置文件可在对应的官方下载。
 
 
-一、	前置环境
+ **一、	前置环境 <br/>** 
+
 -	Jdk1.8
 -	Maven3.5.0+   
--	Mysql5.7.20 （<a href="https://gitee.com/myzw/wk_crm/wikis/mysql%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">注意事项</a>）
+-	Mysql5.7.20 （<a href="https://gitee.com/myzw/wk_crm/wikis/mysql%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">数据库安装注意事项</a>）
 -	Redis(版本不限)
--	Elasticsearch 6.8.6 （<a href="https://gitee.com/myzw/wk_crm/wikis/elasticsearch%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">注意事项</a>）
+-	Elasticsearch 6.8.6 （<a href="https://gitee.com/myzw/wk_crm/wikis/elasticsearch%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">安装注意事项</a>）
 -	Seata（1.2.0）
 -	Sentinel（1.7.2）
 -	Nacos（1.2.1)
 
-二、	安装说明 <br/>
+ **二、	安装说明 <br/>** 
      
-    - 导入初始化sql,目前项目下gateway使用的独立数据库，其他模块暂时用的是同一数据库，后续可能进行拆分
+- 导入初始化sql,目前项目下gateway使用的独立数据库，其他模块暂时用的是同一数据库，后续可能进行拆分
       
         1、初始化gateway模块  导入 db/config_info_route.sql
         4、初始化其余模块     导入 db/wk_crm.sql
