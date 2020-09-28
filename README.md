@@ -63,7 +63,7 @@ wk_crm
 ## 悟空CRM项目架构图
 
 
-<img src="https://images.gitee.com/uploads/images/2020/0910/094237_e7cb3bca_1096736.jpeg" width="600">
+<img src="https://images.gitee.com/uploads/images/2020/0910/094237_e7cb3bca_1096736.jpeg" width="650">
 
 ## 使用说明
 
@@ -139,9 +139,13 @@ crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访�
 
 #### 9. 项目启动 <br/>
 
+
+```
 先启动nacos,seata,sentinel, elasticsearch,mysql,redis等基础服务
 再各个模块下通过执行`sh 72crm.sh start`（windows下直接运行72crm.bat）启动各个模块服务。
 其中项目基础模块：gateway，authorization，admin必须启动，其他模块按需启动。
+
+```
 
 
 ### 三、其他说明
@@ -154,11 +158,9 @@ crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访�
 #### 2.模块依赖关系 <br/>
 
 ```
-
 - 除网关外，其余项目均依赖于admin模块，用于获取当前登录人的信息
 - oa模块的任务依赖于work模块，其余一些关联业务功能依赖于crm模块
 - 商业智能依赖crm,oa模块
-
 
 ```
 
