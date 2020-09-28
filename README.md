@@ -1,4 +1,4 @@
-# 悟空CRM-11
+# 悟空CRM-11.0
 
 
 ## 悟空CRM介绍
@@ -63,7 +63,7 @@ wk_crm
 ## 悟空CRM项目架构图
 
 
-<img src="https://images.gitee.com/uploads/images/2020/0910/094237_e7cb3bca_1096736.jpeg" width="800">
+<img src="https://images.gitee.com/uploads/images/2020/0910/094237_e7cb3bca_1096736.jpeg" width="600">
 
 ## 使用说明
 
@@ -130,16 +130,18 @@ crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访�
 
 
 ```
-·在项目根目录下执行 mvn clean -Dmaven.test.skip=true  package <br/>
-·然后把对应模块下target文件夹下 <br/>
-·${name}-${version}-SNAPSHOT.zip/tar.gz上传到服务器，例：admin-0.0.1-SNAPSHOT.zip <br/>并将压缩文件解压，检查对应配置文件。
+·在项目根目录下执行 mvn clean -Dmaven.test.skip=true package
+·然后把对应模块下target文件夹下
+·${name}-${version}-SNAPSHOT.zip/tar.gz上传到服务器,例：admin-0.0.1-SNAPSHOT.zip 并将压缩文件解压，检查对应配置文件。
+
 ```
 
 
 #### 9. 项目启动 <br/>
 
-先启动nacos,seata,sentinel, elasticsearch,mysql,redis等基础服务 <br/>再各个模块下通过执行`sh 72crm.sh start`（windows下直接运行72crm.bat）启动各个模块服务。其中项目基础模块：gateway，authorization，admin必须启动，其他模块按需启动。<br/>
-
+先启动nacos,seata,sentinel, elasticsearch,mysql,redis等基础服务
+再各个模块下通过执行`sh 72crm.sh start`（windows下直接运行72crm.bat）启动各个模块服务。
+其中项目基础模块：gateway，authorization，admin必须启动，其他模块按需启动。
 
 
 ### 三、其他说明
@@ -152,7 +154,6 @@ crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访�
 #### 2.模块依赖关系 <br/>
 
 ```
-
 
 - 除网关外，其余项目均依赖于admin模块，用于获取当前登录人的信息
 - oa模块的任务依赖于work模块，其余一些关联业务功能依赖于crm模块
