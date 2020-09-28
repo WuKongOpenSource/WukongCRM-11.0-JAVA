@@ -1,12 +1,21 @@
-# wk_crm
+# 悟空CRM-11
 
-#### 介绍
 
-悟空软件长期为企业提供企业管理软件(CRM/HRM/OA/ERP等)的研发、实施、营销、咨询、培训、服务于一体的信息化服务。悟空软件以高科技为起点，以技术为核心、以完善的售后服务为后盾，秉承稳固与发展、求实与创新的精神，已为国内外上千家企业提供服务。
+## 悟空CRM介绍
 
-悟空的发展受益于开源，也会回馈于开源。2020年，悟空CRM会继续秉承“拥抱开放、合作共赢、创造价值”的理念，在开源的道路上继续砥砺前行，和更多的社区开发者一起为国内外开源做出积极贡献。
 
-#### 目录结构
+悟空CRM在中国的开源管理软件行业有较高的知名度。目前软件已达到千万级的用户量，开源系统下载量达到200多万次，已覆盖设计制造业、服务业、金融业、政府机构等多种行业。与阿里巴巴、腾讯、OPPO、航天信息、CCTV等多家知名企业达成战略合作。
+
+公司先后获得河南省高新技术企业、国家3A信用企业、IOS9001软件产品认证等20多项荣誉奖项。拥有50余项软件著作权。 获得20余家国内媒体报道。公司自成立以来，以高科技为起点，以技术为核心、 以完善的售后服务为后盾，秉承稳固与发展、求实与创新的精神，已为国内外上万家企业提供了服务。 在为实现企业价值最大化的过程中， 实现了自身的价值的提升，取得了最大程度的双赢合作，并获得了社会各界的广泛赞誉和认同。
+
+
+QQ社区交流群：(http:////shang.qq.com/wpa/qunwpa?idkey=13d5e5809eb9feb350336e55c8b7a00b9cb472078b09b4441222a52dd76b278e)
+
+
+项目采用前后端分离模式，前端代码在前端仓库可查看：查看VUE前端仓库
+
+
+## 悟空CRM目录结构
 
 ``` lua
 wk_crm
@@ -24,7 +33,7 @@ wk_crm
 ```
 
 
-#### 主要技术栈
+## 悟空CRM使用的主要技术栈
 
 | 名称                  | 版本                        | 说明 |
 |---------------------|---------------------------|----|
@@ -40,82 +49,120 @@ wk_crm
 | gateway             | 2.2.2.RELEASE             |  微服务网关        |
 | feign               | 2.2.2.RELEASE             |  服务调用        |
 
-#### 项目架构图
+
+## 悟空CRM项目架构图
 
 ![项目架构图](https://images.gitee.com/uploads/images/2020/0910/094237_e7cb3bca_1096736.jpeg "项目架构图.jpg")
 
 
-#### 使用说明
 
-一、	前置环境
--	Jdk1.8
--	Maven3.5.0+   
--	Mysql5.7.20 （<a href="https://gitee.com/myzw/wk_crm/wikis/mysql%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">注意事项</a>）
--	Redis(版本不限)
--	Elasticsearch 6.8.6 （<a href="https://gitee.com/myzw/wk_crm/wikis/elasticsearch%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">注意事项</a>）
--	Seata（1.2.0）
--	Sentinel（1.7.2）（项目中sentinel使用8079端口）
--	Nacos（1.2.1)
+## 使用说明
 
-二、	安装说明 <br/>
+### 一、前置环境
+- Jdk1.8
+- Maven3.5.0+   
+- Mysql5.7.20 （<a href="https://gitee.com/myzw/wk_crm/wikis/mysql%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">数据库安装注意事项</a>）
+- Redis(版本不限)
+- Elasticsearch 6.8.6 （<a href="https://gitee.com/myzw/wk_crm/wikis/elasticsearch%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">环境配置注意事项</a>）
+- Seata（1.2.0）
+- Sentinel（1.7.2）（项目中sentinel使用8079端口）
+- Nacos（1.2.1)
+
+### 二、安装说明
      
-    - 导入初始化sql,目前项目下gateway使用的独立数据库，其他模块暂时用的是同一数据库，后续可能进行拆分
+#### 1. 导入初始化sql,目前项目下gateway模块使用的独立数据库，其他模块使用同一数据库
       
 
-         1、初始化gateway模块               导入 DB/config_info_route.sql
-         4、初始化其余模块                  导入 DB/wk_crm.sql
-         5、初始化定时任务模块              导入 DB/xxl_job.sql
+```
+- 初始化gateway模块数据库：在数据库中运行` DB/config_info_route.sql`
+- 初始化其余模块数据库：在数据库中运行 `DB/wk_crm.sql`
+- 初始化定时任务模块数据库：在数据库中运行 `DB/xxl_job.sql`
 
+```
+<br/>
 
-    - 在项目根目录执行mvn install
-    - 然后在各个项目修改数据库以及redis配置文件,默认使用的是application-dev.yml,打包后启动脚本默认使用的application-test.yml配置
-    - 在core\src\main\resources\application-core.yml里面
-      修改elasticsearch配置
+#### 2.在项目根目录执行`mvn install`
 
-        spring.elasticsearch.rest.uris = elasticsearch地址 例：127.0.0.1:9200
+<br/>
+
+#### 3.在各个模块中配置数据库帐号信息以及redis帐号信息`（默认使用的是application-dev.yml配置文件,打包后启动脚本默认使用的application-test.yml配置文件）`
+
+<br/>
+
+#### 4.在`core\src\main\resources\application-core.yml`里面修改elasticsearch配置
+
+        
+```
+spring.elasticsearch.rest.uris = elasticsearch地址 例：127.0.0.1:9200
         spring.elasticsearch.rest.username = elasticsearch用户名 例：elastic
-        spring.elasticsearch.rest.password = elasticsearch用户名 例: password 
+        spring.elasticsearch.rest.password = elasticsearch密码 例: password 
+```
 
-      修改文件上传地址
-        crm.upload.config    文件上传配置 1 本地 2 阿里云OSS 例 ：1
-        crm.upload.oss       oss上传文件所需配置内容 
-        crm.upload.oss.bucketName  需要配置两个bucket，
-                        0为登录才可访问文件上传地址，1为完全公开文件上传地址
-        crm.upload.local 本地上传文件所需配置内容 
-        crm.upload.local.uploadPath 需要配置两个地址
-                        0为登录才可访问文件上传地址，1为完全公开文件上传地址
-                        本地上传还需配置公网地址，指向服务器网关
-      修改jetcache缓存配置
-            详见 https://github.com/alibaba/jetcache/wiki
-    - 项目日志文件在core\src\main\resources\logback-spring.xml修改
-2. 启动 <br/>
-        - 先启动nacos,seata,sentinel, elasticsearch,mysql,redis等基础服务 <br/>
-	- 再启动各个服务，最少需要启动的服务（gateway，authorization，admin）<br/>
-
-3. 打包部署 <br/>
-        ·在项目根目录下执行 mvn clean -Dmaven.test.skip=true  package <br/>
-        ·然后把对应项目下target文件夹下 <br/>
-        ·${name}-${version}-SNAPSHOT.zip/tar.gz上传到服务器，如 admin-0.0.1-SNAPSHOT.zip <br/>
-        ·将压缩文件解压，执行sh 72crm.sh start,windows下直接运行72crm.bat <br/>
-        ·项目启动默认使用的application-test.yml，application-core.yml,如需修改，可修改对应脚本文件，如：<br/>
-        ·spring.profiles.include=core,prod <br/>
-
-4. 其他说明 <br/>
-    - 代码生成器地址：core\src\test\com\kakarote\generator\Generator.java
-    - 接口文档地址
-        http://localhost:8443/swagger-ui.html
-        或者访问对应服务下 http://服务地址:端口/swagger-ui.html
-
-4. 模块依赖关系 <br/>
-
-     **除网关外，其余项目均依赖于admin模块** ，用于获取当前登录人的信息<br/>
-     oa模块的任务依赖于work模块，其余一些关联业务功能依赖于crm模块 <br/>
-     商业智能依赖crm,oa模块<br/>
+<br/>
 
 
-三、 功能预览
+#### 5.修改系统中文件上传地址，默认为本地配置，本地上传还需配置公网地址，指向服务器网关（可选）
 
-    截图截图
+```
+        crm.upload.config:1                文件上传配置 1:本地 2:阿里云OSS 
+        crm.upload.oss                     oss上传文件所需配置内容 
+        crm.upload.oss.bucketName.0        需要配置两个bucket，0为登录才可访问文件上传地址，1为完全公开文件上传地址
+        crm.upload.local                   本地上传文件所需配置内容 
+        crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访问文件上传地址，1为完全公开文件上传地址
+```
+
+#### 6.可选：修改jetcache缓存配置详见 https://github.com/alibaba/jetcache/wiki
+<br/>
+
+#### 7. 可选：项目日志文件在`core\src\main\resources\logback-spring.xml`修改
+            
 
 
-四、xxxx> 这里输入引用文本
+#### 8. 项目打包部署 <br/>
+
+
+```
+·在项目根目录下执行 mvn clean -Dmaven.test.skip=true  package <br/>
+·然后把对应模块下target文件夹下 <br/>
+·${name}-${version}-SNAPSHOT.zip/tar.gz上传到服务器，例：admin-0.0.1-SNAPSHOT.zip <br/>并将压缩文件解压，检查对应配置文件。
+```
+
+
+#### 9. 项目启动 <br/>
+
+先启动nacos,seata,sentinel, elasticsearch,mysql,redis等基础服务 <br/>再各个模块下通过执行`sh 72crm.sh start`（windows下直接运行72crm.bat）启动各个模块服务。其中项目基础模块：gateway，authorization，admin必须启动，其他模块按需启动。<br/>
+<br/>
+
+
+### 三、其他说明
+
+#### 1.代码生成器及接口文档<br/>
+
+代码生成器地址：`core\src\test\com\kakarote\generator\Generator.java`
+接口文档地址`http://localhost:8443/swagger-ui.html`或者访问对应服务下 http://服务地址:端口/swagger-ui.html
+
+#### 2.模块依赖关系 <br/>
+
+```
+
+**除网关外，其余项目均依赖于admin模块** ，用于获取当前登录人的信息<br/>
+oa模块的任务依赖于work模块，其余一些关联业务功能依赖于crm模块 <br/>
+商业智能依赖crm,oa模块<br/>
+
+```
+
+
+###三、 悟空CRM功能模块预览
+
+
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172541_efed65bd_345098.png "01.png")
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172557_c001d047_345098.png "02.png")
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172612_97363074_345098.png "03.png")
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172625_47a2798b_345098.png "04.png")
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172636_ae5cad59_345098.png "05.png")
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172648_c7928c60_345098.png "06.png")
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172704_ac4c3308_345098.png "07.png")
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172714_84b7ee29_345098.png "08.png")
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172726_4552bddb_345098.png "10.png")
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172736_da77deec_345098.png "11.png")
+![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172745_e22b7a4a_345098.png "12.png")
