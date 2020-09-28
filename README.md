@@ -12,8 +12,6 @@
 
 QQ群交流群⑩群：[1026560336](http:////shang.qq.com/wpa/qunwpa?idkey=13d5e5809eb9feb350336e55c8b7a00b9cb472078b09b4441222a52dd76b278e)
 
-悟空CRM采用全新的前后端分离模式，本仓库代码中已集成前端vue打包后文件，可免去打包操作。如需调整前端代码，请单独下载前端代码[查看VUE前端仓库](https://gitee.com/wukongcrm_admin/W72crm_web)
-
 
 扫码添加小悟官方客服微信，邀您加入千人微信交流群：
 
@@ -23,6 +21,8 @@ QQ群交流群⑩群：[1026560336](http:////shang.qq.com/wpa/qunwpa?idkey=13d5e
 
 <img src="https://images.gitee.com/uploads/images/2019/1202/135713_d3566c6a_345098.jpeg" width="200">
 
+
+ **悟空CRM采用全新的前后端分离模式，本仓库代码中已集成前端vue打包后文件，可免去打包操作。如需调整前端代码，请单独下载前端代码[查看VUE前端仓库](https://gitee.com/wukongcrm_admin/W72crm_web)** 
 
 
 ## 悟空CRM目录结构
@@ -62,9 +62,8 @@ wk_crm
 
 ## 悟空CRM项目架构图
 
-![项目架构图](https://images.gitee.com/uploads/images/2020/0910/094237_e7cb3bca_1096736.jpeg "项目架构图.jpg" width="600")
 
-
+<img src="https://images.gitee.com/uploads/images/2020/0910/094237_e7cb3bca_1096736.jpeg" width="800">
 
 ## 使用说明
 
@@ -104,8 +103,9 @@ wk_crm
         
 ```
 spring.elasticsearch.rest.uris = elasticsearch地址 例：127.0.0.1:9200
-        spring.elasticsearch.rest.username = elasticsearch用户名 例：elastic
-        spring.elasticsearch.rest.password = elasticsearch密码 例: password 
+spring.elasticsearch.rest.username = elasticsearch用户名 例：elastic
+spring.elasticsearch.rest.password = elasticsearch密码 例: password 
+
 ```
 
 
@@ -113,17 +113,17 @@ spring.elasticsearch.rest.uris = elasticsearch地址 例：127.0.0.1:9200
 #### 5.修改系统中文件上传地址，默认为本地配置，本地上传还需配置公网地址，指向服务器网关（可选）
 
 ```
-        crm.upload.config:1                文件上传配置 1:本地 2:阿里云OSS 
-        crm.upload.oss                     oss上传文件所需配置内容 
-        crm.upload.oss.bucketName.0        需要配置两个bucket，0为登录才可访问文件上传地址，1为完全公开文件上传地址
-        crm.upload.local                   本地上传文件所需配置内容 
-        crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访问文件上传地址，1为完全公开文件上传地址
+crm.upload.config:1                文件上传配置 1:本地 2:阿里云OSS 
+crm.upload.oss                     oss上传文件所需配置内容 
+crm.upload.oss.bucketName.0        需要配置两个bucket，0为登录才可访问文件上传地址，1为完全公开文件上传地址
+crm.upload.local                   本地上传文件所需配置内容 
+crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访问文件上传地址，1为完全公开文件上传地址
 ```
 
-#### 6.可选：修改jetcache缓存配置详见 https://github.com/alibaba/jetcache/wiki
+#### 6.（可选）修改jetcache缓存配置详见 https://github.com/alibaba/jetcache/wiki
 
 
-#### 7. 可选：项目日志文件在`core\src\main\resources\logback-spring.xml`修改
+#### 7.（可选）项目日志文件在`core\src\main\resources\logback-spring.xml`修改
             
 
 #### 8. 项目打包部署
@@ -153,12 +153,13 @@ spring.elasticsearch.rest.uris = elasticsearch地址 例：127.0.0.1:9200
 
 ```
 
-**除网关外，其余项目均依赖于admin模块** ，用于获取当前登录人的信息<br/>
-oa模块的任务依赖于work模块，其余一些关联业务功能依赖于crm模块 <br/>
-商业智能依赖crm,oa模块<br/>
+
+- 除网关外，其余项目均依赖于admin模块，用于获取当前登录人的信息
+- oa模块的任务依赖于work模块，其余一些关联业务功能依赖于crm模块
+- 商业智能依赖crm,oa模块
+
 
 ```
-
 
 
 ### 三、悟空CRM功能模块预览
