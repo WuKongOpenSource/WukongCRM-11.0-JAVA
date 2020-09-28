@@ -29,7 +29,7 @@ QQ群交流群⑩群：[1026560336](http:////shang.qq.com/wpa/qunwpa?idkey=13d5e
 
 ```
 
-[--查看VUE前端仓库](https://gitee.com/wukongcrm_admin/W72crm_web) 
+[--查看VUE前端仓库](<a href="https://gitee.com/wukongcrm_admin/W72crm_web" target="_blank">环境配置注意事项</a>) 
 
 ## 悟空CRM目录结构
 
@@ -126,7 +126,7 @@ crm.upload.local                   本地上传文件所需配置内容
 crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访问文件上传地址，1为完全公开文件上传地址
 ```
 
-#### 6.（可选）修改jetcache缓存配置详见 https://github.com/alibaba/jetcache/wiki
+#### 6.（可选）修改jetcache缓存配置详见 <a href="https://github.com/alibaba/jetcache/wiki" target="_blank">官方文档</a> 
 
 
 #### 7.（可选）项目日志文件在`core\src\main\resources\logback-spring.xml`修改
@@ -148,8 +148,8 @@ crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访�
 
 ```
 先启动nacos,seata,sentinel, elasticsearch,mysql,redis等基础服务
-再各个模块下通过执行`sh 72crm.sh start`（windows下直接运行72crm.bat）启动各个模块服务。
-其中项目基础模块：gateway，authorization，admin必须启动，其他模块按需启动。
+在各个模块下通过执行`sh 72crm.sh start`（windows下直接运行72crm.bat）启动各个模块服务。
+其中项目基础模块：gateway，authorization，admin必须启动，其他模块可按需启动。
 
 ```
 
