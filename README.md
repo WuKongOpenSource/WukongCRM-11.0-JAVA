@@ -15,10 +15,8 @@ wk_crm
 ├── bi            -- 商业智能模块
 ├── core          -- 通用的代码和工具类
 ├── crm           -- 客户管理模块
-├── email         -- 邮箱模块
 ├── gateway       -- 网关模块
 ├── job           -- 定时任务模块
-├── km            -- 定时任务模块
 ├── oa            -- OA模块
 └── work          -- 项目管理模块
 
@@ -56,7 +54,7 @@ wk_crm
 -	Redis(版本不限)
 -	Elasticsearch 6.8.6 （<a href="https://gitee.com/myzw/wk_crm/wikis/elasticsearch%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">注意事项</a>）
 -	Seata（1.2.0）
--	Sentinel（1.7.2）
+-	Sentinel（1.7.2）（项目中sentinel使用8079端口）
 -	Nacos（1.2.1)
 
 二、	安装说明 <br/>
@@ -93,9 +91,6 @@ wk_crm
 2. 启动 <br/>
         - 先启动nacos,seata,sentinel, elasticsearch,mysql,redis等基础服务 <br/>
 	- 再启动各个服务，最少需要启动的服务（gateway，authorization，admin）<br/>
-        - 初始化其他依赖框架配置 <br/>
-          1、修改seata配置详见，[详见](http://)
-          2、修改xxl-job配置，详见[初始化xxl-job](https://gitee.com/myzw/wk_crm/wikis/seata?sort_id=2827577)
 
 3. 打包部署 <br/>
         ·在项目根目录下执行 mvn clean -Dmaven.test.skip=true  package <br/>
@@ -106,7 +101,7 @@ wk_crm
         ·spring.profiles.include=core,prod <br/>
 
 4. 其他说明 <br/>
-    - 代码生成器在core\src\test下,core\src\test\com\kakarote\generator\Generator.java
+    - 代码生成器地址：core\src\test\com\kakarote\generator\Generator.java
     - 接口文档地址
         http://localhost:8443/swagger-ui.html
         或者访问对应服务下 http://服务地址:端口/swagger-ui.html
