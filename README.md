@@ -8,11 +8,21 @@
 
 公司先后获得河南省高新技术企业、国家3A信用企业、IOS9001软件产品认证等20多项荣誉奖项。拥有50余项软件著作权。 获得20余家国内媒体报道。公司自成立以来，以高科技为起点，以技术为核心、 以完善的售后服务为后盾，秉承稳固与发展、求实与创新的精神，已为国内外上万家企业提供了服务。 在为实现企业价值最大化的过程中， 实现了自身的价值的提升，取得了最大程度的双赢合作，并获得了社会各界的广泛赞誉和认同。
 
+演示地址：[http://www.5kcrm.com](http://www.5kcrm.com/)
 
-QQ社区交流群：(http:////shang.qq.com/wpa/qunwpa?idkey=13d5e5809eb9feb350336e55c8b7a00b9cb472078b09b4441222a52dd76b278e)
+QQ群交流群⑩群：[1026560336](http:////shang.qq.com/wpa/qunwpa?idkey=13d5e5809eb9feb350336e55c8b7a00b9cb472078b09b4441222a52dd76b278e)
+
+悟空CRM采用全新的前后端分离模式，本仓库代码中已集成前端vue打包后文件，可免去打包操作。如需调整前端代码，请单独下载前端代码[查看VUE前端仓库](https://gitee.com/wukongcrm_admin/W72crm_web)
 
 
-项目采用前后端分离模式，前端代码在前端仓库可查看：查看VUE前端仓库
+扫码添加小悟官方客服微信，邀您加入千人微信交流群：
+
+<img src="https://images.gitee.com/uploads/images/2019/1231/115927_f9c580c8_345098.png" width="200">
+
+关注悟空CRM公众号，了解更多悟空资讯
+
+<img src="https://images.gitee.com/uploads/images/2019/1202/135713_d3566c6a_345098.jpeg" width="200">
+
 
 
 ## 悟空CRM目录结构
@@ -52,7 +62,7 @@ wk_crm
 
 ## 悟空CRM项目架构图
 
-![项目架构图](https://images.gitee.com/uploads/images/2020/0910/094237_e7cb3bca_1096736.jpeg "项目架构图.jpg")
+![项目架构图](https://images.gitee.com/uploads/images/2020/0910/094237_e7cb3bca_1096736.jpeg "项目架构图.jpg" width="600")
 
 
 
@@ -79,15 +89,15 @@ wk_crm
 - 初始化定时任务模块数据库：在数据库中运行 `DB/xxl_job.sql`
 
 ```
-<br/>
+
 
 #### 2.在项目根目录执行`mvn install`
 
-<br/>
+
 
 #### 3.在各个模块中配置数据库帐号信息以及redis帐号信息`（默认使用的是application-dev.yml配置文件,打包后启动脚本默认使用的application-test.yml配置文件）`
 
-<br/>
+
 
 #### 4.在`core\src\main\resources\application-core.yml`里面修改elasticsearch配置
 
@@ -98,7 +108,6 @@ spring.elasticsearch.rest.uris = elasticsearch地址 例：127.0.0.1:9200
         spring.elasticsearch.rest.password = elasticsearch密码 例: password 
 ```
 
-<br/>
 
 
 #### 5.修改系统中文件上传地址，默认为本地配置，本地上传还需配置公网地址，指向服务器网关（可选）
@@ -112,13 +121,12 @@ spring.elasticsearch.rest.uris = elasticsearch地址 例：127.0.0.1:9200
 ```
 
 #### 6.可选：修改jetcache缓存配置详见 https://github.com/alibaba/jetcache/wiki
-<br/>
+
 
 #### 7. 可选：项目日志文件在`core\src\main\resources\logback-spring.xml`修改
             
 
-
-#### 8. 项目打包部署 <br/>
+#### 8. 项目打包部署
 
 
 ```
@@ -131,7 +139,7 @@ spring.elasticsearch.rest.uris = elasticsearch地址 例：127.0.0.1:9200
 #### 9. 项目启动 <br/>
 
 先启动nacos,seata,sentinel, elasticsearch,mysql,redis等基础服务 <br/>再各个模块下通过执行`sh 72crm.sh start`（windows下直接运行72crm.bat）启动各个模块服务。其中项目基础模块：gateway，authorization，admin必须启动，其他模块按需启动。<br/>
-<br/>
+
 
 
 ### 三、其他说明
@@ -152,7 +160,8 @@ oa模块的任务依赖于work模块，其余一些关联业务功能依赖于cr
 ```
 
 
-###三、 悟空CRM功能模块预览
+
+### 三、悟空CRM功能模块预览
 
 
 ![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172541_efed65bd_345098.png "01.png")
