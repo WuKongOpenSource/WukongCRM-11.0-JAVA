@@ -22,7 +22,9 @@ QQ群交流群⑩群：[1026560336](http:////shang.qq.com/wpa/qunwpa?idkey=13d5e
 <img src="https://images.gitee.com/uploads/images/2019/1202/135713_d3566c6a_345098.jpeg" width="200">
 
 
- **  :sparkles: 注：悟空CRM采用全新的前后端分离模式，本仓库代码中已集成前端vue打包后文件，可免去打包操作。如需调整前端代码，请单独下载前端代码[查看VUE前端仓库](https://gitee.com/wukongcrm_admin/W72crm_web)** 
+ :maple_leaf:  **注：悟空CRM采用全新的前后端分离模式，本仓库代码中已集成前端vue打包后文件，可免去打包操作。如需调整前端代码，请单独下载前端代码** 
+
+[查看VUE前端仓库](https://gitee.com/wukongcrm_admin/W72crm_web) 
 
 
 ## 悟空CRM目录结构
