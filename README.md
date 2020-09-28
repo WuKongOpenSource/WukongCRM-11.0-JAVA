@@ -20,10 +20,8 @@
 ├── bi            -- 商业智能模块
 ├── core          -- 通用的代码和工具类
 ├── crm           -- 客户管理模块
-├── email         -- 邮箱模块
 ├── gateway       -- 网关模块
 ├── job           -- 定时任务模块
-├── km            -- 定时任务模块
 ├── oa            -- OA模块
 └── work          -- 项目管理模块
 
@@ -68,14 +66,14 @@
 -	Elasticsearch 6.8.6 （<a href="https://gitee.com/myzw/wk_crm/wikis/elasticsearch%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">安装注意事项</a>）
 -	Seata（1.2.0）
 -	Sentinel（1.7.2）
--	Nacos（1.2.1)
+-	Nacos（1.2.1)（nacos数据推荐持久化到数据库）
 
  **二、	安装说明 <br/>** 
      
 - 安装前需导入初始化sql,项目下gateway使用的独立数据库，其他模块暂时用的是同一数据库，后续可能进行拆分
       
-        1、初始化gateway模块  导入 db/config_info_route.sql
-        4、初始化其余模块     导入 db/wk_crm.sql
+        1、初始化gateway模块  导入 DB/config_info_route.sql
+        4、初始化其余模块     导入 DB/wk_crm.sql
 
     - 在项目根目录执行mvn install
     - 然后在各个项目修改数据库以及redis配置文件,默认使用的是application-dev.yml,打包后启动脚本默认使用的application-test.yml配置
