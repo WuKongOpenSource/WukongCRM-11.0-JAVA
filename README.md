@@ -10,7 +10,7 @@
 
 演示地址：[http://www.5kcrm.com](http://www.5kcrm.com/)
 
-QQ群交流群⑩群：[1026560336](http:////shang.qq.com/wpa/qunwpa?idkey=13d5e5809eb9feb350336e55c8b7a00b9cb472078b09b4441222a52dd76b278e)
+QQ群交流群群：[1026560336](http:////shang.qq.com/wpa/qunwpa?idkey=13d5e5809eb9feb350336e55c8b7a00b9cb472078b09b4441222a52dd76b278e)
 
 
 扫码添加小悟官方客服微信，邀您加入千人微信交流群：
