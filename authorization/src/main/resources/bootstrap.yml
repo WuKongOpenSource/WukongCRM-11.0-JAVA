@@ -1,0 +1,28 @@
+server:
+  port: ${SERVER_PORT:8445}
+spring:
+  application:
+    name: authorization
+  profiles:
+    include: core,dev
+  cloud:
+    nacos:
+      config:
+        enabled: true
+        server-addr: 127.0.0.1:8848
+        file-extension: yaml
+        prefix: admin
+      discovery:
+        enabled: true
+        server-addr: 127.0.0.1:8848
+    sentinel:
+      filter:
+        enabled: false
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD_HOST:127.0.0.1}:${SENTINEL_DASHBOARD_PORT:8079}
+      datasource:
+        flow:
+          server-addr: 127.0.0.1:8848
+          dataId: ${spring.application.name}-flow-rules
+          groupId: SENTINEL_GROUP
+          rule-type: flow

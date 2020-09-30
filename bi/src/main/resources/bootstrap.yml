@@ -1,0 +1,28 @@
+server:
+  port: ${SERVER_PORT:8558}
+spring:
+  profiles:
+    include: core,dev
+  application:
+    name: bi
+  cloud:
+    nacos:
+      config:
+        enabled: true
+        server-addr: 127.0.0.1:8848
+        file-extension: yaml
+        prefix: km
+      discovery:
+        enabled: true
+        server-addr: 127.0.0.1:8848
+    sentinel:
+      filter:
+        enabled: false
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD_HOST:localhost}:${SENTINEL_DASHBOARD_PORT:8079}
+      datasource:
+        flow:
+          server-addr: localhost:8848
+          dataId: ${spring.application.name}-flow-rules
+          groupId: SENTINEL_GROUP
+          rule-type: flow

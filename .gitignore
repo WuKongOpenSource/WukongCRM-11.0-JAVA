@@ -7,5 +7,3 @@ target
 */target/**
 rebel.xml
 rebel-remote.xml
-*bootstrap.yml
-

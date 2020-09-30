@@ -1,0 +1,45 @@
+server:
+  port: ${SERVER_PORT:8443}
+spring:
+  application:
+    name: gateway
+  profiles:
+    active: dev
+  resources:
+    cache:
+      cachecontrol:
+        no-cache: true
+    static-locations: file:public/,classpath:public/,classpath:/static,classpath:/resources,classpath:/META-INF/resources,file:/usr/local/wk-single/upload/public
+  mvc:
+    throw-exception-if-no-handler-found: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  cloud:
+    nacos:
+      config:
+        enabled: true
+        server-addr: 127.0.0.1:8848
+        file-extension: yaml
+        prefix: gateway
+      discovery:
+        enabled: true
+        server-addr: 127.0.0.1:8848
+    sentinel:
+      filter:
+        enabled: false
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD_HOST:localhost}:${SENTINEL_DASHBOARD_PORT:8079}
+      datasource:
+        flow:
+          server-addr: localhost:8848
+          dataId: ${spring.application.name}-flow-rules
+          groupId: SENTINEL_GROUP
+          rule-type: flow
+    gateway:
+      enabled: true
+      discovery:
+        locator:
+          lower-case-service-id: true
+          enabled: true
