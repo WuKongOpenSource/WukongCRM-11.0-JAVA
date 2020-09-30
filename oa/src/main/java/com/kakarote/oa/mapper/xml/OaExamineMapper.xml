@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.oa.mapper.OaExamineMapper">
+
+    <select id="myInitiate" resultType="com.kakarote.oa.entity.VO.ExamineVO">
+        select a.*,b.examine_status,b.record_id as examine_record_id,
+        b.examine_step_id ,c.title as
+        categoryTitle,c.examine_type,c.icon
+        from wk_oa_examine a left join wk_oa_examine_record b on a.examine_id = b.examine_id left join
+        wk_oa_examine_category c on a.category_id = c.category_id
+        where
+        <choose>
+            <when test="data.status == null and isAdmin == true">
+                1=1
+            </when>
+            <otherwise>
+                a.create_user_id = #{userId}
+            </otherwise>
+        </choose>
+        <if test="data.categoryId != null">
+            and a.category_id = #{data.categoryId}
+        </if>
+        <if test="data.status != null">
+            <choose>
+                <when test="data.status == 0">
+                    and (b.examine_status = 0 or b.examine_status = 3)
+                </when>
+                <otherwise>
+                    and b.examine_status = #{data.status}
+                </otherwise>
+            </choose>
+        </if>
+        <if test="biStatus != null">
+            and b.examine_status != #{biStatus}
+        </if>
+        <if test="data.startTime != null and endTime != null">
+            and a.create_time between #{data.startTime} and #{data.endTime}
+        </if>
+        group by a.examine_id,b.record_id order by a.create_time desc
+    </select>
+    <select id="queryExamineUserByExamineLog" resultType="java.lang.Long">
+        SELECT
+        a.examine_user
+        FROM
+        wk_oa_examine_log as a
+        WHERE a.record_id=#{record.examineRecordId} and is_recheck = 0 and
+        <choose>
+            <when test="record.examineStatus == 3">
+                examine_status= 0
+            </when>
+            <otherwise>
+                examine_status=#{record.examineStatus}
+            </otherwise>
+        </choose>
+        <if test="record.examineStepId != null">
+            and a.examine_step_id=#{record.examineStepId}
+        </if>
+    </select>
+    <select id="myOaExamine" resultType="com.kakarote.oa.entity.VO.ExamineVO">
+        select a.*,b.examine_status,b.record_id as examine_record_id,b.examine_step_id,c.title as
+        categoryTitle,c.icon,c.examine_type
+        from wk_oa_examine a
+        left join wk_oa_examine_record b on a.examine_id = b.examine_id
+        left join wk_oa_examine_category c on a.category_id = c.category_id
+        left join wk_oa_examine_log d on d.record_id = b.record_id
+        where 1 = 1
+        <if test="data.categoryId != null">
+            and a.category_id = #{data.categoryId}
+        </if>
+        <if test="data.status == null">
+            <if test="isAdmin == false">
+                and ((d.examine_user = #{userId} and d.examine_status = 0 and ifnull(b.examine_step_id,1) =
+                ifnull(d.examine_step_id,1) and d.is_recheck !=1)
+                or ((d.examine_user = #{userId} and d.examine_status not in(0,4))))
+            </if>
+        </if>
+        <if test="data.status == 1">
+            and (d.examine_user = #{userId} and d.examine_status = 0 and ifnull(b.examine_step_id,1) =
+            ifnull(d.examine_step_id,1) and d.is_recheck !=1)
+        </if>
+        <if test="data.status == 2">
+            and (d.examine_user = #{userId} and d.examine_status not in(0,4) and d.is_recheck = 0)
+        </if>
+        <if test="data.startTime != null and endTime != null">
+            and a.create_time between #{data.startTime} and #{data.endTime}
+        </if>
+        group by a.examine_id,b.examine_status,b.record_id
+        <choose>
+            <when test="data.status == 1">
+                order by a.create_time desc
+            </when>
+            <when test="data.status == 2">
+                order by d.examine_time desc
+            </when>
+            <otherwise>
+                order by d.create_time desc
+            </otherwise>
+        </choose>
+    </select>
+    <select id="queryExamineById" resultType="com.kakarote.oa.entity.VO.ExamineVO">
+        select a.*,b.title as categoryTitle,b.type,b.icon,c.examine_status  from wk_oa_examine as a
+        left join wk_oa_examine_category b on a.category_id = b.category_id
+        left join `wk_oa_examine_record` c on a.examine_id = c.examine_id where a.examine_id = #{id}
+    </select>
+    <select id="queryExamineRecordById" resultType="com.alibaba.fastjson.JSONObject">
+     SELECT saer.* ,sau.img,sau.realname from wk_oa_examine_record as  saer
+     LEFT JOIN wk_admin_user as sau on sau.user_id = saer.create_user
+     WHERE saer.record_id = #{recordId}
+    </select>
+    <select id="myInitiateExcel" resultType="com.alibaba.fastjson.JSONObject">
+        select a.examine_id,a.batch_id
+            from wk_oa_examine a left join wk_oa_examine_record b on a.examine_id = b.examine_id left join wk_oa_examine_category c on a.category_id = c.category_id
+            where
+            <choose>
+                <when test="data.checkStatus == null and isAdmin == true">
+                    1=1
+                </when>
+                <otherwise>
+                    a.create_user_id = #{userId}
+                </otherwise>
+            </choose>
+            <if test="data.categoryId != null and data.categoryId != ''">
+                and a.category_id = #{data.categoryId}
+            </if>
+            <if test="data.checkStatus != null and data.checkStatus != ''">
+                <choose>
+                    <when test="data.checkStatus == 0">
+                        and  (b.examine_status = 0 or b.examine_status = 3)
+                    </when>
+                    <otherwise>
+                        and b.examine_status = #{data.checkStatus}
+                    </otherwise>
+                </choose>
+            </if>
+            <if test="data.startTime != null and data.endTime != null">
+                and a.create_time between #{data.startTime} and  #{data.endTime}
+            </if>
+            group by a.examine_id,b.record_id order by  a.create_time desc
+    </select>
+    <select id="myOaExamineExcel" resultType="com.alibaba.fastjson.JSONObject">
+        select a.examine_id,a.batch_id
+          from wk_oa_examine a  left join  wk_oa_examine_record b on a.examine_id = b.examine_id left join wk_oa_examine_category c on a.category_id = c.category_id left join wk_oa_examine_log d on d.record_id = b.record_id
+            where 1 = 1
+            <if test="data.categoryId != null and data.categoryId != ''">
+                and a.category_id = #{data.categoryId}
+            </if>
+            <if test="data.checkStatus == null and isAdmin == false">
+                and ((d.examine_user = #{userId} and d.examine_status = 0 and ifnull(b.examine_step_id,1) = ifnull(d.examine_step_id,1) and d.is_recheck !=1) or ((d.examine_user = #{userId} and d.examine_status not in(0,4))))
+            </if>
+            <if test="data.checkStatus == 1">
+                and (d.examine_user = #{userId} and d.examine_status = 0 and ifnull(b.examine_step_id,1) = ifnull(d.examine_step_id,1) and d.is_recheck !=1)
+            </if>
+            <if test="data.checkStatus == 2">
+                and (d.examine_user = #{userId} and d.examine_status not in(0,4))
+            </if>
+            <if test="data.startTime != null and data.endTime != null">
+                and a.create_time between #{data.startTime} and  #{data.endTime}
+            </if>
+            <if test="data.createUserId != null ">
+                and a.create_user_id = #{data.createUserId}
+            </if>
+            group by a.examine_id,b.examine_status,b.record_id
+    </select>
+    <select id="queryTravelExamineList" resultType="com.alibaba.fastjson.JSONObject">
+        select a.examine_id,a.create_time,d.realname as create_user_name,a.money,a.content,a.remark,a.duration,
+              b.start_address,b.end_address,b.start_time,b.end_time,b.traffic,b.stay,b.diet,b.other,b.money as travel_money,
+              b.vehicle,b.trip,b.duration as travel_duration,b.description,
+              (CASE WHEN f.examine_status = 0 THEN '未审核'
+                   WHEN f.examine_status = 1 THEN '审核通过'
+                   WHEN f.examine_status = 2 THEN '审核拒绝'
+                   WHEN f.examine_status = 3 THEN '审核中'
+                   WHEN f.examine_status = 4 THEN '已撤回' END ) as examine_status,
+              (CASE WHEN f.examine_status in (0,3) THEN (select GROUP_CONCAT(realname) from wk_admin_user where user_id in (
+                          select examine_user from wk_oa_examine_log where record_id = g.record_id and order_id = a.g.order_id))
+                    WHEN f.examine_status in (1,2,4) THEN '' END
+              ) as examine_user_name,
+              (select GROUP_CONCAT(realname) from wk_admin_user where user_id in (
+                select examine_user from wk_oa_examine_log where record_id = g.record_id and order_id = (CASE WHEN f.examine_status in (0,3) THEN (g.order_id - 1)
+                                                                                                                 WHEN f.examine_status in (1,2,4) THEN g.order_id END)
+              )) as previous_examine_user_name,
+              c.customer_ids,
+              c.contacts_ids,
+              c.business_ids,
+              c.contract_ids,
+              if(c.customer_ids is null,null,(select GROUP_CONCAT(customer_name SEPARATOR'】、【') from wk_crm_customer where find_in_set(customer_id,c.customer_ids))) as customer_name,
+              if(c.contacts_ids is null,null,(select GROUP_CONCAT(name SEPARATOR'】、【') from wk_crm_contacts where find_in_set(contacts_id,c.contacts_ids))) as contacts_name,
+              if(c.business_ids is null,null,(select GROUP_CONCAT(business_name SEPARATOR'】、【') from wk_crm_business where find_in_set(business_id,c.business_ids))) as business_name,
+              if(c.contract_ids is null,null,(select GROUP_CONCAT(name SEPARATOR'】、【') from wk_crm_contract where find_in_set(contract_id,c.contract_ids))) as contract_name
+          from wk_oa_examine as a left join wk_oa_examine_travel as b on a.examine_id = b.examine_id
+          left join wk_oa_examine_relation as c on a.examine_id = c.examine_id
+          left join wk_admin_user as d on a.create_user_id = d.user_id
+          left join wk_oa_examine_category as e on a.category_id = e.category_id
+          left join wk_oa_examine_record as f on f.examine_id = a.examine_id
+          left join (select max(order_id) as order_id,record_id from wk_oa_examine_log where is_recheck != 1 group by record_id) as g on f.record_id = g.record_id
+          where a.examine_id in
+           <foreach collection="examineIdList" index="index" item="id" open="(" close=")" separator=",">
+               #{id}
+           </foreach>
+    </select>
+    <select id="queryCustomExamineList" resultType="com.alibaba.fastjson.JSONObject">
+        select a.*,b.*,d.realname as create_user_name,
+              (CASE WHEN f.examine_status = 0 THEN '未审核'
+                   WHEN f.examine_status = 1 THEN '审核通过'
+                   WHEN f.examine_status = 2 THEN '审核拒绝'
+                   WHEN f.examine_status = 3 THEN '审核中'
+                   WHEN f.examine_status = 4 THEN '已撤回' END ) as examine_status,
+              (CASE WHEN f.examine_status in (0,3) THEN (select GROUP_CONCAT(realname) from wk_admin_user where user_id in (
+                          select examine_user from wk_oa_examine_log where record_id = g.record_id and order_id = a.g.order_id))
+                    WHEN f.examine_status in (1,2,4) THEN '' END
+              ) as examine_user_name,
+              (select GROUP_CONCAT(realname) from wk_admin_user where user_id in (
+                select examine_user from wk_oa_examine_log where record_id = g.record_id and order_id = (CASE WHEN f.examine_status in (0,3) THEN (g.order_id - 1)
+                                                                                                                 WHEN f.examine_status in (1,2,4) THEN g.order_id END)
+              )) as previous_examine_user_name,
+              c.customer_ids,
+              c.contacts_ids,
+              c.business_ids,
+              c.contract_ids,
+              if(c.customer_ids is null,null,(select GROUP_CONCAT(customer_name SEPARATOR'】、【') from wk_crm_customer where find_in_set(customer_id,c.customer_ids))) as customer_name,
+              if(c.contacts_ids is null,null,(select GROUP_CONCAT(name SEPARATOR'】、【') from wk_crm_contacts where find_in_set(contacts_id,c.contacts_ids))) as contacts_name,
+              if(c.business_ids is null,null,(select GROUP_CONCAT(business_name SEPARATOR'】、【') from wk_crm_business where find_in_set(business_id,c.business_ids))) as business_name,
+              if(c.contract_ids is null,null,(select GROUP_CONCAT(name SEPARATOR'】、【') from wk_crm_contract where find_in_set(contract_id,c.contract_ids))) as contract_name
+          from wk_oa_examine as a
+          left join (select x.batch_id
+                    <foreach collection="fieldMap" item="field" index="index">
+                        <choose>
+                            <when test="field.type == 12">
+                                ,GROUP_CONCAT(if(name = '${field.name}',(select name from wk_admin_dept where find_in_set(dept_id,ifnull(x.vlaue,0))),null)) AS '${field.name}'
+                            </when>
+                            <when test="field.type == 10">
+                                ,GROUP_CONCAT(if(name = '${field.name}',(select realname from wk_admin_user where find_in_set(user_id,ifnull(x.vlaue,0))),null)) AS '${field.name}'
+                            </when>
+                            <otherwise>
+                                ,max(CASE WHEN `name` = '${field.name}' THEN value END) AS '${field.name}'
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                     from wk_oa_examine_data as x where x.batch_id in
+                     <foreach collection="batchIds" index="index" separator="," item="batchId" open="(" close=")">
+                         #{batchId}
+                     </foreach>
+                     ) as b on a.batch_id = b.batch_id
+          left join wk_oa_examine_relation as c on a.examine_id = c.examine_id
+          left join wk_admin_user as d on a.create_user_id = d.user_id
+          left join wk_oa_examine_category as e on a.category_id = e.category_id
+          left join wk_oa_examine_record as f on f.examine_id = a.examine_id
+          left join (select max(order_id) as order_id,record_id from wk_oa_examine_log where is_recheck != 1 group by record_id) as g on f.record_id = g.record_id
+          where a.examine_id in
+            <foreach collection="examineIdList" index="index" item="id" open="(" close=")" separator=",">
+                #{id}
+            </foreach>
+    </select>
+    <select id="queryExamineList" resultType="com.alibaba.fastjson.JSONObject">
+      select a.*,d.realname as create_user_name,
+          (CASE WHEN f.examine_status = 0 THEN '未审核'
+               WHEN f.examine_status = 1 THEN '审核通过'
+               WHEN f.examine_status = 2 THEN '审核拒绝'
+               WHEN f.examine_status = 3 THEN '审核中'
+               WHEN f.examine_status = 4 THEN '已撤回' END ) as examine_status,
+          (CASE WHEN f.examine_status in (0,3) THEN (select GROUP_CONCAT(realname) from wk_admin_user where user_id in (
+                      select examine_user from wk_oa_examine_log where record_id = g.record_id and order_id = a.g.order_id))
+                WHEN f.examine_status in (1,2,4) THEN '' END
+          ) as examine_user_name,
+          (select GROUP_CONCAT(realname) from wk_admin_user where user_id in (
+            select examine_user from wk_oa_examine_log where record_id = g.record_id and order_id = (CASE WHEN f.examine_status in (0,3) THEN (g.order_id - 1)
+                                                                                                             WHEN f.examine_status in (1,2,4) THEN g.order_id END)
+          )) as previous_examine_user_name,
+          c.customer_ids,
+          c.contacts_ids,
+          c.business_ids,
+          c.contract_ids,
+          if(c.customer_ids is null,null,(select GROUP_CONCAT(customer_name SEPARATOR'】、【') from wk_crm_customer where find_in_set(customer_id,c.customer_ids))) as customer_name,
+          if(c.contacts_ids is null,null,(select GROUP_CONCAT(name SEPARATOR'】、【') from wk_crm_contacts where find_in_set(contacts_id,c.contacts_ids))) as contacts_name,
+          if(c.business_ids is null,null,(select GROUP_CONCAT(business_name SEPARATOR'】、【') from wk_crm_business where find_in_set(business_id,c.business_ids))) as business_name,
+          if(c.contract_ids is null,null,(select GROUP_CONCAT(name SEPARATOR'】、【') from wk_crm_contract where find_in_set(contract_id,c.contract_ids))) as contract_name
+      from wk_oa_examine as a
+      left join wk_oa_examine_relation as c on a.examine_id = c.examine_id
+      left join wk_admin_user as d on a.create_user_id = d.user_id
+      left join wk_oa_examine_category as e on a.category_id = e.category_id
+      left join wk_oa_examine_record as f on f.examine_id = a.examine_id
+      left join (select max(order_id) as order_id,record_id from wk_oa_examine_log where is_recheck != 1 group by record_id) as g on f.record_id = g.record_id
+      where a.examine_id in
+        <foreach collection="examineIdList" index="index" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+      order by a.create_time
+    </select>
+</mapper>

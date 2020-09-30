@@ -1,0 +1,1641 @@
+package com.kakarote.crm.service.impl;
+
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.lang.Dict;
+import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.poi.excel.ExcelUtil;
+import cn.hutool.poi.excel.ExcelWriter;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.util.TypeUtils;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.kakarote.core.common.Const;
+import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.entity.BasePage;
+import com.kakarote.core.entity.PageEntity;
+import com.kakarote.core.entity.UserInfo;
+import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.feign.admin.entity.AdminMessageBO;
+import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
+import com.kakarote.core.feign.admin.entity.SimpleDept;
+import com.kakarote.core.feign.admin.entity.SimpleUser;
+import com.kakarote.core.feign.admin.service.AdminFileService;
+import com.kakarote.core.feign.admin.service.AdminMessageService;
+import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.crm.entity.CrmEventBO;
+import com.kakarote.core.feign.crm.entity.QueryEventCrmPageBO;
+import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
+import com.kakarote.core.redis.Redis;
+import com.kakarote.core.servlet.ApplicationContextHolder;
+import com.kakarote.core.servlet.BaseServiceImpl;
+import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.BaseUtil;
+import com.kakarote.core.utils.TagUtil;
+import com.kakarote.core.utils.UserCacheUtil;
+import com.kakarote.core.utils.UserUtil;
+import com.kakarote.crm.common.*;
+import com.kakarote.crm.constant.*;
+import com.kakarote.crm.entity.BO.*;
+import com.kakarote.crm.entity.PO.*;
+import com.kakarote.crm.entity.VO.*;
+import com.kakarote.crm.mapper.CrmBackLogMapper;
+import com.kakarote.crm.mapper.CrmCustomerMapper;
+import com.kakarote.crm.service.*;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.hssf.usermodel.*;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.ss.util.CellRangeAddressList;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.client.RequestOptions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * <p>
+ * 客户表 服务实现类
+ * </p>
+ *
+ * @author zhangzhiwei
+ * @since 2020-05-29
+ */
+@Service(value = "customerService")
+@Slf4j
+public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, CrmCustomer> implements ICrmCustomerService, CrmPageService {
+
+    @Autowired
+    private ICrmFieldService crmFieldService;
+
+    @Autowired
+    private ICrmCustomerDataService crmCustomerDataService;
+
+    @Autowired
+    private ICrmActivityService crmActivityService;
+
+    @Autowired
+    private ICrmActionRecordService crmActionRecordService;
+
+    @Autowired
+    private ICrmBackLogDealService crmBackLogDealService;
+
+    @Autowired
+    private ICrmCustomerSettingService crmCustomerSettingService;
+
+    @Autowired
+    private ICrmBusinessService crmBusinessService;
+
+    @Autowired
+    private ICrmContactsService crmContactsService;
+
+    @Autowired
+    private ICrmContractService crmContractService;
+
+    @Autowired
+    private ICrmCustomerUserStarService crmCustomerUserStarService;
+
+    @Autowired
+    private ActionRecordUtil actionRecordUtil;
+
+
+    @Autowired
+    private ElasticsearchRestTemplate elasticsearchRestTemplate;
+
+    @Autowired
+    private AdminService adminService;
+
+    @Autowired
+    private AdminFileService adminFileService;
+
+    @Autowired
+    private ICrmCustomerPoolService crmCustomerPoolService;
+
+    @Autowired
+    private CrmBackLogMapper mapper;
+
+    /**
+     * 查询字段配置
+     *
+     * @param id 主键ID
+     * @return data
+     */
+    @Override
+    public List<CrmModelFiledVO> queryField(Integer id) {
+        CrmModel crmModel = queryById(id, null);
+        List<CrmModelFiledVO> vos = crmFieldService.queryField(crmModel);
+        JSONObject value = new JSONObject();
+        value.put("location", crmModel.get("location"));
+        value.put("address", crmModel.get("address"));
+        value.put("detailAddress", crmModel.get("detailAddress"));
+        value.put("lng", crmModel.get("lng"));
+        value.put("lat", crmModel.get("lat"));
+        vos.add(new CrmModelFiledVO("map_address", FieldEnum.MAP_ADDRESS, "地区定位", 1).setIsNull(0).setValue(value));
+        return vos;
+    }
+
+    /**
+     * 分页查询
+     *
+     * @param search
+     * @return
+     */
+    @Override
+    public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
+        BasePage<Map<String, Object>> basePage = queryList(search);
+        Long userId = UserUtil.getUserId();
+        List<Integer> starIds = crmCustomerUserStarService.starList(userId);
+        basePage.getList().forEach(map -> {
+            Integer customerId = (Integer) map.get("customerId");
+            map.put("star", starIds.contains((customerId)) ? 1 : 0);
+            Integer businessCount = crmBusinessService.lambdaQuery().eq(CrmBusiness::getCustomerId, customerId).eq(CrmBusiness::getStatus, 1).count();
+            map.put("businessCount", businessCount);
+            //查询联系人,新建合同关联需要
+            Object contactsId = map.get("contactsId");
+            if (ObjectUtil.isNotEmpty(contactsId)) {
+                CrmContacts contacts = crmContactsService.lambdaQuery().select(CrmContacts::getName, CrmContacts::getMobile, CrmContacts::getAddress)
+                        .eq(CrmContacts::getContactsId, contactsId).one();
+                if (contacts != null){
+                    map.put("contactsName", contacts.getName());
+                    map.put("contactsMobile", contacts.getMobile());
+                    map.put("contactsAddress", contacts.getAddress());
+                }
+            }
+        });
+//        setPoolDay(basePage.getList());
+        return basePage;
+    }
+
+
+    public List<Map<String, Object>> setPoolDay(List<Map<String, Object>> list) {
+        Long userId = UserUtil.getUserId();
+        List<CrmCustomerPool> poolList = crmCustomerPoolService.lambdaQuery().eq(CrmCustomerPool::getStatus, 1).eq(CrmCustomerPool::getPutInRule, 1).eq(CrmCustomerPool::getRemindSetting, 1).list();
+        Map<Integer, Integer> customerMap = new HashMap<>();
+        Map<Integer, Set<Integer>> remindPoolMap = new HashMap<>();
+        poolList.forEach(pool -> {
+            List<Long> userIdsList = new ArrayList<>();
+            List<JSONObject> recordList = new ArrayList<>();
+            List<Integer> customerIdList = new ArrayList<>();
+            List<Integer> deptIds = StrUtil.splitTrim(pool.getMemberDeptId(), Const.SEPARATOR).stream().map(Integer::valueOf).collect(Collectors.toList());
+            if (deptIds.size() > 0) {
+                userIdsList.addAll(adminService.queryUserByDeptIds(deptIds).getData());
+            }
+            if (StrUtil.isNotEmpty(pool.getMemberUserId())) {
+                userIdsList.addAll(Arrays.stream(pool.getMemberUserId().split(Const.SEPARATOR)).map(Long::parseLong).collect(Collectors.toList()));
+            }
+            List<CrmCustomerPoolRule> ruleList = ApplicationContextHolder.getBean(ICrmCustomerPoolRuleService.class).lambdaQuery().eq(CrmCustomerPoolRule::getPoolId, pool.getPoolId()).list();
+            for (CrmCustomerPoolRule rule : ruleList) {
+                Map<String, Object> record = BeanUtil.beanToMap(rule);
+                record.put("remindDay", pool.getRemindDay());
+                userIdsList.add(userId);
+                record.put("ids", userIdsList);
+                if (rule.getType().equals(1)) {
+                    recordList.addAll(mapper.putInPoolByRecord(record));
+                } else if (rule.getType().equals(2)) {
+                    recordList.addAll(mapper.putInPoolByBusiness(record));
+                } else if (rule.getType().equals(3)) {
+                    Integer startDay = rule.getLimitDay() - pool.getRemindDay();
+                    record.put("startDay", startDay);
+                    recordList.addAll(mapper.putInPoolByDealStatus(record));
+                }
+                recordList.forEach(r -> {
+                    Integer customerId = r.getInteger("customerId");
+                    customerIdList.add(customerId);
+                    if (customerMap.containsKey(customerId) && customerMap.get(customerId) <= r.getInteger("poolDay")) {
+                        return;
+                    }
+                    customerMap.put(customerId, r.getInteger("poolDay"));
+                });
+            }
+            //此处是为了记录客户id是由于哪些公海规则提醒的，返回给前端，当单个标记已处理时，提交回来，保存到数据库待办事项提醒表里
+            customerIdList.forEach(customerId -> {
+                Set<Integer> poolIdSet = new HashSet<>();
+                if (remindPoolMap.containsKey(customerId)) {
+                    poolIdSet = remindPoolMap.get(customerId);
+                    poolIdSet.add(pool.getPoolId());
+                } else {
+                    poolIdSet.add(pool.getPoolId());
+                }
+                remindPoolMap.put(customerId, poolIdSet);
+            });
+        });
+        list.forEach(record -> {
+            record.put("poolDay", customerMap.get(record.get("customerId")));
+            record.put("poolIds", CollectionUtil.join(remindPoolMap.get(record.get("customerId")), ","));
+        });
+        return list;
+    }
+
+    /**
+     * 查询字段配置
+     *
+     * @param id 主键ID
+     * @return data
+     */
+    @Override
+    public CrmModel queryById(Integer id, Integer poolId) {
+        CrmModel crmModel;
+        if (id != null) {
+            crmModel = getBaseMapper().queryById(id, UserUtil.getUserId());
+            crmModel.setLabel(CrmEnum.CUSTOMER.getType());
+            crmModel.setOwnerUserName(UserCacheUtil.getUserName(crmModel.getOwnerUserId()));
+            crmCustomerDataService.setDataByBatchId(crmModel);
+            List<String> stringList = ApplicationContextHolder.getBean(ICrmRoleFieldService.class).queryNoAuthField(crmModel.getLabel());
+            stringList.forEach(crmModel::remove);
+            if (ObjectUtil.isNotEmpty(poolId)) {
+                LambdaQueryWrapper<CrmCustomerPoolFieldSetting> wrapper = new LambdaQueryWrapper<>();
+                wrapper.select(CrmCustomerPoolFieldSetting::getFieldName);
+                wrapper.eq(CrmCustomerPoolFieldSetting::getPoolId, poolId).eq(CrmCustomerPoolFieldSetting::getIsHidden, 1);
+                List<String> nameList = ApplicationContextHolder.getBean(ICrmCustomerPoolFieldSettingService.class).listObjs(wrapper, Object::toString);
+                nameList.forEach(crmModel::remove);
+            }
+            Integer contactsId = (Integer) crmModel.get("contactsId");
+            if (contactsId != null) {
+                CrmContacts contacts = crmContactsService.getById(contactsId);
+                crmModel.put("contactsName", contacts.getName());
+                crmModel.put("contactsMobile", contacts.getMobile());
+                crmModel.put("contactsAddress", contacts.getAddress());
+            }
+        } else {
+            crmModel = new CrmModel(CrmEnum.CUSTOMER.getType());
+        }
+        return crmModel;
+    }
+
+    /**
+     * 保存或新增信息
+     *
+     * @param crmModel model
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> addOrUpdate(CrmModelSaveBO crmModel, boolean isExcel) {
+        CrmCustomer crmCustomer = BeanUtil.copyProperties(crmModel.getEntity(), CrmCustomer.class);
+        if (crmCustomer.getCustomerId() != null) {
+            if (!UserUtil.isAdmin() && getBaseMapper().queryIsRoUser(crmCustomer.getCustomerId(), UserUtil.getUserId()) > 0) {
+                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            }
+        }
+        String batchId = StrUtil.isNotEmpty(crmCustomer.getBatchId()) ? crmCustomer.getBatchId() : IdUtil.simpleUUID();
+        actionRecordUtil.updateRecord(crmModel.getField(), Dict.create().set("batchId", batchId).set("dataTableName", "wk_crm_customer_data"));
+        crmCustomerDataService.saveData(crmModel.getField(), batchId);
+        if (StrUtil.isEmpty(crmCustomer.getEmail())) {
+            crmCustomer.setEmail(null);
+        }
+        if (crmCustomer.getCustomerId() != null) {
+            crmBackLogDealService.deleteByType(crmCustomer.getOwnerUserId(), getLabel(), CrmBackLogEnum.TODAY_CUSTOMER, crmCustomer.getCustomerId());
+            crmBackLogDealService.deleteByType(crmCustomer.getOwnerUserId(), getLabel(), CrmBackLogEnum.FOLLOW_CUSTOMER, crmCustomer.getCustomerId());
+            crmCustomer.setUpdateTime(DateUtil.date());
+            actionRecordUtil.updateRecord(BeanUtil.beanToMap(getById(crmCustomer.getCustomerId())), BeanUtil.beanToMap(crmCustomer), CrmEnum.CUSTOMER, crmCustomer.getCustomerName(), crmCustomer.getCustomerId());
+            updateById(crmCustomer);
+            crmCustomer = getById(crmCustomer.getCustomerId());
+            ElasticUtil.batchUpdateEsData(elasticsearchRestTemplate.getClient(), "customer", crmCustomer.getCustomerId().toString(), crmCustomer.getCustomerName());
+        } else {
+            crmCustomer.setCreateTime(DateUtil.date());
+            crmCustomer.setUpdateTime(DateUtil.date());
+            crmCustomer.setReceiveTime(DateUtil.date());
+            crmCustomer.setCreateUserId(UserUtil.getUserId());
+            crmCustomer.setOwnerUserId(UserUtil.getUserId());
+            crmCustomer.setBatchId(batchId);
+            crmCustomer.setRwUserId(",");
+            crmCustomer.setLastTime(new Date());
+            crmCustomer.setRoUserId(",");
+            crmCustomer.setStatus(1);
+            crmCustomer.setDealStatus(0);
+            if (!crmCustomerSettingService.queryCustomerSettingNum(1, crmCustomer.getOwnerUserId())) {
+                throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_SETTING_USER_ERROR);
+            }
+            save(crmCustomer);
+            crmActivityService.addActivity(2, CrmActivityEnum.CUSTOMER, crmCustomer.getCustomerId(), "");
+            actionRecordUtil.addRecord(crmCustomer.getCustomerId(), CrmEnum.CUSTOMER, crmCustomer.getCustomerName());
+        }
+        crmModel.setEntity(BeanUtil.beanToMap(crmCustomer));
+        savePage(crmModel, crmCustomer.getCustomerId(), isExcel);
+        Map<String, Object> map = new HashMap<>();
+        map.put("customerId", crmCustomer.getCustomerId());
+        map.put("customerName", crmCustomer.getCustomerName());
+        return map;
+    }
+
+    @Override
+    public void setOtherField(Map<String, Object> map) {
+        String ownerUserName = UserCacheUtil.getUserName((Long) map.get("ownerUserId"));
+        map.put("ownerUserName", ownerUserName);
+        String createUserName = UserCacheUtil.getUserName((Long) map.get("createUserId"));
+        map.put("createUserName", createUserName);
+    }
+
+    /**
+     * 删除客户数据
+     *
+     * @param ids ids
+     */
+    @Override
+    public void deleteByIds(List<Integer> ids) {
+        for (Integer id : ids) {
+            if (!UserUtil.isAdmin() && getBaseMapper().queryIsRoUser(id, UserUtil.getUserId()) > 0) {
+                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            }
+        }
+        Integer contactsNum = crmContactsService.lambdaQuery().in(CrmContacts::getCustomerId, ids).count();
+        Integer businessNum = crmBusinessService.lambdaQuery().in(CrmBusiness::getCustomerId, ids).eq(CrmBusiness::getStatus, 1).count();
+        if (contactsNum > 0 || businessNum > 0) {
+            throw new CrmException(CrmCodeEnum.CRM_DATA_JOIN_ERROR);
+        }
+        lambdaUpdate().set(CrmCustomer::getUpdateTime, new Date()).set(CrmCustomer::getStatus, 3).in(CrmCustomer::getCustomerId, ids).update();
+        for (Integer id : ids) {
+            String name = lambdaQuery().select(CrmCustomer::getCustomerName).eq(CrmCustomer::getCustomerId, id).one().getCustomerName();
+            actionRecordUtil.addDeleteActionRecord(CrmEnum.CUSTOMER, name, id);
+        }
+        LambdaQueryWrapper<CrmCustomer> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(CrmCustomer::getCustomerId, ids);
+        List<String> batchList = listObjs(wrapper, Object::toString);
+        //删除文件
+        adminFileService.delete(batchList);
+        //删除跟进记录
+        crmActivityService.deleteActivityRecord(CrmActivityEnum.CUSTOMER, ids);
+        //删除字段操作记录
+        crmActionRecordService.deleteActionRecord(CrmEnum.CUSTOMER, ids);
+        //删除自定义字段
+        crmCustomerDataService.deleteByBatchId(batchList);
+        deletePage(ids);
+
+    }
+
+    /**
+     * 修改客户负责人
+     *
+     * @param changOwnerUserBO data
+     */
+    @Override
+    public void changeOwnerUser(CrmBusinessChangOwnerUserBO changOwnerUserBO) {
+        if (!isMaxOwner(changOwnerUserBO.getOwnerUserId(), changOwnerUserBO.getIds())) {
+            throw new CrmException(CrmCodeEnum.THE_NUMBER_OF_CUSTOMERS_HAS_REACHED_THE_LIMIT);
+        }
+        String ownerUserName = adminService.queryUserName(changOwnerUserBO.getOwnerUserId()).getData();
+        changOwnerUserBO.getIds().forEach(id -> {
+            if (AuthUtil.isRwAuth(id, CrmEnum.CUSTOMER)) {
+                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            }
+            String memberId = "," + changOwnerUserBO.getOwnerUserId() + ",";
+            getBaseMapper().deleteMember(memberId, id);
+            CrmCustomer customer = getById(id);
+            if (2 == changOwnerUserBO.getTransferType() && !changOwnerUserBO.getOwnerUserId().equals(customer.getOwnerUserId())) {
+                if (1 == changOwnerUserBO.getPower()) {
+                    customer.setRoUserId(customer.getRoUserId() + customer.getOwnerUserId() + Const.SEPARATOR);
+                }
+                if (2 == changOwnerUserBO.getPower()) {
+                    customer.setRwUserId(customer.getRwUserId() + customer.getOwnerUserId() + Const.SEPARATOR);
+                }
+                addTermMessage(AdminMessageEnum.CRM_CUSTOMER_USER, customer.getCustomerId(), customer.getCustomerName(), customer.getOwnerUserId());
+            }
+            customer.setOwnerUserId(changOwnerUserBO.getOwnerUserId());
+            customer.setFollowup(0);
+            customer.setIsReceive(1);
+            customer.setReceiveTime(DateUtil.date());
+            updateById(customer);
+            actionRecordUtil.addConversionRecord(id, CrmEnum.CUSTOMER, changOwnerUserBO.getOwnerUserId(), customer.getCustomerName());
+            changOwnerUserBO.getChangeType().forEach(type -> {
+                switch (type) {
+                    case 1: {
+                        List<Integer> ids = crmContactsService.lambdaQuery()
+                                .select(CrmContacts::getContactsId)
+                                .eq(CrmContacts::getCustomerId, id)
+                                .list().stream().map(CrmContacts::getContactsId).collect(Collectors.toList());
+                        crmContactsService.changeOwnerUser(ids, changOwnerUserBO.getOwnerUserId());
+                        break;
+                    }
+                    case 2: {
+                        List<Integer> ids = crmBusinessService.lambdaQuery()
+                                .select(CrmBusiness::getBusinessId)
+                                .eq(CrmBusiness::getCustomerId, id)
+                                .list().stream().map(CrmBusiness::getBusinessId).collect(Collectors.toList());
+                        CrmBusinessChangOwnerUserBO changOwnerUser = new CrmBusinessChangOwnerUserBO();
+                        changOwnerUser.setPower(changOwnerUserBO.getPower());
+                        changOwnerUser.setTransferType(changOwnerUserBO.getTransferType());
+                        changOwnerUser.setIds(ids);
+                        changOwnerUser.setOwnerUserId(changOwnerUserBO.getOwnerUserId());
+                        crmBusinessService.changeOwnerUser(changOwnerUser);
+                        break;
+                    }
+                    case 3: {
+                        List<Integer> ids = crmContractService.lambdaQuery()
+                                .select(CrmContract::getContractId)
+                                .eq(CrmContract::getCustomerId, id)
+                                .list().stream().map(CrmContract::getContractId).collect(Collectors.toList());
+                        CrmBusinessChangOwnerUserBO changOwnerUser = new CrmBusinessChangOwnerUserBO();
+                        changOwnerUser.setTransferType(changOwnerUserBO.getTransferType());
+                        changOwnerUser.setPower(changOwnerUserBO.getPower());
+                        changOwnerUser.setIds(ids);
+                        changOwnerUser.setOwnerUserId(changOwnerUserBO.getOwnerUserId());
+                        crmContractService.changeOwnerUser(changOwnerUser);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            });
+            //修改es
+            Map<String, Object> map = new HashMap<>();
+            map.put("ownerUserId", changOwnerUserBO.getOwnerUserId());
+            map.put("ownerUserName", ownerUserName);
+            map.put("rwUserId", customer.getRwUserId());
+            map.put("roUserId", customer.getRoUserId());
+            map.put("followup", 0);
+            map.put("isReceive", 1);
+            map.put("receiveTime", DateUtil.formatDateTime(new Date()));
+            updateField(map, Collections.singletonList(id));
+        });
+    }
+
+    /**
+     * 全部导出
+     *
+     * @param response resp
+     * @param search   搜索对象
+     */
+    @Override
+    public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
+        List<Map<String, Object>> dataList = queryPageList(search).getList();
+        try (ExcelWriter writer = ExcelUtil.getWriter()) {
+            List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+            headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
+            writer.merge(headList.size() - 1, "客户信息");
+            if (dataList.size() == 0) {
+                Map<String, Object> record = new HashMap<>();
+                headList.forEach(head -> record.put(head.getFieldName(), ""));
+                dataList.add(record);
+            }
+            dataList.forEach(record -> {
+                record.put("dealStatus", Objects.equals(1, record.get("deal_status")) ? "已成交" : "未成交");
+                record.put("status", Objects.equals(1, record.get("status")) ? "未锁定" : "已锁定");
+            });
+            writer.setOnlyAlias(true);
+            writer.write(dataList, true);
+            writer.setRowHeight(0, 20);
+            writer.setRowHeight(1, 20);
+            for (int i = 0; i < headList.size(); i++) {
+                writer.setColumnWidth(i, 20);
+            }
+            Cell cell = writer.getCell(0, 0);
+            CellStyle cellStyle = cell.getCellStyle();
+            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
+            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            Font font = writer.createFont();
+            font.setBold(true);
+            font.setFontHeightInPoints((short) 16);
+            cellStyle.setFont(font);
+            cell.setCellStyle(cellStyle);
+            //自定义标题别名
+            //response为HttpServletResponse对象
+            response.setContentType("application/vnd.ms-excel;charset=utf-8");
+            response.setCharacterEncoding("UTF-8");
+            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
+            response.setHeader("Content-Disposition", "attachment;filename=customer.xls");
+            ServletOutputStream out = response.getOutputStream();
+            writer.flush(out);
+        } catch (Exception e) {
+            log.error("导出客户错误：", e);
+        }
+    }
+
+    /**
+     * 客户放入公海
+     *
+     * @param poolBO bo
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateCustomerByIds(CrmCustomerPoolBO poolBO) {
+        if (poolBO.getIds().size() == 0) {
+            return;
+        }
+        Long userId = UserUtil.getUserId();
+        List<CrmOwnerRecord> ownerRecordList = new ArrayList<>();
+        List<CrmCustomerPoolRelation> poolRelationList = new ArrayList<>();
+        for (Integer id : poolBO.getIds()) {
+            CrmCustomer crmCustomer = getById(id);
+            if (crmCustomer.getOwnerUserId() == null) {
+                continue;
+            }
+            boolean isUser = Objects.equals(userId, crmCustomer.getOwnerUserId()) || StrUtil.splitTrim(crmCustomer.getRwUserId(), Const.SEPARATOR).contains(userId.toString());
+            if (!UserUtil.isAdmin() && !isUser) {
+                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            }
+            CrmOwnerRecord crmOwnerRecord = new CrmOwnerRecord();
+            crmOwnerRecord.setTypeId(id);
+            crmOwnerRecord.setType(CrmEnum.CUSTOMER_POOL.getType());
+            crmOwnerRecord.setPreOwnerUserId(crmCustomer.getOwnerUserId());
+            crmOwnerRecord.setCreateTime(DateUtil.date());
+            ownerRecordList.add(crmOwnerRecord);
+            lambdaUpdate()
+                    .set(CrmCustomer::getOwnerUserId, null)
+                    .set(CrmCustomer::getPreOwnerUserId, userId)
+                    .set(CrmCustomer::getPoolTime, new Date())
+                    .set(CrmCustomer::getIsReceive, null)
+                    .set(CrmCustomer::getRoUserId, ",")
+                    .set(CrmCustomer::getRwUserId, ",")
+                    .eq(CrmCustomer::getCustomerId, crmCustomer.getCustomerId()).update();
+            CrmCustomerPoolRelation relation = new CrmCustomerPoolRelation();
+            relation.setCustomerId(id);
+            relation.setPoolId(poolBO.getPoolId());
+            poolRelationList.add(relation);
+            actionRecordUtil.addPutIntoTheOpenSeaRecord(id, getLabel(), crmCustomer.getCustomerName());
+        }
+        if (ownerRecordList.size() > 0) {
+            ApplicationContextHolder.getBean(ICrmOwnerRecordService.class).saveBatch(ownerRecordList);
+        }
+        if (poolRelationList.size() > 0) {
+            ApplicationContextHolder.getBean(ICrmCustomerPoolRelationService.class).saveBatch(poolRelationList);
+        }
+        LambdaUpdateWrapper<CrmContacts> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.set(CrmContacts::getOwnerUserId, null);
+        wrapper.in(CrmContacts::getCustomerId, poolBO.getIds());
+        crmContactsService.update(wrapper);
+        putInPool(poolBO);
+    }
+
+    /**
+     * 标星
+     *
+     * @param customerId 客户id
+     */
+    @Override
+    public void star(Integer customerId) {
+        LambdaQueryWrapper<CrmCustomerUserStar> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CrmCustomerUserStar::getCustomerId, customerId);
+        wrapper.eq(CrmCustomerUserStar::getUserId, UserUtil.getUserId());
+        CrmCustomerUserStar star = crmCustomerUserStarService.getOne(wrapper);
+        if (star == null) {
+            star = new CrmCustomerUserStar();
+            star.setCustomerId(customerId);
+            star.setUserId(UserUtil.getUserId());
+            crmCustomerUserStarService.save(star);
+        } else {
+            crmCustomerUserStarService.removeById(star.getId());
+        }
+    }
+
+    /**
+     * 设置首要联系人
+     *
+     * @param contactsBO data
+     */
+    @Override
+    public void setContacts(CrmFirstContactsBO contactsBO) {
+        lambdaUpdate().set(CrmCustomer::getContactsId, contactsBO.getContactsId())
+                .eq(CrmCustomer::getCustomerId, contactsBO.getCustomerId()).update();
+    }
+
+    /**
+     * 获取团队成员
+     *
+     * @param customerId 客户ID
+     * @return data
+     */
+    @Override
+    public List<CrmMembersSelectVO> getMembers(Integer customerId) {
+        CrmCustomer crmCustomer = getById(customerId);
+        List<CrmMembersSelectVO> recordList = new ArrayList<>();
+        if (crmCustomer.getOwnerUserId() != null) {
+            UserInfo userInfo = UserCacheUtil.getUserInfo(crmCustomer.getOwnerUserId());
+            CrmMembersSelectVO crmMembersVO = new CrmMembersSelectVO();
+            crmMembersVO.setUserId(userInfo.getUserId());
+            crmMembersVO.setDeptName(UserCacheUtil.getDeptName(userInfo.getDeptId()));
+            crmMembersVO.setRealname(UserCacheUtil.getUserName(userInfo.getUserId()));
+            crmMembersVO.setPost(userInfo.getPost());
+            crmMembersVO.setPower("负责人权限");
+            crmMembersVO.setGroupRole("负责人");
+            recordList.add(crmMembersVO);
+        }
+        String roUserId = crmCustomer.getRoUserId();
+        String rwUserId = crmCustomer.getRwUserId();
+        String memberIds = roUserId + rwUserId.substring(1);
+        if (Const.SEPARATOR.equals(memberIds)) {
+            return recordList;
+        }
+        String[] memberIdsArr = memberIds.substring(1, memberIds.length() - 1).split(",");
+        Set<String> memberIdsSet = new HashSet<>(Arrays.asList(memberIdsArr));
+        for (String memberId : memberIdsSet) {
+            UserInfo userInfo = UserCacheUtil.getUserInfo(Long.valueOf(memberId));
+            CrmMembersSelectVO crmMembersVO = new CrmMembersSelectVO();
+            crmMembersVO.setUserId(userInfo.getUserId());
+            crmMembersVO.setDeptName(UserCacheUtil.getDeptName(userInfo.getDeptId()));
+            crmMembersVO.setRealname(UserCacheUtil.getUserName(userInfo.getUserId()));
+            crmMembersVO.setGroupRole("普通成员");
+            if (roUserId.contains(memberId)) {
+                crmMembersVO.setPower("只读");
+            } else if (rwUserId.contains(memberId)) {
+                crmMembersVO.setPower("读写");
+            }
+            crmMembersVO.setPost(userInfo.getPost());
+            recordList.add(crmMembersVO);
+        }
+        return recordList;
+    }
+
+    /**
+     * 领取或分配客户
+     *
+     * @param poolBO    bo
+     * @param isReceive 领取还是分配
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void getCustomersByIds(CrmCustomerPoolBO poolBO, Integer isReceive) {
+        if (poolBO.getIds().size() == 0) {
+            return;
+        }
+        if (poolBO.getUserId() == null) {
+            poolBO.setUserId(UserUtil.getUserId());
+        }
+        if (AuthUtil.isPoolAdmin(poolBO.getPoolId()) && isReceive == 1) {
+            throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_POOL_DISTRIBUTE_ERROR);
+        }
+        if (!isMaxOwner(poolBO.getUserId(), poolBO.getIds())) {
+            throw new CrmException(CrmCodeEnum.THE_NUMBER_OF_CUSTOMERS_HAS_REACHED_THE_LIMIT);
+        }
+        CrmCustomerPool pool = crmCustomerPoolService.getById(poolBO.getPoolId());
+        if (isReceive == 2) {
+            if (pool.getReceiveSetting() != null && pool.getReceiveSetting() == 1) {
+                if (poolBO.getIds().size() > pool.getReceiveNum()) {
+                    throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_POOL_RECEIVE_ERROR);
+                }
+                Redis redis = BaseUtil.getRedis();
+                String key = "receiveNum:poolId_" + poolBO.getPoolId() + ":userId_" + poolBO.getUserId();
+                Integer num = redis.get(key);
+                if (ObjectUtil.isNotEmpty(num) && (num + poolBO.getIds().size() > pool.getReceiveNum())) {
+                    throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_POOL_RECEIVE_NUMBER_ERROR);
+                }
+                long expireTime = (DateUtil.endOfDay(DateUtil.date()).getTime() - System.currentTimeMillis()) / 1000;
+                redis.setex(key, (int) expireTime, ObjectUtil.isEmpty(num) ? poolBO.getIds().size() : num + poolBO.getIds().size());
+            }
+        }
+        List<CrmOwnerRecord> records = new ArrayList<>();
+        for (Integer id : poolBO.getIds()) {
+            CrmCustomer customer = query().select("customer_id", "customer_name").eq("customer_id", id).one();
+            actionRecordUtil.addDistributionRecord(id, CrmEnum.CUSTOMER, isReceive.equals(1) ? poolBO.getUserId() : null, customer.getCustomerName());
+            //前负责人领取限制，从前负责人脱手开始计算天数
+            if (isReceive == 2) {
+                if (pool.getPreOwnerSetting() == 1) {
+                    Integer days = getBaseMapper().queryOutDays(id, poolBO.getUserId());
+                    if (days != null && days <= pool.getPreOwnerSettingDay()) {
+                        throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_POOL_PRE_USER_RECEIVE_ERROR);
+                    }
+                }
+            }
+            CrmOwnerRecord crmOwnerRecord = new CrmOwnerRecord();
+            crmOwnerRecord.setTypeId(id);
+            crmOwnerRecord.setType(CrmEnum.CUSTOMER_POOL.getType());
+            crmOwnerRecord.setPostOwnerUserId(poolBO.getUserId());
+            crmOwnerRecord.setCreateTime(DateUtil.date());
+            records.add(crmOwnerRecord);
+        }
+        ApplicationContextHolder.getBean(ICrmOwnerRecordService.class).saveBatch(records);
+        LambdaQueryWrapper<CrmCustomerPoolRelation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(CrmCustomerPoolRelation::getCustomerId, poolBO.getIds());
+        ApplicationContextHolder.getBean(ICrmCustomerPoolRelationService.class).remove(wrapper);
+        List<Integer> contactsIds = crmContactsService.lambdaQuery().select(CrmContacts::getContactsId).in(CrmContacts::getCustomerId, poolBO.getIds()).list()
+                .stream().map(CrmContacts::getContactsId).collect(Collectors.toList());
+        crmContactsService.lambdaUpdate().set(CrmContacts::getOwnerUserId, poolBO.getUserId()).in(CrmContacts::getCustomerId, poolBO.getIds()).update();
+        lambdaUpdate()
+                .set(CrmCustomer::getOwnerUserId, poolBO.getUserId())
+                .set(CrmCustomer::getFollowup, 0)
+                .set(CrmCustomer::getReceiveTime, new Date())
+                .set(CrmCustomer::getUpdateTime, new Date())
+                .set(CrmCustomer::getIsReceive, isReceive)
+                .in(CrmCustomer::getCustomerId, poolBO.getIds())
+                .update();
+        receiveCustomer(poolBO, isReceive,contactsIds);
+    }
+
+    /**
+     * 添加团队成员
+     *
+     * @param crmMemberSaveBO data
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void addMember(CrmMemberSaveBO crmMemberSaveBO) {
+        for (Integer id : crmMemberSaveBO.getIds()) {
+            if (AuthUtil.isCrmOperateAuth(CrmEnum.CUSTOMER, id)) {
+                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            }
+            CrmCustomer oldCustomer = getById(id);
+            Long ownerUserId = oldCustomer.getOwnerUserId();
+            for (Long memberId : crmMemberSaveBO.getMemberIds()) {
+                if (ownerUserId.equals(memberId)) {
+                    throw new CrmException(CrmCodeEnum.CRM_MEMBER_ADD_ERROR);
+                }
+                oldCustomer.setRoUserId(oldCustomer.getRoUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
+                oldCustomer.setRwUserId(oldCustomer.getRwUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
+                String name = lambdaQuery().select(CrmCustomer::getCustomerName).eq(CrmCustomer::getCustomerId, id).one().getCustomerName();
+                addTermMessage(AdminMessageEnum.CRM_CUSTOMER_USER, oldCustomer.getCustomerId(), oldCustomer.getCustomerName(), memberId);
+                actionRecordUtil.addMemberActionRecord(CrmEnum.CUSTOMER, id, memberId, name);
+            }
+            if (1 == crmMemberSaveBO.getPower()) {
+                oldCustomer.setRoUserId(oldCustomer.getRoUserId() + StrUtil.join(Const.SEPARATOR, crmMemberSaveBO.getMemberIds()) + Const.SEPARATOR);
+            } else if (2 == crmMemberSaveBO.getPower()) {
+                oldCustomer.setRwUserId(oldCustomer.getRwUserId() + StrUtil.join(Const.SEPARATOR, crmMemberSaveBO.getMemberIds()) + Const.SEPARATOR);
+            }
+            updateById(oldCustomer);
+            Map<String, Object> map = new HashMap<>();
+            map.put("roUserId", oldCustomer.getRoUserId());
+            map.put("rwUserId", oldCustomer.getRwUserId());
+            updateField(map, Collections.singletonList(id));
+            if (CollUtil.isNotEmpty(crmMemberSaveBO.getChangeType())) {
+                if (crmMemberSaveBO.getChangeType().contains(2)) {
+                    List<Integer> ids = crmBusinessService.lambdaQuery()
+                            .select(CrmBusiness::getBusinessId)
+                            .eq(CrmBusiness::getCustomerId, id)
+                            .list().stream().map(CrmBusiness::getBusinessId).collect(Collectors.toList());
+                    crmMemberSaveBO.setIds(ids);
+                    crmBusinessService.addMember(crmMemberSaveBO);
+                }
+                if (crmMemberSaveBO.getChangeType().contains(3)) {
+                    List<Integer> ids = crmContractService.lambdaQuery()
+                            .select(CrmContract::getContractId)
+                            .eq(CrmContract::getCustomerId, id)
+                            .list().stream().map(CrmContract::getContractId).collect(Collectors.toList());
+                    crmMemberSaveBO.setIds(ids);
+                    crmContractService.addMember(crmMemberSaveBO);
+                }
+            }
+        }
+
+    }
+
+    /**
+     * 删除团队成员
+     *
+     * @param crmMemberSaveBO data
+     */
+    @Override
+    public void deleteMember(CrmMemberSaveBO crmMemberSaveBO) {
+        for (Integer id : crmMemberSaveBO.getIds()) {
+            if (AuthUtil.isCrmOperateAuth(CrmEnum.CUSTOMER, id)) {
+                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            }
+            deleteMembers(id, crmMemberSaveBO.getMemberIds());
+        }
+    }
+
+
+    private void deleteMembers(Integer id, List<Long> memberIds) {
+        CrmCustomer oldCustomer = getById(id);
+        Long ownerUserId = oldCustomer.getOwnerUserId();
+        for (Long memberId : memberIds) {
+            if (ownerUserId.equals(memberId)) {
+                throw new CrmException(CrmCodeEnum.CRM_MEMBER_DELETE_ERROR);
+            }
+            oldCustomer.setRoUserId(oldCustomer.getRoUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
+            oldCustomer.setRwUserId(oldCustomer.getRwUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
+            if (!memberId.equals(UserUtil.getUserId())) {
+                addTermMessage(AdminMessageEnum.CRM_CUSTOMER_REMOVE_TEAM, oldCustomer.getCustomerId(), oldCustomer.getCustomerName(), memberId);
+                actionRecordUtil.addDeleteMemberActionRecord(CrmEnum.CUSTOMER, id, memberId, false, oldCustomer.getCustomerName());
+            } else {
+                addTermMessage(AdminMessageEnum.CRM_CUSTOMER_TEAM_EXIT, oldCustomer.getCustomerId(), oldCustomer.getCustomerName(), oldCustomer.getOwnerUserId());
+                actionRecordUtil.addDeleteMemberActionRecord(CrmEnum.CUSTOMER, id, memberId, true, oldCustomer.getCustomerName());
+            }
+        }
+        updateById(oldCustomer);
+        Map<String, Object> map = new HashMap<>();
+        map.put("roUserId", oldCustomer.getRoUserId());
+        map.put("rwUserId", oldCustomer.getRwUserId());
+        updateField(map, Collections.singletonList(id));
+    }
+
+    /**
+     * 退出团队
+     *
+     * @param customerId 客户ID
+     */
+    @Override
+    public void exitTeam(Integer customerId) {
+        deleteMembers(customerId, Collections.singletonList(UserUtil.getUserId()));
+    }
+
+    /**
+     * 下载导入模板
+     *
+     * @param response resp
+     * @throws IOException ex
+     */
+    @Override
+    public void downloadExcel(HttpServletResponse response) throws IOException {
+        List<CrmModelFiledVO> crmModelFiledList = queryField(null);
+        crmModelFiledList.removeIf(model -> Arrays.asList(FieldEnum.FILE, FieldEnum.CHECKBOX, FieldEnum.USER, FieldEnum.STRUCTURE).contains(FieldEnum.parse(model.getType())));
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet sheet = wb.createSheet("客户导入表");
+        sheet.setDefaultRowHeight((short) 400);
+        CellStyle textStyle = wb.createCellStyle();
+        DataFormat format = wb.createDataFormat();
+        textStyle.setDataFormat(format.getFormat("@"));
+        for (int i = 0; i < crmModelFiledList.size() + 2; i++) {
+            if (crmModelFiledList.size() > i && Objects.equals(crmModelFiledList.get(i).getType(), FieldEnum.DATE.getType())) {
+                CellStyle dateStyle = wb.createCellStyle();
+                DataFormat dateFormat = wb.createDataFormat();
+                dateStyle.setDataFormat(dateFormat.getFormat(DatePattern.NORM_DATE_PATTERN));
+                sheet.setDefaultColumnStyle(i, dateStyle);
+            } else if (crmModelFiledList.size() > i && Objects.equals(crmModelFiledList.get(i).getType(), FieldEnum.DATETIME.getType())) {
+                CellStyle dateStyle = wb.createCellStyle();
+                DataFormat dateFormat = wb.createDataFormat();
+                dateStyle.setDataFormat(dateFormat.getFormat(DatePattern.NORM_DATETIME_PATTERN));
+                sheet.setDefaultColumnStyle(i, dateStyle);
+            } else {
+                sheet.setDefaultColumnStyle(i, textStyle);
+            }
+            sheet.setColumnWidth(i, 20 * 256);
+        }
+        HSSFRow titleRow = sheet.createRow(0);
+        CellStyle cellStyle = wb.createCellStyle();
+        cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
+        cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        Font font = wb.createFont();
+        font.setBold(true);
+        font.setFontHeightInPoints((short) 16);
+        cellStyle.setFont(font);
+        titleRow.createCell(0).setCellValue("客户导入模板(*)为必填项");
+        cellStyle.setAlignment(HorizontalAlignment.CENTER);
+        titleRow.getCell(0).setCellStyle(cellStyle);
+        CellRangeAddress region = new CellRangeAddress(0, 0, 0, crmModelFiledList.size() + 1);
+        sheet.addMergedRegion(region);
+        try {
+            HSSFRow row = sheet.createRow(1);
+            for (int i = 0; i < crmModelFiledList.size(); i++) {
+                CrmModelFiledVO record = crmModelFiledList.get(i);
+                String fieldName = "_" + record.getFieldName();
+                fieldName = fieldName.replaceAll("[\\n`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。， 、？]", "");
+                //省市区需特殊处理
+                if ("_mapAddress".equals(fieldName)) {
+                    HSSFCell cell1 = row.createCell(i);
+                    cell1.setCellValue("省");
+                    HSSFCell cell2 = row.createCell(i + 1);
+                    cell2.setCellValue("市");
+                    HSSFCell cell3 = row.createCell(i + 2);
+                    cell3.setCellValue("区");
+                    HSSFSheet hideSheet = wb.createSheet(fieldName);
+                    wb.setSheetHidden(wb.getSheetIndex(hideSheet), true);
+                    int rowId = 0;
+                    // 设置第一行，存省的信息
+                    Row provinceRow = hideSheet.createRow(rowId++);
+                    provinceRow.createCell(0).setCellValue("省列表");
+                    List<String> provinceList = getBaseMapper().queryCityList(100000);
+                    for (int x = 0; x < provinceList.size(); x++) {
+                        Cell provinceCell = provinceRow.createCell(x + 1);
+                        provinceCell.setCellValue(provinceList.get(x));
+                    }
+                    // 将具体的数据写入到每一行中，行开头为父级区域，后面是子区域。
+                    Map<String, List<String>> areaMap = CrmExcelUtil.getAreaMap();
+                    for (String key : areaMap.keySet()) {
+                        List<String> son = areaMap.get(key);
+                        Row subRow = hideSheet.createRow(rowId++);
+                        subRow.createCell(0).setCellValue(key);
+                        for (int x = 0; x < son.size(); x++) {
+                            Cell cell = subRow.createCell(x + 1);
+                            cell.setCellValue(son.get(x));
+                        }
+                        // 添加名称管理器
+                        String range = CrmExcelUtil.getRange(1, rowId, son.size());
+                        Name name = wb.createName();
+                        // key不可重复
+                        name.setNameName(key);
+                        String formula = fieldName + "!" + range;
+                        name.setRefersToFormula(formula);
+                    }
+                    // 省级下拉框
+                    CellRangeAddressList provRangeAddressList = new CellRangeAddressList(2, Integer.MAX_VALUE, i, i);
+                    String[] arr = provinceList.toArray(new String[]{});
+                    DVConstraint provConstraint = DVConstraint.createExplicitListConstraint(arr);
+                    HSSFDataValidation provinceDataValidation = new HSSFDataValidation(provRangeAddressList, provConstraint);
+                    provinceDataValidation.createErrorBox("error", "请选择正确的省份");
+                    sheet.addValidationData(provinceDataValidation);
+                    //市 区下拉框
+                    for (int x = 2; x < 10000; x++) {
+                        CrmExcelUtil.setDataValidation(CrmExcelUtil.getCorrespondingLabel(i + 1), sheet, x, i + 1);
+                        CrmExcelUtil.setDataValidation(CrmExcelUtil.getCorrespondingLabel(i + 2), sheet, x, i + 2);
+                    }
+                } else {
+                    HSSFCell cell = row.createCell(i);
+                    cell.setCellValue(record.getName() + (record.getIsNull() == 1 ? "(*)" : ""));
+                    List<String> setting = record.getSetting().stream().map(Object::toString).collect(Collectors.toList());
+                    if (setting != null && setting.size() != 0) {
+                        HSSFSheet hidden = wb.createSheet(fieldName);
+                        HSSFCell sheetCell = null;
+                        for (int j = 0, length = setting.size(); j < length; j++) {
+                            String name = setting.get(j);
+                            HSSFRow sheetRow = hidden.createRow(j);
+                            sheetCell = sheetRow.createCell(0);
+                            sheetCell.setCellValue(name);
+                        }
+                        Name namedCell = wb.createName();
+                        namedCell.setNameName(fieldName);
+                        namedCell.setRefersToFormula(fieldName + "!$A$1:$A$" + setting.size());
+                        CellRangeAddressList regions = new CellRangeAddressList(2, Integer.MAX_VALUE, i, i);
+                        DVConstraint constraint = DVConstraint.createFormulaListConstraint(fieldName);
+                        HSSFDataValidation dataValidation = new HSSFDataValidation(regions, constraint);
+                        wb.setSheetHidden(wb.getSheetIndex(hidden), true);
+                        sheet.addValidationData(dataValidation);
+                    }
+                }
+            }
+            response.setContentType("application/vnd.ms-excel;charset=utf-8");
+            response.setCharacterEncoding("UTF-8");
+            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
+            response.setHeader("Content-Disposition", "attachment;filename=customer_import.xls");
+            wb.write(response.getOutputStream());
+        } catch (Exception e) {
+            log.error("error", e);
+        } finally {
+            wb.close();
+        }
+    }
+
+    /**
+     * 保存客户规则设置
+     *
+     * @param customerSetting setting
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void customerSetting(CrmCustomerSetting customerSetting) {
+        ICrmCustomerSettingUserService settingUserService = ApplicationContextHolder.getBean(ICrmCustomerSettingUserService.class);
+        settingUserService.removeByMap(new JSONObject().fluentPut("setting_id", customerSetting.getSettingId()));
+        customerSetting.setCreateTime(DateUtil.date());
+        crmCustomerSettingService.saveOrUpdate(customerSetting);
+        Integer type = customerSetting.getType();
+        List<Integer> settingIds = crmCustomerSettingService.lambdaQuery()
+                .select(CrmCustomerSetting::getSettingId)
+                .eq(CrmCustomerSetting::getType, type).list()
+                .stream().map(CrmCustomerSetting::getSettingId).collect(Collectors.toList());
+        List<CrmCustomerSettingUser> userList = new ArrayList<>();
+        for (SimpleDept dept : customerSetting.getDeptIds()) {
+            Integer count = settingUserService.lambdaQuery()
+                    .eq(CrmCustomerSettingUser::getDeptId, dept.getId())
+                    .eq(CrmCustomerSettingUser::getType, 2)
+                    .in(CrmCustomerSettingUser::getSettingId, settingIds).count();
+            if (count > 0) {
+                throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_SETTING_USER_EXIST_ERROR);
+            }
+            CrmCustomerSettingUser crmCustomerSettingUser = new CrmCustomerSettingUser();
+            crmCustomerSettingUser.setDeptId(dept.getId());
+            crmCustomerSettingUser.setSettingId(customerSetting.getSettingId());
+            crmCustomerSettingUser.setType(2);
+            userList.add(crmCustomerSettingUser);
+        }
+        for (SimpleUser user : customerSetting.getUserIds()) {
+            Integer count = settingUserService.lambdaQuery()
+                    .eq(CrmCustomerSettingUser::getUserId, user.getUserId())
+                    .eq(CrmCustomerSettingUser::getType, 1)
+                    .in(CrmCustomerSettingUser::getSettingId, settingIds).count();
+            if (count > 0) {
+                throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_SETTING_USER_EXIST_ERROR);
+            }
+            CrmCustomerSettingUser crmCustomerSettingUser = new CrmCustomerSettingUser();
+            crmCustomerSettingUser.setUserId(user.getUserId());
+            crmCustomerSettingUser.setSettingId(customerSetting.getSettingId());
+            crmCustomerSettingUser.setType(1);
+            userList.add(crmCustomerSettingUser);
+        }
+        settingUserService.saveBatch(userList);
+    }
+
+    /**
+     * 删除客户规则设置
+     *
+     * @param settingId settingId
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteCustomerSetting(Integer settingId) {
+        CrmCustomerSetting setting = crmCustomerSettingService.getById(settingId);
+        if (setting != null) {
+            ICrmCustomerSettingUserService settingUserService = ApplicationContextHolder.getBean(ICrmCustomerSettingUserService.class);
+            settingUserService.removeByMap(new JSONObject().fluentPut("setting_id", settingId));
+            crmCustomerSettingService.removeById(settingId);
+        }
+    }
+
+    @Override
+    public List<CrmModelFiledVO> information(Integer customerId, Integer poolId) {
+        CrmModel crmModel = queryById(customerId, null);
+        List<String> keyList = Arrays.asList("customerName", "nextTime", "website", "remark", "telephone", "mobile", "email", "lastTime", "updateTime", "createTime");
+        List<String> systemFieldList = Arrays.asList("最后跟进时间", "创建人", "创建时间", "更新时间", "最后跟进记录", "成交状态", "负责人获取客户时间");
+        List<CrmModelFiledVO> crmModelFiledVOS = queryInformation(crmModel, keyList);
+        CrmModelFiledVO filedVO = new CrmModelFiledVO();
+        filedVO.setFieldType(1);
+        filedVO.setFormType("deal_status");
+        filedVO.setName("成交状态");
+        filedVO.setValue(Objects.equals(0, crmModel.get("dealStatus")) ? "未成交" : "已成交");
+        crmModelFiledVOS.add(filedVO);
+        Map<String, Object> map = new HashMap<>();
+        map.put("location", crmModel.get("location"));
+        map.put("address", crmModel.get("address"));
+        map.put("detailAddress", crmModel.get("detailAddress"));
+        map.put("lng", crmModel.get("lng"));
+        map.put("lat", crmModel.get("lat"));
+        crmModelFiledVOS.add(new CrmModelFiledVO().setName("地区定位").setFormType("map_address").setFieldType(1).setValue(map));
+        List<CrmModelFiledVO> collect = crmModelFiledVOS.stream().sorted(Comparator.comparingInt(r -> -r.getFieldType())).peek(r -> {
+            r.setFieldType(null);
+            r.setSetting(null);
+            r.setType(null);
+            if (systemFieldList.contains(r.getName())) {
+                r.setSysInformation(1);
+            } else {
+                r.setSysInformation(0);
+            }
+        }).collect(Collectors.toList());
+        if (ObjectUtil.isNotEmpty(poolId)) {
+            LambdaQueryWrapper<CrmCustomerPoolFieldSetting> wrapper = new LambdaQueryWrapper<>();
+            wrapper.select(CrmCustomerPoolFieldSetting::getName, CrmCustomerPoolFieldSetting::getIsHidden);
+            wrapper.eq(CrmCustomerPoolFieldSetting::getPoolId, poolId);
+            List<CrmCustomerPoolFieldSetting> fieldSettings = ApplicationContextHolder.getBean(ICrmCustomerPoolFieldSettingService.class).list(wrapper);
+            List<String> nameList = fieldSettings.stream().filter(setting -> setting.getIsHidden().equals(1)).map(CrmCustomerPoolFieldSetting::getName).collect(Collectors.toList());
+            //查询新增的自定义字段并且公海还没有进行设置的字段名称
+            List<String> collect1 = collect.stream().map(CrmModelFiledVO::getName).collect(Collectors.toList());
+            List<String> collect2 = fieldSettings.stream().map(CrmCustomerPoolFieldSetting::getName).collect(Collectors.toList());
+            Collection<String> disjunction = CollUtil.disjunction(collect1, collect2);
+            collect.removeIf(r -> disjunction.contains(r.getName()) || nameList.contains(r.getName()) || "负责人".equals(r.getName()) || "负责人获取客户时间".equals(r.getName()));
+        } else {
+            collect.removeIf(r -> "前负责人".equals(r.getName()));
+        }
+        ICrmRoleFieldService crmRoleFieldService = ApplicationContextHolder.getBean(ICrmRoleFieldService.class);
+        List<CrmRoleField> roleFieldList = crmRoleFieldService.queryUserFieldAuth(crmModel.getLabel(), 1);
+        Map<String, Integer> levelMap = new HashMap<>();
+        roleFieldList.forEach(crmRoleField -> {
+            levelMap.put(StrUtil.toCamelCase(crmRoleField.getFieldName()), crmRoleField.getAuthLevel());
+        });
+        collect.removeIf(field -> (!UserUtil.isAdmin() && Objects.equals(1, levelMap.get(field.getFieldName()))));
+        return collect;
+    }
+
+    /**
+     * 查询客户规则设置
+     *
+     * @param pageEntity entity
+     * @param type       type
+     */
+    @Override
+    public BasePage<CrmCustomerSetting> queryCustomerSetting(PageEntity pageEntity, Integer type) {
+        BasePage<CrmCustomerSetting> page = crmCustomerSettingService.lambdaQuery().eq(CrmCustomerSetting::getType, type).page(pageEntity.parse());
+        ICrmCustomerSettingUserService settingUserService = ApplicationContextHolder.getBean(ICrmCustomerSettingUserService.class);
+        page.getList().forEach(crmCustomerSetting -> {
+            List<CrmCustomerSettingUser> list = settingUserService.lambdaQuery().eq(CrmCustomerSettingUser::getSettingId, crmCustomerSetting.getSettingId()).list();
+            List<Integer> deptIds = new ArrayList<>();
+            List<Long> userIds = new ArrayList<>();
+            list.forEach(settingUser -> {
+                if (settingUser.getType().equals(1)) {
+                    userIds.add(settingUser.getUserId());
+                } else if (settingUser.getType().equals(2)) {
+                    deptIds.add(settingUser.getDeptId());
+                }
+            });
+            if (userIds.size() > 0) {
+                List<SimpleUser> data = adminService.queryUserByIds(userIds).getData();
+                crmCustomerSetting.setUserIds(data);
+                crmCustomerSetting.setRange(data.stream().map(SimpleUser::getRealname).collect(Collectors.joining(Const.SEPARATOR)));
+            } else {
+                crmCustomerSetting.setUserIds(new ArrayList<>());
+            }
+
+            if (deptIds.size() > 0) {
+                List<SimpleDept> data = adminService.queryDeptByIds(deptIds).getData();
+                crmCustomerSetting.setDeptIds(data);
+                String range = crmCustomerSetting.getRange();
+                if (StrUtil.isNotEmpty(range)) {
+                    range = range + Const.SEPARATOR;
+                } else {
+                    range = "";
+                }
+                range = range + data.stream().map(SimpleDept::getName).collect(Collectors.joining(Const.SEPARATOR));
+                crmCustomerSetting.setRange(range);
+            } else {
+                crmCustomerSetting.setDeptIds(new ArrayList<>());
+            }
+        });
+        return page;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void setDealStatus(Integer dealStatus, List<Integer> ids) {
+        BulkRequest bulkRequest = new BulkRequest();
+        String index = CrmEnum.CUSTOMER.getIndex();
+        for (Integer id : ids) {
+            if (!UserUtil.getUserId().equals(UserUtil.getSuperUser()) && !UserUtil.getUser().getRoles().contains(UserUtil.getSuperRole())
+                    && getBaseMapper().queryIsRoUser(id, UserUtil.getUserId()) > 0) {
+                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            }
+            CrmCustomer byId = getById(id);
+            if (byId != null) {
+                byId.setDealStatus(dealStatus);
+                byId.setDealTime(new Date());
+                updateById(byId);
+                UpdateRequest updateRequest = new UpdateRequest(index, "_doc", id.toString());
+                Map<String, Object> map = new HashMap<>();
+                map.put("dealTime", DateUtil.formatDateTime(new Date()));
+                map.put("dealStatus", dealStatus);
+                updateRequest.doc(map);
+                bulkRequest.add(updateRequest);
+            }
+        }
+        try {
+            elasticsearchRestTemplate.getClient().bulk(bulkRequest, RequestOptions.DEFAULT);
+            elasticsearchRestTemplate.refresh(index);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public BasePage<CrmContacts> queryContacts(CrmContactsPageBO pageEntity) {
+        BasePage<CrmContacts> contactsBasePage = pageEntity.parse();
+        String conditions = AuthUtil.getCrmAuthSql(CrmEnum.CONTACTS, 1);
+        return getBaseMapper().queryContacts(contactsBasePage, pageEntity.getCustomerId(), pageEntity.getSearch(), conditions);
+    }
+    @Autowired
+    private ICrmBusinessTypeService businessTypeService;
+
+    @Override
+    public BasePage<Map<String, Object>> queryBusiness(CrmContactsPageBO pageEntity) {
+        BasePage<Map<String, Object>> basePage = pageEntity.parse();
+        String condition = AuthUtil.getCrmAuthSql(CrmEnum.BUSINESS, "a", 1);
+        BasePage<Map<String, Object>> page = getBaseMapper().queryBusiness(basePage, pageEntity.getCustomerId(), pageEntity.getSearch(), condition);
+        for (Map<String, Object> map : page.getList()) {
+            CrmListBusinessStatusVO crmListBusinessStatusVO = businessTypeService.queryListBusinessStatus((Integer) map.get("typeId"), (Integer) map.get("statusId"), (Integer) map.get("isEnd"));
+            map.put("businessStatusCount",crmListBusinessStatusVO);
+        }
+        return page;
+    }
+
+    @Override
+    public BasePage<Map<String, Object>> queryContract(CrmContactsPageBO pageEntity) {
+        BasePage<Map<String, Object>> basePage = pageEntity.parse();
+        String conditions = AuthUtil.getCrmAuthSql(CrmEnum.CONTRACT, "a", 1);
+        BasePage<Map<String, Object>> page = getBaseMapper().queryContract(basePage, pageEntity.getCustomerId(), pageEntity.getSearch(), pageEntity.getCheckStatus(), conditions);
+        for (Map<String, Object> map : page.getList()) {
+            Double contractMoney =map.get("money")!=null?Double.parseDouble(map.get("money").toString()):0D;
+            BigDecimal receivedProgress = new BigDecimal(100);
+            if (!(contractMoney.intValue() == 0)){
+                receivedProgress = ((map.get("receivedMoney")!=null?(BigDecimal) map.get("receivedMoney"):new BigDecimal(0)).divide(new BigDecimal(contractMoney), 4, BigDecimal.ROUND_HALF_UP)).multiply(new BigDecimal(100));
+            }
+            map.put("receivedProgress",receivedProgress);
+        }
+        return page;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void lock(Integer status, List<String> ids) {
+        if (status != 1 && status != 2) {
+            throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
+        }
+
+        for (String id : ids) {
+            if (!UserUtil.isAdmin() && getBaseMapper().queryIsRoUser(Integer.parseInt(id), UserUtil.getUserId()) > 0) {
+                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            }
+        }
+        if (status == 2) {
+            QueryWrapper<CrmCustomer> wrapper = new QueryWrapper<>();
+            wrapper.select("count(owner_user_id) as num", "owner_user_id");
+            wrapper.isNotNull("owner_user_id").eq("status", 1);
+            wrapper.in("customer_id", ids).groupBy("owner_user_id");
+            List<Map<String, Object>> maps = listMaps(wrapper);
+            for (Map<String, Object> map : maps) {
+                boolean b = crmCustomerSettingService.queryCustomerSettingNum(2, (Long) map.get("ownerUserId"), TypeUtils.castToInt(map.get("num")));
+                if (!b) {
+                    throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_LOCK_MAX_ERROR);
+                }
+            }
+        }
+        actionRecordUtil.addIsLockRecord(ids, CrmEnum.CUSTOMER, status);
+        lambdaUpdate().set(CrmCustomer::getStatus, status).in(CrmCustomer::getCustomerId, ids).update();
+        updateField("status", status, ids.stream().map(Integer::valueOf).collect(Collectors.toList()));
+    }
+
+    @Override
+    public List<SimpleCrmEntity> querySimpleEntity(List<Integer> ids) {
+        if (ids.size() == 0) {
+            return new ArrayList<>();
+        }
+        List<CrmCustomer> list = query().in("customer_id", ids).list();
+        return list.stream().map(crmCustomer -> {
+            SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
+            simpleCrmEntity.setId(crmCustomer.getCustomerId());
+            simpleCrmEntity.setName(crmCustomer.getCustomerName());
+            return simpleCrmEntity;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SimpleCrmEntity> queryByNameCustomerInfo(String name) {
+        List<CrmCustomer> list = query().like("customer_name", name).list();
+        return list.stream().map(crmCustomer -> {
+            SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
+            simpleCrmEntity.setId(crmCustomer.getCustomerId());
+            simpleCrmEntity.setName(crmCustomer.getCustomerName());
+            return simpleCrmEntity;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SimpleCrmEntity> queryNameCustomerInfo(String name) {
+        List<CrmCustomer> list = query().select("customer_id", "customer_name").eq("customer_name", name).list();
+        return list.stream().map(crmCustomer -> {
+            SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
+            simpleCrmEntity.setId(crmCustomer.getCustomerId());
+            simpleCrmEntity.setName(crmCustomer.getCustomerName());
+            return simpleCrmEntity;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public SimpleCrmEntity queryFirstCustomerByName(String name) {
+        CrmCustomer crmCustomer = query().select("customer_id", "customer_name").eq("customer_name", name).eq("status", 1).one();
+        SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
+        simpleCrmEntity.setId(crmCustomer.getCustomerId());
+        simpleCrmEntity.setName(crmCustomer.getCustomerName());
+        return simpleCrmEntity;
+    }
+
+    /**
+     * 查询文件数量
+     *
+     * @param customerId id
+     * @return data
+     */
+    @Override
+    public CrmInfoNumVO num(Integer customerId) {
+        CrmCustomer customer = getById(customerId);
+        AdminFileService fileService = ApplicationContextHolder.getBean(AdminFileService.class);
+        List<CrmField> crmFields = crmFieldService.queryFileField();
+        List<String> batchIdList = new ArrayList<>();
+        if (crmFields.size() > 0) {
+            LambdaQueryWrapper<CrmCustomerData> wrapper = new LambdaQueryWrapper<>();
+            wrapper.select(CrmCustomerData::getValue);
+            wrapper.eq(CrmCustomerData::getBatchId, customer.getBatchId());
+            wrapper.in(CrmCustomerData::getFieldId, crmFields.stream().map(CrmField::getFieldId).collect(Collectors.toList()));
+            batchIdList.addAll(crmCustomerDataService.listObjs(wrapper, Object::toString));
+        }
+        batchIdList.add(customer.getBatchId());
+        batchIdList.addAll(crmActivityService.queryFileBatchId(customer.getCustomerId(), getLabel().getType()));
+        String businessCon = AuthUtil.getCrmAuthSql(CrmEnum.BUSINESS, 1);
+        String contractCon = AuthUtil.getCrmAuthSql(CrmEnum.CONTRACT, 1);
+        String receivablesCon = AuthUtil.getCrmAuthSql(CrmEnum.RECEIVABLES, 1);
+        String contactsCon = AuthUtil.getCrmAuthSql(CrmEnum.CONTACTS, 1);
+        String returnVisitCon = AuthUtil.getCrmAuthSql(CrmEnum.RETURN_VISIT, 1);
+        String invoiceCon = AuthUtil.getCrmAuthSql(CrmEnum.INVOICE, 1);
+        Map<String, Object> map = new HashMap<>();
+        map.put("businessCon", businessCon);
+        map.put("contractCon", contractCon);
+        map.put("receivablesCon", receivablesCon);
+        map.put("contactsCon", contactsCon);
+        map.put("returnVisitCon", returnVisitCon);
+        map.put("invoiceCon", invoiceCon);
+        map.put("customerId", customerId);
+        CrmInfoNumVO infoNumVO = getBaseMapper().queryNum(map);
+        infoNumVO.setFileCount(fileService.queryNum(batchIdList).getData());
+        Set<String> member = new HashSet<>();
+        member.addAll(StrUtil.splitTrim(customer.getRoUserId(), Const.SEPARATOR));
+        member.addAll(StrUtil.splitTrim(customer.getRwUserId(), Const.SEPARATOR));
+        if (customer.getOwnerUserId() != null) {
+            member.add(customer.getOwnerUserId().toString());
+        }
+        infoNumVO.setMemberCount(member.size());
+        return infoNumVO;
+    }
+
+    /**
+     * 查询文件列表
+     *
+     * @param customerId id
+     * @return file
+     */
+    @Override
+    public List<FileEntity> queryFileList(Integer customerId) {
+        List<FileEntity> fileEntityList = new ArrayList<>();
+        CrmCustomer crmCustomer = getById(customerId);
+        boolean auth = AuthUtil.isRwAuth(customerId, CrmEnum.CUSTOMER);
+
+        AdminFileService fileService = ApplicationContextHolder.getBean(AdminFileService.class);
+        fileService.queryFileList(crmCustomer.getBatchId()).getData().forEach(fileEntity -> {
+            fileEntity.setSource("附件上传");
+            if (auth && !fileEntity.getCreateUserId().equals(UserUtil.getUserId())) {
+                fileEntity.setReadOnly(1);
+            } else {
+                fileEntity.setReadOnly(0);
+            }
+            fileEntityList.add(fileEntity);
+        });
+        List<CrmField> crmFields = crmFieldService.queryFileField();
+        if (crmFields.size() > 0) {
+            LambdaQueryWrapper<CrmCustomerData> wrapper = new LambdaQueryWrapper<>();
+            wrapper.select(CrmCustomerData::getValue);
+            wrapper.eq(CrmCustomerData::getBatchId, crmCustomer.getBatchId());
+            wrapper.in(CrmCustomerData::getFieldId, crmFields.stream().map(CrmField::getFieldId).collect(Collectors.toList()));
+            List<FileEntity> data = fileService.queryFileList(crmCustomerDataService.listObjs(wrapper, Object::toString)).getData();
+            data.forEach(fileEntity -> {
+                fileEntity.setSource("客户详情");
+                fileEntity.setReadOnly(1);
+                fileEntityList.add(fileEntity);
+            });
+        }
+        List<String> stringList = crmActivityService.queryFileBatchId(crmCustomer.getCustomerId(), getLabel().getType());
+        if (stringList.size() > 0) {
+            List<FileEntity> data = fileService.queryFileList(stringList).getData();
+            data.forEach(fileEntity -> {
+                fileEntity.setSource("跟进记录");
+                fileEntity.setReadOnly(1);
+                fileEntityList.add(fileEntity);
+            });
+        }
+        return fileEntityList;
+    }
+
+
+    /**
+     * 获取客户名称
+     *
+     * @param customerId id
+     * @return data
+     */
+    @Override
+    public String getCustomerName(Integer customerId) {
+        if (customerId == null) {
+            return "";
+        }
+        return lambdaQuery().select(CrmCustomer::getCustomerName).eq(CrmCustomer::getCustomerId, customerId)
+                .oneOpt().map(CrmCustomer::getCustomerName).orElse("");
+    }
+
+
+    /**
+     * 团队成员相关消息
+     */
+    @Override
+    public void addTermMessage(AdminMessageEnum messageEnum, Integer typeId, String title, Long userId) {
+        AdminMessageBO adminMessageBO = new AdminMessageBO();
+        adminMessageBO.setTitle(title);
+        adminMessageBO.setTypeId(typeId);
+        adminMessageBO.setUserId(UserUtil.getUserId());
+        adminMessageBO.setIds(Collections.singletonList(userId));
+        adminMessageBO.setMessageType(messageEnum.getType());
+        ApplicationContextHolder.getBean(AdminMessageService.class).sendMessage(adminMessageBO);
+    }
+
+    /**
+     * 大的搜索框的搜索字段
+     *
+     * @return fields
+     */
+    @Override
+    public String[] appendSearch() {
+        return new String[]{"customerName", "telephone", "mobile"};
+    }
+
+    /**
+     * 获取crm列表类型
+     *
+     * @return data
+     */
+    @Override
+    public CrmEnum getLabel() {
+        return CrmEnum.CUSTOMER;
+    }
+
+    /**
+     * 查询所有字段
+     *
+     * @return data
+     */
+    @Override
+    public List<CrmModelFiledVO> queryDefaultField() {
+        List<CrmModelFiledVO> filedList = crmFieldService.queryField(getLabel().getType());
+        filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
+        filedList.add(new CrmModelFiledVO("lastContent", FieldEnum.TEXTAREA, 1));
+        filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
+        filedList.add(new CrmModelFiledVO("dealTime", FieldEnum.DATETIME, 1));
+        filedList.add(new CrmModelFiledVO("receiveTime", FieldEnum.DATETIME, 1));
+        filedList.add(new CrmModelFiledVO("poolTime", FieldEnum.DATETIME, 1));
+        filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
+        filedList.add(new CrmModelFiledVO("roUserId", FieldEnum.CHECKBOX, 1));
+        filedList.add(new CrmModelFiledVO("rwUserId", FieldEnum.CHECKBOX, 1));
+        filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
+        filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
+        filedList.add(new CrmModelFiledVO("status", FieldEnum.TEXT, 1));
+        filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
+        filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
+        return filedList;
+    }
+
+    @Override
+    public boolean isMaxOwner(Long ownerUserId, List<Integer> ids) {
+        Integer number = getBaseMapper().ownerNum(ids, ownerUserId);
+        return crmCustomerSettingService.queryCustomerSettingNum(1, ownerUserId, number);
+    }
+
+
+    @Override
+    public void updateInformation(CrmUpdateInformationBO updateInformationBO) {
+        String batchId = updateInformationBO.getBatchId();
+        Integer customerId = updateInformationBO.getId();
+        if (!UserUtil.isAdmin() && getBaseMapper().queryIsRoUser(customerId, UserUtil.getUserId()) > 0) {
+            throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+        }
+        updateInformationBO.getList().forEach(record -> {
+            CrmCustomer oldCustomer = getById(customerId);
+            Map<String, Object> oldCustomerMap = BeanUtil.beanToMap(oldCustomer);
+            if (record.getInteger("fieldType") == 1) {
+                Map<String, Object> crmCustomerMap = new HashMap<>(oldCustomerMap);
+                crmCustomerMap.put(record.getString("fieldName"), record.get("value"));
+                CrmCustomer crmCustomer = BeanUtil.mapToBean(crmCustomerMap, CrmCustomer.class, true);
+                actionRecordUtil.updateRecord(oldCustomerMap, crmCustomerMap, CrmEnum.CUSTOMER, crmCustomer.getCustomerName(), crmCustomer.getCustomerId());
+                update().set(StrUtil.toUnderlineCase(record.getString("fieldName")), record.get("value")).eq("customer_id", updateInformationBO.getId()).update();
+                if ("customerName".equals(record.getString("fieldName"))) {
+                    ElasticUtil.batchUpdateEsData(elasticsearchRestTemplate.getClient(), "customer", crmCustomer.getCustomerId().toString(), crmCustomer.getCustomerName());
+                }
+            } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
+                boolean bol = crmCustomerDataService.lambdaUpdate()
+                        .set(CrmCustomerData::getName, record.getString("fieldName"))
+                        .set(CrmCustomerData::getValue, record.getString("value"))
+                        .eq(CrmCustomerData::getFieldId, record.getInteger("fieldId"))
+                        .eq(CrmCustomerData::getBatchId, batchId).update();
+                if (!bol) {
+                    CrmCustomerData crmCustomerData = new CrmCustomerData();
+                    crmCustomerData.setFieldId(record.getInteger("fieldId"));
+                    crmCustomerData.setName(record.getString("fieldName"));
+                    crmCustomerData.setValue(record.getString("value"));
+                    crmCustomerData.setCreateTime(new Date());
+                    crmCustomerData.setBatchId(batchId);
+                    crmCustomerDataService.save(crmCustomerData);
+                }
+                String oldFieldValue = crmCustomerDataService.lambdaQuery().select(CrmCustomerData::getValue).eq(CrmCustomerData::getFieldId, record.getInteger("fieldId"))
+                        .eq(CrmCustomerData::getBatchId, batchId).last("limit 1").one().getValue();
+                String formType = record.getString("formType");
+                String newValue = record.getString("value");
+                if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
+                    oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
+                    newValue = adminService.queryUserByIds(TagUtil.toLongSet(record.getString("value"))).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
+                } else if (formType.equals(FieldEnum.STRUCTURE.getFormType())) {
+                    oldFieldValue = adminService.queryDeptByIds(TagUtil.toSet(oldFieldValue)).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
+                    newValue = adminService.queryDeptByIds(TagUtil.toSet(record.getString("value"))).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
+                } else if (formType.equals(FieldEnum.FILE.getFormType())) {
+                    oldFieldValue = adminFileService.queryFileList(oldFieldValue).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
+                    newValue = adminFileService.queryFileList(record.getString("value")).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
+                }
+                String oldValue = StrUtil.isEmpty(oldFieldValue) ? "空" : oldFieldValue;
+                String detail = "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
+                actionRecordUtil.publicContentRecord(CrmEnum.CUSTOMER, BehaviorEnum.UPDATE, customerId, oldCustomer.getCustomerName(), detail);
+            }
+            updateField(record, customerId);
+        });
+    }
+
+    @Override
+    public List<CrmDataCheckVO> dataCheck(CrmDataCheckBO dataCheckBO) {
+        List<CrmDataCheckVO> list = getBaseMapper().dataCheck(dataCheckBO);
+        for (CrmDataCheckVO crmDataCheckVO : list) {
+            if (crmDataCheckVO.getOwnerUserId() != null) {
+                crmDataCheckVO.setOwnerUserName(adminService.queryUserName(crmDataCheckVO.getOwnerUserId()).getData());
+            }
+            if (crmDataCheckVO.getContactsId() != null){
+                crmDataCheckVO.setContactsName(Optional.ofNullable(crmContactsService.getById(crmDataCheckVO.getContactsId())).map(CrmContacts::getName).orElse(null));
+            }
+        }
+        return list;
+    }
+
+    @Override
+    public BasePage<JSONObject> queryReceivablesPlan(CrmRelationPageBO crmRelationPageBO) {
+        String conditions = AuthUtil.getCrmAuthSql(CrmEnum.CONTRACT, "c", 1);
+        return getBaseMapper().queryReceivablesPlan(crmRelationPageBO.parse(), crmRelationPageBO.getCustomerId(), conditions);
+    }
+
+    @Override
+    public BasePage<JSONObject> queryReceivables(CrmRelationPageBO crmRelationPageBO) {
+        String conditions = AuthUtil.getCrmAuthSql(CrmEnum.RECEIVABLES, "a", 1);
+        BasePage<JSONObject> jsonObjects = getBaseMapper().queryReceivables(crmRelationPageBO.parse(), crmRelationPageBO.getCustomerId(), conditions);
+        for (JSONObject jsonObject : jsonObjects.getList()) {
+            String ownerUserName = UserCacheUtil.getUserName(jsonObject.getLong("ownerUserId"));
+            jsonObject.put("ownerUserName", ownerUserName);
+        }
+        return jsonObjects;
+    }
+
+    @Override
+    public BasePage<JSONObject> queryReturnVisit(CrmRelationPageBO crmRelationPageBO) {
+        List<CrmField> nameList = crmFieldService.lambdaQuery().select(CrmField::getFieldId, CrmField::getFieldName).eq(CrmField::getLabel, CrmEnum.RETURN_VISIT.getType())
+                .eq(CrmField::getIsHidden, 0).ne(CrmField::getFieldType, 1).list();
+        String conditions = AuthUtil.getCrmAuthSql(CrmEnum.RETURN_VISIT, "a", 1);
+        BasePage<JSONObject> jsonObjects = getBaseMapper().queryReturnVisit(crmRelationPageBO.parse(), crmRelationPageBO.getCustomerId(), conditions, nameList);
+        for (JSONObject jsonObject : jsonObjects.getList()) {
+            String ownerUserName = UserCacheUtil.getUserName(jsonObject.getLong("ownerUserId"));
+            jsonObject.put("ownerUserName", ownerUserName);
+        }
+        return jsonObjects;
+    }
+
+    @Override
+    public BasePage<JSONObject> queryInvoice(CrmRelationPageBO crmRelationPageBO) {
+        String conditions = AuthUtil.getCrmAuthSql(CrmEnum.INVOICE, "a", 0);
+        BasePage<JSONObject> jsonObjects = getBaseMapper().queryInvoice(crmRelationPageBO.parse(), crmRelationPageBO.getCustomerId(), conditions);
+        for (JSONObject jsonObject : jsonObjects.getList()) {
+            String ownerUserName = UserCacheUtil.getUserName(jsonObject.getLong("ownerUserId"));
+            jsonObject.put("ownerUserName", ownerUserName);
+        }
+        return jsonObjects;
+    }
+
+    @Override
+    public BasePage<JSONObject> queryInvoiceInfo(CrmRelationPageBO crmRelationPageBO) {
+        BasePage<JSONObject> jsonObjects = getBaseMapper().queryInvoiceInfo(crmRelationPageBO.parse(), crmRelationPageBO.getCustomerId());
+        for (JSONObject jsonObject : jsonObjects.getList()) {
+            String ownerUserName = UserCacheUtil.getUserName(jsonObject.getLong("ownerUserId"));
+            jsonObject.put("ownerUserName", ownerUserName);
+        }
+        return jsonObjects;
+    }
+
+    @Override
+    public BasePage<JSONObject> queryCallRecord(CrmRelationPageBO crmRelationPageBO) {
+        BasePage<JSONObject> jsonObjects = getBaseMapper().queryCallRecord(crmRelationPageBO.parse(), crmRelationPageBO.getCustomerId());
+        for (JSONObject jsonObject : jsonObjects.getList()) {
+            String ownerUserName = UserCacheUtil.getUserName(jsonObject.getLong("ownerUserId"));
+            jsonObject.put("ownerUserName", ownerUserName);
+        }
+        return jsonObjects;
+    }
+
+
+    @Override
+    public List<JSONObject> nearbyCustomer(String lng, String lat, Integer type, Integer radius, Long ownerUserId) {
+        Integer menuId = adminService.queryMenuId("crm", "customer", "nearbyCustomer").getData();
+        List<Long> authUserIdList = AuthUtil.getUserIdByAuth(menuId);
+        List<Integer> poolIdList = new ArrayList<>();
+        if (ObjectUtil.isEmpty(type) || type.equals(9)) {
+            if (UserUtil.isAdmin()) {
+                poolIdList = crmCustomerPoolService.lambdaQuery().select(CrmCustomerPool::getPoolId).list().stream().map(CrmCustomerPool::getPoolId).collect(Collectors.toList());
+            } else {
+                poolIdList = crmCustomerPoolService.queryPoolIdByUserId();
+            }
+        }
+        List<JSONObject> jsonObjects = getBaseMapper().nearbyCustomer(lng, lat, type, radius, ownerUserId, authUserIdList, poolIdList);
+        for (JSONObject jsonObject : jsonObjects) {
+            String ownerUserName = UserCacheUtil.getUserName(jsonObject.getLong("ownerUserId"));
+            jsonObject.put("ownerUserName", ownerUserName);
+        }
+        return jsonObjects;
+    }
+
+    @Override
+    public List<String> eventCustomer(CrmEventBO crmEventBO) {
+        return getBaseMapper().eventCustomer(crmEventBO);
+    }
+
+    @Override
+    public BasePage<Map<String, Object>> eventCustomerPageList(QueryEventCrmPageBO eventCrmPageBO) {
+        Long userId = eventCrmPageBO.getUserId();
+        Long time = eventCrmPageBO.getTime();
+        if (userId == null) {
+            userId = UserUtil.getUserId();
+        }
+        List<Integer> customerIds = getBaseMapper().eventCustomerList(userId, new Date(time));
+        if (customerIds.size() == 0) {
+            return new BasePage<>();
+        }
+        List<String> collect = customerIds.stream().map(Object::toString).collect(Collectors.toList());
+        CrmSearchBO crmSearchBO = new CrmSearchBO();
+        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect)));
+        crmSearchBO.setLabel(CrmEnum.CUSTOMER.getType());
+        crmSearchBO.setPage(eventCrmPageBO.getPage());
+        crmSearchBO.setLimit(eventCrmPageBO.getLimit());
+        BasePage<Map<String, Object>> page = queryPageList(crmSearchBO);
+        return page;
+    }
+
+    @Override
+    public List<Integer> forgottenCustomer(Integer day, List<Long> userIds) {
+        return getBaseMapper().forgottenCustomer(day, userIds);
+    }
+
+    @Override
+    public List<Integer> unContactCustomer(String search, List<Long> userIds) {
+        return getBaseMapper().unContactCustomer(search, userIds);
+    }
+}

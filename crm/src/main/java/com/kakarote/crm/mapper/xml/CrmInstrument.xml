@@ -1,0 +1,463 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmInstrumentMapper">
+
+    <select id="sellFunnel" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        <if test="isEnd == null">
+            COUNT(1) as count,
+            ccbs.`name`,
+            ccbs.order_num,
+            IFNULL(SUM(ccb.money),0) as money,
+            ccb.type_id
+        </if>
+        <if test="isEnd != null">
+            IFNULL(SUM(ccb.money),0) as money,
+            IFNULL(SUM(case when ccb.is_end='1' then ccb.money else 0 end),0) as win,
+            IFNULL(SUM(case when ccb.is_end='2' then ccb.money else 0 end),0) as lose
+        </if>
+        FROM wk_crm_business as ccb
+        LEFT JOIN wk_crm_business_status as ccbs ON ccbs.status_id = ccb.status_id and ccb.status = 1
+        where ccbs.type_id = #{typeId}
+        <if test="isEnd == null">
+            and ccb.is_end = 0
+        </if>
+        and  ccb.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+        GROUP BY ccbs.`name`,ccbs.order_num,ccb.type_id order by ccbs.order_num
+    </select>
+
+    <select id="queryBulletin" resultType="java.util.HashMap">
+        select
+        (SELECT COUNT(*) FROM wk_crm_business as c WHERE c.status = 1
+        and DATE_FORMAT(c.create_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="map.businessUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+        ) as businessCount,
+        COUNT(*) as contractCount,
+        IFNULL(SUM(CASE WHEN a.check_status = 1 THEN a.money END),0) as contractMoney,
+        (SELECT COUNT(*) FROM wk_crm_contacts as c WHERE DATE_FORMAT(c.create_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="map.contactsUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>) as contactsCount,
+        (SELECT COUNT(*) FROM wk_crm_customer as c WHERE status != 3 and
+        DATE_FORMAT(c.create_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="map.customerUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>) as customerCount,
+        (SELECT IFNULL(SUM(money),0) FROM wk_crm_receivables as c WHERE check_status='1' and
+        DATE_FORMAT(c.return_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="map.receivablesUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>) as receivablesMoney,
+        (SELECT COUNT(*) FROM wk_crm_activity as c WHERE  c.status = 1 and type in (1,4) and
+        DATE_FORMAT(c.create_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND ((activity_type = 1 and create_user_id in
+        <for collection="map.leadsUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+        )or (activity_type = 2 and create_user_id in
+        <for collection="map.customerUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>) or (activity_type = 3 and create_user_id in
+        <for collection="map.contactsUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>) or (activity_type = 5 and create_user_id in
+        <for collection="map.businessUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>) or (activity_type = 6 and create_user_id in
+        <for collection="map.contractUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>))) as recordCount,
+        (SELECT IFNULL(SUM(c.money),0) FROM wk_crm_business as c WHERE c.status =1 and
+        DATE_FORMAT(c.create_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="map.businessUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>) as businessMoney
+        from wk_crm_contract as a
+        WHERE a.check_status != 7 and
+        DATE_FORMAT(a.order_date,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="map.contractUserIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for> and check_status != 7
+    </select>
+
+    <select id="forgottenCustomerCount" resultType="java.lang.Integer">
+        select count(customer_id)
+        from `wk_crm_customer`  where
+        deal_status = 0  and status != 3 and (to_days(now()) - ifnull(to_days(last_time),to_days(create_time))) &gt; #{day}
+        AND owner_user_id in
+        <for collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
+
+    <select id="unContactCustomerCount" resultType="java.lang.Integer">
+        select count(*) from wk_crm_customer a
+        where status != 3 and to_days(last_time) &lt; to_days(next_time) and to_days(next_time) &lt; to_days(now()) AND owner_user_id in
+        <for collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
+
+    <select id="salesTrend" resultType="java.util.HashMap">
+        select #{time.beginTime} as type,
+        (SELECT IFNULL(SUM(${data.month}),0) FROM wk_crm_achievement
+        WHERE year = #{data.year}
+        and status=#{data.label} and
+        <choose>
+            <when test="data.deptIds!=null and data.deptIds.size>0">
+                type=2 and obj_id in
+                <for collection="data.deptIds" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </for>
+            </when>
+            <otherwise>
+                type=3 and obj_id in
+                <for collection="data.userIds" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </for>
+            </otherwise>
+        </choose>
+        ) as achievement,
+        IFNULL(SUM(money),0) as money FROM
+        <choose>
+            <when test="data.label==1">
+                wk_crm_contract
+            </when>
+            <when test="data.label==2">
+                wk_crm_receivables
+            </when>
+            <otherwise>
+                wk_crm_receivables
+            </otherwise>
+        </choose>
+        where check_status='1' and
+        DATE_FORMAT(
+        <choose>
+            <when test="data.label==1">
+                order_date
+            </when>
+            <when test="data.label==2">
+                return_time
+            </when>
+            <otherwise>
+                return_time
+            </otherwise>
+        </choose>,#{time.sqlDateFormat}) =#{time.beginTime}
+        AND owner_user_id in
+        <for collection="data.userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
+
+    <select id="dataInfoCustomer" resultType="java.util.HashMap">
+        SELECT COUNT(a.customer_id) allCustomer,
+        COUNT(CASE WHEN a.deal_status = '1' THEN 1 ELSE NULL END) AS dealCustomer
+        FROM wk_crm_customer AS a
+        where a.status != 3 and
+        DATE_FORMAT(a.create_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
+
+    <select id="dataInfoBusiness" resultType="java.util.HashMap">
+        SELECT COUNT(*) as allBusiness,IFNULL(SUM(money),0) as businessMoney,
+        COUNT(CASE WHEN is_end='1' THEN 1 ELSE null END) as endBusiness
+        FROM wk_crm_business as a
+        where a.status = 1
+        and
+        DATE_FORMAT(a.create_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
+
+    <select id="dataInfoContract" resultType="java.util.HashMap">
+        SELECT COUNT(*) as allContract,IFNULL(SUM(CASE WHEN a.check_status = 1 THEN a.money END),0) as contractMoney,
+        IFNULL(SUM(b.planMoney),0) as planMoney
+        FROM wk_crm_contract as a
+        left join (
+          SELECT IFNULL(SUM(money),0) as planMoney,contract_id FROM wk_crm_receivables_plan group by contract_id
+        ) AS b on b.contract_id = a.contract_id and a.check_status='1'
+        WHERE a.check_status != 7 and DATE_FORMAT(a.order_date,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
+
+    <select id="dataInfoReceivables" resultType="java.util.HashMap">
+        SELECT IFNULL(SUM(CASE WHEN check_status='1' THEN money ELSE 0 END),0) as receivablesMoney
+        FROM wk_crm_receivables as a
+        where DATE_FORMAT(a.return_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
+
+    <select id="dataInfoActivity" resultType="java.util.HashMap">
+        SELECT COUNT(*) as activityNum,
+        COUNT(CASE WHEN b.activity_type_id in (SELECT customer_id FROM wk_crm_customer where status != 3 and
+        DATE_FORMAT(create_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} AND #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND owner_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+        ) THEN 1 ELSE NULL END ) as activityRealNum
+        FROM (
+        SELECT
+        b.activity_type_id
+        FROM
+        wk_crm_activity AS b
+        left join wk_crm_customer c on b.activity_type_id = c.customer_id
+        WHERE
+        b.type = '1'
+        AND b.activity_type = '2'
+        AND DATE_FORMAT(b.create_time,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND b.create_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+        and c.status != 3
+        GROUP BY b.activity_type_id
+        ) as b
+    </select>
+
+    <select id="queryPerformance" resultType="com.alibaba.fastjson.JSONObject">
+        select
+        <if test="queryItem">
+            (SELECT
+            <foreach collection="monthList" item="item" separator="+">
+                IFNULL(SUM(${item}),0)
+            </foreach>
+            FROM wk_crm_achievement WHERE year = #{year} and status = #{label} and
+            <choose>
+                <when test="deptIds.size()>0">
+                    type=2 and obj_id in
+                    <for collection="deptIds" item="id" open="(" separator="," close=")">
+                        #{id}
+                    </for>
+                </when>
+                <otherwise>
+                    type=3 and obj_id in
+                    <for collection="userIds" item="id" open="(" separator="," close=")">
+                        #{id}
+                    </for>
+                </otherwise>
+            </choose>) as achievementMoneys,
+        </if>
+        IFNULL(SUM(money),0) as money
+        FROM
+        <choose>
+            <when test="label==1">
+                wk_crm_contract
+            </when>
+            <when test="label==2">
+                wk_crm_receivables
+            </when>
+        </choose>
+        where check_status='1' and DATE_FORMAT(
+        <choose>
+            <when test="label==1">
+                create_time
+            </when>
+            <when test="label==2">
+                return_time
+            </when>
+        </choose>,#{sqlDateFormat})
+        <choose>
+            <when test="cycleNum==1">
+                = #{beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{beginTime} and #{finalTime}
+            </otherwise>
+        </choose>
+        and owner_user_id in
+        <for collection="userIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
+    <select id="queryRecordCount" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT activity_type as crmType,COUNT(activity_type) as count FROM wk_crm_activity
+        WHERE type in (1,4) and ((activity_type = 1 and create_user_id in
+        <foreach collection="data.leadsUserIds" open="(" close=")" separator="," item="id" index="index">
+            #{id}
+        </foreach>
+        or (activity_type = 2 and create_user_id in
+        <foreach collection="data.customerUserIds" open="(" close=")" separator="," item="id" index="index">
+            #{id}
+        </foreach>
+        )
+        or (activity_type = 3 and create_user_id in
+        <foreach collection="data.contactsUserIds" open="(" close=")" separator="," item="id" index="index">
+            #{id}
+        </foreach>
+        )
+        or (activity_type = 5 and create_user_id in
+        <foreach collection="data.businessUserIds" open="(" close=")" separator="," item="id" index="index">
+            #{id}
+        </foreach>
+        )
+        or (activity_type = 6 and create_user_id in
+        <foreach collection="data.contractUserIds" open="(" close=")" separator="," item="id" index="index">
+            #{id}
+        </foreach>
+        ))) and status = 1
+        <choose>
+            <when test="data.type == 1">
+                AND TO_DAYS(create_time) = TO_DAYS(now())
+            </when>
+            <when test="data.type == 2">
+                AND to_days(NOW()) - TO_DAYS(create_time) = 1
+            </when>
+            <when test="data.type == 3">
+                AND   YEARWEEK(date_format(create_time,'%Y-%m-%d')) = YEARWEEK(now())
+            </when>
+            <when test="data.type == 4">
+                AND  YEARWEEK(date_format(create_time,'%Y-%m-%d')) = YEARWEEK(now()) -1
+            </when>
+            <when test="data.type == 5">
+                AND  date_format(create_time,'%Y-%m')=date_format(now(),'%Y-%m')
+            </when>
+            <when test="data.type == 6">
+                AND  date_format(create_time,'%Y-%m')=date_format(DATE_SUB(curdate(), INTERVAL 1 MONTH),'%Y-%m')
+            </when>
+            <when test="data.type == 7">
+                AND  QUARTER(create_time)=QUARTER(now())
+            </when>
+            <when test="data.type == 8">
+                AND  QUARTER(create_time)=QUARTER(DATE_SUB(now(),interval 1 QUARTER))
+            </when>
+            <when test="data.type == 9">
+                AND   YEAR(create_time)=YEAR(NOW())
+            </when>
+            <when test="data.type == 10">
+                AND  YEAR(create_time)=YEAR(date_sub(now(),interval 1 year))
+            </when>
+            <when test="data.type == 11">
+                AND  TO_DAYS(create_time) >= TO_DAYS(#{data.startTime}) and  TO_DAYS(create_time) &lt;= TO_DAYS(#{data.endTime})
+            </when>
+        </choose>
+        group by activity_type
+    </select>
+</mapper>

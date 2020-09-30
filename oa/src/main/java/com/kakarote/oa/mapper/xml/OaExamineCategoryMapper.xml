@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.oa.mapper.OaExamineCategoryMapper">
+
+    <select id="queryAllExamineCategoryList" resultType="com.kakarote.oa.entity.PO.OaExamineCategory">
+      select category_id,title,type,icon from wk_oa_examine_category where is_deleted = 0 and status = 1
+      <if test="!isAdmin">
+          AND ( user_ids = '' OR user_ids LIKE concat( '%,', #{userId}, ',%' ) )
+          AND ( dept_ids = '' OR dept_ids LIKE concat( '%,', #{deptId}, ',%' ))
+      </if>
+    </select>
+</mapper>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmCustomerPoolMapper">
+
+    <select id="queryPoolIdByUserId" resultType="java.lang.Integer">
+        select pool_id from wk_crm_customer_pool
+        where find_in_set(#{userId},admin_user_id) or find_in_set(#{userId},member_user_id)
+        or find_in_set(#{deptId},member_dept_id)
+    </select>
+    <select id="putInPoolByRecord" resultType="java.lang.Integer">
+        select a.customer_id
+        from wk_crm_customer as a
+        <if test="data.customerLevelSetting == 2">
+            left join wk_crm_customer_data as c on a.batch_id = c.batch_id and c.name = 'level'
+        </if>
+        where (to_days(now()) - to_days(if(a.last_time > a.receive_time,a.last_time,a.receive_time))) > #{data.limitDay} and a.status = 1
+        <choose>
+            <when test="data.ids != null and data.ids.size() >0">
+                and a.owner_user_id in
+                <foreach collection="data.ids" index="index" item="id" separator="," open="(" close=")" >
+                    #{id}
+                </foreach>
+            </when>
+            <otherwise>
+                and a.owner_user_id is not null
+            </otherwise>
+        </choose>
+        <if test="data.dealHandle == 0">
+            and a.deal_status = 0
+        </if>
+        <if test="data.customerLevelSetting == 2">
+            and c.value = #{data.level}
+        </if>
+        <if test="data.businessHandle == 0">
+            and (select count(1) from wk_crm_business d where a.customer_id = d.customer_id) = 0
+        </if>
+    </select>
+    <select id="putInPoolByBusiness" resultType="java.lang.Integer">
+        select a.customer_id
+        from wk_crm_customer as a left join wk_crm_business as b on a.customer_id = b.customer_id and b.status = 1
+        <if test="data.customerLevelSetting != 1">
+            left join wk_crm_customer_data as c on a.batch_id = c.batch_id and c.name = 'level'
+        </if>
+        where (to_days(now()) - to_days(a.receive_time)) > #{data.limitDay} and a.status = 1 and b.business_id is null
+        <choose>
+            <when test="data.ids != null and data.ids.size() >0">
+                and a.owner_user_id in
+                <foreach collection="data.ids" index="index" item="id" separator="," open="(" close=")" >
+                    #{id}
+                </foreach>
+            </when>
+            <otherwise>
+                and a.owner_user_id is not null
+            </otherwise>
+        </choose>
+        <if test="data.dealHandle == 0">
+            and a.deal_status = 0
+        </if>
+        <if test="data.customerLevelSetting == 2">
+            and c.value = #{data.level}
+        </if>
+    </select>
+    <select id="putInPoolByDealStatus" resultType="java.lang.Integer">
+        select a.customer_id
+        from wk_crm_customer as a
+        <if test="data.customerLevelSetting != 1">
+        left join wk_crm_customer_data as c on a.batch_id = c.batch_id and c.name = 'level'
+        </if>
+        where (to_days(now()) - to_days(a.receive_time)) > #{data.limitDay} and a.status = 1 and a.deal_status = 0
+        <choose>
+            <when test="data.ids != null and data.ids.size() >0">
+                and a.owner_user_id in
+                <foreach collection="data.ids" index="index" item="id" separator="," open="(" close=")" >
+                    #{id}
+                </foreach>
+            </when>
+            <otherwise>
+                and a.owner_user_id is not null
+            </otherwise>
+        </choose>
+        <if test="data.customerLevelSetting == 2">
+            and c.value = #{data.level}
+        </if>
+        <if test="data.businessHandle == 0">
+            and (select count(1) from wk_crm_business d where a.customer_id = d.customer_id) = 0
+        </if>
+    </select>
+</mapper>

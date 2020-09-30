@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmExamineMapper">
+
+    <select id="queryExaminePage" resultType="com.kakarote.crm.entity.VO.CrmQueryAllExamineVO">
+        select * from wk_crm_examine where status != 2
+    </select>
+    <select id="myExamine" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        a.*,
+        a.record_id as examineRecordId,
+        a.create_user as create_user_id,
+        b.`name`,
+        b.examine_type,
+        <if test="data.categoryType == 1">
+            c.`name` AS catagory,
+            c.contract_id AS catagory_id,
+            c.order_date,
+            d.customer_id as catagory_cite_id,
+            d.customer_name as catagory_cite_name
+        </if>
+        <if test="data.categoryType == 2">
+            d.number AS catagory,
+            d.receivables_id AS catagory_id,
+            d.return_time,
+            c.contract_id as catagory_cite_id,
+            c.name as catagory_cite_name
+        </if>
+        <if test="data.categoryType == 3">
+            d.invoice_apply_number AS catagory,
+            d.invoice_id AS catagory_id,
+            d.real_invoice_date,
+            c.contract_id as catagory_cite_id,
+            c.name as catagory_cite_name
+        </if>
+        FROM
+        wk_crm_examine_log AS e
+        LEFT JOIN wk_crm_examine_record AS a ON e.record_id = a.record_id
+        LEFT JOIN wk_crm_examine AS b ON a.examine_id = b.examine_id
+        <if test="data.categoryType == 1">
+        LEFT JOIN wk_crm_contract AS c ON c.examine_record_id = a.record_id AND b.category_type = '1'
+        LEFT JOIN wk_crm_customer as d on c.customer_id=d.customer_id
+        </if>
+        <if test="data.categoryType == 2">
+        LEFT JOIN wk_crm_receivables AS d ON d.examine_record_id = a.record_id AND b.category_type = '2'
+        LEFT JOIN wk_crm_contract AS c ON d.contract_id = c.contract_id
+        </if>
+        <if test="data.categoryType == 3">
+        LEFT JOIN wk_crm_invoice AS d ON d.examine_record_id = a.record_id AND b.category_type = '3'
+        LEFT JOIN wk_crm_contract AS c ON d.contract_id = c.contract_id
+        </if>
+        WHERE
+        e.log_id IN (
+        SELECT MAX(log_id)
+        FROM wk_crm_examine_log
+        WHERE
+        <choose>
+            <when test="(data.status == null || data.status == '') and isAdmin == true">
+                1=1
+            </when>
+            <otherwise>
+                examine_user = #{userId}
+            </otherwise>
+        </choose>
+        <choose>
+            <when test="data.status == 1 ">
+                and examine_status = 0 and is_recheck !=1
+            </when>
+            <when test="data.status == 2">
+                and examine_status != 0 and is_recheck = 0
+            </when>
+            <otherwise>
+                and ((examine_status = 0 and is_recheck !=1) or examine_status != 0)
+            </otherwise>
+        </choose>
+        GROUP BY record_id
+        )
+        <if test="data.categoryType == 1">
+            and c.contract_id is not null
+        </if>
+        <if test="data.categoryType == 2">
+            and d.receivables_id is not null
+        </if>
+        <if test="data.categoryType == 3">
+            and d.invoice_id is not null
+        </if>
+        order by create_time desc
+    </select>
+</mapper>

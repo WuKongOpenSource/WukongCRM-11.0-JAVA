@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.admin.mapper.AdminDeptMapper">
+
+    <select id="queryDeptUserList" resultType="com.kakarote.admin.entity.BO.DeptVO">
+        select a.*,
+           count(b.status != 0 or null) as allNum
+            from `wk_admin_dept` a
+                left join `wk_admin_user` b on a.dept_id = b.dept_id
+            group by a.dept_id
+    </select>
+</mapper>

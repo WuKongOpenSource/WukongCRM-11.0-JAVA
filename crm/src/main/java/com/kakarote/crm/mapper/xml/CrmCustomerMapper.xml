@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmCustomerMapper">
+    <update id="deleteMember">
+        update wk_crm_customer set rw_user_id = replace(rw_user_id,#{memberId},','),ro_user_id = replace(ro_user_id,#{memberId},',') where customer_id = #{id}
+    </update>
+    <select id="queryById" resultType="com.kakarote.crm.common.CrmModel">
+        select a.*,(if(a.owner_user_id is null,1,0)) as is_pool,
+               (select count(1) from wk_crm_customer_user_star where customer_id = a.customer_id and user_id = #{userId}) as star
+        from `wk_crm_customer` as a
+        where customer_id = #{id}
+    </select>
+
+    <select id="queryIsRoUser" resultType="java.lang.Integer">
+        select count(*) from wk_crm_customer where find_in_set(#{userId},ro_user_id) and customer_id =#{id} and owner_user_id is not null
+    </select>
+
+    <select id="queryOutDays" resultType="java.lang.Integer">
+        select TO_DAYS(now()) - TO_DAYS(a.create_time) as days from
+        (select pre_owner_user_id,create_time from wk_crm_owner_record
+        where type_id = #{customerId} and type = 9 and post_owner_user_id is null order by create_time desc limit 1) as a
+        where a.pre_owner_user_id = #{userId}
+    </select>
+
+    <select id="queryContacts" resultType="com.kakarote.crm.entity.PO.CrmContacts">
+      select a.contacts_id,a.name,a.mobile,a.post,a.telephone,
+      (select value from `wk_crm_contacts_data` as b where b.batch_id = a.batch_id and b.name = 'policymakers' limit 1)
+        as policymakers
+      from wk_crm_contacts as a where a.customer_id = #{customerId}
+      <if test="search!=null and search!=''">
+          and a.name like CONCAT('%',#{search},'%')
+      </if>
+        ${condition}
+    </select>
+    <select id="queryBusiness" resultType="java.util.HashMap">
+        select a.business_id,a.business_name,ifnull(a.money,0) as money,a.is_end,a.type_id,a.status_id,b.customer_name,c.name as type_name,
+        d.name as status_name,a.deal_date
+        from wk_crm_business as a
+        left join wk_crm_customer as b on a.customer_id = b.customer_id
+        left join wk_crm_business_type as c on a.type_id = c.type_id
+        left join wk_crm_business_status as d on a.status_id = d.status_id
+        where a.status = 1 and a.customer_id = #{customerId}
+        <if test="search!=null and search!=''">
+            and a.business_name like CONCAT('%',#{search},'%')
+        </if>
+        ${condition}
+    </select>
+    <select id="queryContract" resultType="java.util.HashMap">
+        select a.contract_id,a.num,a.name as contract_name,b.customer_name,a.money,a.start_time,a.end_time,a.received_money,a.unreceived_money
+        <if test="checkStatus!=null">
+            ,ifnull((select sum(c.money) from `wk_crm_receivables` c where c.contract_id = a.contract_id and c.check_status = 1),0) as receivablesMoneyCount
+        </if>
+        ,a.check_status
+        from wk_crm_contract as a
+        inner join wk_crm_customer as b on a.customer_id = b.customer_id
+        where a.customer_id = #{customerId} and a.check_status != 7
+        <if test="checkStatus!=null">
+            and a.check_status =#{checkStatus}
+        </if>
+        <if test="search!=null and search!=''">
+            and a.name like CONCAT('%',#{search},'%')
+        </if>
+        ${condition}
+    </select>
+
+    <select id="queryNum" resultType="com.kakarote.crm.entity.VO.CrmInfoNumVO">
+        select
+        (select count(*) from wk_crm_contacts where customer_id = #{customerId} ${contactsCon}) as contactCount,
+        (select count(*) from wk_crm_business where customer_id = #{customerId} and status = 1 ${businessCon}) as businessCount,
+        (select count(*) from wk_crm_contract where customer_id = #{customerId} and check_status != 7 ${contractCon}) as contractCount,
+        (select count(*) from wk_crm_return_visit where customer_id = #{customerId} ${returnVisitCon}) as returnVisitCount,
+        (select count(*) from wk_crm_invoice where customer_id = #{customerId} ${invoiceCon}) as invoiceCount,
+        (select count(*) from wk_call_record where model = 'customer' and model_id = #{customerId}) as callRecordCount,
+        count(*) as receivablesCount
+        from
+        wk_crm_receivables
+        where customer_id = #{customerId} and check_status != 7 ${receivablesCon}
+    </select>
+    <select id="ownerNum" resultType="java.lang.Integer">
+        SELECT count(customer_id) FROM wk_crm_customer
+        where (owner_user_id != #{ownerUserId} or owner_user_id is null)
+        and customer_id in
+        <foreach collection="ids" index="index" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+    <select id="dataCheck" resultType="com.kakarote.crm.entity.VO.CrmDataCheckVO">
+        select a.* from (
+        select a.customer_id as id,a.customer_name as name, a.create_time,a.owner_user_id, 2 as type,a.last_time,''as poolName
+        2 as type,a.last_time,'' as poolName,a.contacts_id
+        from `wk_crm_customer` a
+        where a.owner_user_id is not null and a.status != 3
+        <if test="data.name != null">
+            and a.customer_name like concat('%', #{data.name}, '%')
+        </if>
+        <if test="data.phone != null">
+            and (a.telephone = #{data.phone} or a.mobile = #{data.phone})
+        </if>
+        union all
+        select a.customer_id as id,a.customer_name as name, a.create_time, null as owner_user_id,
+        9 as type,a.last_time,
+        (select GROUP_CONCAT(y.pool_name) from wk_crm_customer_pool_relation as x join wk_crm_customer_pool as y on x.pool_id = y.pool_id where x.customer_id = a.customer_id) as poolName,
+        a.contacts_id
+        from `wk_crm_customer` a
+        where a.owner_user_id is null and a.status != 3
+        <if test="data.name != null">
+            and a.customer_name like concat('%', #{data.name}, '%')
+        </if>
+        <if test="data.phone != null">
+            and (a.telephone = #{data.phone} or a.mobile = #{data.phone})
+        </if>
+        union all
+        select a.leads_id as id,a.leads_name as name, a.create_time,a.owner_user_id,
+        1 as type,a.last_time,'' as poolName,0 as contacts_id
+        from `wk_crm_leads` a
+        where  a.is_transform = 0
+        <if test="data.name != null">
+            and a.leads_name like concat('%', #{data.name}, '%')
+        </if>
+        <if test="data.phone != null">
+            and (a.telephone = #{data.phone} or a.mobile = #{data.phone})
+        </if>
+        ) a limit 0,10
+    </select>
+    <select id="queryReceivablesPlan" resultType="com.alibaba.fastjson.JSONObject">
+        select a.plan_id,a.num,b.customer_name,c.num as contract_num,a.money,a.return_date,a.return_type,a.remind,a.remark
+        from wk_crm_receivables_plan as a inner join wk_crm_customer as b on a.customer_id = b.customer_id
+        inner join wk_crm_contract as c on a.contract_id = c.contract_id
+        where b.customer_id = #{customerId} ${conditions}
+    </select>
+    <select id="queryReceivables" resultType="com.alibaba.fastjson.JSONObject">
+        select a.receivables_id,a.number as receivables_num,b.name as contract_name,b.money as contract_money,a.money as receivables_money,
+        a.owner_user_id,
+        a.check_status,a.return_time,d.num as planNum
+        from wk_crm_receivables as a inner join wk_crm_contract as b on a.contract_id = b.contract_id
+        left join wk_crm_receivables_plan as d on a.plan_id = d.plan_id
+        where a.customer_id = #{customerId} and a.check_status != 7 ${conditions}
+    </select>
+    <select id="queryReturnVisit" resultType="com.alibaba.fastjson.JSONObject">
+        select a.*,a.visit_number,a.visit_time,a.owner_user_id,c.num as contract_num,d.customer_name,e.name as contacts_name,
+        <foreach collection="nameList" separator="," index="index" item="x">
+            (select value from wk_crm_return_visit_data  where field_id = '${x.fieldId}' and batch_id = a.batch_id limit 1) as '${x.fieldName}'
+        </foreach>
+        from wk_crm_return_visit as a
+        left join wk_crm_contract as c on a.contract_id = c.contract_id
+        left join wk_crm_customer as d on a.customer_id = d.customer_id
+        left join wk_crm_contacts as e on a.contacts_id = e.contacts_id
+        where a.customer_id = #{customerId} ${conditions}
+    </select>
+    <select id="queryInvoice" resultType="com.alibaba.fastjson.JSONObject">
+        select a.invoice_id,a.invoice_apply_number,a.invoice_money,a.invoice_date,a.real_invoice_date,a.invoice_type,a.invoice_number,
+        a.logistics_number,a.telephone,a.remark,a.check_status,a.invoice_status,a.create_time,
+        c.num as contract_num,c.money as contract_money, a.owner_user_id
+        from wk_crm_invoice as a
+        left join wk_crm_contract as c on a.contract_id = c.contract_id
+        where a.customer_id = #{customerId} ${conditions}
+    </select>
+    <select id="queryInvoiceInfo" resultType="com.alibaba.fastjson.JSONObject">
+        select a.info_id,a.title_type,a.invoice_title,a.tax_number,a.deposit_bank,a.deposit_account,a.deposit_address,
+        a.telephone,a.remark,a.create_time,a.create_user_id as ownerUserId
+        from wk_crm_invoice_info as a
+        left join wk_crm_customer b on a.customer_id = b.customer_id
+        where a.customer_id = #{customerId}
+    </select>
+    <select id="queryCallRecord" resultType="com.alibaba.fastjson.JSONObject">
+        select a.call_record_id,a.number,a.create_time,a.talk_time,a.dial_time,a.state,a.type,a.file_path,a.file_name,a.owner_user_id
+        from wk_call_record as a
+        where a.model = 'customer' and a.model_id = #{customerId}
+    </select>
+    <select id="nearbyCustomer" resultType="com.alibaba.fastjson.JSONObject">
+        select
+        a.customer_id,a.customer_name,a.last_time,a.location,a.detail_address,a.mobile,a.telephone,
+       a.lng,a.lat, a.owner_user_id,
+        (IF(a.owner_user_id is null, '公海', '客户')) as model,
+        ROUND(
+        6378.138 * 2 * ASIN(
+        SQRT(
+        POW(
+        SIN(
+        (
+        #{lat} * PI() / 180 - lat * PI() / 180
+        ) / 2
+        ),
+        2
+        ) + COS(#{lat} * PI() / 180) * COS(lat * PI() / 180) * POW(
+        SIN(
+        (
+        #{lng} * PI() / 180 - lng * PI() / 180
+        ) / 2
+        ),
+        2
+        )
+        )
+        ) * 1000
+        )                                     as distance
+        from wk_crm_customer as a
+        where a.status != 3 and  ROUND(
+        6378.138 * 2 * ASIN(
+        SQRT(
+        POW(
+        SIN(
+        (
+        #{lat} * PI() / 180 - lat * PI() / 180
+        ) / 2
+        ),
+        2
+        ) + COS(#{lat} * PI() / 180) * COS(lat * PI() / 180) * POW(
+        SIN(
+        (
+        #{lng} * PI() / 180 - lng * PI() / 180
+        ) / 2
+        ),
+        2
+        )
+        )
+        ) * 1000
+        ) &lt; #{radius}
+        <if test="ownerUserId != null">
+            and owner_user_id = #{ownerUserId}
+        </if>
+        <choose>
+            <when test="type == 2">
+                and owner_user_id in
+                <foreach collection="userIds" item="userId" index="index" separator="," close=")" open="(">
+                    #{userId}
+                </foreach>
+            </when>
+            <when test="type == 9">
+                and customer_id in (select customer_id from wk_crm_customer_pool_relation where pool_id in
+                <foreach collection="poolIdList" item="poolId" index="index" separator="," close=")" open="(">
+                    #{poolId}
+                </foreach>)
+            </when>
+            <otherwise>
+                and (owner_user_id in
+                <foreach collection="userIds" item="userId" index="index" separator="," close=")" open="(">
+                    #{userId}
+                </foreach>
+                or customer_id in (select customer_id from wk_crm_customer_pool_relation where pool_id in
+                <foreach collection="poolIdList" item="poolId" index="index" separator="," close=")" open="(">
+                    #{poolId}
+                </foreach>
+                ))
+            </otherwise>
+        </choose>
+    </select>
+    <select id="eventCustomer" resultType="java.lang.String">
+        select date_format(next_time,'%Y-%m-%d') as time
+        from `wk_crm_customer`
+        where status != 3 and owner_user_id = #{data.userId} and next_time between #{data.startTime} and #{data.endTime}
+        group by date_format(next_time,'%Y-%m-%d')
+    </select>
+    <select id="eventCustomerList" resultType="java.lang.Integer">
+        select customer_id
+        from `wk_crm_customer`
+        where status != 3 and owner_user_id = #{userId} and to_days(next_time) = to_days(#{time})
+    </select>
+    <select id="forgottenCustomer" resultType="java.lang.Integer">
+        select customer_id
+        from `wk_crm_customer`  where  deal_status = 0  and status != 3 and (to_days(now()) - ifnull(to_days(last_time),to_days(create_time)))> #{day}
+        AND owner_user_id in
+        <foreach collection="userIds" index="index" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </select>
+    <select id="unContactCustomer" resultType="java.lang.Integer">
+        select customer_id from wk_crm_customer
+        where status != 3 and to_days(last_time) &lt; to_days(next_time) and to_days(next_time) &lt; to_days(now())  AND owner_user_id in
+        <foreach collection="userIds" index="index" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+        <if test="search != null and search != ''">
+            and (customer_name like concat('%',#{search},'%') or
+            telephone like concat('%',#{search},'%') or
+            mobile like concat('%',#{search},'%'))
+        </if>
+    </select>
+</mapper>

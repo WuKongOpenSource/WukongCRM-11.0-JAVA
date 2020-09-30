@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmBackLogMapper">
+    <select id="todayCustomerNum" resultType="java.lang.Integer">
+        select count(*) from wk_crm_customer
+        where to_days(next_time) = to_days(now()) and last_time &lt; next_time and owner_user_id = #{userId} and status != 3
+        and customer_id not in (select type_id from wk_crm_back_log_deal where model = 1 and crm_type = 2 and create_user_id = #{userId})
+    </select>
+
+    <select id="todayLeadsNum" resultType="java.lang.Integer">
+        select count(*) from wk_crm_leads
+        where to_days(next_time) = to_days(now()) and last_time &lt; next_time and owner_user_id = #{userId}
+        and leads_id not in (select type_id from wk_crm_back_log_deal where model = 11 and crm_type = 1 and create_user_id = #{userId})
+    </select>
+
+    <select id="todayBusinessNum" resultType="java.lang.Integer">
+        select count(*) from wk_crm_business
+        where to_days(next_time) = to_days(now()) and last_time &lt; next_time and owner_user_id = #{userId}
+        and business_name not in (select type_id from wk_crm_back_log_deal where model = 12 and crm_type = 5 and create_user_id = #{userId})
+    </select>
+
+    <select id="followCustomerNum" resultType="java.lang.Integer">
+        select count(*) from wk_crm_customer as a
+        where is_receive = 1 and followup = 0 and status = 1
+        and owner_user_id = #{userId}
+        and customer_id not in (select type_id from wk_crm_back_log_deal where model = 3 and crm_type = 2 and create_user_id = #{userId})
+    </select>
+
+    <select id="putInPoolByRecord" resultType="com.alibaba.fastjson.JSONObject">
+        select a.customer_id,(#{limitDay} - (to_days(now()) - to_days(if(a.last_time &gt; a.receive_time,a.last_time,a.receive_time)))) as poolDay
+        from wk_crm_customer as a
+        <if test="customerLevelSetting == 2">
+            left join wk_crm_customer_data as c on a.batch_id = c.batch_id and c.name = 'level'
+        </if>
+        where (to_days(now()) - to_days(if(a.last_time &gt; a.receive_time,a.last_time,a.receive_time)))
+        between (#{limitDay} - #{remindDay}) and #{limitDay} 
+        and a.status = 1 and a.owner_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+        <if test="dealHandle == 0">
+            and a.deal_status = 0
+        </if>
+        <if test="customerLevelSetting == 2">
+            and c.value = #{level}
+        </if>
+        <if test="businessHandle == 0">
+            and (select count(1) from wk_crm_business d where a.customer_id = d.customer_id) = 0
+        </if>
+    </select>
+
+    <select id="putInPoolByBusiness" resultType="com.alibaba.fastjson.JSONObject">
+        select a.customer_id,(#{limitDay} - (to_days(now()) - to_days(a.receive_time))) as poolDay
+        from wk_crm_customer as a left join wk_crm_business as b on a.customer_id = b.customer_id and b.status = 1
+        <if test="customerLevelSetting != 1">
+            left join wk_crm_customer_data as c on a.batch_id = c.batch_id and c.name = 'level'
+        </if>
+        where (to_days(now()) - to_days(a.receive_time)) between (#{limitDay} - #{remindDay}) and #{limitDay}
+        and a.status = 1  and b.business_id is null
+        and a.owner_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+        <if test="dealHandle == 0">
+            and a.deal_status = 0
+        </if>
+        <if test="customerLevelSetting == 2">
+            and c.value = #{level}
+        </if>
+    </select>
+
+    <select id="putInPoolByDealStatus" resultType="com.alibaba.fastjson.JSONObject">
+        select a.customer_id,(#{limitDay} - (to_days(now()) - to_days(a.receive_time))) as poolDay
+        from wk_crm_customer as a
+        <if test="customerLevelSetting != 1">
+            left join wk_crm_customer_data as c on a.batch_id = c.batch_id and c.name = 'level'
+        </if>
+        where (to_days(now()) - to_days(a.receive_time)) between (#{limitDay} - #{remindDay}) and #{limitDay}
+        and a.status = 1 and a.deal_status = 0 
+        and a.owner_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+        <if test="customerLevelSetting == 2">
+            and c.value = #{level}
+        </if>
+        <if test="businessHandle == 0">
+            and (select count(1) from wk_crm_business d where a.customer_id = d.customer_id) = 0
+        </if>
+    </select>
+
+    <select id="followLeadsNum" resultType="java.lang.Integer">
+        select count(*) from wk_crm_leads as a
+        where followup = 0
+        and is_transform = 0  and owner_user_id = #{userId} and is_receive = 1
+        and leads_id not in (select type_id from wk_crm_back_log_deal where model = 2 and crm_type = 1 and create_user_id = #{userId})
+    </select>
+
+    <select id="endContractNum" resultType="java.lang.Integer">
+        select count(*) from wk_crm_contract as a inner join wk_crm_customer as b on a.customer_id = b.customer_id
+        where check_status = 1 and to_days(a.end_time) &gt;= to_days(now()) and to_days(a.end_time) &lt;= to_days(now()) + IFNULL(#{remindDay},0) and a.owner_user_id = #{userId}
+        and contract_id not in (select type_id from wk_crm_back_log_deal where model = 8 and crm_type = 6 and create_user_id = #{userId})
+    </select>
+
+    <select id="checkContractNum" resultType="java.lang.Integer">
+        select count(*)
+        from wk_crm_contract as a inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id
+        left join wk_crm_examine_log as c on b.record_id = c.record_id
+        where c.examine_user = #{userId} and a.check_status in (0,3) and c.examine_status in (0,3) and ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and c.is_recheck != 1
+        and contract_id not in (select type_id from wk_crm_back_log_deal where model = 5 and crm_type = 6 and create_user_id = #{userId})
+    </select>
+
+    <select id="returnVisitRemindNum" resultType="java.lang.Integer">
+        select count(1) from wk_crm_contract
+        where check_status = 1 and owner_user_id = #{userId} and to_days(now()) - to_days(start_time) &gt;= #{remindDay}
+        and contract_id not in (select type_id from wk_crm_back_log_deal where model = 9 and crm_type = 6 and create_user_id = #{userId})
+    </select>
+
+    <select id="checkReceivablesNum" resultType="java.lang.Integer">
+        select count(*)
+        from wk_crm_receivables as a inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id
+        left join wk_crm_examine_log as c on b.record_id = c.record_id
+        where c.examine_user = #{userId} and a.check_status in (0,3) and ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and c.is_recheck != 1
+        and receivables_id not in (select type_id from wk_crm_back_log_deal where model = 6 and crm_type = 7 and create_user_id = #{userId})
+    </select>
+
+    <select id="remindReceivablesPlanNum" resultType="java.lang.Integer">
+        select count(*)
+        from wk_crm_receivables_plan as a inner join wk_crm_customer as b on a.customer_id = b.customer_id
+        inner join wk_crm_contract as c on a.contract_id = c.contract_id
+        where to_days(a.return_date) &gt;= to_days(now()) and to_days(a.return_date) &lt;= to_days(now())+a.remind
+        and receivables_id is null and c.owner_user_id = #{userId}
+        and plan_id not in (select type_id from wk_crm_back_log_deal where model = 7 and crm_type = 8 and create_user_id = #{userId})
+    </select>
+
+    <select id="checkInvoiceNum" resultType="java.lang.Integer">
+        select count(*)
+        from wk_crm_invoice as a inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id
+        left join wk_crm_examine_log as c on b.record_id = c.record_id
+        where c.examine_user = #{userId} and a.check_status in (0,3) and ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and c.is_recheck != 1
+        and invoice_id not in (select type_id from wk_crm_back_log_deal where model = 10 and crm_type = 18 and create_user_id = #{userId})
+    </select>
+
+    <select id="queryExamineTypeId" resultType="java.lang.String">
+        <choose>
+            <when test="crmType == 6">
+                select contract_id from wk_crm_contract as a
+            </when>
+            <when test="crmType == 7">
+                select receivables_id from wk_crm_receivables as a
+            </when>
+            <when test="crmType == 18">
+                select invoice_id from wk_crm_invoice as a
+            </when>
+        </choose>
+        inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id left join wk_crm_examine_log as c on b.record_id = c.record_id where c.is_recheck != 1
+        <if test="type == 1">
+            and  ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and a.check_status in (0,3) and c.examine_status in (0,3)
+        </if>
+        <if test="type == 2">
+            and  a.check_status in (1,2)
+        </if>
+        and c.examine_user =#{userId}
+    </select>
+
+    <select id="remindReceivables" resultType="com.kakarote.crm.entity.PO.CrmReceivablesPlan">
+        select a.plan_id,a.num,a.customer_id,a.contract_id,c.num as contractNum,a.money,a.return_date,a.return_type,a.remind,a.remark
+        from wk_crm_receivables_plan as a inner join wk_crm_contract as c on a.contract_id = c.contract_id where 1=1
+        <choose>
+            <when test="type == 1">
+                and to_days(a.return_date) &gt;= to_days(now()) and to_days(a.return_date) &lt;= to_days(now())+a.remind and receivables_id is null
+            </when>
+            <when test="type == 2">
+                and receivables_id is not null
+            </when>
+            <when test="type == 3">
+                and to_days(a.return_date) &lt; to_days(now()) and receivables_id is null
+            </when>
+            <otherwise>
+                and plan_id='0'
+            </otherwise>
+        </choose>
+        and c.owner_user_id = #{userId}
+        and a.plan_id not in
+        <for collection="ids" item="item">
+            #{item}
+        </for>
+    </select>
+
+</mapper>

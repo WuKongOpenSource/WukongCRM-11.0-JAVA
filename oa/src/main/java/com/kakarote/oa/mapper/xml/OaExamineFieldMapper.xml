@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.oa.mapper.OaExamineFieldMapper">
+    <delete id="deleteByChooseId">
+      DELETE FROM wk_oa_examine_field WHERE field_id not in
+      <foreach collection="ids" separator="," item="id" open="(" close=")" index="index">
+          #{id}
+      </foreach>
+      and (operating = '0' or operating = '2')
+        and examine_category_id = #{categoryId}
+    </delete>
+    <delete id="deleteByFieldValue">
+    DELETE FROM wk_oa_examine_data WHERE field_id in
+      (
+      SELECT field_id FROM wk_oa_examine_field WHERE field_id not in
+        <foreach collection="ids" separator="," item="id" open="(" close=")" index="index">
+            #{id}
+        </foreach>
+      and (operating = '0' or operating = '2')
+        and examine_category_id = #{categoryId}
+      )
+    </delete>
+
+    <select id="queryFieldByBatchId" resultType="com.kakarote.oa.entity.PO.OaExamineField">
+        select a.field_id,a.field_name,a.name,a.type,a.input_tips,a.options,a.is_unique,a.is_null,b.value,a.field_type 
+        from wk_oa_examine_field a
+        left join `wk_oa_examine_data` b on a.field_id = b.field_id 
+        where a.examine_category_id = #{categoryId} and b.batch_id = #{batchId} order by sorting
+    </select>
+</mapper>

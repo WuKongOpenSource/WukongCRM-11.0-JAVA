@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmLeadsDataMapper">
+    <select id="queryDataByBatchId">
+        SELECT b.field_name,a.value
+        FROM wk_crm_leads_data as a
+        JOIN wk_crm_field as b on a.field_id=b.field_id
+        WHERE  a.batch_id=#{batchId}
+    </select>
+</mapper>

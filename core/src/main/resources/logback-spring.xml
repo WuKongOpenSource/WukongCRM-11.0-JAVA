@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration  scan="true" scanPeriod="60 seconds" debug="false">
+    <!-- 获取yml中的log地址 -->
+    <springProperty scope="context" name="logName" source="spring.application.name" defaultValue="crm"/>
+    <property name="logName" value="${logName}" />
+    <property name="logPath" value="./logs/${logName}.log" />
+    <contextName>${logName}</contextName>
+
+    <!--输出到控制台-->
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符-->
+            <pattern>%green(%d{yyyy-MM-dd HH:mm:ss}) %boldMagenta(%contextName) %highlight(%-5level) %cyan(%logger{100}) - %highlight(%msg) %n</pattern>
+        </encoder>
+    </appender>
+    <!--输出到文件-->
+    <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${logPath}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${logPath}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %contextName [%thread] %-5level %logger{100} - %msg %n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO" additivity="false">
+        <appender-ref ref="console" />
+        <appender-ref ref="file" />
+    </root>
+    <!--自定义配置-->
+    <logger name="com.kakarote" level="DEBUG" additivity="false">
+        <appender-ref ref="console"/>
+        <appender-ref ref="file"/>
+    </logger>
+
+    <logger name="com.alibaba.nacos" level="DEBUG" additivity="false"/>
+
+    <logger name="org.springframework.web.servlet.mvc" level="INFO" additivity="false">
+        <appender-ref ref="console" />
+        <appender-ref ref="file" />
+    </logger>
+</configuration>
+

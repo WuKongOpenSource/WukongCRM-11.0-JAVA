@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.oa.mapper.OaExamineLogMapper">
+
+    <select id="queryExamineLog" resultType="com.kakarote.oa.entity.PO.OaExamineLog">
+        select * from wk_oa_examine_log where record_id = #{recordId} and examine_user = #{examineUser}
+        <if test="stepId != null">
+            and examine_step_id = #{stepId}
+        </if>
+        and examine_status = 0 and is_recheck != 1 order by create_time desc limit 1
+    </select>
+    <select id="queryCountByStepId" resultType="java.lang.Integer">
+        SELECT  DISTINCT ((SELECT COUNT(log_id) FROM wk_oa_examine_log WHERE record_id = #{recordId} and examine_step_id = #{stepId})
+      - (SELECT COUNT(log_id) FROM wk_oa_examine_log WHERE record_id = #{recordId} and examine_step_id = #{stepId} and examine_status = 2 )) as toCount
+        FROM wk_oa_examine_log
+    </select>
+    <select id="queryUserByRecordId" resultType="com.alibaba.fastjson.JSONObject">
+            select sael.examine_time  as examineTime , sael.examine_status,sau.realname,sau.user_id,sau.img
+            from wk_oa_examine_log as sael
+            LEFT JOIN wk_admin_user as sau on sau.user_id = sael.examine_user
+            where sael.record_id = #{recordId} and  sael.examine_status = 3 and sael.is_recheck != 1
+    </select>
+    <select id="queryRecordAndId" resultType="com.alibaba.fastjson.JSONObject">
+    select create_user, sau.realname , sau.user_id , sau.img, aser.create_time as examineTime, 6 as examine_status
+    from wk_oa_examine_record  as aser LEFT JOIN wk_admin_user as sau on sau.user_id = aser.create_user
+    where record_id = #{recordId}
+    </select>
+    <select id="queryRecordByUserIdAndStatus" resultType="com.alibaba.fastjson.JSONObject">
+    SELECT DISTINCT user_id, realname  ,img, 6 as examine_status, #{examineTime} as examineTime from wk_admin_user
+    WHERE user_id = #{createUser}
+    </select>
+    <select id="queryExamineLogAndUserByRecordId" resultType="com.alibaba.fastjson.JSONObject">
+    select sael.examine_time  as examineTime , sael.examine_status,sau.realname,sau.img,sael.log_id
+    from wk_oa_examine_log as sael LEFT JOIN wk_admin_user as sau on sau.user_id = sael.examine_user
+    where sael.record_id = #{recordId} and sael.is_recheck != 1 order by sael.create_time
+    </select>
+    <select id="queryExamineLogAndUserByLogId" resultType="com.alibaba.fastjson.JSONObject">
+      select sael.examine_time  as examineTime , sael.examine_status,sau.realname ,sau.img , sael.log_id
+      from wk_oa_examine_log as sael LEFT JOIN wk_admin_user as sau on sau.user_id = sael.examine_user
+      where sael.log_id = #{logId} and sael.is_recheck != 1 order by sael.create_time
+    </select>
+    <select id="queryUserByRecordIdAndStepIdAndStatus" resultType="com.alibaba.fastjson.JSONObject">
+      select sael.examine_time  as examineTime , sael.examine_status,sau.realname,sau.user_id , sau.img
+      from wk_oa_examine_log as sael LEFT JOIN wk_admin_user as sau on sau.user_id = sael.examine_user
+      where record_id = #{recordId} and examine_step_id = #{stepId} and sael.is_recheck != 1 order by sael.create_time
+    </select>
+    <select id="queryUserByUserId" resultType="com.alibaba.fastjson.JSONObject">
+    SELECT DISTINCT saud.user_id, saud.realname, 0 as examine_status from wk_admin_user as sau
+    LEFT JOIN wk_admin_user as saud on saud.user_id = sau.parent_id
+    WHERE sau.user_id = #{createUserId}
+    </select>
+    <select id="queryUserByUserIdAndStatus" resultType="com.alibaba.fastjson.JSONObject">
+    SELECT DISTINCT user_id, realname , 0 as examine_status,img from wk_admin_user
+    WHERE user_id = #{userId}
+    </select>
+
+    <select id="queryExamineLogByRecordIdByStep" resultType="com.alibaba.fastjson.JSONObject">
+    select sael.order_id,ases.step_num as order_id , sau.user_id , sau.realname , sau.img ,sael.examine_status,sael.examine_time,sael.remarks
+        from wk_oa_examine_log as sael LEFT JOIN wk_admin_user as sau on sau.user_id = sael.examine_user
+        LEFT JOIN wk_oa_examine_step as ases on ases.step_id = sael.examine_step_id
+        where sael.record_id = #{recordId} AND sael.examine_status not in (0,5) order by sael.create_time
+    </select>
+    <select id="queryExamineLogByRecordIdByStep1" resultType="com.alibaba.fastjson.JSONObject">
+    select  sael.order_id,sau.user_id , sau.realname , sau.img,sael.examine_status,sael.examine_time,sael.remarks,sael.is_recheck
+    from wk_oa_examine_log as sael  LEFT JOIN wk_admin_user as sau on sau.user_id = sael.examine_user
+    where sael.record_id = #{recordId} AND sael.examine_status not in (0,5) order by sael.create_time
+    </select>
+</mapper>

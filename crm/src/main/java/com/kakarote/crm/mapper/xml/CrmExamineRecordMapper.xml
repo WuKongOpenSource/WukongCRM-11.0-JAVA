@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmExamineRecordMapper">
+    <select id="queryExamineRecordById" resultType="com.alibaba.fastjson.JSONObject">
+      SELECT saer.* ,sau.img,sau.realname from wk_crm_examine_record as  saer
+      LEFT JOIN wk_admin_user as sau on sau.user_id = saer.create_user
+      WHERE saer.record_id = #{recordId}
+    </select>
+
+    <select id="queryInfoByRecordId" resultType="com.alibaba.fastjson.JSONObject">
+      select a.create_time,a.owner_user_id,check_status
+      from ${tableName} as a
+      where examine_record_id = #{recordId}
+    </select>
+</mapper>

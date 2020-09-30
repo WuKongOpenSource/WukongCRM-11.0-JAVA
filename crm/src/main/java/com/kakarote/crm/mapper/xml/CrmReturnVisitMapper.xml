@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmReturnVisitMapper">
+    <select id="queryById" resultType="com.kakarote.crm.common.CrmModel">
+        SELECT
+               a.*, b.customer_name,
+               c. NAME AS contacts_name,
+               d.num AS contract_num
+        FROM
+             `wk_crm_return_visit` AS a
+                 LEFT JOIN `wk_crm_customer` AS b ON a.customer_id = b.customer_id
+                 LEFT JOIN `wk_crm_contacts` AS c ON a.contacts_id = c.contacts_id
+                 LEFT JOIN `wk_crm_contract` AS d ON a.contract_id = d.contract_id
+        where visit_id =#{id}
+    </select>
+</mapper>

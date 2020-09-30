@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.bi.mapper.BiCustomerMapper">
+    <select id="totalCustomerStats" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT  count( 1 ) AS customerNum,  t.type,  count( IF ( t.deal_status = '1', 1, NULL )) AS dealCustomerNum
+        FROM
+        (
+        SELECT DATE_FORMAT( a.create_time, #{sqlDateFormat} ) AS type,  a.deal_status
+        FROM
+        wk_crm_customer AS a
+        WHERE
+        (DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+        AND a.owner_user_id IN
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        AND a.STATUS != 3
+        ) t
+        GROUP BY t.type
+    </select>
+
+
+    <select id="totalCustomerTable" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="userIds" item="x" separator="union all">
+            select (select realname from wk_admin_user where user_id = ${x}) as realname,
+            count(a.customer_id) as customerNum,
+            count(if(deal_status ='1',1,null)) as dealCustomerNum,
+            (select IFNULL(SUM(money),0)
+            from wk_crm_contract
+            where DATE_FORMAT(order_date,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+            and owner_user_id = ${x} and check_status = 1
+            ) as contractMoney,
+            (select IFNULL(SUM(money),0)
+            from wk_crm_receivables
+            where DATE_FORMAT(return_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+            and owner_user_id = ${x} and check_status = 1
+            ) as receivablesMoney
+            from wk_crm_customer as a
+            where DATE_FORMAT(create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime} and owner_user_id = ${x} and a.status != 3
+        </foreach>
+    </select>
+
+    <select id="customerRecordStats" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="timeList" item="x" separator="union all">
+            select '${x}' as type,
+            IFNULL((select count(1)
+            from wk_crm_activity a
+            left join wk_crm_customer c on a.activity_type_id = c.customer_id
+            where if(a.activity_type = 2,c.status != 3,1=1) and DATE_FORMAT(a.create_time,'${sqlDateFormat}') = ${x} and a.type = 1 and a.create_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            ),0) as recordCount,
+            (SELECT count(v.customer_id) from (SELECT a.activity_type_id as customer_id
+            FROM wk_crm_activity a
+            left join wk_crm_customer c on a.activity_type_id = c.customer_id
+            WHERE c.status != 3 and  a.activity_type = 2
+            AND a.type = 1
+            AND DATE_FORMAT(a.create_time, '${sqlDateFormat}') = ${x}
+            AND a.create_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            union
+            SELECT a.customer_id
+            FROM wk_crm_leads a
+            LEFT JOIN wk_crm_activity b ON a.leads_id = b.activity_type_id
+            AND activity_type = 1
+            AND type = 1
+            left join wk_crm_customer c on b.activity_type_id = c.customer_id
+            WHERE c.status != 3 and DATE_FORMAT(b.create_time, '${sqlDateFormat}') = ${x}
+            AND b.create_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            union
+            SELECT a.customer_id
+            FROM wk_crm_contacts a
+            LEFT JOIN wk_crm_activity b ON a.contacts_id = b.activity_type_id
+            AND activity_type = 3
+            AND type = 1
+            left join wk_crm_customer c on b.activity_type_id = c.customer_id
+            WHERE c.status != 3 and DATE_FORMAT(b.create_time, '${sqlDateFormat}') = ${x}
+            AND b.create_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            union
+            SELECT a.customer_id
+            FROM wk_crm_business a
+            LEFT JOIN wk_crm_activity b ON a.business_id = b.activity_type_id
+            AND activity_type = 5
+            AND type = 1
+            AND b.create_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            left join wk_crm_customer c on b.activity_type_id = c.customer_id
+            WHERE c.status != 3 and DATE_FORMAT(b.create_time, '${sqlDateFormat}') = ${x}
+            ) as v) AS customerCount
+        </foreach>
+    </select>
+    
+    <select id="customerRecordInfo" resultType="com.alibaba.fastjson.JSONObject">
+        select
+        cau.realname,
+        (
+        select count(1) from `wk_crm_activity` a
+        left join wk_crm_customer c on a.activity_type_id = c.customer_id
+        where if(a.activity_type = 2,c.status != 3,1=1) and a.create_user_id = v.create_user_id
+        and DATE_FORMAT(a.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime} and a.type = 1
+        ) as recordCount,
+        count(v.customer_id) as customerCount
+        from (SELECT a.activity_type_id as customer_id,a.create_user_id
+        FROM wk_crm_activity a
+        left join wk_crm_customer c on a.activity_type_id = c.customer_id
+        WHERE c.status != 3 and a.activity_type = 2
+        AND a.type = 1
+        AND DATE_FORMAT(a.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        union
+        SELECT a.customer_id,b.create_user_id
+        FROM wk_crm_leads a
+        LEFT JOIN wk_crm_activity b ON a.leads_id = b.activity_type_id
+        AND activity_type = 1
+        AND type = 1
+        left join wk_crm_customer c on b.activity_type_id = c.customer_id
+        WHERE c.status != 3 and DATE_FORMAT(b.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        union
+        SELECT a.customer_id,b.create_user_id
+        FROM wk_crm_contacts a
+        LEFT JOIN wk_crm_activity b ON a.contacts_id = b.activity_type_id
+        AND activity_type = 3
+        AND type = 1
+        left join wk_crm_customer c on b.activity_type_id = c.customer_id
+        WHERE c.status != 3 and DATE_FORMAT(b.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        union
+        SELECT a.customer_id,b.create_user_id
+        FROM wk_crm_business a
+        LEFT JOIN wk_crm_activity b ON a.business_id = b.activity_type_id
+        AND activity_type = 5
+        AND type = 1
+        left join wk_crm_customer c on b.activity_type_id = c.customer_id
+        WHERE c.status != 3 and DATE_FORMAT(b.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        ) as v
+        left JOIN wk_admin_user cau on cau.user_id = v.create_user_id
+        WHERE cau.user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        GROUP BY cau.user_id
+    </select>
+    
+    <select id="customerRecordCategoryStats" resultType="com.alibaba.fastjson.JSONObject">
+        select a.category,IFNULL(count(a.activity_id),0) as recordNum,
+        TRUNCATE(IFNULL(count(a.activity_id)*100/(select count(*) from wk_crm_activity a
+        left join wk_crm_customer c on a.activity_type_id = c.customer_id
+        where if(a.activity_type = 2,c.status != 3,1=1) and  a.type = 1
+        and DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+        and a.create_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        ),0),2) as proportion
+        from wk_crm_activity a
+        left join wk_crm_customer c on a.activity_type_id = c.customer_id
+        where c.status != 3 and a.type = 1 and DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+        and a.create_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        group by a.category
+    </select>
+
+    <select id="customerConversionStats" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        <foreach collection="timeList" item="x" separator=",">
+            TRUNCATE (ifnull(count(DATE_FORMAT(create_time, #{sqlDateFormat} ) = '${x}' and deal_status = 1 or null),0)*100/ifnull(count(DATE_FORMAT(create_time, #{sqlDateFormat} ) = '${x}' or null),0),2) as '${x}'
+        </foreach>
+        FROM
+        wk_crm_customer
+        WHERE owner_user_id IN
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and status != 3
+    </select>
+
+    <select id="customerConversionInfo" resultType="com.alibaba.fastjson.JSONObject">
+        select a.customer_name,
+        case when b.contract_id is NULL then null when b.contract_id is not null then b.name end as contract_name,
+        case when b.contract_id is NULL then null when b.contract_id is not null then b.money end as contract_money,
+        case when b.contract_id is NULL then null when b.contract_id is not null then b.order_date end as order_date,
+        (select sum(c.money)
+        from wk_crm_receivables as c
+        where c.check_status =1 and c.contract_id = b.contract_id
+        ) as receivables_money,
+        d.realname AS owner_user_name,
+        a.create_time,a.update_time
+        from wk_crm_customer as a left join wk_crm_contract as b on a.customer_id = b.customer_id
+        left join wk_admin_user as d on a.owner_user_id = d.user_id
+        where DATE_FORMAT(a.create_time,#{sqlDateFormat}) = #{time} and b.check_status != 7
+        and a.deal_status = 1 and a.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and a.status != 3
+    </select>
+
+    <select id="poolStats" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="timeList" item="x" separator="union all">
+            select '${x}' as type,
+            count(a.type_id) as putInNum,
+            (select count(a.type_id)
+            from wk_crm_owner_record a
+            left join wk_crm_customer c on a.type_id = c.customer_id
+            where c.status != 3 and DATE_FORMAT(a.create_time,'${sqlDateFormat}') = ${x}
+            and a.type = 9 and a.post_owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>) as receiveNum
+            from wk_crm_owner_record a
+            left join wk_crm_customer c on a.type_id = c.customer_id
+            where c.status != 3 and DATE_FORMAT(a.create_time,'${sqlDateFormat}') = ${x}
+            and a.type = 9 and a.pre_owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+        </foreach>
+    </select>
+
+    <select id="poolTable" resultType="com.alibaba.fastjson.JSONObject">
+        select a.realname,b.name as deptName,
+        (select count(a.type_id)
+        from wk_crm_owner_record a
+        left join wk_crm_customer c on a.type_id = c.customer_id
+        where c.status != 3 and DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+        and a.type = 9 and a.pre_owner_user_id = a.user_id) as putInNum,
+        (select count(a.type_id)
+        from wk_crm_owner_record a
+        left join wk_crm_customer c on a.type_id = c.customer_id
+        where c.status != 3 and DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+        and a.type = 9 and a.post_owner_user_id = a.user_id) as receiveNum
+        from wk_admin_user as a left join wk_admin_dept as b on a.dept_id = b.dept_id
+        where user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+    </select>
+    <select id="querySatisfactionOptionList" resultType="com.alibaba.fastjson.JSONObject">
+        select t.field_id, t.options from wk_crm_field t where t.label = 17 and t.field_name = 'satisficing'
+        and t.type = 3  limit 1
+    </select>
+    <select id="employeeCycle" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT t.type,
+        AVG( TIMESTAMPDIFF( DAY, t.create_time, t.deal_time )) as cycle,
+        count( customer_id ) AS customerNum
+        FROM (
+        SELECT DATE_FORMAT( create_time, #{sqlDateFormat} ) AS type, create_time, deal_time,customer_id
+        FROM wk_crm_customer
+        WHERE
+        STATUS != 3
+        AND (DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+        AND deal_status = 1
+        AND owner_user_id IN
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        ) t GROUP BY t.type
+    </select>
+
+    <select id="employeeCycleInfo" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="userIds" item="x" separator="union all">
+            select a.realname,
+            (TRUNCATE(IF(AVG(TIMESTAMPDIFF(DAY,b.create_time,b.deal_time)) &gt;= 0,AVG(TIMESTAMPDIFF(DAY,b.create_time,b.deal_time)),0),1)) as cycle,
+            count(distinct b.customer_id) as customerNum
+            from wk_admin_user as a left join wk_crm_customer as b on a.user_id = b.owner_user_id
+            where b.status != 3 and DATE_FORMAT(b.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+            and b.deal_status = 1 and a.user_id = ${x}
+        </foreach>
+    </select>
+
+    <select id="districtCycle" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="districts" item="x" separator="union all">
+            select '${x}' as type,
+            (TRUNCATE(IF(AVG(TIMESTAMPDIFF(DAY,create_time,deal_time)) &gt;= 0,AVG(TIMESTAMPDIFF(DAY,create_time,deal_time)),0),1)) as cycle,
+            count(customer_id) as customerNum
+            from wk_crm_customer
+            where DATE_FORMAT(create_time,'${entity.sqlDateFormat}') between #{entity.beginTime} and #{entity.finalTime}
+            and deal_status = 1 and owner_user_id in
+            <for collection="entity.userIds" item="item">
+                #{item}
+            </for>
+            and address like '%${x}%'
+        </foreach>
+    </select>
+
+    <select id="productCycle" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="productList" item="x" separator="union all">
+            select '${x.name}' as productName,
+            (TRUNCATE(IF(AVG(TIMESTAMPDIFF(DAY,a.create_time,a.deal_time)) &gt;= 0,AVG(TIMESTAMPDIFF(DAY,a.create_time,a.deal_time)),0),1)) as cycle,
+            count(distinct a.customer_id) as customerNum
+            from wk_crm_customer as a left join wk_crm_contract as b on a.customer_id = b.customer_id
+            left join wk_crm_contract_product as c on b.contract_id = c.contract_id
+            where DATE_FORMAT(a.create_time,'${entity.sqlDateFormat}') between #{entity.beginTime} and #{entity.finalTime}
+            and a.deal_status = 1 and a.owner_user_id in
+            <for collection="entity.userIds" item="item">
+                #{item}
+            </for>
+            and c.product_id = ${x.id}
+        </foreach>
+    </select>
+
+    <select id="customerSatisfactionTable" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="userIds" item="x" separator="union all">
+            select z.realname,count(z.contract_id) as visit_contract_num
+            <foreach collection="options" item="y">
+                ,COUNT(CASE z.value WHEN '${y}' THEN 1 ELSE null END) as '${y}'
+            </foreach>
+            from (select a.realname,c.value,b.contract_id
+            from wk_admin_user as a
+            left join wk_crm_return_visit as b on a.user_id = b.owner_user_id
+            left join wk_crm_return_visit_data as c on b.batch_id = c.batch_id and c.field_id = #{fieldId}
+            where DATE_FORMAT(b.visit_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+            and a.user_id = ${x}) as z
+        </foreach>
+    </select>
+
+    <select id="productSatisfactionTable" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="products" item="x" separator="union all">
+            select z.name as product_name,count(z.contract_id) as visit_num
+            <foreach collection="options" item="y">
+                ,COUNT(CASE z.value WHEN '${y}' THEN 1 ELSE null END) as '${y}'
+            </foreach>
+            from (select d.name,b.contract_id,e.value
+            from wk_crm_return_visit as a
+            left join wk_crm_contract as b on a.contract_id = b.contract_id
+            left join wk_crm_contract_product as c on b.contract_id = c.contract_id
+            left join wk_crm_product as d on c.product_id = d.product_id
+            left join wk_crm_return_visit_data as e on a.batch_id = e.batch_id and e.field_id = #{fieldId}
+            where d.status != 3 and  DATE_FORMAT(b.order_date,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+            and d.product_id = #{x.id} and a.owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            ) as z
+        </foreach>
+
+    </select>
+</mapper>

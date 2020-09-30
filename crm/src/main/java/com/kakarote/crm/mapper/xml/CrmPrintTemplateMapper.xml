@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmPrintTemplateMapper">
+    <delete id="removePrintRecord">
+        delete from wk_crm_print_record where template_id = #{templateId}
+    </delete>
+    <select id="queryPrintRecord" resultType="com.kakarote.crm.entity.PO.CrmPrintRecord">
+        select a.*,c.template_name
+        from wk_crm_print_record as a
+        left join wk_crm_print_template as c on a.template_id = c.template_id
+        where a.crm_type = #{crmType} and type_id = #{typeId}
+    </select>
+</mapper>

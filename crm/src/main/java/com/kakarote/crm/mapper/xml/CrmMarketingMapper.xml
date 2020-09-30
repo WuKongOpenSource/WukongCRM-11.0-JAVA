@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmMarketingMapper">
+
+    <select id="queryPageList" resultType="com.kakarote.crm.entity.PO.CrmMarketing">
+        select a.marketing_id,
+        a.marketing_name,
+        a.marketing_type,
+        a.marketing_money,
+        a.main_file_ids,
+        a.address,
+        a.crm_type,
+        a.start_time,
+        a.end_time,
+        a.status,
+        a.second,
+        a.create_time,
+        a.update_time,
+        a.create_user_id
+        from `wk_crm_marketing` a
+        where 1 = 1
+        <if test="isAdmin != true">
+            and (
+            <foreach collection="userIds" index="index" item="x" separator="or">
+                a.relation_user_id like concat('%,',#{x},',%')
+            </foreach>
+            )
+        </if>
+        <if test="crmType != null">
+            and a.crm_type = #{crmType}
+        </if>
+        <if test="search != null and search != ''">
+            and a.marketing_name like concat('%',#{search},'%')
+        </if>
+        <if test="timeType == 1">
+            and to_days(NOW()) &lt;= TO_DAYS(a.end_time) and to_days(NOW()) &gt;= TO_DAYS(a.start_time)
+        </if>
+        <if test="timeType == 2">
+            and to_days(NOW()) &gt; TO_DAYS(a.end_time)
+        </if>
+        <if test="status != null">
+            and a.status = #{status}
+        </if>
+        ORDER BY IFNUll(a.update_time,a.create_time) desc
+    </select>
+    <select id="census" resultType="com.alibaba.fastjson.JSONObject">
+        select a.r_id, a.status, a.field_info,a.owner_user_id
+        from `wk_crm_marketing_info` a
+        where a.marketing_id = #{marketingId}
+          and a.owner_user_id in
+          <foreach collection="userIds" separator="," item="userId" index="index" open="(" close=")">
+              #{userId}
+          </foreach>
+          <if test="status != null">
+              and a.status = #{status}
+          </if>
+    </select>
+</mapper>

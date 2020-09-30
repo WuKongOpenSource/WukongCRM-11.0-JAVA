@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CallRecordMapper">
+    <select id="queryRecord" resultType="com.kakarote.crm.entity.PO.CallRecord">
+        select * from wk_call_record  where number = #{number}
+        and start_time = #{startTime} and owner_user_id = #{ownerUserId} limit 1
+    </select>
+
+    <select id="pageCallRecordList" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        cr.*,
+        au.realname AS createUserName,
+        hu.realname AS ownerUserName,
+        (
+        CASE
+        cr.model
+        WHEN 'leads' THEN
+        ( SELECT cl.leads_name FROM wk_crm_leads cl WHERE cl.leads_id = cr.model_id )
+        WHEN 'customer' THEN
+        ( SELECT cc.customer_name FROM wk_crm_customer cc WHERE cc.customer_id = cr.model_id )
+        WHEN 'contacts' THEN
+        ( SELECT cl.NAME FROM wk_crm_contacts cl WHERE cl.contacts_id = cr.model_id )
+        END
+        ) AS model_name
+        FROM
+        ( wk_call_record cr LEFT JOIN wk_admin_user au ON ( cr.create_user_id = au.user_id ) )
+        LEFT JOIN wk_admin_user hu ON (
+        cr.owner_user_id = hu.user_id
+        )
+        WHERE owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and (DATE_FORMAT(cr.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+        <if test = "talkTime != null and talkTime != ''">
+            and talk_time ${talkTimeCondition} #{talkTime}
+        </if>
+        order by cr.call_record_id DESC
+    </select>
+
+    <select id="queryContactsByCustomerId" resultType="com.alibaba.fastjson.JSONObject">
+        select a.contacts_id,a.name,a.mobile,a.post,a.telephone,
+        (select value from `wk_crm_contacts_data` as b where b.batch_id = a.batch_id and b.name = 'policymakers' limit 1)
+        as policymakers
+        from wk_crm_contacts as a where a.customer_id = #{customerId}
+    </select>
+
+    <select id="searchFieldValueByLeadsId" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        cl.leads_id,
+        cl.leads_name,
+        afd.`value`,
+        afd.batch_id
+        FROM
+        ( wk_crm_field af LEFT JOIN wk_crm_leads_data afd ON ( af.field_id = afd.field_id ) )
+        LEFT JOIN wk_crm_leads cl ON ( afd.batch_id = cl.batch_id )
+        WHERE
+        af.type = 7
+        AND af.label = 1
+        AND cl.leads_id = #{leadsId}
+    </select>
+
+    <select id="searchFieldValueByContactsId" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        cc.contacts_id,
+        cc.`name`,
+        afd.`value`,
+        afd.batch_id
+        FROM
+        ( wk_crm_field af LEFT JOIN wk_crm_contacts_data afd ON ( af.field_id = afd.field_id ) )
+        LEFT JOIN wk_crm_contacts cc ON ( afd.batch_id = cc.batch_id )
+        WHERE
+        af.type = 7
+        AND af.label = 3
+        AND cc.contacts_id = #{contactsId}
+    </select>
+
+    <select id="analysis" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        `owner_user_id`,
+        count( call_record_id ) AS `total_count_calls`,
+        sum( state = 2 ) AS `total_count_answer`,
+        sum(
+        IF
+        ( state = 2, talk_time, 0 )) AS `total_time_calls`,
+        max(
+        IF
+        ( state = 2, talk_time, 0 )) AS `max_time_calls`,
+        sum( type = 0 ) AS `total_count_calls_out`,
+        sum( type = 0 and state = 2 ) AS `total_count_answer_out`,
+        sum( IF ( state = 2 and type = 0, talk_time, 0 ) ) AS `total_time_calls_out`,
+        sum( type = 1 ) AS `total_count_calls_in`,
+        sum( type = 1 and state = 2 ) AS `total_count_answer_in`,
+        sum( IF ( state = 2 and type = 1, talk_time, 0 ) ) AS `total_time_calls_in`,
+        IF
+        ( count( call_record_id ), sum( state = 2 ) / count( 1 ), 0 ) AS `rate_answer`,
+        IF
+        (
+        sum( type = 0 and state = 2 ),
+        sum( IF ( state = 2 and type = 0, talk_time, 0 ) ) / sum( type = 0 and state = 2 ),
+        0
+        ) AS `average_time_call_out`,
+        IF
+        ( sum( type = 0 ), sum( type = 0 and state = 2 ) / sum( type = 0 ), 0 ) AS `rate_answer_out`,
+        IF
+        (
+        sum( type = 1 and state = 2 ),
+        sum( IF ( state = 2 and type = 1, talk_time, 0 ) ) / sum( type = 1 and state = 2 ),
+        0
+        ) AS `average_time_call_in`,
+        IF
+        ( sum( type = 1 ), sum( type = 1 and state = 2 ) / sum( type = 1 ), 0 ) AS `rate_answer_in`
+        FROM
+        `wk_call_record`
+        WHERE
+        owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and (DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+        GROUP BY owner_user_id
+    </select>
+</mapper>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmAuthMapper">
+    <select id="queryAuthNum" resultType="java.lang.Integer">
+        select count(*) from ${tableName} where ${conditions}
+    </select>
+    <select id="queryReadFollowRecord" resultType="java.lang.Integer">
+        select count(1) from wk_admin_user_role as a inner join wk_admin_role_menu as b on a.role_id = b.role_id
+        inner join wk_admin_role_menu as d on a.role_id = d.role_id
+        where b.menu_id = #{a} and d.menu_id = #{b} and a.user_id = #{userId}
+    </select>
+</mapper>

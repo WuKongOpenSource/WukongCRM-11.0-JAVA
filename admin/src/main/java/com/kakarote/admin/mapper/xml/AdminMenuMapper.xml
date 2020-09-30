@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.admin.mapper.AdminMenuMapper">
+    <select id="queryMenuList" resultType="com.kakarote.admin.entity.PO.AdminMenu">
+        SELECT a.realm, a.menu_id, a.parent_id,a.menu_type
+        FROM wk_admin_menu as a
+        WHERE menu_id IN
+            (
+              SELECT menu_id FROM wk_admin_role_menu AS a INNER JOIN wk_admin_user_role as b ON a.role_id = b.role_id
+              WHERE b.user_id = #{userId} group by a.menu_id
+            )
+    </select>
+    <select id="queryPoolReadAuth" resultType="java.util.HashMap">
+        SELECT
+               count( CASE WHEN find_in_set( #{userId}, admin_user_id ) THEN 1 ELSE NULL END ) AS adminNum ,
+               count( CASE WHEN find_in_set( #{userId},member_user_id ) or find_in_set( #{deptId},member_dept_id ) THEN 1 ELSE NULL END ) AS userNum
+        FROM
+             wk_crm_customer_pool
+        WHERE `status` = '1'
+    </select>
+    <select id="queryMenuId" resultType="java.lang.Integer">
+        select a.menu_id from wk_admin_menu as a inner join wk_admin_menu as b on a.parent_id = b.menu_id
+                                                    inner join wk_admin_menu as c on b.parent_id = c.menu_id
+        where c.realm = #{realm1} and b.realm = #{realm2} and a.realm = #{realm3}
+    </select>
+</mapper>

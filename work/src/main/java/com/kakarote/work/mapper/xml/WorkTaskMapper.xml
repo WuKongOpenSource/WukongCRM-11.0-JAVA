@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.work.mapper.WorkTaskMapper">
+    <select id="queryMyTaskList" resultType="com.kakarote.work.entity.VO.TaskInfoVO">
+    select a.*,b.name as work_name,d.customer_ids,d.contacts_ids,d.business_ids,d.contract_ids,
+      (select count(*) from wk_work_task_comment where type_id = a.task_id and type = 1) as commentCount,
+      (select count(*) from wk_work_task where pid = a.task_id and status = 5) as childWCCount,
+      (select count(*) from wk_work_task where pid = a.task_id) as childAllCount
+    from wk_work_task a left join wk_work b on a.work_id = b.work_id
+      left join wk_work_task_relation as d on a.task_id = d.task_id
+    where (a.owner_user_id like concat('%,',#{userId},',%') or a.main_user_id = #{userId}) and a.pid = 0
+    and a.ishidden = 0 and a.is_top = #{isTop} and (a.status = 1 or a.status = 2) and a.is_archive = 0
+    </select>
+    <select id="queryTaskLabel" resultType="com.kakarote.work.entity.BO.TaskLabelBO">
+    select b.task_id,a.label_id,a.name as label_name,a.color
+    from wk_work_task_label as a left join wk_work_task as b on find_in_set(a.label_id,b.label_id)
+    where
+        b.task_id in
+        <foreach collection="list" item="taskId" index="index" open="(" close=")" separator=",">
+            #{taskId}
+        </foreach>
+    </select>
+    <select id="queryTaskInfo" resultType="com.kakarote.work.entity.VO.TaskDetailVO" parameterType="java.lang.Integer">
+        select a.*,b.name as workName from wk_work_task a left join `wk_work` b on a.work_id = b.work_id where task_id = #{taskId}
+    </select>
+    <select id="queryWorkTaskLabelList" resultType="com.kakarote.work.entity.BO.WorkTaskLabelBO">
+        select label_id,name as label_name,color from wk_work_task_label where label_id in
+        <foreach collection="list" item="labelId" index="index" open="(" close=")" separator=",">
+            #{labelId}
+        </foreach>
+    </select>
+    <select id="queryTrashList" resultType="com.kakarote.work.entity.VO.TaskInfoVO">
+        select a.task_id,a.name,a.stop_time,a.priority,a.status,d.customer_ids,d.contacts_ids,d.business_ids,d.contract_ids,
+        (select count(*) from wk_work_task_comment where type_id = a.task_id and type = 1) as comment_count,
+        (select count(*) from wk_work_task where pid = a.task_id) as child_all_count,
+        (select count(*) from wk_work_task where pid = a.task_id and status = 5) as child_WC_count
+        from wk_work_task as a
+        left join wk_work_task_relation as d on a.task_id = d.task_id
+        where pid = 0 and ishidden = 1
+        <if test="userId != null">
+            and (a.main_user_id = #{userId} or a.owner_user_id like concat('%,',#{userId},',%'))
+        </if>
+        order by a.hidden_time desc
+    </select>
+    <select id="queryTaskCount" resultType="com.kakarote.work.entity.VO.OaTaskListVO">
+        SELECT
+          COUNT(CASE WHEN a.`status` = '5' THEN 1 ELSE null END) as stopTask,
+          COUNT(*) as allTask
+        FROM
+          wk_work_task as a
+        where ishidden = 0 and a.pid = 0
+        <if test="data.type == null or data.type == 0">
+            and (
+            a.main_user_id in
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+            or a.create_user_id in
+            <foreach collection="userIdList"  item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+            or
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator="or">
+                FIND_IN_SET(#{userId},a.owner_user_id)
+            </foreach>
+            )
+        </if>
+        <if test="data.type == 1">
+            and a.main_user_id in
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+        </if>
+        <if test="data.type == 2">
+            and a.create_user_id in
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+        </if>
+        <if test="data.type == 3">
+            and
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator="or">
+                FIND_IN_SET(#{userId},a.owner_user_id)
+            </foreach>
+        </if>
+        <if test="data.status != null and data.status == 1">
+            and a.status in(1,2)
+        </if>
+        <choose>
+            <when test="data.status != null and data.status == 1">
+                and a.status in(1,2)
+            </when>
+            <when test="data.status != null">
+                and a.status = #{data.status}
+            </when>
+        </choose>
+        <if test="data.priority != null">
+            and a.priority = #{data.priority}
+        </if>
+        <if test="data.dueDate != null and data.dueDate != ''">
+            and date_format(a.stop_time,'%Y-%m-%d') = #{data.dueDate}
+        </if>
+        <if test="data.search != null">
+            and a.name like concat('%', #{data.search},'%')
+        </if>
+        <if test="data.mainUserId != null">
+            and a.main_user_id = #{data.mainUserId}
+        </if>
+    </select>
+    <select id="getTaskList" resultType="com.kakarote.work.entity.VO.TaskInfoVO">
+        select a.*,
+        (select count(*) from wk_work_task_comment where type_id = a.task_id and type = 1) as commentCount,
+        (select count(*) from wk_work_task where pid = a.task_id and status = 5) as childWCCount,
+        (select count(*) from wk_work_task where pid = a.task_id) as childAllCount
+        from wk_work_task a
+        where a.pid = 0 and a.ishidden = 0
+        <if test="data.type == null or data.type == 0">
+            and (
+            a.main_user_id in
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+            or a.create_user_id in
+            <foreach collection="userIdList"  item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+            or
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator="or">
+                FIND_IN_SET(#{userId},a.owner_user_id)
+            </foreach>
+            )
+        </if>
+        <if test="data.type == 1">
+            and a.main_user_id in
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+        </if>
+        <if test="data.type == 2">
+            and a.create_user_id in
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+        </if>
+        <if test="data.type == 3">
+            and
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator="or">
+                FIND_IN_SET(#{userId},a.owner_user_id)
+            </foreach>
+        </if>
+        <if test="data.status != null and data.status == 1">
+            and a.status in(1,2)
+        </if>
+        <choose>
+            <when test="data.status != null and data.status == 1">
+                and a.status in(1,2)
+            </when>
+            <when test="data.status != null">
+                and a.status = #{data.status}
+            </when>
+        </choose>
+        <if test="data.priority != null">
+            and a.priority = #{data.priority}
+        </if>
+        <if test="data.dueDate != null and data.dueDate != ''">
+            and date_format(a.stop_time,'%Y-%m-%d') = #{data.dueDate}
+        </if>
+        <if test="data.search != null and data.search != ''">
+            and a.name like concat('%', #{data.search},'%')
+        </if>
+        <if test="data.mainUserId != null">
+            and a.main_user_id = #{data.mainUserId}
+        </if>
+        order by a.create_time desc
+    </select>
+    <select id="getTaskListExport" resultType="com.alibaba.fastjson.JSONObject">
+        select a.task_id,a.name,a.description,a.start_time,a.stop_time,a.create_time,a.create_user_id,a.main_user_id,
+               (CASE WHEN a.priority = 0 THEN '无'
+                     WHEN a.priority = 1 THEN '低'
+                     WHEN a.priority = 2 THEN '中'
+                     WHEN a.priority = 3 THEN '高' END ) as priority,
+               a.owner_user_id,
+               (select GROUP_CONCAT(name) from wk_work_task_label where find_in_set(label_id,a.label_id) ) as label_name,
+              d.customer_ids,
+              d.contacts_ids,
+              d.business_ids,
+              d.contract_ids
+                from wk_work_task as a
+                    left join wk_work_task_relation as d on a.task_id = d.task_id
+                where a.pid = 0 and a.ishidden = 0
+        <if test="data.type == null or data.type == 0">
+            and (
+            a.main_user_id in
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+            or a.create_user_id in
+            <foreach collection="userIdList"  item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+            or
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator="or">
+                FIND_IN_SET(#{userId},a.owner_user_id)
+            </foreach>
+            )
+        </if>
+        <if test="data.type == 1">
+            and a.main_user_id in
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+        </if>
+        <if test="data.type == 2">
+            and a.create_user_id in
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+        </if>
+        <if test="data.type == 2">
+            and
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator="or">
+                FIND_IN_SET(#{userId},a.owner_user_id)
+            </foreach>
+        </if>
+        <if test="data.status != null and data.status == 1">
+            and a.status in(1,2)
+        </if>
+        <choose>
+            <when test="data.status != null and data.status == 1">
+                and a.status in(1,2)
+            </when>
+            <when test="data.status != null">
+                and a.status = #{data.status}
+            </when>
+        </choose>
+        <if test="data.priority != null">
+            and a.priority = #{data.priority}
+        </if>
+        <if test="data.dueDate != null and data.dueDate != ''">
+            and date_format(a.stop_time,'%Y-%m-%d') = #{data.dueDate}
+        </if>
+        <if test="data.search != null and data.search != ''">
+            and a.name like concat('%', #{data.search},'%')
+        </if>
+        <if test="data.mainUserId != null">
+            and a.main_user_id = #{data.mainUserId}
+        </if>
+        order by a.create_time desc
+    </select>
+    <select id="myTaskExport" resultType="com.alibaba.fastjson.JSONObject">
+        select a.task_id,a.name,a.description,a.start_time,a.stop_time,a.create_time,
+               a.create_user_id,a.main_user_id,a.owner_user_id,
+               (CASE WHEN a.priority = 0 THEN '无'
+                     WHEN a.priority = 1 THEN '低'
+                     WHEN a.priority = 2 THEN '中'
+                     WHEN a.priority = 3 THEN '高' END ) as priority,
+               (CASE WHEN a.is_top = 0 THEN '收件箱'
+                     WHEN a.is_top = 1 THEN '今天要做'
+                     WHEN a.is_top = 2 THEN '下一步要做'
+                     WHEN a.is_top = 3 THEN '以后要做' END ) as is_top,
+        (select GROUP_CONCAT(name) from wk_work_task_label where find_in_set(label_id,a.label_id)) as label_name,                                                                                                                                                                                                d.customer_ids,
+              d.contacts_ids,
+              d.business_ids,
+              d.contract_ids,
+              if(d.customer_ids is null,null,(select GROUP_CONCAT(customer_name SEPARATOR'】、【') from wk_crm_customer where find_in_set(customer_id,d.customer_ids))) as customer_name,
+              if(d.contacts_ids is null,null,(select GROUP_CONCAT(name SEPARATOR'】、【') from wk_crm_contacts where find_in_set(contacts_id,d.contacts_ids))) as contacts_name,
+              if(d.business_ids is null,null,(select GROUP_CONCAT(business_name SEPARATOR'】、【') from wk_crm_business where find_in_set(business_id,d.business_ids))) as business_name,
+              if(d.contract_ids is null,null,(select GROUP_CONCAT(name SEPARATOR'】、【') from wk_crm_contract where find_in_set(contract_id,d.contract_ids))) as contract_name
+          from wk_work_task as a
+          left join wk_work_task_relation as d on a.task_id = d.task_id
+          where (a.owner_user_id like concat('%,',#{data.userId},',%') or a.main_user_id = #{data.userId}) and a.pid = 0
+          and a.ishidden = 0 and (a.status = 1 or a.status = 2) and a.is_archive = 0
+          order by a.is_top
+    </select>
+</mapper>

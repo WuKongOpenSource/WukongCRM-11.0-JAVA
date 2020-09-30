@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.oa.mapper.OaLogMapper">
+    <select id="queryList" resultType="com.alibaba.fastjson.JSONObject">
+        select
+        a.*, b.dept_id,
+        b.realname,
+        b.img as userImg,
+        soal.customer_ids,
+        soal.contacts_ids,
+        soal.business_ids,
+        soal.contract_ids,
+        (CASE WHEN c.log_id is null THEN 0 ELSE 1 END) as getBulletin,
+        c.customer_num as customerCount,
+        c.business_num as businessCount,
+        c.contract_num as contractCount,
+        c.receivables_money as receivablesMoney,
+        c.activity_num as recordCount,
+        (SELECT COUNT(*) FROM wk_work_task_comment WHERE type_id=a.log_id and type='2') as replyNum
+        FROM
+        wk_oa_log as a
+        LEFT JOIN wk_admin_user as b on a.create_user_id=b.user_id
+        LEFT JOIN wk_oa_log_record as c on a.log_id=c.log_id
+        LEFT JOIN wk_oa_log_relation as soal on soal.log_id=a.log_id
+        WHERE 1 = 1
+        <if test="data.categoryId != null">
+            and a.category_id = #{data.categoryId}
+        </if>
+        <choose>
+            <when test="data.by==1">
+                and a.create_user_id in
+                <for collection="data.userIds" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </for>
+            </when>
+            <when test="data.by==2">
+                and FIND_IN_SET(#{data.send_user_ids},a.send_user_ids)
+                <if test="data.userIds!=null and data.userIds.size()>0">
+                    and a.create_user_id in
+                    <foreach collection="data.userIds" index="i" item="id" open="(" separator="," close=")">
+                        #{id}
+                    </foreach>
+                </if>
+            </when>
+            <when test="data.by==0">
+                <if test="!data.isAdmin">
+                    and (
+                    <if test="data.userIds1!=null and data.userIds1.size()>0">
+                        a.create_user_id in
+                        <foreach collection="data.userIds1" index="i" item="id" open="(" separator="," close=")">
+                            #{id}
+                        </foreach>
+                        or
+                    </if>
+                    FIND_IN_SET(#{data.send_user_ids},a.send_user_ids)
+                    <if test="data.userIds2!=null and data.userIds2.size()>0">
+                        and a.create_user_id in
+                        <foreach collection="data.userIds2" index="i" item="id" open="(" separator="," close=")">
+                            #{id}
+                        </foreach>
+                    </if>
+                    )
+                </if>
+            </when>
+        </choose>
+        <if test="data.beginTime!=null">
+            and date_format(a.create_time,#{data.sqlDateFormat}) between #{data.beginTime} and #{data.finalTime}
+        </if>
+        <if test="data.startTime!=null">
+            and date_format(a.create_time,'%Y-%m-%d') between #{data.startTime} and #{data.endTime}
+        </if>
+        <if test="data.categoryId!=null">
+            and category_id = #{data.categoryId}
+        </if>
+        <if test="data.logId!=null">
+            and a.log_id = #{data.logId}
+        </if>
+        <if test="data.search!=null and data.search!=''">
+            and (
+            a.content like CONCAT('%',#{data.search},'%')
+            or a.tomorrow like CONCAT('%',#{data.search},'%')
+            or a.question like CONCAT('%',#{data.search},'%')
+            )
+        </if>
+        <if test="data.recentDays!=null">
+            and to_days(now()) - to_days(a.create_time) &lt; #{data.recentDays}
+        </if>
+        order by a.log_id desc
+    </select>
+
+    <select id="queryLogBulletin" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+            COUNT(*) allNum,
+            COUNT(CASE WHEN create_user_id=#{userId} and to_days(create_time) = to_days(now()) THEN 1 ELSE null END) as nowNum
+        FROM
+            wk_oa_log
+        WHERE
+            date_format( create_time, '%Y-%m-%d' ) between #{beginTime} and #{endTime}
+            AND create_user_id = #{userId}
+    </select>
+    
+    <select id="queryCompleteStats" resultType="java.lang.Integer">
+        select count(distinct create_user_id) from wk_oa_log
+        where create_time between #{start} and #{end} and create_user_id in
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        and category_id = #{type}
+    </select>
+
+    <select id="queryCompleteOaLogList" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+          a.*, b.dept_id,
+          b.realname,
+          b.img as userImg,
+          soal.customer_ids,
+          soal.contacts_ids,
+          soal.business_ids,
+          soal.contract_ids,
+          (CASE WHEN c.log_id is null THEN 0 ELSE 1 END) as getBulletin,
+          c.customer_num as customerCount,
+          c.business_num as businessCount,
+          c.contract_num as contractCount,
+          c.receivables_money as receivablesMoney,
+          c.activity_num as recordCount,
+          (SELECT COUNT(*) FROM wk_work_task_comment WHERE type_id=a.log_id and type='2') as replyNum
+        FROM
+            wk_oa_log as a
+        LEFT JOIN wk_admin_user as b on a.create_user_id=b.user_id
+        LEFT JOIN wk_oa_log_record as c on a.log_id=c.log_id
+        LEFT JOIN wk_oa_log_relation as soal on soal.log_id=a.log_id
+        WHERE a.create_time between #{data.start} and #{data.end} and a.create_user_id in
+        <foreach collection="data.userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        and a.category_id = #{data.type}
+        <if test="data.search!=null and data.search!=''">
+            and b.realname like CONCAT('%',#{data.search},'%')
+        </if>
+        <if test="!data.isAdmin">
+            and (
+            <if test="data.userIds1!=null and data.userIds1.size()>0">
+                a.create_user_id in
+                <foreach collection="data.userIds1" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+                or
+            </if>
+            FIND_IN_SET(#{data.send_user_ids},a.send_user_ids)
+            <if test="data.userIds2!=null and data.userIds2.size()>0">
+                and a.create_user_id in
+                <foreach collection="data.userIds2" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+            )
+        </if>
+        order by a.create_time
+    </select>
+
+    <select id="queryIncompleteOaLogList" resultType="com.kakarote.core.feign.admin.entity.SimpleUser">
+        select user_id,realname,img from wk_admin_user
+        where user_id not in
+        <foreach collection="data.notIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        and user_id in
+        <foreach collection="data.userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        <if test="data.search!=null and data.search!=''">
+            and realname like CONCAT('%',#{data.search},'%')
+        </if>
+    </select>
+    
+    <select id="queryBulletinByLog" resultType="com.alibaba.fastjson.JSONObject">
+        select
+        (SELECT COUNT(*) FROM wk_crm_business as c WHERE TO_DAYS(create_time)=TO_DAYS(NOW()) AND owner_user_id in
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>) as business_num,
+        COUNT(*) as contract_num,
+        (SELECT COUNT(*) FROM wk_crm_customer as c WHERE TO_DAYS(create_time)=TO_DAYS(NOW()) and status != 3 AND owner_user_id in
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>) as customer_num,
+        (SELECT IFNULL(SUM(money),0) FROM wk_crm_receivables as c WHERE check_status='1' and TO_DAYS(return_time)=TO_DAYS(NOW()) AND owner_user_id in
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>) as receivables_money,
+        (SELECT COUNT(*) FROM wk_crm_activity as c WHERE type = 1 and TO_DAYS(create_time)=TO_DAYS(NOW()) AND create_user_id in
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>) as activity_num
+        from wk_crm_contract as a
+        WHERE TO_DAYS(create_time)=TO_DAYS(NOW()) AND owner_user_id in
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach> and check_status='1'
+    </select>
+    <select id="queryBulletinByLogInfo" resultType="com.kakarote.oa.entity.PO.OaLogBulletin">
+        SELECT business_id as type_id,2 as type FROM wk_crm_business WHERE TO_DAYS(create_time) = TO_DAYS(NOW()) AND owner_user_id IN
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach> and status != 3
+        union all
+        SELECT contract_id as type_id,3 as type FROM wk_crm_contract WHERE TO_DAYS(create_time) = TO_DAYS(NOW()) AND owner_user_id IN
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach> and check_status != 7
+        union all
+        SELECT customer_id as type_id,1 as type FROM wk_crm_customer WHERE TO_DAYS(create_time) = TO_DAYS(NOW()) and status != 3 AND owner_user_id IN
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        union all
+        SELECT receivables_id as type_id,4 as type FROM wk_crm_receivables WHERE check_status = '1' AND TO_DAYS(return_time) = TO_DAYS(NOW()) AND owner_user_id IN
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        union all
+        SELECT activity_id as type_id,5 as type FROM wk_crm_activity WHERE type in (1,4) AND TO_DAYS(create_time) = TO_DAYS(NOW()) AND create_user_id IN
+        <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="queryLogBulletinByType" resultType="com.alibaba.fastjson.JSONObject">
+        <choose>
+            <when test="data.type == 1">
+                select a.customer_id, a.customer_name, a.deal_status, a.create_time, a.owner_user_id,b.realname as owner_user_name,a.last_time
+                from `wk_crm_customer` a left join `wk_admin_user` b on a.owner_user_id = b.user_id
+                where a.customer_id in
+                <foreach collection="data.typeIds" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+                <if test="data.search!=null and data.search!=''">
+                    and a.customer_name like concat('%',#{data.search},'%')
+                </if>
+            </when>
+            <when test="data.type==2">
+                select a.business_id,a.business_name,a.create_time, a.owner_user_id,b.realname as owner_user_name,a.last_time,c.name as statusName
+                from `wk_crm_business` as a
+                left join `wk_admin_user` b on a.owner_user_id = b.user_id
+                left join wk_crm_business_status c on a.status_id = c.status_id
+                where a.status != 3 and a.business_id in
+                <foreach collection="data.typeIds" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+                <if test="data.search!=null and data.search!=''">
+                    and a.business_name like concat('%',#{data.search},'%')
+                </if>
+            </when>
+            <when test="data.type==3">
+                select a.contract_id,a.check_status,a.create_time,a.name,a.last_time,
+                (select group_concat(realname) from `wk_admin_user` where find_in_set(user_id,a.company_user_id)) as company_user_name
+                from `wk_crm_contract` a left join `wk_crm_contacts` b on a.contacts_id = b.contacts_id
+                where a.contract_id in
+                <foreach collection="data.typeIds" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+                <if test="data.search!=null and data.search!=''">
+                    and a.name like concat('%',#{data.search},'%')
+                </if>
+            </when>
+            <when test="data.type==4">
+                select a.receivables_id,a.number,a.return_time, a.owner_user_id,b.realname as owner_user_name
+                from `wk_crm_receivables` a left join `wk_admin_user` b on a.owner_user_id = b.user_id
+                where a.receivables_id in
+                <foreach collection="data.typeIds" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+                <if test="data.search!=null and data.search!=''">
+                    and a.number like concat('%',#{data.search},'%')
+                </if>
+            </when>
+            <when test="data.type==5">
+                select a.activity_id,b.img as userImg,b.realname,a.create_time,a.content,a.category,a.next_time,a.batch_id,a.business_ids,a.contacts_ids,a.activity_type,a.activity_type_id,a.status,
+                (case a.activity_type
+                when 2 then (select customer_name from `wk_crm_customer` where customer_id = a.activity_type_id)
+                when 1 then (select leads_name from `wk_crm_leads` where leads_id = a.activity_type_id)
+                when 5 then (select business_name from `wk_crm_business` where business_id = a.activity_type_id)
+                when 6 then (select name from `wk_crm_contract` where contract_id = a.activity_type_id)
+                when 3 then (select name from `wk_crm_contacts` where contacts_id = a.activity_type_id)
+                end) as crm_type_name
+                from wk_crm_activity as a inner join wk_admin_user as b on a.create_user_id = b.user_id
+                where a.activity_id in
+                <foreach collection="data.typeIds" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+                and a.activity_type = #{data.crmType}
+            </when>
+        </choose>
+        <if test="data.sortField!=null">
+            order by ${data.sortField} ${data.orderType}
+        </if>
+    </select>
+    
+    <select id="queryLogRecordCount" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT a.activity_type as crmType,COUNT(a.activity_type) as count FROM wk_crm_activity a
+        WHERE a.activity_id in
+        <foreach collection="typeIds" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        group by a.activity_type
+    </select>
+    <select id="queryById" resultType="com.alibaba.fastjson.JSONObject">
+        select
+        a.*, b.dept_id,
+        b.realname,
+        b.img as userImg,
+        soal.customer_ids,
+        soal.contacts_ids,
+        soal.business_ids,
+        soal.contract_ids,
+        (CASE WHEN c.log_id is null THEN 0 ELSE 1 END) as getBulletin,
+        c.customer_num as customerCount,
+        c.business_num as businessCount,
+        c.contract_num as contractCount,
+        c.receivables_money as receivablesMoney,
+        c.activity_num as recordCount,
+        (SELECT COUNT(*) FROM wk_work_task_comment WHERE type_id=a.log_id and type='2') as replyNum
+        FROM
+        wk_oa_log as a
+        LEFT JOIN wk_admin_user as b on a.create_user_id=b.user_id
+        LEFT JOIN wk_oa_log_record as c on a.log_id=c.log_id
+        LEFT JOIN wk_oa_log_relation as soal on soal.log_id=a.log_id
+        WHERE a.log_id = #{logId}
+    </select>
+
+    <select id="queryExportList" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        a.log_id,a.content,a.tomorrow,a.question,a.create_time,
+        (CASE WHEN a.category_id = 1 THEN '日报' WHEN a.category_id = 2 THEN '周报' WHEN a.category_id = 3 THEN '月报' END) as category,
+        (select GROUP_CONCAT(realname) from wk_admin_user where find_in_set(user_id,a.send_user_ids)) as send_user_name,
+        (select GROUP_CONCAT(name) from wk_admin_dept where find_in_set(dept_id,a.send_dept_ids)) as send_dept_name,
+        b.dept_id,
+        b.realname as create_user_name,
+        soal.customer_ids,
+        soal.contacts_ids,
+        soal.business_ids,
+        soal.contract_ids,
+        if(soal.customer_ids is null,null,(select GROUP_CONCAT(customer_name SEPARATOR'】、【') from wk_crm_customer where find_in_set(customer_id,soal.customer_ids))) as customer_name,
+        if(soal.contacts_ids is null,null,(select GROUP_CONCAT(name SEPARATOR'】、【') from wk_crm_contacts where find_in_set(contacts_id,soal.contacts_ids))) as contacts_name,
+        if(soal.business_ids is null,null,(select GROUP_CONCAT(business_name SEPARATOR'】、【') from wk_crm_business where find_in_set(business_id,soal.business_ids))) as business_name,
+        if(soal.contract_ids is null,null,(select GROUP_CONCAT(name SEPARATOR'】、【') from wk_crm_contract where find_in_set(contract_id,soal.contract_ids))) as contract_name,
+        (SELECT COUNT(*) FROM wk_work_task_comment WHERE type_id=a.log_id and type='2') as replyNum
+        FROM
+        wk_oa_log as a
+        LEFT JOIN wk_admin_user as b on a.create_user_id=b.user_id
+        LEFT JOIN wk_oa_log_relation as soal on soal.log_id=a.log_id
+        WHERE 1 = 1
+        <choose>
+            <when test="by==1">
+                and a.create_user_id in
+                <for collection="userIds" index="i" item="id" open="(" separator="," close=")">
+                    #{id}
+                </for>
+            </when>
+            <when test="by==2">
+                and FIND_IN_SET(#{send_user_ids},a.send_user_ids)
+                <if test="userIds!=null and userIds.size()>0">
+                    and a.create_user_id in
+                    <foreach collection="userIds" index="i" item="id" open="(" separator="," close=")">
+                        #{id}
+                    </foreach>
+                </if>
+            </when>
+            <when test="by==0">
+                <if test="!isAdmin">
+                    and (
+                    <if test="userIds1!=null and userIds1.size()>0">
+                        a.create_user_id in
+                        <foreach collection="userIds1" index="i" item="id" open="(" separator="," close=")">
+                            #{id}
+                        </foreach>
+                        or
+                    </if>
+                    FIND_IN_SET(#{send_user_ids},a.send_user_ids)
+                    <if test="userIds2!=null and userIds2.size()>0">
+                        and a.create_user_id in
+                        <foreach collection="userIds2" index="i" item="id" open="(" separator="," close=")">
+                            #{id}
+                        </foreach>
+                    </if>
+                    )
+                </if>
+            </when>
+        </choose>
+        <if test="beginTime!=null">
+            and date_format(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+        </if>
+        <if test="categoryId!=null">
+            and category_id = #{categoryId}
+        </if>
+        <if test="logId!=null">
+            and a.log_id = #{logId}
+        </if>
+        <if test="search!=null">
+            and (
+            a.content like CONCAT('%',#{search},'%')
+            or a.tomorrow like CONCAT('%',#{search},'%')
+            or a.question like CONCAT('%',#{search},'%')
+            )
+        </if>
+        order by a.log_id desc
+    </select>
+
+    <select id="queryCommentList" resultType="com.alibaba.fastjson.JSONObject">
+        select a.comment_id,a.content,a.main_id,b.realname as create_user_name,c.realname as reply_name
+        from wk_work_task_comment as a left join wk_admin_user as b on a.user_id = b.user_id
+        left join wk_admin_user as c on a.pid = c.user_id
+        where type_id = #{typeId} and type = 2
+    </select>
+</mapper>

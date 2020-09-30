@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.oa.mapper.OaEventMapper">
+
+    <select id="queryList" resultType="com.kakarote.oa.entity.PO.OaEvent">
+        select a.*,b.color
+        from `wk_oa_event` a left join `wk_oa_calendar_type` b on a.type_id = b.type_id
+        where 1 = 1
+        <if test="queryEventListBO.userId != null">
+            and find_in_set(#{queryEventListBO.userId},owner_user_ids)
+        </if>
+        <if test="queryEventListBO.startTime != null">
+            and (repeat_end_time is null or
+            case
+            when repetition_type = 1 then unix_timestamp(repeat_start_time) * 1000  >= (#{queryEventListBO.startTime} - (unix_timestamp(end_time) * 1000 - unix_timestamp(start_time) * 1000)) and
+            unix_timestamp(repeat_end_time) * 1000 &lt;= #{queryEventListBO.endTime} + (unix_timestamp(end_time) * 1000 - unix_timestamp(start_time) * 1000)
+            else
+            unix_timestamp(repeat_end_time)*1000 &gt;= #{queryEventListBO.startTime}
+            end
+            )
+        </if>
+        <if test="queryEventListBO.typeIds != null and queryEventBO.type.size() > 0">
+            and a.type_id in
+            <foreach collection="queryEventListBO.typeIds" index="index" item="typeId" separator="," open="(" close=")" >
+                #{typeId}
+            </foreach>
+        </if>
+    </select>
+</mapper>

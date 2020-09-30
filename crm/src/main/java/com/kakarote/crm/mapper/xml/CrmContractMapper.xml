@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmContractMapper">
+    <update id="deleteMember">
+        update wk_crm_contract set rw_user_id = replace(rw_user_id,#{memberId},','),ro_user_id = replace(ro_user_id,#{memberId},',') where contract_id = #{id}
+    </update>
+    <select id="queryById" resultType="com.kakarote.crm.common.CrmModel">
+        select crt.*,ccc.customer_id,ccc.customer_name,ccb.business_name,a.name as contacts_name,
+               ( select count(1) from wk_crm_receivables where contract_id =  crt.contract_id ) as receivablesCount,
+               ( select IFNULL(sum(money),0) from wk_crm_receivables where contract_id =  crt.contract_id and check_status = 1) as receivablesMoney
+        from wk_crm_contract as crt
+              left join wk_crm_customer as ccc on crt.customer_id = ccc.customer_id
+              left join wk_crm_business as ccb on crt.business_id = ccb.business_id
+              left join wk_crm_contacts as a on crt.contacts_id = a.contacts_id
+        where crt.contract_id = #{id}
+    </select>
+    <select id="queryNum" resultType="com.kakarote.crm.entity.VO.CrmInfoNumVO">
+        select
+        (select count(*) from wk_crm_contract_product where contract_id = #{contractId}) as productCount,
+        (select count(*) from wk_crm_receivables where contract_id = #{contractId} and check_status != 7 ${conditions}) as receivablesCount,
+        (select count(*) from wk_crm_return_visit where contract_id = #{contractId} ${returnVisitCon}) as returnVisitCount,
+        count(*) as invoiceCount
+        from wk_crm_invoice where contract_id = #{contractId} ${invoiceCon}
+    </select>
+    <select id="queryReceivablesPlansByContractId" resultType="com.kakarote.crm.entity.PO.CrmReceivablesPlan">
+        select a.plan_id,a.num,a.money,a.return_type,date(a.return_date) as return_date
+        from wk_crm_receivables_plan as a left join wk_crm_receivables as b on a.receivables_id = b.receivables_id
+        where b.receivables_id is null and a.contract_id = #{contractId}
+    </select>
+    <select id="queryReceivablesPlansByReceivablesId"
+            resultType="com.kakarote.crm.entity.PO.CrmReceivablesPlan">
+        select plan_id,num,money,return_type,date(return_date) as return_date from wk_crm_receivables_plan where receivables_id = #{receivablesId}
+    </select>
+    <select id="querySubtotalByContractId" resultType="com.alibaba.fastjson.JSONObject">
+        select distinct ccc.discount_rate,
+        round(((select SUM(subtotal) from wk_crm_contract_product WHERE contract_id = ccc.contract_id)/100*(100 - ccc.discount_rate) ),2)as money
+        from wk_crm_contract as ccc
+        where ccc.contract_id = #{contractId}
+    </select>
+    <select id="queryProductPageList" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT *,
+        (select value from `wk_crm_product_data` a  where a.batch_id = c.batch_id and a.name = 'unit') as unit
+        from
+        (select sccp.product_id,scp.name as product_name,sccp.price,sccp.sales_price,sccp.num,sccp.discount,sccp.subtotal,c.name as category_name,scp.batch_id,scp.status
+        FROM wk_crm_contract_product sccp
+        LEFT JOIN wk_crm_product as scp on scp.product_id = sccp.product_id
+        left join `wk_crm_product_category` as c on scp.category_id = c.category_id
+        where sccp.contract_id = #{contractId}) as c
+    </select>
+    <select id="queryReturnVisit" resultType="com.alibaba.fastjson.JSONObject">
+        select a.*,a.visit_number,a.visit_time,a.owner_user_id,c.num as contract_num,d.customer_name,e.name as contacts_name,
+        <foreach collection="nameList" separator="," index="index" item="x">
+            (select value from wk_crm_return_visit_data  where field_id = '${x.fieldId}' and batch_id = a.batch_id limit 1) as '${x.fieldName}'
+        </foreach>
+        from wk_crm_return_visit as a
+        left join wk_crm_contract as c on a.contract_id = c.contract_id
+        left join wk_crm_customer as d on a.customer_id = d.customer_id
+        left join wk_crm_contacts as e on a.contacts_id = e.contacts_id
+        where a.contract_id = #{contractId}
+    </select>
+    <select id="endContract" resultType="java.lang.String">
+        select date_format(date_sub(end_time,interval #{data.expiringDay} day),'%Y-%m-%d')  as time
+        from `wk_crm_contract`
+        where check_status = 1 and owner_user_id = #{data.userId}
+        and (to_days(end_time) - #{data.expiringDay}) between to_days(#{data.startTime}) and to_days(#{data.endTime})
+        group by date_format(date_sub(end_time,interval #{data.expiringDay} day),'%Y-%m-%d')
+    </select>
+    <select id="receiveContract" resultType="java.lang.String">
+        select date_format(a.return_date,'%Y-%m-%d')  as time
+        from `wk_crm_receivables_plan` a
+        left join `wk_crm_contract` c on a.contract_id = c.contract_id
+        where c.check_status = 1
+        and to_days(a.return_date) between to_days(#{data.startTime}) and to_days(#{data.endTime})
+        and  a.create_user_id = #{data.userId}
+        and a.return_date is not null
+        group by date_format(a.return_date,'%Y-%m-%d')
+    </select>
+    <select id="endContractList" resultType="java.lang.Integer">
+        select contract_id
+        from `wk_crm_contract`
+        where check_status = 1 and owner_user_id = #{userId}
+        and (to_days(end_time) - #{expiringDay}) = to_days(#{time})
+    </select>
+    <select id="receiveContractList" resultType="com.alibaba.fastjson.JSONObject">
+        select c.contract_id,a.return_type,a.return_date,a.num as planNum
+        from `wk_crm_receivables_plan` a
+        left join `wk_crm_contract` c on a.contract_id = c.contract_id
+        where c.check_status = 1
+        and to_days(a.return_date)  = to_days(#{time})
+        and  a.create_user_id = #{userId}
+        and a.return_date is not null
+    </select>
+</mapper>

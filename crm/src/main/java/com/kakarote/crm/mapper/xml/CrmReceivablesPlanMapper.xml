@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmReceivablesPlanMapper">
+    <select id="queryReceivablesPlansByContractId" resultType="com.kakarote.crm.entity.PO.CrmReceivablesPlan">
+        select a.plan_id,a.num,a.money,a.return_type,date(a.return_date) as return_date
+        from wk_crm_receivables_plan as a join wk_crm_receivables as b on a.receivables_id = b.receivables_id
+        where b.receivables_id is null and a.contract_id = #{contractId}
+    </select>
+    <select id="queryReceivablesPlanListByContractId" resultType="com.kakarote.crm.entity.PO.CrmReceivablesPlan">
+        select scrp.plan_id,  scrp.num,scc.customer_name ,scco.num as contract_num ,scrp.remind,
+     scrp.money,scrp.return_date,return_type,
+     scrp.remind,scrp.remark
+                     from wk_crm_receivables_plan as scrp
+                    LEFT JOIN wk_crm_customer as scc on scc.customer_id = scrp.customer_id
+                     LEFT JOIN wk_crm_contract as scco on scco.contract_id = scrp.contract_id
+                    where scrp.contract_id = #{contractId}
+    </select>
+    <select id="queryUpdateField" resultType="java.util.HashMap">
+        select a.customer_id,b.customer_name,a.contract_id,c.num,a.money,a.return_date,a.return_type,a.remind,a.remark
+        from wk_crm_receivables_plan as a
+                 left join wk_crm_customer as b on a.customer_id = b.customer_id
+                 left join wk_crm_contract as c on a.contract_id = c.contract_id
+        where a.plan_id = #{id}
+    </select>
+</mapper>

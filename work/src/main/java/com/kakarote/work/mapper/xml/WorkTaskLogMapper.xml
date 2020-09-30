@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.work.mapper.WorkTaskLogMapper">
+    <select id="queryTaskLog" resultType="com.kakarote.work.entity.VO.WorkTaskLogVO">
+      SELECT wtl.log_id, wtl.content, wtl.create_time ,au.img,au.realname
+      FROM wk_work_task_log as wtl
+      JOIN wk_admin_user as au on au.user_id = wtl.user_id
+      where wtl.task_id = #{taskId} and wtl.status != 4
+      order by wtl.create_time desc
+    </select>
+
+</mapper>

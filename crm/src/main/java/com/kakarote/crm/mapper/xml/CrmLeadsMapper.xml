@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmLeadsMapper">
+    <select id="queryById" resultType="com.kakarote.crm.common.CrmModel">
+        select a.*,a.leads_name as name,
+          (select count(1) from wk_crm_leads_user_star where leads_id = a.leads_id and user_id = #{userId} limit 0,1) as star
+        from wk_crm_leads as a
+        where leads_id = #{id}
+    </select>
+    <select id="eventLeads" resultType="java.lang.String">
+        select date_format(next_time,'%Y-%m-%d') as time
+        from `wk_crm_leads`
+        where owner_user_id = #{data.userId} and next_time between #{data.startTime} and #{data.endTime}
+        group by date_format(next_time,'%Y-%m-%d')
+    </select>
+    <select id="eventLeadsList" resultType="java.lang.Integer">
+        select leads_id
+        from `wk_crm_leads`
+        where owner_user_id = #{userId} and to_days(next_time) = to_days(#{time})
+    </select>
+</mapper>

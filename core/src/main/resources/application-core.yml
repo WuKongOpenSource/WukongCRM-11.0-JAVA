@@ -1,0 +1,62 @@
+spring:
+  mvc:
+    throw-exception-if-no-handler-found: true
+    favicon:
+      enabled: false
+    date-format: yyyy-MM-dd HH:mm:ss
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  resources:
+    add-mappings: false
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+mybatis-plus:
+  configuration:
+    default-scripting-language: com.kakarote.core.mybatis.MybatisXMLDriver
+    call-setters-on-nulls: true
+  mapper-locations: classpath:/mapper/xml/*.xml
+
+ribbon:
+  okhttp:
+    enabled: true
+feign:
+  client:
+    config:
+      default.connect-timeout: 10000
+      default.read-timeout: 10000
+  sentinel:
+    enabled: true
+  httpclient:
+    enabled: false
+  okhttp:
+    enabled: true
+jetcache:
+  statIntervalMinutes: 15
+  areaInCacheName: false
+  local:
+    default:
+      type: linkedhashmap
+      limit: 100
+      keyConvertor: none
+      expireAfterWriteInMillis: 100000
+crm:
+  upload:
+    # 1 本地 2 阿里云OSS
+    config: 1
+    oss:
+      endpoint:
+      accessKeyId:
+      accessKeySecret:
+      publicUrl:
+      bucketName:
+        0: 72crm-cloud
+        1: 72crm-public
+    local:
+      publicUrl:
+      uploadPath:
+        # 默认是文件上传是windows路径,若是其他系统许自行修改
+        0: D:\upload\wk-single\private
+        1: D:\upload\wk-single\public

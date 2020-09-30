@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.work.mapper.WorkTaskLabelMapper">
+    <select id="getLabelList" resultType="com.kakarote.work.entity.VO.WorkTaskLabelOrderVO">
+        select label_id, name, color,999 as orderNum from wk_work_task_label
+    </select>
+    <select id="getTaskList" resultType="com.kakarote.work.entity.VO.TaskInfoVO">
+        select a.task_id,a.name,a.stop_time,a.priority,a.work_id,a.status,a.label_id,
+          d.customer_ids,d.contacts_ids,d.business_ids,d.contract_ids,
+        (select count(*) from wk_work_task_comment where type_id = a.task_id and type = 1) as comment_count,
+        (select count(*) from wk_work_task where pid = a.task_id) as child_all_count,
+        (select count(*) from wk_work_task where pid = a.task_id and status = 5) as child_WC_count
+        from wk_work_task as a
+        left join wk_work_task_relation as d on a.task_id = d.task_id
+        where pid = 0 and find_in_set(#{labelId},a.label_id) and a.ishidden = 0
+        <if test="userId != null">
+            and (a.main_user_id = #{userId} or a.owner_user_id like concat('%,',#{userId},',%'))
+        </if>
+    </select>
+    <select id="getWorkList" resultType="com.kakarote.work.entity.VO.WorkTaskByLabelVO">
+        select distinct a.work_id,a.name,a.color
+        from wk_work as a left join wk_work_task as b on a.work_id = b.work_id
+        where find_in_set(#{labelId},b.label_id) and b.ishidden = 0
+        <if test="userId != null">
+            and (b.main_user_id = #{userId} or b.owner_user_id like concat('%,',#{userId},',%'))
+        </if>
+        group by a.work_id
+    </select>
+</mapper>

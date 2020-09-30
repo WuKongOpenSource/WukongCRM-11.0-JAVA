@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmContactsMapper">
+    <select id="queryById" resultType="com.kakarote.crm.common.CrmModel">
+        select a.*,b.customer_id,b.customer_name,
+               (select count(1) from wk_crm_contacts_user_star where contacts_id = a.contacts_id and user_id = #{userId}) as star
+        from wk_crm_contacts as a left join wk_crm_customer as b on a.customer_id = b.customer_id
+        where a.contacts_id = #{id}
+    </select>
+    <select id="queryNum" resultType="com.kakarote.crm.entity.VO.CrmInfoNumVO">
+        select count(*) as businessCount from wk_crm_contacts_business as a inner join wk_crm_business as b on a.business_id = b.business_id
+         where a.contacts_id = #{contactsId} and b.status = 1
+    </select>
+    <select id="queryBusiness" resultType="java.util.Map">
+        select a.business_id,a.business_name,a.money,f.customer_name,d.name as type_name,e.name as status_name,a.is_end,a.status_id,a.type_id
+        from wk_crm_business as a inner join wk_crm_contacts_business as b on a.business_id = b.business_id
+        inner join wk_crm_contacts as c on b.contacts_id = c.contacts_id
+        left join wk_crm_business_type as d on a.type_id = d.type_id
+        left join wk_crm_business_status as e on a.status_id = e.status_id
+        left join wk_crm_customer as f on a.customer_id = f.customer_id
+        where c.contacts_id = #{contactsId}
+    </select>
+</mapper>

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.work.mapper.WorkMapper">
+    <select id="deleteTaskRelationByWorkId" parameterType="java.lang.Integer">
+    delete from `wk_work_task_relation` where task_id in (select task_id from `wk_work_task` where work_id = #{workId})
+    </select>
+    <update id="leaveTaskOwnerUser">
+    update `wk_work_task` set owner_user_id = replace(owner_user_id,concat(',',#{userId},','),',')
+    where work_id = #{workId} and  owner_user_id like concat(',',#{userId},',')
+    </update>
+    <select id="queryWorkNameList" resultType="com.kakarote.work.entity.VO.WorkInfoVo">
+      select  a.work_id,a.name,a.owner_user_id,a.color,0 as collect,999 as orderNum,
+      a.is_system_cover,cover_url,a.is_open,a.create_user_id,a.owner_role,a.batch_id,
+      a.description
+      from wk_work as a
+      where a.status = 1
+      <if test="userId != null">
+        (and (a.owner_user_id like concat('%,',#{userId},',%') and a.is_open = 0) or a.is_open = 1)
+      </if>
+    </select>
+    <select id="queryWorkTaskTemplateClass" resultType="com.kakarote.work.entity.VO.WorkTaskTemplateClassVO">
+        select class_id, name as class_name from `wk_work_task_class` where work_id = #{taskId} order by order_num
+    </select>
+    <select id="queryTaskByClassId" resultType="com.kakarote.work.entity.VO.TaskInfoVO">
+        select a.*,ifnull(b.class_id,-1) as classId,b.order_num as classOrder,
+        d.customer_ids,d.contacts_ids,d.business_ids,d.contract_ids,
+        (select count(*) from wk_work_task_comment where type_id = a.task_id and type = 1) as commentCount,
+        e.childWCCount,e.childAllCount
+        from wk_work_task a left join wk_work_task_class b on a.class_id = b.class_id
+        left join wk_work_task_relation as d on a.task_id = d.task_id
+        LEFT JOIN (
+        SELECT COUNT(*) as childAllCount,COUNT(status=5 or null) as childWCCount,pid FROM wk_work_task GROUP BY pid
+        ) as e on e.pid = a.task_id
+        where a.work_id = #{data.workId} and a.status != 3  and a.ishidden = 0 and is_archive = 0
+        <if test="classId != null">
+            and a.class_id = #{classId}
+        </if>
+        <if test="data.mainUserId != null and data.mainUserId.size > 0">
+            and
+            <foreach collection="data.mainUserId" item="userId" open="(" close=")" separator="or">
+                a.owner_user_id like concat('%,',#{userId},',%') or  a.main_user_id = #{userId}
+            </foreach>
+        </if>
+        <if test="data.labelId != null and data.labelId.size > 0">
+            and
+            <foreach collection="data.labelId" item="labelId" open="(" close=")" separator="or">
+                a.label_id like  concat('%,',#{labelId},',%')
+            </foreach>
+        </if>
+        <if test="data.stopTimeType != null">
+            and case #{data.stopTimeType}
+            when 1 then  date_format(a.stop_time,'%Y-%m-%d') = date_format(now(),'%Y-%m-%d')
+            when 2 then  date_format(a.stop_time,'%Y-%m-%d') = date_format(DATE_ADD(NOW(),INTERVAL 1 DAY),'%Y-%m-%d')
+            when 3 then  YEARWEEK(date_format(a.stop_time,'%Y-%m-%d')) = YEARWEEK(now())
+            when 4 then  date_format(a.stop_time,'%Y%m') = DATE_FORMAT( CURDATE( ) , '%Y%m' )
+            when 5 then  a.stop_time is null
+            when 6 then  a.stop_time &lt; now()
+            when 7 then  date_format(a.update_time,'%Y-%m-%d') = date_format(now(),'%Y-%m-%d') end
+        </if>
+        <if test="data.taskName != null and data.taskName != ''">
+            and a.name like concat('%',#{data.taskName},'%')
+        </if>
+        order by b.order_num
+    </select>
+    <select id="workStatistics" resultType="com.kakarote.work.entity.VO.WorkTaskStatsVO">
+      select count(*) as allCount,
+      count((status=1 and is_archive=0)or null) as unfinished,
+      count((status=2 and is_archive=0) or null) as overdue,
+      count((status=5 and is_archive=0) or null) as complete,
+      count(is_archive=1 or null) as archive,
+      ifnull(ROUND((count((status=5 and is_archive=0) or null)/count(is_archive=0 or null))*100,2),0) as completionRate,
+      ifnull(ROUND((count((status=2 and is_archive=0) or null)/count(is_archive=0 or null))*100,2),0) as overdueRate
+      from wk_work_task where ishidden = 0
+        <if test="workId != null and workId != ''">
+            and work_id = #{workId}
+        </if>
+        <if test="workIdList != null and workIdList.size > 0">
+            and work_id in
+            <foreach collection="workIdList" item="id" open="(" close=")" separator=",">
+                #{id}
+            </foreach>
+        </if>
+        <if test="userId != null">
+            and (main_user_id = #{userId} or owner_user_id like concat('%,',#{userId},',%'))  and (is_archive = 0 or (is_archive = 1 and status = 5))
+        </if>
+        <if test="mainUserId != null">
+            and main_user_id = #{mainUserId}
+        </if>
+    </select>
+    <select id="queryAllWorkMember" resultType="com.kakarote.work.entity.VO.WorkUserStatsVO">
+        select user_id,img,realname from wk_admin_user where user_id in (select main_user_id from wk_work_task where ishidden = 0 and work_id > 0)
+    </select>
+    <select id="queryWorkIdListByOwnerUser" resultType="java.lang.Integer">
+      select work_id from wk_work
+      where (owner_user_id like concat('%,',#{userId},',%') and is_open = 0) or is_open = 1
+    </select>
+    <select id="queryWorkClassStats" resultType="com.kakarote.work.entity.VO.WorkClassStatsVO">
+      select count(case when status = 5 then 1 else null end ) as complete,count(case when status != 5 then 1 else null end ) as undone
+      from wk_work_task where class_id = #{classId} and work_id = #{workId} and ishidden = 0 and (is_archive = 0 or (is_archive = 1 and status = 5))
+    </select>
+    <select id="queryWorkLabelByWorkId" resultType="com.kakarote.work.entity.PO.WorkTask">
+      select label_id,status from wk_work_task
+      where work_id = #{workId} and label_id is not null and ishidden = 0 and (is_archive = 0 or (is_archive = 1 and status = 5))
+    </select>
+    <select id="archList" resultType="com.kakarote.work.entity.VO.TaskInfoVO">
+        select a.*,b.name as workName,d.customer_ids,d.contacts_ids,d.business_ids,d.contract_ids,
+        (select count(*) from wk_work_task_comment where type_id = a.task_id and type = 1) as commentCount,
+         (select count(*) from wk_work_task where pid = a.task_id and status = 5) as childWCCount,
+         (select count(*) from wk_work_task where pid = a.task_id) as childAllCount
+      from wk_work_task a left join wk_work b on a.work_id = b.work_id
+      left join wk_work_task_relation as d on a.task_id = d.task_id
+      where a.work_id = #{workId} and a.is_archive = 1 and a.ishidden = 0
+    </select>
+
+    <select id="queryWorkAuthByUserId" resultType="java.lang.String">
+        select b.realm from wk_admin_role_menu as a left join wk_admin_menu as b on a.menu_id = b.menu_id
+        where a.role_id = #{roleId} and b.parent_id = #{parentId}
+    </select>
+
+    <select id="queryMenuByRoleId" resultType="java.lang.String">
+        SELECT a.realm,a.menu_id,a.parent_id FROM wk_admin_menu as a
+        LEFT JOIN wk_admin_role_menu as b on a.menu_id=b.menu_id
+        where b.role_id = #{roleId}
+    </select>
+
+    <select id="queryOwnerRoleList" resultType="com.kakarote.work.entity.BO.WorkOwnerRoleBO">
+        select a.user_id,b.realname,a.role_id,c.role_name,b.img
+        from wk_work_user as a left join wk_admin_user as b on a.user_id = b.user_id
+        left join wk_admin_role as c on a.role_id = c.role_id
+        where a.work_id = #{workId}
+    </select>
+</mapper>

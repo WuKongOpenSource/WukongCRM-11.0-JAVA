@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmReceivablesMapper">
+    <select id="queryById" resultType="com.kakarote.crm.common.CrmModel">
+        SELECT
+               a.*,
+               b.customer_name,
+               c.num AS contract_num,
+               c.name AS contract_name,
+               c.money AS contract_money,
+               e.num as plan_num
+        FROM
+             wk_crm_receivables AS a
+                 LEFT JOIN wk_crm_customer AS b ON a.customer_id = b.customer_id
+                 LEFT JOIN wk_crm_contract AS c ON a.contract_id = c.contract_id
+                 LEFT JOIN wk_crm_receivables_plan as e on a.plan_id=e.plan_id
+        WHERE
+                a.receivables_id = #{id}
+    </select>
+    <select id="queryListByContractId" resultType="com.alibaba.fastjson.JSONObject">
+        select  rec.receivables_id,rec.number as receivables_num,scco.name contract_name,scco.money as contract_money
+        ,rec.owner_user_id,
+        rec.check_status,rec.return_time,rec.money as receivables_money,a.num as plan_num
+        FROM `wk_crm_receivables` as rec left join `wk_crm_receivables_plan` a on rec.receivables_id = a.receivables_id
+        left join wk_crm_contract as scco on scco.contract_id = rec.contract_id
+        where rec.contract_id = #{contractId} and rec.check_status != 7 ${conditions}
+    </select>
+</mapper>

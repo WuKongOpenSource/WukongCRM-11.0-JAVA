@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.oa.mapper.OaCalendarTypeMapper">
+
+    <select id="queryEventTask" resultType="com.kakarote.oa.entity.VO.EventTaskVO">
+        select task_id, name, unix_timestamp(start_time) * 1000 as startTime, unix_timestamp(stop_time) * 1000 as endTime,2 as eventType
+        from `wk_work_task`
+        where unix_timestamp(start_time) * 1000 &gt;= (#{data.startTime} - (unix_timestamp(stop_time) * 1000 - unix_timestamp(start_time) * 1000))
+        and unix_timestamp(stop_time) * 1000 &lt;= #{data.endTime} + (unix_timestamp(stop_time) * 1000 - unix_timestamp(start_time) * 1000)
+        and   pid = 0 and ishidden = 0
+        and (
+        main_user_id = #{data.userId}
+        or FIND_IN_SET(#{data.userId},owner_user_id)
+        )
+    </select>
+    <select id="queryFixedTypeByUserId" resultType="java.lang.String">
+        select color
+        from `wk_oa_calendar_type_user` a
+                 left join `wk_oa_calendar_type` `b` on a.type_id = b.type_id
+        where b.color in (1, 2, 3, 4,5,6)
+          and a.user_id = #{userId}
+    </select>
+</mapper>

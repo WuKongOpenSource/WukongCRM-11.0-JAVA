@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmBusinessMapper">
+    <update id="deleteMember">
+        update wk_crm_business set rw_user_id = replace(rw_user_id,#{memberId},','),ro_user_id = replace(ro_user_id,#{memberId},',') where business_id = #{id}
+    </update>
+    <select id="queryById" resultType="com.kakarote.crm.common.CrmModel">
+        select a.*,b.customer_id,b.customer_name,c.name as type_name,d.name as status_name,
+               (select count(1) from wk_crm_business_user_star where business_id = a.business_id and user_id = #{userId}) as star
+        from wk_crm_business as a
+            left join wk_crm_customer as b on a.customer_id = b.customer_id
+            left join wk_crm_business_type as c on a.type_id = c.type_id
+            left join wk_crm_business_status as d on a.status_id = d.status_id
+        where a.business_id = #{id}
+    </select>
+
+    <select id="queryContacts" resultType="com.kakarote.crm.entity.PO.CrmContacts">
+        select a.contacts_id,a.name,a.mobile,a.post
+        from wk_crm_contacts as a inner join wk_crm_contacts_business as b on a.contacts_id = b.contacts_id
+        where b.business_id = #{businessId}
+    </select>
+
+    <select id="queryNum" resultType="com.kakarote.crm.entity.VO.CrmInfoNumVO">
+        select
+        (select count(a.contacts_id) from wk_crm_contacts_business a inner join `wk_crm_contacts` b on a.contacts_id = b.contacts_id where a.business_id = #{businessId} ${contactsConditions}) as contactCount,
+        (select count(*) from wk_crm_contract where business_id = #{businessId} and check_status != 7 ${conditions}) as contractCount,
+        count(*) as productCount from
+        wk_crm_business_product where business_id = #{businessId}
+    </select>
+    <select id="querySubtotalByBusinessId" resultType="com.alibaba.fastjson.JSONObject">
+        select distinct ccc.discount_rate
+        from wk_crm_business as ccc
+        where ccc.business_id = #{businessId}
+    </select>
+    <select id="queryProduct" resultType="com.alibaba.fastjson.JSONObject">
+        select b.product_id,b.name,b.name as productName,c.name as category_name,a.price,a.sales_price,a.num,a.discount,a.subtotal,(select value from `wk_crm_product_data` as d where d.batch_id = b.batch_id and d.name = 'unit') as 'unit',(select value from `wk_crm_product_data` as d where d.batch_id = b.batch_id and d.name = '是否上下架') as '是否上下架'
+        from wk_crm_business_product as a inner join wk_crm_product as b on a.product_id = b.product_id
+        left join wk_crm_product_category as c on b.category_id = c.category_id
+        where a.business_id = #{businessId}
+    </select>
+    <select id="queryContract" resultType="com.alibaba.fastjson.JSONObject">
+        select a.contract_id,a.num,a.name as contract_name,b.customer_name,a.money,a.start_time,a.end_time,a.check_status
+        from wk_crm_contract as a left join wk_crm_customer as b on a.customer_id = b.customer_id
+        where a.business_id = #{businessId} and a.check_status != 7
+        ${conditions}
+    </select>
+    <select id="eventDealBusiness" resultType="java.lang.String">
+        select date_format(deal_date,'%Y-%m-%d') as time
+        from `wk_crm_business`
+        where status != 3 and owner_user_id = #{data.userId} and deal_date between #{data.startTime} and #{data.endTime}
+        group by date_format(deal_date,'%Y-%m-%d')
+    </select>
+    <select id="eventDealBusinessPageList" resultType="java.lang.Integer">
+        select business_id
+        from `wk_crm_business`
+        where status != 3 and owner_user_id = #{userId} and to_days(deal_date) = to_days(#{time})
+    </select>
+    <select id="eventBusiness" resultType="java.lang.String">
+        select date_format(next_time,'%Y-%m-%d') as time
+        from `wk_crm_business`
+        where status != 3 and owner_user_id = #{data.userId} and next_time between #{data.startTime} and #{data.endTime}
+        group by date_format(next_time,'%Y-%m-%d')
+    </select>
+    <select id="eventBusinessPageList" resultType="java.lang.Integer">
+        select business_id
+        from `wk_crm_business`
+        where status != 3 and owner_user_id = #{userId} and to_days(next_time) = to_days(#{time})
+    </select>
+</mapper>

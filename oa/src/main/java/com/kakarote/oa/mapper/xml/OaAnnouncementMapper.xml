@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.oa.mapper.OaAnnouncementMapper">
+    <select id="queryList" resultType="com.kakarote.oa.entity.PO.OaAnnouncement">
+        SELECT
+        a.*,d.user_id,d.username,d.img,d.realname,d.parent_id ,
+        (CASE WHEN FIND_IN_SET(b.user_id,read_user_ids)>0 THEN 1 ELSE 0 END) as is_read
+        FROM
+        wk_oa_announcement AS a
+        LEFT JOIN wk_admin_user as d on a.create_user_id=d.user_id
+        LEFT JOIN wk_admin_user as b on FIND_IN_SET(b.user_id,a.owner_user_ids)
+        LEFT JOIN wk_admin_dept as c on FIND_IN_SET(c.dept_id,a.dept_ids)
+        WHERE 1=1
+        and (c.dept_id=#{deptId} or b.user_id=#{userId} or (a.owner_user_ids ='' and a.dept_ids ='') or a.create_user_id=#{userId})
+        <if test="type==1">
+            and a.start_time &lt; NOW() and a.end_time&gt;NOW()
+        </if>
+        <if test="type==2">
+            and (a.start_time &gt; NOW() or a.end_time &lt;NOW())
+        </if>
+        group by a.announcement_id
+        order by a.announcement_id desc
+    </select>
+</mapper>

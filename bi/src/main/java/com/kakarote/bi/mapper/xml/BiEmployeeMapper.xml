@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.bi.mapper.BiEmployeeMapper">
+    <select id="contractNum" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="timeList" item="x" separator="union all" index="i">
+            select ${x} as month,
+            count(contract_id) as thisMonth,
+            (select count(contract_id)
+            from wk_crm_contract
+            where DATE_FORMAT(order_date,'%Y%m') =
+            <choose>
+                <when test="i==0">
+                    ${x-89}
+                </when>
+                <otherwise>
+                    ${x-1}
+                </otherwise>
+            </choose>
+            and check_status = 1 and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>) as lastMonth,
+            (select count(contract_id)
+            from wk_crm_contract
+            where DATE_FORMAt(order_date,'%Y%m') = ${x-100} and check_status = 1  and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>) as lastYear
+            from wk_crm_contract
+            where DATE_FORMAT(order_date,'%Y%m') = ${x} and check_status = 1 and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+        </foreach>
+    </select>
+    <select id="contractMoney" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="timeList" item="x" separator="union all">
+            select ${x} as month,
+            IFNULL(SUM(money),0) as thisMonth,
+            (select IFNULL(SUM(money),0)
+            from wk_crm_contract
+            where DATE_FORMAT(order_date,'%Y%m') =
+            <choose>
+                <when test="i==0">
+                    ${x-89}
+                </when>
+                <otherwise>
+                    ${x-1}
+                </otherwise>
+            </choose>
+            and check_status = 1 and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>) as lastMonth,
+            (select IFNULL(SUM(money),0)
+            from wk_crm_contract
+            where DATE_FORMAt(order_date,'%Y%m') = ${x-100} and check_status = 1  and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>) as lastYear
+            from wk_crm_contract
+            where DATE_FORMAT(order_date,'%Y%m') = ${x} and check_status = 1 and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+        </foreach>
+    </select>
+    <select id="receivables" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="timeList" item="x" separator="union all">
+            select ${x} as month,
+            IFNULL(SUM(money),0) as thisMonth,
+            (select IFNULL(SUM(money),0)
+            from wk_crm_receivables
+            where DATE_FORMAT(return_time,'%Y%m') =
+            <choose>
+                <when test="i==0">
+                    ${x-89}
+                </when>
+                <otherwise>
+                    ${x-1}
+                </otherwise>
+            </choose>
+            and check_status = 1 and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>) as lastMonth,
+            (select IFNULL(SUM(money),0)
+            from wk_crm_receivables
+            where DATE_FORMAt(return_time,'%Y%m') = ${x-100} and check_status = 1  and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>) as lastYear
+            from wk_crm_receivables
+            where DATE_FORMAT(return_time,'%Y%m') = ${x} and check_status = 1 and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+        </foreach>
+    </select>
+    <select id="totalContractTable" resultType="com.alibaba.fastjson.JSONObject">
+            select type,
+            count(contract_id) as contractNum,
+            IFNULL(SUM(IFNULL(money,0)),0) as contractMoney,
+            IFNULL(SUM(receivablesMoney),0) as receivablesMoney
+            from
+            (select DATE_FORMAT( a.order_date, '%Y%m' )  type,a.contract_id,a.money,
+            (select SUM(money)
+            from wk_crm_receivables as b
+            where b.contract_id = a.contract_id and b.check_status = 1) as receivablesMoney
+            from wk_crm_contract as a
+            where (DATE_FORMAT(a.order_date,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+            and a.check_status = 1 and a.owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            ) as x GROUP BY x.type
+    </select>
+    <select id="totalContract" resultType="com.alibaba.fastjson.JSONObject">
+        select count(contract_id) as contractNum,
+        IFNULL(sum(money),0) as contractMoney,
+        IFNULL(sum(receivablesMoney),0) as receivablesMoney,
+        (IFNULL(sum(money),0) - IFNULL(sum(receivablesMoney),0)) as unreceivedMoney
+        from (select a.money,a.contract_id,
+        (select SUM(IFNULL(money,0)) from wk_crm_receivables as b
+        where b.contract_id = a.contract_id and b.check_status = 1) as receivablesMoney
+        from wk_crm_contract as a
+        where DATE_FORMAT(a.order_date,#{sqlDateFormat}) between #{beginTime} and #{finalTime} and a.check_status = 1
+        <if test="userIds.size()>0">
+            and a.owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+        </if>
+        ) as x
+    </select>
+
+    <select id="totalInvoice" resultType="com.alibaba.fastjson.JSONObject">
+        select IFNULL(sum(money),0) as receivablesMoney,
+        (select IFNULL(sum(invoice_money),0) from wk_crm_invoice
+        where year(real_invoice_date) = #{year} and check_status = 1
+        <if test="userIds.size()>0">
+            and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+        </if>
+        ) as invoiceMoney
+        from wk_crm_receivables
+        where year(return_time) = #{year} and check_status = 1
+        <if test="userIds.size()>0">
+            and owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+        </if>
+    </select>
+
+    <select id="invoiceStatsTable" resultType="com.alibaba.fastjson.JSONObject">
+        select x.type,x.receivablesMoney,x.receivablesNoInvoice,y.invoiceMoney,y.invoiceNoReceivables
+        from (SELECT t1.type, IFNULL( sum( t1.money ), 0 ) AS receivablesMoney,
+                (IFNULL( sum( t1.b_money ), 0 ) - IFNULL( sum( t1.invoice_money ), 0 )) AS receivablesNoInvoice
+            FROM( SELECT DATE_FORMAT( a.return_time, #{sqlDateFormat}) AS type, a.money, b.money AS b_money, c.invoice_money
+            from wk_crm_receivables as a
+            left join wk_crm_contract as b on a.contract_id = b.contract_id
+            left join wk_crm_invoice as c on b.contract_id = c.contract_id
+            where (DATE_FORMAT(a.return_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+            and a.check_status = 1 and a.owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            ) t1 GROUP BY t1.type
+        ) as x left join
+        (SELECT t2.type, IFNULL( sum( t2.invoice_money ), 0 ) AS invoiceMoney,
+        ( IFNULL( sum( CASE WHEN t2.check_status = 1 THEN t2.money ELSE 0 END ), 0 ) - IFNULL( sum( CASE WHEN t2.c_status = 1 THEN t2.c_money ELSE 0 END ), 0 )) AS invoiceNoReceivables
+         FROM ( SELECT DATE_FORMAT( a.real_invoice_date, #{sqlDateFormat} ) AS type, a.invoice_money, b.check_status,
+            c.check_status AS c_status, b.money, c.money AS c_money
+            from wk_crm_invoice as a
+            left join wk_crm_contract as b on a.contract_id = b.contract_id
+            left join wk_crm_receivables as c on b.contract_id = c.contract_id
+            where (DATE_FORMAT(a.real_invoice_date,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+            and a.owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            ) t2 GROUP BY t2.type
+        ) as y on x.type = y.type
+    </select>
+</mapper>

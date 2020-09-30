@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmContractProductMapper">
+    <select id="queryByContractId" resultType="com.kakarote.crm.entity.PO.CrmContractProduct">
+        SELECT sccp.*,
+        scp.name as product_name,
+        c.name as category_name
+        FROM wk_crm_contract_product as sccp
+        JOIN wk_crm_product as scp on scp.product_id = sccp.product_id
+        join `wk_crm_product_category` as c on scp.category_id = c.category_id
+        where sccp.contract_id = #{contractId}
+    </select>
+    <select id="queryList" resultType="com.kakarote.crm.entity.PO.CrmContractProduct">
+        select c.product_id , c.name as name,d.name as category_name,b.unit,b.price,b.sales_price,b.num,b.discount,b.subtotal
+      from wk_crm_contract as a inner join wk_crm_contract_product as b on a.contract_id = b.contract_id
+      inner join wk_crm_product as c on b.product_id = c.product_id  and a.check_status != 3
+      inner join wk_crm_product_category as d on c.category_id = d.category_id
+      where a.contract_id = #{contractId}
+    </select>
+</mapper>

@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmActivityMapper">
+    <sql id="baseQuery">
+        <choose>
+            <when test="crmType == 2">
+                and (
+                <choose>
+                    <when test="activityType == 2">
+                        a.activity_type = 2 and a.activity_type_id = #{activityTypeId}
+                    </when>
+                    <when test="activityType == 3">
+                        a.activity_type = 3 and a.activity_type_id in (select contacts_id from `wk_crm_contacts` where customer_id = #{activityTypeId})
+                    </when>
+                    <when test="activityType == 5">
+                        a.activity_type = 5 and a.activity_type_id in (select business_id from `wk_crm_business` where customer_id = #{activityTypeId})
+                    </when>
+                    <when test="activityType == 6">
+                        a.activity_type = 6 and a.activity_type_id in (select contract_id from `wk_crm_contract` where customer_id = #{activityTypeId}) and a.type = 2
+                    </when>
+                    <when test="activityType == 7">
+                        a.activity_type = 7 and a.activity_type_id in (select receivables_id from `wk_crm_receivables` where customer_id = #{activityTypeId}) and a.type = 2
+                    </when>
+                    <when test="activityType == 8">
+                        a.activity_type = 8 and a.activity_type_id in (select log_id from `wk_oa_log_relation` where find_in_set(#{activityTypeId},customer_ids))
+                    </when>
+                    <when test="activityType == 9">
+                        a.activity_type = 9 and a.activity_type_id in (select examine_id from `wk_oa_examine_relation` where find_in_set(#{activityTypeId},customer_ids))
+                    </when>
+                    <when test="activityType == 10">
+                        a.activity_type = 10 and a.activity_type_id in (select event_id from `wk_oa_event_relation` where find_in_set(#{activityTypeId},customer_ids))
+                    </when>
+                    <when test="activityType == 11">
+                        a.activity_type = 11 and a.activity_type_id in (select task_id from `wk_work_task_relation` where find_in_set(#{activityTypeId},customer_ids))
+                    </when>
+                    <otherwise>
+<!--                        (a.activity_type = 1 and a.activity_type_id in (select leads_id from `wk_crm_leads` where customer_id = #{activityTypeId} ))-->
+<!--                        or-->
+                        (a.activity_type = 2 and a.activity_type_id = #{activityTypeId})
+                        or
+                        (a.activity_type = 3 and a.activity_type_id in (select contacts_id from `wk_crm_contacts` where customer_id = #{activityTypeId} ))
+                        or
+                        (a.activity_type = 5 and a.activity_type_id in (select business_id from `wk_crm_business` where customer_id = #{activityTypeId} ))
+                        or
+                        (a.activity_type = 6 and a.activity_type_id in (select contract_id from `wk_crm_contract` where customer_id = #{activityTypeId} ) and a.type = 2)
+                        or
+                        (a.activity_type = 7 and a.activity_type_id in (select receivables_id from `wk_crm_receivables` where customer_id = #{activityTypeId} ) and a.type = 2)
+                        or
+                        (a.activity_type = 8 and a.activity_type_id in (select log_id from `wk_oa_log_relation` where find_in_set(#{activityTypeId},customer_ids) ))
+                        or
+                        (a.activity_type = 9 and a.activity_type_id in (select examine_id from `wk_oa_examine_relation` where find_in_set(#{activityTypeId},customer_ids) ))
+                        or
+                        (a.activity_type = 10 and a.activity_type_id in (select event_id from `wk_oa_event_relation` where find_in_set(#{activityTypeId},customer_ids) ))
+                        or
+                        (a.activity_type = 11 and a.activity_type_id in (select task_id from `wk_work_task_relation` where find_in_set(#{activityTypeId},customer_ids) ))
+                    </otherwise>
+                </choose>
+                )
+            </when>
+            <when test="crmType == 3">
+                and (
+                <choose>
+                    <when test="activityType == 2">
+                        a.activity_type = 2 and a.activity_id in (select activity_id from `wk_crm_activity_relation` where type = 3 and type_id = #{activityTypeId} )
+                    </when>
+                    <when test="activityType == 3">
+                        a.activity_type = 3 and a.activity_type_id = #{activityTypeId}
+                    </when>
+                    <when test="activityType == 8">
+                        a.activity_type = 8 and a.activity_type_id in (select log_id from `wk_oa_log_relation` where find_in_set(#{activityTypeId},contacts_ids) )
+                    </when>
+                    <when test="activityType == 9">
+                        a.activity_type = 9 and a.activity_type_id in (select examine_id from `wk_oa_examine_relation` where find_in_set(#{activityTypeId},contacts_ids) )
+                    </when>
+                    <when test="activityType == 10">
+                        a.activity_type = 10 and a.activity_type_id in (select event_id from `wk_oa_event_relation` where find_in_set(#{activityTypeId},contacts_ids) )
+                    </when>
+                    <when test="activityType == 11">
+                        a.activity_type = 11 and a.activity_type_id in (select task_id from `wk_work_task_relation` where find_in_set(#{activityTypeId},contacts_ids) )
+                    </when>
+                    <otherwise>
+                        (a.activity_type = 2 and a.activity_id in (select activity_id from `wk_crm_activity_relation` where type = 3 and type_id = #{activityTypeId} ))
+                        or
+                        (a.activity_type = 3 and a.activity_type_id = #{activityTypeId})
+                        or
+                        (a.activity_type = 8 and a.activity_type_id in (select log_id from `wk_oa_log_relation` where find_in_set(#{activityTypeId},contacts_ids) ))
+                        or
+                        (a.activity_type = 9 and a.activity_type_id in (select examine_id from `wk_oa_examine_relation` where find_in_set(#{activityTypeId},contacts_ids) ))
+                        or
+                        (a.activity_type = 10 and a.activity_type_id in (select event_id from `wk_oa_event_relation` where find_in_set(#{activityTypeId},contacts_ids) ))
+                        or
+                        (a.activity_type = 11 and a.activity_type_id in (select task_id from `wk_work_task_relation` where find_in_set(#{activityTypeId},contacts_ids) ))
+                    </otherwise>
+                </choose>
+                )
+            </when>
+            <when test="crmType == 5">
+                and (
+                <choose>
+                    <when test="activityType == 2">
+                        a.activity_type = 2 and a.activity_id in (select activity_id from `wk_crm_activity_relation` where type = 5 and type_id = #{activityTypeId} )
+                    </when>
+                    <when test="activityType == 5">
+                        a.activity_type = 5 and a.activity_type_id = #{activityTypeId}
+                    </when>
+                    <when test="activityType == 6">
+                        a.activity_type = 6 and a.activity_type_id in (select contract_id from `wk_crm_contract` where business_id = #{activityTypeId} ) and a.type = 2
+                    </when>
+                    <when test="activityType == 7">
+                        a.activity_type = 7 and a.activity_type_id in (select receivables_id from `wk_crm_receivables` where contract_id in (select contract_id from `wk_crm_contract` where business_id = #{activityTypeId} ) ) and a.type = 2
+                    </when>
+                    <when test="activityType == 8">
+                        a.activity_type = 8 and a.activity_type_id in (select log_id from `wk_oa_log_relation` where find_in_set(#{activityTypeId},business_ids) )
+                    </when>
+                    <when test="activityType == 9">
+                        a.activity_type = 9 and a.activity_type_id in (select examine_id from `wk_oa_examine_relation` where find_in_set(#{activityTypeId},business_ids) )
+                    </when>
+                    <when test="activityType == 10">
+                        a.activity_type = 10 and a.activity_type_id in (select event_id from `wk_oa_event_relation` where find_in_set(#{activityTypeId},business_ids) )
+                    </when>
+                    <when test="activityType == 11">
+                        a.activity_type = 11 and a.activity_type_id in (select task_id from `wk_work_task_relation` where find_in_set(#{activityTypeId},business_ids) )
+                    </when>
+                    <otherwise>
+                        (a.activity_type = 2 and a.activity_id in (select activity_id from `wk_crm_activity_relation` where type = 5 and type_id = #{activityTypeId} ))
+                        or
+                        (a.activity_type = 5 and a.activity_type_id = #{activityTypeId})
+                        or
+                        (a.activity_type = 6 and a.activity_type_id in (select contract_id from `wk_crm_contract` where business_id = #{activityTypeId} ) and a.type = 2 )
+                        or
+                        (a.activity_type = 7 and a.activity_type_id in (select receivables_id from `wk_crm_receivables` where contract_id in (select contract_id from `wk_crm_contract` where business_id = #{activityTypeId} ) ) and a.type = 2)
+                        or
+                        (a.activity_type = 8 and a.activity_type_id in (select log_id from `wk_oa_log_relation` where find_in_set(#{activityTypeId},business_ids) ))
+                        or
+                        (a.activity_type = 9 and a.activity_type_id in (select examine_id from `wk_oa_examine_relation` where find_in_set(#{activityTypeId},business_ids) ))
+                        or
+                        (a.activity_type = 10 and a.activity_type_id in (select event_id from `wk_oa_event_relation` where find_in_set(#{activityTypeId},business_ids) ))
+                        or
+                        (a.activity_type = 11 and a.activity_type_id in (select task_id from `wk_work_task_relation` where find_in_set(#{activityTypeId},business_ids) ))
+                    </otherwise>
+                </choose>
+                )
+            </when>
+            <when test="crmType == 6">
+                and (
+                <choose>
+                    <when test="activityType == 6">
+                        a.activity_type = 6 and a.activity_type_id = #{activityTypeId}
+                    </when>
+                    <when test="activityType == 7">
+                        a.activity_type = 7 and a.activity_type_id in (select receivables_id from `wk_crm_receivables` where contract_id  = #{activityTypeId} ) and a.type = 2
+                    </when>
+                    <when test="activityType == 8">
+                        a.activity_type = 8 and a.activity_type_id in (select log_id from `wk_oa_log_relation` where find_in_set(#{activityTypeId},contract_ids) )
+                    </when>
+                    <when test="activityType == 9">
+                        a.activity_type = 9 and a.activity_type_id in (select examine_id from `wk_oa_examine_relation` where find_in_set(#{activityTypeId},business_ids) )
+                    </when>
+                    <when test="activityType == 10">
+                        a.activity_type = 10 and a.activity_type_id in (select event_id from `wk_oa_event_relation` where find_in_set(#{activityTypeId},contract_ids) )
+                    </when>
+                    <when test="activityType == 11">
+                        a.activity_type = 11 and a.activity_type_id in (select task_id from `wk_work_task_relation` where find_in_set(#{activityTypeId},contract_ids) )
+                    </when>
+                    <otherwise>
+                        (a.activity_type = 6 and a.activity_type_id = #{activityTypeId})
+                        or
+                        (a.activity_type = 7 and a.activity_type_id in (select receivables_id from `wk_crm_receivables` where contract_id  = #{activityTypeId} ) and a.type = 2)
+                        or
+                        (a.activity_type = 8 and a.activity_type_id in (select log_id from `wk_oa_log_relation` where find_in_set(#{activityTypeId},contract_ids) ))
+                        or
+                        (a.activity_type = 9 and a.activity_type_id in (select examine_id from `wk_oa_examine_relation` where find_in_set(#{activityTypeId},business_ids) ))
+                        or
+                        (a.activity_type = 10 and a.activity_type_id in (select event_id from `wk_oa_event_relation` where find_in_set(#{activityTypeId},contract_ids) ))
+                        or
+                        (a.activity_type = 11 and a.activity_type_id in (select task_id from `wk_work_task_relation` where find_in_set(#{activityTypeId},contract_ids) ))
+                    </otherwise>
+                </choose>
+                )
+            </when>
+            <otherwise>
+                and a.activity_type = #{crmType} and a.activity_type_id = #{activityTypeId}
+            </otherwise>
+        </choose>
+    </sql>
+    <select id="getCrmActivityPageList" resultType="com.kakarote.crm.entity.PO.CrmActivity">
+        select a.*,(case a.activity_type when 1 then (select leads_name from `wk_crm_leads` where leads_id = a.activity_type_id)
+        when 2 then (select customer_name from `wk_crm_customer` where customer_id = a.activity_type_id)
+        when 3 then (select name from `wk_crm_contacts` where contacts_id = a.activity_type_id)
+        when 5 then (select business_name from `wk_crm_business` where business_id = a.activity_type_id)
+        when 6 then (select name from `wk_crm_contract` where contract_id = a.activity_type_id)
+        when 7 then (select number from `wk_crm_receivables` where receivables_id = a.activity_type_id)
+        end ) as activityTypeName
+        from `wk_crm_activity` as a
+        where  date_format(a.create_time,'%Y-%m-%d') = #{time} and a.status = 1
+        <if test="startDate!=null and endDate != null">
+            and date_format(a.create_time,'%Y-%m-%d') between #{startDate} and #{endDate}
+        </if>
+        <if test="search!=null and search != ''">
+            and a.content like concat('%', #{search}, '%')
+        </if>
+        <include refid="baseQuery"/>
+        <if test="nofollowRecord">
+            and a.type != 1
+        </if>
+        order by a.create_time desc
+    </select>
+    <select id="getActivityCountByTime" resultType="java.lang.String">
+        SELECT date_format(create_time,'%Y-%m-%d') FROM wk_crm_activity as a where a.status = 1
+        <include refid="baseQuery"/>
+        <if test="intervalDay != null">
+            and TO_DAYS(now()) - TO_DAYS(a.create_time) &lt; #{intervalDay}
+        </if>
+        <if test="search != null">
+            and a.content like concat('%', #{search}, '%')
+        </if>
+        <if test="nofollowRecord">
+            and a.type != 1
+        </if>
+        <if test="startDate != null and endDate != null">
+            and date_format(a.create_time,'%Y-%m-%d') between #{startDate} and #{endDate}
+        </if>
+        GROUP BY date_format(create_time,'%Y-%m-%d')  ORDER BY create_time DESC LIMIT #{page},2
+    </select>
+    <select id="queryActivityById" resultType="com.kakarote.crm.entity.PO.CrmActivity">
+        select a.*,(case a.activity_type
+        when 2 then (select customer_name from `wk_crm_customer` where customer_id = a.activity_type_id)
+        when 1 then (select leads_name from `wk_crm_leads` where leads_id = a.activity_type_id)
+        when 5 then (select business_name from `wk_crm_business` where business_id = a.activity_type_id)
+        when 6 then (select name from `wk_crm_contract` where contract_id = a.activity_type_id)
+        when 3 then (select name from `wk_crm_contacts` where contacts_id = a.activity_type_id)
+        end) as 'crmTypeName'
+        from wk_crm_activity as a 
+        where activity_id = #{activityId}
+    </select>
+    <select id="queryRecordList" resultType="com.kakarote.crm.entity.PO.CrmActivity">
+        select a.activity_id,a.type,a.create_time,a.content,a.category,a.next_time,a.batch_id,a.business_ids,a.contacts_ids,a.activity_type,a.activity_type_id,a.status,
+        a.lng,a.lat,a.address,a.create_user_id,
+        (case a.activity_type
+        when 2 then (select customer_name from `wk_crm_customer` where customer_id = a.activity_type_id )
+        when 1 then (select leads_name from `wk_crm_leads` where leads_id = a.activity_type_id )
+        when 5 then (select business_name from `wk_crm_business` where business_id = a.activity_type_id )
+        when 6 then (select name from `wk_crm_contract` where contract_id = a.activity_type_id )
+        when 3 then (select name from `wk_crm_contacts` where contacts_id = a.activity_type_id )
+        end) as 'crmTypeName'
+        from wk_crm_activity as a
+        where a.create_user_id in
+        <foreach collection="data.userIds" index="index" item="id" close=")" open="(" separator=",">
+            #{id}
+        </foreach>
+         and a.status = 1
+        <choose>
+            <when test="data.queryType == 1">
+                and a.type = 1
+            </when>
+            <when test="data.queryType == 4">
+                and a.type = 4
+            </when>
+            <when test="data.queryType == 0">
+                and a.type in (1,4)
+            </when>
+        </choose>
+        <if test="data.crmType != null">
+            and a.activity_type = #{data.crmType}
+        </if>
+        <if test="data.search != null">
+            and a.content like concat('%',#{data.search},'%')
+        </if>
+        <choose>
+            <when test="data.type == 1">
+                AND TO_DAYS(a.create_time) = TO_DAYS(now())
+            </when>
+            <when test="data.type == 2">
+                AND to_days(NOW()) - TO_DAYS(a.create_time) = 1
+            </when>
+            <when test="data.type == 3">
+                AND   YEARWEEK(date_format(a.create_time,'%Y-%m-%d')) = YEARWEEK(now())
+            </when>
+            <when test="data.type == 4">
+                AND  YEARWEEK(date_format(a.create_time,'%Y-%m-%d')) = YEARWEEK(now()) -1
+            </when>
+            <when test="data.type == 5">
+                AND  date_format(a.create_time,'%Y-%m')=date_format(now(),'%Y-%m')
+            </when>
+            <when test="data.type == 6">
+                AND  date_format(a.create_time,'%Y-%m')=date_format(DATE_SUB(curdate(), INTERVAL 1 MONTH),'%Y-%m')
+            </when>
+            <when test="data.type == 7">
+                AND  QUARTER(a.create_time)=QUARTER(now())
+            </when>
+            <when test="data.type == 8">
+                AND  QUARTER(a.create_time)=QUARTER(DATE_SUB(now(),interval 1 QUARTER))
+            </when>
+            <when test="data.type == 9">
+                AND   YEAR(a.create_time)=YEAR(NOW())
+            </when>
+            <when test="data.type == 10">
+                AND  YEAR(a.create_time)=YEAR(date_sub(now(),interval 1 year))
+            </when>
+            <when test="data.type == 11">
+                AND  TO_DAYS(a.create_time) >= TO_DAYS(#{data.startTime}) and  TO_DAYS(a.create_time) &lt;= TO_DAYS(#{data.endTime})
+            </when>
+        </choose>
+        order by a.create_time desc
+    </select>
+    <select id="queryOutworkStats" resultType="com.alibaba.fastjson.JSONObject">
+        select b.user_id,b.realname,b.img,count(1) as count
+        from wk_crm_activity as a inner join
+        wk_admin_user as b on a.create_user_id = b.user_id
+        where a.type = 4
+        and b.user_id in
+        <foreach collection="userIds" item="userId" index="index" separator="," close=")" open="(">
+            #{userId}
+        </foreach>
+        and a.create_time between #{startTime} and #{endTime} group by create_user_id
+    </select>
+    <select id="queryOutworkList" resultType="com.kakarote.crm.entity.PO.CrmActivity">
+        select b.user_id,b.realname,b.img as userImg,a.activity_id,a.create_time,a.address,a.content,a.activity_type,a.status,a.batch_id,c.customer_id,c.customer_name
+        from wk_crm_activity as a
+        left join wk_admin_user as b on a.create_user_id = b.user_id
+        left join wk_crm_customer as c on a.activity_type_id = c.customer_id
+        where a.type = 4 and a.create_user_id = #{userId}
+        <if test="startTime!=null and startTime!=''">
+            and a.create_time between #{startTime} and #{endTime}
+        </if>
+        order by create_time desc
+    </select>
+</mapper>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmFieldMapper">
+    <select id="verifyFixedField" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM wk_crm_${tableName} WHERE ${fieldName}=#{value}
+        <if test="label==2||label==5||label==4">
+            and status != 3
+        </if>
+        <if test="label==6||label==7">
+            and check_status != 7
+        </if>
+        <if test="batchId!=null and batchId!=''">
+            and batch_id!=#{batchId}
+        </if>
+    </select>
+
+    <select id="verifyField" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM wk_crm_${tableName}_data WHERE field_id = #{fieldId} and value = #{value}
+        <if test="batchId!=null and batchId!=''">
+            and batch_id!=#{batchId}
+        </if>
+    </select>
+    <update id="updateFieldName">
+        update wk_crm_${name}_data a INNER join
+        (select field_id,field_name from wk_crm_field where label = #{type} and  field_id > #{count} limit 200000) b
+        on a.field_id = b.field_id
+        set a.`name`=b.field_name;
+    </update>
+    <select id="initData" resultType="java.util.HashMap">
+        SELECT * FROM wk_crm_${tableName} as a
+        JOIN (
+        SELECT b.${table}_id as tid
+        <if test="fields.size() >0">
+        <for collection="fields" index="i" item="item" open="," separator="," close="">
+            max(CASE WHEN `a`.`name` = '${item.fieldName}' THEN `a`.`value` END) AS '${item.fieldName}'
+        </for>
+        </if>
+        FROM wk_crm_${tableName}_data as a
+        right JOIN wk_crm_${tableName} as b on a.batch_id = b.batch_id
+        where b.${table}_id in (
+        SELECT * FROM (
+        SELECT ${table}_id FROM wk_crm_${tableName} WHERE ${table}_id > '${lastId}'
+        <if test="label==2||label==5||label==4">
+            and status != 3
+        </if>
+        <if test="label==6||label==7">
+            and check_status != 7
+        </if>
+        ORDER BY ${table}_id asc
+        limit 1000
+        ) as a
+        )
+        GROUP BY b.batch_id
+        ORDER BY null
+        ) as b on a.${table}_id=b.tid
+        ORDER BY a.${table}_id asc
+    </select>
+    <select id="queryFieldDuplicateByNoFixed" resultType="java.lang.Integer">
+        select count(*) from `wk_crm_field` a left join `wk_crm_customer_data` b on a.field_id = b.field_id
+        where label = 2 and field_name = #{name} and value = #{value};
+    </select>
+    <select id="queryCustomerFieldDuplicateByFixed" resultType="java.lang.Integer">
+        select count(1) from `wk_crm_customer` where ${name} = #{value} and status != 3
+    </select>
+</mapper>

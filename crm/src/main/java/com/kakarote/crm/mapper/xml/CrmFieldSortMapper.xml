@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmFieldSortMapper">
+    <select id="queryListHead" resultType="com.kakarote.crm.entity.VO.CrmFieldSortVO">
+        SELECT
+               a.id,
+               a.field_id,
+               a.field_name,
+               a.name,
+               a.type,
+               a.style AS width
+        FROM
+             wk_crm_field_sort AS a
+        WHERE label = #{label} and user_id=#{userId} and is_hide = '0'
+        ORDER BY sort asc
+    </select>
+</mapper>

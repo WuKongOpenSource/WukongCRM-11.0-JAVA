@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.bi.mapper.BiRankMapper">
+    <select id="addressAnalyse" resultType="com.alibaba.fastjson.JSONObject">
+        <foreach collection="address" item="x" separator="union all">
+            SELECT '${x}' as address,
+            COUNT(1) as allCustomer,
+            sum(deal_status) as dealCustomer
+            FROM wk_crm_customer as ccc
+            where left(ccc.address,INSTR(ccc.address, ',') - 1) like concat('%','${x}','%') and ccc.owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            and DATE_FORMAT(ccc.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        </foreach>
+    </select>
+
+    <select id="portrait" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT count(*) as allCustomer,
+        sum(a.deal_status) as dealCustomer,
+        (case when (IFNULL(b.`value`,'') = '') then '未知' else b.`value` end) as industry
+        FROM wk_crm_customer as a
+        LEFT JOIN wk_crm_customer_data as b on a.batch_id=b.batch_id
+        and b.`name`= (select field_name from wk_crm_field where label = 2 and field_name = 'industry' )
+        where a.status !=3 and   a.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+
+        <choose>
+            <when test="type == 1">
+                and to_days(NOW()) = TO_DAYS(a.create_time)
+            </when>
+            <when test="type == 2">
+                and to_days(NOW()) - TO_DAYS(a.create_time) = 1
+            </when>
+            <when test="type == 3">
+                and YEARWEEK(date_format(a.create_time,'%Y-%m-%d')) = YEARWEEK(now())
+            </when>
+            <when test="type == 4">
+                and YEARWEEK(date_format(a.create_time,'%Y-%m-%d')) = YEARWEEK(now()) -1
+            </when>
+            <when test="type == 5">
+                and date_format(a.create_time,'%Y-%m')=date_format(now(),'%Y-%m')
+            </when>
+            <when test="type == 6">
+                and date_format(a.create_time,'%Y-%m')=date_format(DATE_SUB(curdate(), INTERVAL 1 MONTH),'%Y-%m')
+            </when>
+            <when test="type == 7">
+                and QUARTER(a.create_time)=QUARTER(now()) AND YEAR(a.create_time)=YEAR(NOW())
+            </when>
+            <when test="type == 8">
+                and QUARTER(a.create_time)=QUARTER(DATE_SUB(now(),interval 1 QUARTER)) and YEAR(DATE_SUB(a.create_time,interval 1 QUARTER)) = YEAR(DATE_SUB(NOW(),interval 1 QUARTER))
+            </when>
+            <when test="type == 9">
+                and YEAR(a.create_time)=YEAR(NOW())
+            </when>
+            <when test="type == 10">
+                and YEAR(a.create_time)=YEAR(date_sub(now(),interval 1 year))
+            </when>
+            <when test="type == 11">
+                and  TO_DAYS(a.create_time) &gt;= TO_DAYS(#{startTime})
+                and  TO_DAYS(a.create_time) &lt;= TO_DAYS(#{endTime})
+            </when>
+        </choose>
+        GROUP BY IFNULL(b.value,'')
+    </select>
+    <select id="portraitLevel" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT count(*) as allCustomer,
+        sum(a.deal_status) as dealCustomer,
+        (case when (IFNULL(b.`value`,'') = '') then '未知' else b.`value` end) as level
+        FROM wk_crm_customer as a
+        LEFT JOIN wk_crm_customer_data as b on a.batch_id=b.batch_id
+        and b.`name`= (select field_name from wk_crm_field where label = 2 and field_name = 'level' )
+        where a.status !=3 and  a.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+
+        <choose>
+            <when test="type == 1">
+                and to_days(NOW()) = TO_DAYS(a.create_time)
+            </when>
+            <when test="type == 2">
+                and to_days(NOW()) - TO_DAYS(a.create_time) = 1
+            </when>
+            <when test="type == 3">
+                and YEARWEEK(date_format(a.create_time,'%Y-%m-%d')) = YEARWEEK(now())
+            </when>
+            <when test="type == 4">
+                and YEARWEEK(date_format(a.create_time,'%Y-%m-%d')) = YEARWEEK(now()) -1
+            </when>
+            <when test="type == 5">
+                and date_format(a.create_time,'%Y-%m')=date_format(now(),'%Y-%m')
+            </when>
+            <when test="type == 6">
+                and date_format(a.create_time,'%Y-%m')=date_format(DATE_SUB(curdate(), INTERVAL 1 MONTH),'%Y-%m')
+            </when>
+            <when test="type == 7">
+                and QUARTER(a.create_time)=QUARTER(now()) AND YEAR(a.create_time)=YEAR(NOW())
+            </when>
+            <when test="type == 8">
+                and QUARTER(a.create_time)=QUARTER(DATE_SUB(now(),interval 1 QUARTER)) and YEAR(DATE_SUB(a.create_time,interval 1 QUARTER)) = YEAR(DATE_SUB(NOW(),interval 1 QUARTER))
+            </when>
+            <when test="type == 9">
+                and YEAR(a.create_time)=YEAR(NOW())
+            </when>
+            <when test="type == 10">
+                and YEAR(a.create_time)=YEAR(date_sub(now(),interval 1 year))
+            </when>
+            <when test="type == 11">
+                and  TO_DAYS(a.create_time) &gt;= TO_DAYS(#{startTime})
+                and  TO_DAYS(a.create_time) &lt;= TO_DAYS(#{endTime})
+            </when>
+        </choose>
+        GROUP BY IFNULL(b.value,'')
+    </select>
+    <select id="portraitSource" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT count(*) as allCustomer,
+        sum(a.deal_status) as dealCustomer,
+        (case when (IFNULL(b.`value`,'') = '') then '未知' else b.`value` end) as source
+        FROM wk_crm_customer as a
+        LEFT JOIN wk_crm_customer_data as b on a.batch_id=b.batch_id
+        and b.`name`= (select field_name from wk_crm_field where label = 2 and field_name = 'source' )
+        where a.status !=3 and  a.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+
+        <choose>
+            <when test="type == 1">
+                and to_days(NOW()) = TO_DAYS(a.create_time)
+            </when>
+            <when test="type == 2">
+                and to_days(NOW()) - TO_DAYS(a.create_time) = 1
+            </when>
+            <when test="type == 3">
+                and YEARWEEK(date_format(a.create_time,'%Y-%m-%d')) = YEARWEEK(now())
+            </when>
+            <when test="type == 4">
+                and YEARWEEK(date_format(a.create_time,'%Y-%m-%d')) = YEARWEEK(now()) -1
+            </when>
+            <when test="type == 5">
+                and date_format(a.create_time,'%Y-%m')=date_format(now(),'%Y-%m')
+            </when>
+            <when test="type == 6">
+                and date_format(a.create_time,'%Y-%m')=date_format(DATE_SUB(curdate(), INTERVAL 1 MONTH),'%Y-%m')
+            </when>
+            <when test="type == 7">
+                and QUARTER(a.create_time)=QUARTER(now()) AND YEAR(a.create_time)=YEAR(NOW())
+            </when>
+            <when test="type == 8">
+                and QUARTER(a.create_time)=QUARTER(DATE_SUB(now(),interval 1 QUARTER)) and YEAR(DATE_SUB(a.create_time,interval 1 QUARTER)) = YEAR(DATE_SUB(NOW(),interval 1 QUARTER))
+            </when>
+            <when test="type == 9">
+                and YEAR(a.create_time)=YEAR(NOW())
+            </when>
+            <when test="type == 10">
+                and YEAR(a.create_time)=YEAR(date_sub(now(),interval 1 year))
+            </when>
+            <when test="type == 11">
+                and  TO_DAYS(a.create_time) &gt;= TO_DAYS(#{startTime})
+                and  TO_DAYS(a.create_time) &lt;= TO_DAYS(#{endTime})
+            </when>
+        </choose>
+        GROUP BY IFNULL(b.value,'')
+    </select>
+    <select id="contractProductRanKing" resultType="com.alibaba.fastjson.JSONObject">
+        select IFNULL(SUM(c.num), 0) AS num, a.`name` AS categoryName, b.`name` AS productName, a.category_id, b.product_id
+        from wk_crm_product_category as a
+        JOIN wk_crm_product as b ON a.category_id = b.category_id
+        JOIN wk_crm_contract_product as c ON b.product_id = c.product_id
+        JOIN wk_crm_contract as d ON c.contract_id = d.contract_id
+        WHERE d.check_status = 1
+        and d.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        <choose>
+            <when test="type == 1">
+                and to_days(NOW()) = TO_DAYS(d.order_date)
+            </when>
+            <when test="type == 2">
+                and to_days(NOW()) - TO_DAYS(d.order_date) = 1
+            </when>
+            <when test="type == 3">
+                and YEARWEEK(date_format(d.order_date,'%Y-%m-%d')) = YEARWEEK(now())
+            </when>
+            <when test="type == 4">
+                and YEARWEEK(date_format(d.order_date,'%Y-%m-%d')) = YEARWEEK(now()) -1
+            </when>
+            <when test="type == 5">
+                and date_format(d.order_date,'%Y-%m')=date_format(now(),'%Y-%m')
+            </when>
+            <when test="type == 6">
+                and date_format(d.order_date,'%Y-%m')=date_format(DATE_SUB(curdate(), INTERVAL 1 MONTH),'%Y-%m')
+            </when>
+            <when test="type == 7">
+                and QUARTER(d.order_date)=QUARTER(now()) AND YEAR(d.order_date)=YEAR(NOW())
+            </when>
+            <when test="type == 8">
+                and QUARTER(d.order_date)=QUARTER(DATE_SUB(now(),interval 1 QUARTER)) and YEAR(DATE_SUB(d.order_date,interval 1 QUARTER)) = YEAR(DATE_SUB(NOW(),interval 1 QUARTER))
+            </when>
+            <when test="type == 9">
+                and YEAR(d.order_date)=YEAR(NOW())
+            </when>
+            <when test="type == 10">
+                and YEAR(d.order_date)=YEAR(date_sub(now(),interval 1 year))
+            </when>
+            <when test="type == 11">
+                and  TO_DAYS(d.order_date) &gt;= TO_DAYS(#{startTime})
+                and  TO_DAYS(d.order_date) &lt;= TO_DAYS(#{endTime})
+            </when>
+        </choose>
+        GROUP BY a.category_id
+    </select>
+    <select id="contractRanKing" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT IFNULL(SUM(cct.money), 0) as money,cau.realname,cau.user_id,cau.img,cct.owner_user_id,cad.name as structureName
+        FROM wk_crm_contract as cct
+        LEFT JOIN wk_admin_user as cau on cau.user_id = cct.owner_user_id
+        left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
+        WHERE check_status = 1
+        and  cct.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(order_date,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        GROUP BY cct.owner_user_id
+        ORDER BY money DESC
+    </select>
+    <select id="receivablesRanKing" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT IFNULL(SUM(cct.money), 0) as money,cau.realname,cau.user_id,cau.img,cad.name as structureName
+        FROM
+        wk_crm_receivables as cct
+        LEFT JOIN wk_admin_user as cau on cau.user_id = cct.owner_user_id
+        left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
+        WHERE check_status = 1
+        and  cct.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(return_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        GROUP BY cct.owner_user_id
+        ORDER BY money DESC
+    </select>
+    <select id="contractCountRanKing" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT count(1) as `count`,cau.realname,cau.user_id,cau.img,cct.owner_user_id,cad.name as structureName
+        FROM
+        wk_crm_contract as cct
+        LEFT JOIN wk_admin_user as cau on cau.user_id = cct.owner_user_id
+        left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
+        WHERE check_status != 7
+        and  cct.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(order_date,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        GROUP BY cct.owner_user_id
+        ORDER BY count DESC
+    </select>
+    <select id="productCountRanKing" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT count(1) as `count`,cau.realname,cct.owner_user_id,cad.name as structureName
+        FROM
+        wk_crm_contract_product as ccp
+        LEFT JOIN wk_crm_contract as cct on ccp.contract_id = cct.contract_id
+        LEFT JOIN wk_admin_user as cau on cau.user_id = cct.owner_user_id
+        left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
+        WHERE check_status = 1
+        and  cct.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(order_date,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        GROUP BY cct.owner_user_id
+        ORDER BY count DESC
+    </select>
+
+    <select id="customerCountRanKing" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT count(1) as `count`,cau.realname,cau.user_id,cau.img,cct.owner_user_id,cad.name as structureName
+        FROM
+        wk_crm_customer as cct
+        LEFT JOIN wk_admin_user as cau on cau.user_id = cct.owner_user_id
+        left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
+        WHERE cct.status != 3 and
+        cct.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(cct.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        GROUP BY cct.owner_user_id
+        ORDER BY count DESC
+    </select>
+    <select id="contactsCountRanKing" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT count(1) as `count`,cau.realname,cau.user_id,cau.img,cct.create_user_id,cad.name as structureName
+        FROM
+        wk_crm_contacts as cct
+        LEFT JOIN wk_admin_user as cau on cau.user_id = cct.create_user_id
+        left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
+        WHERE cct.create_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(cct.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        GROUP BY cct.create_user_id
+        ORDER BY count DESC
+    </select>
+    <select id="customerGenjinCountRanKing" resultType="com.alibaba.fastjson.JSONObject">
+        select
+        cau.realname,
+        cau.user_id,
+        cad.name AS structureName,
+        count(v.customer_id) as count
+        from (SELECT a.activity_type_id as customer_id,a.create_user_id
+        FROM wk_crm_activity a
+        left join wk_crm_customer c on a.activity_type_id = c.customer_id
+        WHERE c.status != 3
+        AND a.activity_type = 2
+        AND a.type = 1
+        AND DATE_FORMAT(a.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        union
+        SELECT a.customer_id,b.create_user_id
+        FROM wk_crm_leads a
+        LEFT JOIN wk_crm_activity b ON a.leads_id = b.activity_type_id
+        AND activity_type = 1
+        AND type = 1
+        left join wk_crm_customer c on b.activity_type_id = c.customer_id
+        WHERE c.status != 3
+        AND DATE_FORMAT(b.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        union
+        SELECT a.customer_id,b.create_user_id
+        FROM wk_crm_contacts a
+        LEFT JOIN wk_crm_activity b ON a.contacts_id = b.activity_type_id
+        AND activity_type = 3
+        AND type = 1
+        left join wk_crm_customer c on b.activity_type_id = c.customer_id
+        WHERE c.status != 3
+        AND DATE_FORMAT(b.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        union
+        SELECT a.customer_id,b.create_user_id
+        FROM wk_crm_business a
+        LEFT JOIN wk_crm_activity b ON a.business_id = b.activity_type_id
+        AND activity_type = 5
+        AND type = 1
+        left join wk_crm_customer c on b.activity_type_id = c.customer_id
+        WHERE c.status != 3
+        AND DATE_FORMAT(b.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        ) as v
+        left JOIN wk_admin_user cau on cau.user_id = v.create_user_id
+        inner JOIN wk_admin_dept cad ON cad.dept_id = cau.dept_id
+        WHERE cau.user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        GROUP BY cau.user_id
+        order by count desc
+    </select>
+    <select id="recordCountRanKing" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT count(1)  as `count`,cau.realname,cau.user_id,cau.img,ccr.create_user_id,cad.name as structureName
+        FROM
+        wk_crm_activity as ccr
+        LEFT JOIN wk_admin_user as cau on cau.user_id = ccr.create_user_id
+        left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
+        left join wk_crm_customer c on ccr.activity_type_id = c.customer_id
+        WHERE if(ccr.activity_type = 2,c.status != 3,1=1)
+        and ccr.type = 1  and
+        ccr.create_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(ccr.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        GROUP BY ccr.create_user_id
+        ORDER BY count DESC
+    </select>
+    <select id="travelCountRanKing" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT count(1) as `count`,cau.realname,coe.create_user_id,cad.name as structureName
+        FROM
+        wk_oa_examine_travel as coet
+        LEFT JOIN wk_oa_examine as coe on coe.examine_id = coet.examine_id
+        left join `wk_oa_examine_category` a on coe.category_id = a.category_id
+        LEFT JOIN wk_admin_user as cau on cau.user_id = coe.create_user_id
+        left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
+        left join wk_oa_examine_record as c on coe.examine_id = c.examine_id
+        WHERE a.type = 3 and
+        coe.create_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and c.examine_status = 1
+        and DATE_FORMAT(coet.start_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+        GROUP BY coe.create_user_id
+        ORDER BY count DESC
+    </select>
+    <select id="contractRanKing1" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT IFNULL(SUM(cct.money), 0) as money,(TRUNCATE ( IFNULL((IFNULL(SUM(cct.money), 0)/SUM(achievement)),0)*100 ,2)) as rate,
+        cau.realname,cau.user_id,cau.img,cct.owner_user_id,cad.name as structureName
+        FROM
+        (select sum(money) as money, owner_user_id from wk_crm_contract where check_status = 1
+        and  owner_user_id in
+        <for collection="data.userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(order_date,'${data.sqlDateFormat}') between #{data.beginTime} and #{data.finalTime} group by owner_user_id) as cct
+        LEFT JOIN wk_admin_user as cau on cau.user_id = cct.owner_user_id
+        left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
+        left join ( select sum(x.achievement) as achievement,x.user_id from (
+        <foreach collection="monthMap" item="x" separator="union all" >
+            select ${x.month} as achievement,obj_id as user_id from wk_crm_achievement where obj_id in
+            <for collection="data.userIds" item="item">
+                #{item}
+            </for>
+            and year = #{x.year} and type = 3 and status = 1
+        </foreach>
+        ) as x group by user_id) as y ON y.user_id = cct.owner_user_id
+        where 1=1
+        GROUP BY cct.owner_user_id
+        ORDER BY money DESC
+    </select>
+
+    <select id="receivablesRanKing1" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT IFNULL(SUM(cct.money), 0) as money,(TRUNCATE ( IFNULL((IFNULL(SUM(cct.money), 0)/SUM(achievement)),0)*100 ,2)) as rate,
+        cau.realname,cau.user_id,cau.img,cad.name as structureName
+        FROM
+        (select sum(money) as money, owner_user_id from wk_crm_receivables where check_status = 1
+        and  owner_user_id in
+        <for collection="data.userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(return_time,'${data.sqlDateFormat}') between #{data.beginTime} and #{data.finalTime} group by owner_user_id) as cct
+        LEFT JOIN wk_admin_user as cau on cau.user_id = cct.owner_user_id
+        left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
+        left join ( select sum(x.achievement) as achievement,x.user_id from (
+        <foreach collection="monthMap" item="x" separator="union all" >
+            select ${x.month} as achievement,obj_id as user_id from wk_crm_achievement where obj_id in
+            <for collection="data.userIds" item="item">
+                #{item}
+            </for>
+            and year = #{x.year} and type = 3 and status = 2
+        </foreach>
+        ) as x group by user_id) as y ON y.user_id = cct.owner_user_id
+        where 1=1
+        GROUP BY cct.owner_user_id
+        ORDER BY money DESC
+    </select>
+</mapper>

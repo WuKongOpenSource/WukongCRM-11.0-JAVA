@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.bi.mapper.BiFunnelMapper">
+    <select id="sellFunnel" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT COUNT(1) as count,
+        ccbs.`name`,
+        ccbs.order_num,IFNULL(SUM(ccb.money),0) as money,
+        ccb.type_id
+        FROM wk_crm_business as ccb
+        LEFT JOIN wk_crm_business_status as ccbs ON ccbs.status_id = ccb.status_id and ccb.status = 1
+        where ccbs.type_id = #{typeId} and ccb.is_end = 0
+        and  ccb.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+        GROUP BY ccbs.`name`,ccbs.order_num,ccb.type_id order by ccbs.order_num
+    </select>
+
+    <select id="addBusinessAnalyze" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+            a.type,
+            a.businessMoney,
+            b.businessNum
+        FROM
+            (
+                SELECT
+                t.type,
+                IFNULL( sum( t.money ), 0 ) AS businessMoney
+                FROM
+            (
+            SELECT
+                DATE_FORMAT(create_time,#{sqlDateFormat}) AS type,
+                money
+                FROM
+                wk_crm_business
+            WHERE
+            status = 1
+            AND (DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+            AND owner_user_id IN
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            ) t
+        GROUP BY t.type
+        ) a
+        LEFT JOIN (
+            SELECT
+            t.type,
+            IFNULL( COUNT( 1 ), 0 ) AS businessNum
+            FROM
+            (
+            SELECT
+                DATE_FORMAT(create_time,#{sqlDateFormat}) type
+                FROM
+                wk_crm_business
+            WHERE
+            status = 1
+            AND (DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+            AND owner_user_id IN
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            ) t
+        GROUP BY t.type
+        ) b ON a.type = b.type
+    </select>
+
+    <select id="win" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+            a.type,
+            a.businessNum,
+            b.businessEnd,
+            round( IFNULL( c.proportion * 100 / a.businessNum, 0 ), 2 ) AS proportion
+        FROM
+            (
+            SELECT
+                t.type,
+                COUNT( 1 ) AS businessNum
+            FROM
+            (
+            SELECT
+                DATE_FORMAT( create_time, #{sqlDateFormat} ) AS type
+            FROM
+                wk_crm_business
+            WHERE
+                (DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+                AND owner_user_id IN
+                <for collection="userIds" item="item">
+                    #{item}
+                </for>
+                AND STATUS = 1
+            ) t
+            GROUP BY t.type
+        ) a
+        LEFT JOIN (
+            SELECT
+                t.type,
+                round( IFNULL( count( 1 ), 0 ), 2 ) AS businessEnd
+            FROM
+            (
+            SELECT
+                DATE_FORMAT( create_time, #{sqlDateFormat}) type
+            FROM
+                wk_crm_business
+            WHERE
+                (DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+                AND is_end = 1
+                AND owner_user_id IN
+                <for collection="userIds" item="item">
+                    #{item}
+                </for>
+                AND STATUS = 1
+            ) t
+            GROUP BY t.type
+        ) b ON a.type = b.type
+        LEFT JOIN (
+            SELECT
+                t.type,
+                count( 1 ) AS proportion
+            FROM
+            (
+            SELECT
+                DATE_FORMAT( create_time, #{sqlDateFormat}) type
+            FROM
+                wk_crm_business
+            WHERE
+                (DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+                AND is_end = 1
+                AND owner_user_id IN
+                <for collection="userIds" item="item">
+                    #{item}
+                </for>
+                AND STATUS = 1
+            ) t
+            GROUP BY t.type
+        ) c ON a.type = c.type
+    </select>
+
+
+    <select id="sellFunnelList" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+        a.business_id,a.business_name,a.create_time,a.create_user_id,
+        a.customer_id,
+        a.deal_date,a.money,a.owner_user_id,
+        a.status_id,
+        CASE WHEN a.is_end = 0 THEN e.name
+        WHEN a.is_end = 1 THEN '赢单'
+        WHEN a.is_end = 2 THEN '输单'
+        WHEN a.is_end = 3 THEN '无效' END as status_name,
+        a.type_id,f.name as type_name
+        FROM wk_crm_business a
+        left join wk_crm_business_status e on e.status_id = a.status_id
+        left join wk_crm_business_type f on f.type_id = a.type_id
+        where a.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and date_format(a.create_time,#{sqlDateFormat}) = #{time} and a.status = 1
+    </select>
+</mapper>

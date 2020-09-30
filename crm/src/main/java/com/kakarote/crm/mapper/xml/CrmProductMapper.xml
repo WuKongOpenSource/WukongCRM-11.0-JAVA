@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmProductMapper">
+    <select id="queryById" resultType="com.kakarote.crm.common.CrmModel">
+        select ccp.*, sc.name as category_name
+        from wk_crm_product as ccp
+                 LEFT JOIN wk_crm_product_category as sc on sc.category_id = ccp.category_id
+        where ccp.product_id = #{id}  and ccp.status != 3
+    </select>
+</mapper>

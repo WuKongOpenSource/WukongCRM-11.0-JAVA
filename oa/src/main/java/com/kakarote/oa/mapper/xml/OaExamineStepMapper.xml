@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.oa.mapper.OaExamineStepMapper">
+
+    <select id="queryExamineStepByNextExamineIdOrderByStepId"
+            resultType="com.kakarote.oa.entity.PO.OaExamineStep">
+          SELECT * FROM wk_oa_examine_step
+          WHERE category_id = #{categoryId} and step_num =  (SELECT step_num FROM wk_oa_examine_step where step_id = #{examineStepId}) + 1
+    </select>
+</mapper>
