@@ -76,10 +76,10 @@ wk_crm
 ### 一、前置环境
 - Jdk1.8
 - Maven3.5.0+   
-- Mysql5.7.20 （<a href="https://gitee.com/myzw/wk_crm/wikis/mysql%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">数据库安装注意事项</a>）
+- Mysql5.7.20 （<a href="https://gitee.com/wukongcrm/crm_pro/wikis/mysql配置说明" target="_blank">数据库安装注意事项</a>）
 - Redis(版本不限)
-- Elasticsearch 6.8.6 （<a href="https://gitee.com/myzw/wk_crm/wikis/elasticsearch%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E" target="_blank">环境配置注意事项</a>）
-- Seata（1.2.0）
+- Elasticsearch 6.8.6 （<a href="https://gitee.com/wukongcrm/crm_pro/wikis/elasticsearch配置说明" target="_blank">环境配置注意事项</a>）
+- Seata（1.2.0）（<a href="https://gitee.com/wukongcrm/crm_pro/wikis/seata" target="_blank">配置说明</a>）
 - Sentinel（1.7.2）（项目中sentinel使用8079端口）
 - Nacos（1.2.1)
 
@@ -89,9 +89,10 @@ wk_crm
       
 
 ```
-- 初始化gateway模块数据库：在数据库中运行` DB/config_info_route.sql`
-- 初始化其余模块数据库：在数据库中运行 `DB/wk_crm.sql`
-- 初始化定时任务模块数据库：在数据库中运行 `DB/xxl_job.sql`
+- 初始化gateway模块数据库：新建数据库 `nacos` 在`nacos`数据库中运行` DB/config_info_route.sql`
+- 初始化其余模块数据库：新建数据库 `wk_crm_single` 在`wk_crm_single`数据库中运行 `DB/wk_crm_single.sql`
+- 初始化定时任务模块数据库：新建数据库 `xxl_job` 在`xxl_job`数据库中运行 `DB/xxl_job.sql`
+- 初始化seata数据库：新建数据库 `seata` 在`seata`数据库中运行 `DB/seata.sql`
 
 ```
 
@@ -100,17 +101,17 @@ wk_crm
 
 
 
-#### 3.在各个模块中配置数据库帐号信息以及redis帐号信息`（默认使用的是application-dev.yml配置文件,打包后启动脚本默认使用的application-test.yml配置文件）`
+#### 3.在各个模块下resource目录配置数据库帐号信息以及redis帐号信息`（默认使用的是application-dev.yml配置文件,打包后启动脚本默认使用的application-test.yml配置文件）`
 
 
 
-#### 4.在`core\src\main\resources\application-core.yml`里面修改elasticsearch配置
+#### 4.在`crm\src\main\resources\application-dev.yml`里面修改elasticsearch配置
 
         
 ```
 spring.elasticsearch.rest.uris = elasticsearch地址 例：127.0.0.1:9200
-spring.elasticsearch.rest.username = elasticsearch用户名 例：elastic
-spring.elasticsearch.rest.password = elasticsearch密码 例: password 
+spring.elasticsearch.rest.username = elasticsearch用户名 例：elastic 无密码可留空
+spring.elasticsearch.rest.password = elasticsearch密码 例: password 无密码可留空
 
 ```
 
@@ -121,9 +122,9 @@ spring.elasticsearch.rest.password = elasticsearch密码 例: password
 ```
 crm.upload.config:1                文件上传配置 1:本地 2:阿里云OSS 
 crm.upload.oss                     oss上传文件所需配置内容 
-crm.upload.oss.bucketName.0        需要配置两个bucket，0为登录才可访问文件上传地址，1为完全公开文件上传地址
+crm.upload.oss.bucketName        需要配置两个bucket，0为登录才可访问文件上传地址，1为完全公开文件上传地址
 crm.upload.local                   本地上传文件所需配置内容 
-crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访问文件上传地址，1为完全公开文件上传地址
+crm.upload.local.uploadPath      需要配置两个地址0为登录才可访问文件上传地址，1为完全公开文件上传地址
 ```
 
 #### 6.（可选）修改jetcache缓存配置详见 <a href="https://github.com/alibaba/jetcache/wiki" target="_blank">官方文档</a> 
