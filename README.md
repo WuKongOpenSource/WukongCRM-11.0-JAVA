@@ -150,6 +150,7 @@ crm.upload.local.uploadPath.0      需要配置两个地址0为登录才可访�
 先启动nacos,seata,sentinel, elasticsearch,mysql,redis等基础服务
 在各个模块下通过执行`sh 72crm.sh start`（windows下直接运行72crm.bat）启动各个模块服务。
 其中项目基础模块：gateway，authorization，admin必须启动，其他模块可按需启动。
+启动完成后，在浏览器中访问：http://localhost:8443/即可登录系统
 
 ```
 
