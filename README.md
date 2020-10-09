@@ -28,8 +28,7 @@ QQ群交流群群：[1026560336](http:////shang.qq.com/wpa/qunwpa?idkey=13d5e580
 注：悟空CRM采用全新的前后端分离模式，本仓库代码中已集成前端vue打包后文件，可免去打包操作。如需调整前端代码，请单独下载前端代码
 
 ```
-
-[查看VUE前端仓库](<a href="https://gitee.com/wukongcrm/W72crm_web" target="_blank">环境配置注意事项</a>) 
+(<a href="https://gitee.com/wukongcrm/W72crm_web" target="_blank">前端代码点这</a>) 
 
 ## 悟空CRM目录结构
 
