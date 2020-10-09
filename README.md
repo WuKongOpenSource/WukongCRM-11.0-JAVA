@@ -29,7 +29,7 @@ QQ群交流群群：[1026560336](http:////shang.qq.com/wpa/qunwpa?idkey=13d5e580
 
 ```
 
-[--查看VUE前端仓库](<a href="https://gitee.com/wukongcrm_admin/W72crm_web" target="_blank">环境配置注意事项</a>) 
+[查看VUE前端仓库](<a href="https://gitee.com/wukongcrm/W72crm_web" target="_blank">环境配置注意事项</a>) 
 
 ## 悟空CRM目录结构
 
