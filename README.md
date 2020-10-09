@@ -55,9 +55,9 @@ wk_crm
 |---------------------|---------------------------|----|
 | spring-cloud-alibaba| 2.2.1.RELEASE(Hoxton.SR3) |  核心框架  |
 | swagger             | 2.9.2                     |  接口文档  |
-| mybits-plus         | 3.3.0                     |  ORM框架  |
+| mybatis-plus         | 3.3.0                     |  ORM框架  |
 | sentinel            | 2.2.1.RELEASE             |  断路器以及限流  |
-| nacos               | 2.2.1.RELEASE             |  注册中心以及分布式配置管理  |
+| nacos               | 1.2.1.RELEASE             |  注册中心以及分布式配置管理  |
 | seata               | 1.2.0                     |  分布式事务 |
 | elasticsearch       | 2.2.5.RELEASE(6.8.6)      |  搜索引擎中间件  |
 | jetcache            | 2.6.0                     |  分布式缓存框架  |
