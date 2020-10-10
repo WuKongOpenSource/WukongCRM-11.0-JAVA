@@ -84,7 +84,7 @@ INSERT INTO `wk_admin_config` VALUES (262456, 0, 'numberSetting', '6', '自动�
 INSERT INTO `wk_admin_config` VALUES (262457, 0, 'numberSetting', '7', '自动编号设置');
 INSERT INTO `wk_admin_config` VALUES (262458, 0, 'numberSetting', '17', '自动编号设置');
 INSERT INTO `wk_admin_config` VALUES (262459, 0, 'numberSetting', '18', '自动编号设置');
-INSERT INTO `wk_admin_config` VALUES (262460, 1, 'companyInfo', '{\"companyLogo\":\"/adminFile/down/1297082650858754048\",\"companyName\":\"良心企业\"}', '企业LOGO配置');
+INSERT INTO `wk_admin_config` VALUES (262460, 1, 'companyInfo', '{\"companyLogo\":\"\",\"companyName\":\"良心企业\"}', '企业LOGO配置');
 INSERT INTO `wk_admin_config` VALUES (262461, 1, 'marketing', NULL, '是否开启营销活动');
 
 -- ----------------------------
