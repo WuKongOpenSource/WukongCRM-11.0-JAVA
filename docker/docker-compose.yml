@@ -1,0 +1,78 @@
+version: '3'
+services:
+  db:
+    image: 'mysql:5.7'
+    restart: always
+    container_name: mysql
+    volumes:
+      - ./data/mysql/data:/var/lib/mysql
+      - ./conf/mysql/mysqld.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf
+      - ./data/mysql/init:/docker-entrypoint-initdb.d/
+      - ./log/mysql:/var/log/mysql/
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+    ports:
+      - '3306:3306'
+    network_mode: "host"
+  redis:
+    image: 'redis:6.0.8'
+    restart: on-failure
+    container_name: redis
+    volumes:
+      - ./conf/redis/redis.conf:/etc/redis.conf
+    ports:
+      - '6379:6379'
+    command: [ "redis-server", "/etc/redis.conf" ]
+    network_mode: "host"
+  elasticsearch:
+    image: elasticsearch:6.8.6
+    container_name: elasticsearch
+    network_mode: "host"
+    volumes:
+      - ./data/elasticsearch/data:/usr/share/elasticsearch/data
+      - ./data/elasticsearch/plugins:/usr/share/elasticsearch/plugins
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+  nacos:
+    image: nacos/nacos-server:1.2.1
+    container_name: nacos
+    network_mode: "host"
+    environment:
+      - MODE=standalone
+    depends_on:
+      - db
+    volumes:
+      - ./conf/nacos:/home/nacos/conf
+      - ./log/nacos:/home/nacos/logs
+      - "./entrypoint.sh:/entrypoint.sh"
+    entrypoint: /entrypoint.sh -c 'echo "start web service here"';
+    ports:
+      - "8848:8848"
+  xxl-job-admin:
+    image: xuxueli/xxl-job-admin:2.1.2
+    container_name: xxl-job-admin
+    network_mode: "host"
+    volumes:
+      - ./log/xxl-job:/data/applogs/xxl-job/
+    environment:
+      PARAMS: '--spring.datasource.url=jdbc:mysql://127.0.0.1:3306/xxl_job?Unicode=true&characterEncoding=UTF-8 --spring.datasource.username=root --spring.datasource.password=password'
+    ports:
+      - "8080:8080"
+  wkcrm:
+    image: registry.cn-hangzhou.aliyuncs.com/72crm/crm:11.0.0
+    container_name: "wkcrm"
+    ports:
+      - "80:80"
+    volumes:
+      - ./conf/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./conf/nginx/conf.d/:/etc/nginx/conf.d/
+      - ./log/nginx/:/var/log/nginx/
+      - ../:/usr/local/crm_pro
+    privileged: true
+    network_mode: "host"
+    command: /usr/sbin/init
+    restart: always
+
+
