@@ -32,7 +32,7 @@
         SELECT b.${table}_id as tid
         <if test="fields.size() >0">
         <for collection="fields" index="i" item="item" open="," separator="," close="">
-            max(CASE WHEN `a`.`name` = '${item.fieldName}' THEN `a`.`value` END) AS '${item.fieldName}'
+            max(CASE WHEN `a`.`name` = '${item.getFieldName}' THEN `a`.`value` END) AS '${item.getFieldName}'
         </for>
         </if>
         FROM wk_crm_${tableName}_data as a
