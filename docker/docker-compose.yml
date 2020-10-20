@@ -1,7 +1,7 @@
 version: '3'
 services:
   db:
-    image: 'mysql:5.7'
+    image: 'registry.cn-hangzhou.aliyuncs.com/72crm/mysql:5.7'
     restart: always
     container_name: mysql
     volumes:
@@ -15,7 +15,7 @@ services:
       - '3306:3306'
     network_mode: "host"
   redis:
-    image: 'redis:6.0.8'
+    image: 'registry.cn-hangzhou.aliyuncs.com/72crm/redis:6.0.8'
     restart: on-failure
     container_name: redis
     volumes:
@@ -25,7 +25,7 @@ services:
     command: [ "redis-server", "/etc/redis.conf" ]
     network_mode: "host"
   elasticsearch:
-    image: elasticsearch:6.8.6
+    image: registry.cn-hangzhou.aliyuncs.com/72crm/elasticsearch:6.8.6
     container_name: elasticsearch
     network_mode: "host"
     volumes:
@@ -36,7 +36,7 @@ services:
     ports:
       - "9200:9200"
   nacos:
-    image: nacos/nacos-server:1.2.1
+    image: registry.cn-hangzhou.aliyuncs.com/72crm/nacos/nacos-server:1.2.1
     container_name: nacos
     network_mode: "host"
     environment:
@@ -51,7 +51,7 @@ services:
     ports:
       - "8848:8848"
   xxl-job-admin:
-    image: xuxueli/xxl-job-admin:2.1.2
+    image: registry.cn-hangzhou.aliyuncs.com/72crm/xxl-job:2.1.2
     container_name: xxl-job-admin
     network_mode: "host"
     volumes:
