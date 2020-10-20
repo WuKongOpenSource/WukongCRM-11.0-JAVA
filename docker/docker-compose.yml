@@ -36,7 +36,7 @@ services:
     ports:
       - "9200:9200"
   nacos:
-    image: registry.cn-hangzhou.aliyuncs.com/72crm/nacos/nacos:1.2.1
+    image: registry.cn-hangzhou.aliyuncs.com/72crm/nacos:1.2.1
     container_name: nacos
     network_mode: "host"
     environment:
