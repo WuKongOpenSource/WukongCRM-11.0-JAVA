@@ -2,7 +2,6 @@
 .idea/
 *.iml
 logs
-test
 target
 */target/**
 rebel.xml
