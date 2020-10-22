@@ -15,7 +15,7 @@
       from wk_work as a
       where a.status = 1
       <if test="userId != null">
-        (and (a.owner_user_id like concat('%,',#{userId},',%') and a.is_open = 0) or a.is_open = 1)
+        and ((a.owner_user_id like concat('%,',#{userId},',%') and a.is_open = 0) or a.is_open = 1)
       </if>
     </select>
     <select id="queryWorkTaskTemplateClass" resultType="com.kakarote.work.entity.VO.WorkTaskTemplateClassVO">
