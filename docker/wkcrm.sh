@@ -2,8 +2,6 @@
 #chkconfig: 2345 80 05
 #description: wkcrm
 #author: hmb
-sleep 30s
-#!/usr/bin/env bash
 server_names=('admin' 'authorization' 'bi' 'crm' 'gateway' 'job' 'oa' 'work')
 case "$1" in
 start)
@@ -28,6 +26,7 @@ start)
         sleep 2s;
     done
     echo "wkcrm startup"
+    tail -f /dev/null
     ;;
 stop)
     cd /usr/local/crm_pro/docker/workspace
@@ -38,6 +37,7 @@ stop)
     done
     ;;
 restart)
+    cp -f /72crm.sh /usr/local/crm_pro
     cd /usr/local/crm_pro/docker/workspace
     for value in "${server_names[@]}"
     do
@@ -65,6 +65,7 @@ restart)
         sleep 2s;
     done
     echo "wkcrm startup"
+    tail -f /dev/null
     ;;
 *)
     echo "start|stop|restart"
