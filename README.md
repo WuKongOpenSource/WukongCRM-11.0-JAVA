@@ -123,7 +123,7 @@ spring.elasticsearch.rest.password = elasticsearch密码 例: password 无密码
 
 ```
 
-
+注意：elasticsearch [配置注意点](https://gitee.com/wukongcrm/crm_pro/wikis/elasticsearch配置说明?sort_id=2927431)
 
 #### 5.（可选）修改系统中文件上传地址，默认为本地配置，本地上传还需配置公网地址，指向服务器网关
 
