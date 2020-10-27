@@ -71,7 +71,6 @@ services:
     image: registry.cn-hangzhou.aliyuncs.com/72crm/crm:11.0.0
     container_name: "wkcrm"
     volumes:
-      - ../:/usr/local/crm_pro
       - ./wkcrm.sh:/wkcrm.sh
     ports:
       - "8443:8443"
