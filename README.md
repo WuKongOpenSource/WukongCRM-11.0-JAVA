@@ -82,7 +82,15 @@ wk_crm
 - Sentinel（1.7.2）（项目中sentinel使用8079端口）
 - Nacos（1.2.1)
 
-### 二、安装说明
+###安装
+
+### 一键安装说明
+
+本项目支持Docker一键安装，[查看具体安装方法](https://gitee.com/wukongcrm/crm_pro/wikis/Docker一键安装教程?sort_id=3033975)
+
+
+
+### 手动安装说明
      
 #### 1. 导入初始化sql,目前项目下gateway模块使用的独立数据库，其他模块使用同一数据库
       
