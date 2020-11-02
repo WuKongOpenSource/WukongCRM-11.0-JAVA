@@ -49,9 +49,6 @@ public class ParamAspect implements Ordered {
 
     @Around("(execution(* com.kakarote.*.controller..*(..))||execution(* com.kakarote.*.*.controller..*(..))) && execution(@(org.springframework.web.bind.annotation.*Mapping) * *(..))  && !execution(@(com.kakarote.core.common.ParamAspect) * *(..))")
     public Object around(ProceedingJoinPoint point) throws Throwable {
-        if (RequestContextHolder.getRequestAttributes() == null || UserUtil.getUser() != null) {
-            return point.proceed();
-        }
         ServletRequestAttributes attributes = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes());
         HttpServletRequest request = attributes.getRequest();
         try {
