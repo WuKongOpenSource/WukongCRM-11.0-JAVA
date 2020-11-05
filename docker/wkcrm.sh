@@ -10,9 +10,9 @@ start)
     # shellcheck disable=SC2164
     cd /opt
     echo "启动sentinel"
-    nohup java -Dserver.port=8079 -Dproject.name=sentinel-dashboard -jar sentinel/sentinel-dashboard.jar > sentinel/log.out 2>&1 &
+    nohup java -Dserver.port=8079 -Dproject.name=sentinel-dashboard -jar sentinel/sentinel-dashboard.jar > package/log/sentinel.log 2>&1 &
     echo "启动seata"
-    nohup sh seata/bin/seata-server.sh  > seata/log.out 2>&1 &
+    nohup sh seata/bin/seata-server.sh  > package/log/seata.log 2>&1 &
     # shellcheck disable=SC2039
     for value in "${server_names[@]}"
     do
@@ -44,9 +44,9 @@ restart)
         sleep 0.5s;
     done
     echo "启动sentinel"
-    nohup java -Dserver.port=8079 -Dproject.name=sentinel-dashboard -jar sentinel/sentinel-dashboard.jar > sentinel/log.out 2>&1 &
+    nohup java -Dserver.port=8079 -Dproject.name=sentinel-dashboard -jar sentinel/sentinel-dashboard.jar > package/log/sentinel.log 2>&1 &
     echo "启动seata"
-    nohup sh seata/bin/seata-server.sh  > seata/log.out 2>&1 &
+    nohup sh seata/bin/seata-server.sh  > package/log/seata.log 2>&1 &
     for value in "${server_names[@]}"
     do
         # shellcheck disable=SC2164
