@@ -230,8 +230,4 @@ public class AdminServiceImpl implements AdminService {
         return Result.ok(new UserInfo());
     }
 
-    @Override
-    public Result<Integer> querySystemStatus() {
-        return Result.ok(0);
-    }
 }

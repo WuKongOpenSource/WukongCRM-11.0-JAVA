@@ -82,8 +82,9 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
     }
 
     @Override
-    public List<OaExamineField> queryFieldByBatchId(Integer categoryId, String batchId) {
-        return examineFieldMapper.queryFieldByBatchId(categoryId, batchId);
+    public String queryFieldValueByBatchId(Integer fieldId, String batchId) {
+        return examineDataService.lambdaQuery().select(OaExamineData::getValue).eq(OaExamineData::getFieldId,fieldId).eq(OaExamineData::getBatchId,batchId)
+                .oneOpt().map(OaExamineData::getValue).orElse("");
     }
 
     @Override

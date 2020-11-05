@@ -1,6 +1,8 @@
 package com.kakarote.job.crm;
+
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.service.CrmService;
@@ -30,22 +32,23 @@ public class CrmCustomerJob {
     private Redis redis;
 
     @XxlJob("CrmCustomerJob")
-    public ReturnT<String> demoJobHandler(String param) {
-        try {
-            UserInfo userInfo = UserUtil.setUser(UserUtil.getSuperUser());
-            redis.setex("CrmCustomerJob", Const.MAX_USER_EXIST_TIME, userInfo);
-            Result result = crmService.putInInternational();
-            if (!result.hasSuccess()) {
-                ReturnT<String> fail = ReturnT.FAIL;
-                fail.setMsg(result.getMsg());
-                return fail;
+    public ReturnT<String> crmCustomerJobHandler(String param) {
+            try {
+                Long userId = UserUtil.getSuperUser();
+                if (userId != null) {
+                    UserInfo userInfo = UserUtil.setUser(userId);
+                    redis.setex(CrmCacheKey.CRM_CUSTOMER_JOB_CACHE_KEY, Const.MAX_USER_EXIST_TIME, userInfo);
+                    Result result = crmService.putInInternational();
+                    if (!result.hasSuccess()){
+                        ReturnT<String> fail = ReturnT.FAIL;
+                        fail.setMsg(result.getMsg());
+                        return fail;
+                    }
+                }
+            }finally {
+                redis.del(CrmCacheKey.CRM_CUSTOMER_JOB_CACHE_KEY);
+                UserUtil.removeUser();
             }
-        } catch (Exception e) {
-            XxlJobLogger.log(e);
-        } finally {
-            redis.del("CrmCustomerJob");
-            UserUtil.removeUser();
-        }
 
         XxlJobLogger.log("客户定时放入公海执行完成");
         return ReturnT.SUCCESS;

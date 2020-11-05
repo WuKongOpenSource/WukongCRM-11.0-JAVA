@@ -28,7 +28,7 @@
 		<resources>
 			<resource>
 				<!-- xml放在java目录下-->
-				<directory>src/main/java/com/kakarote/bi/</directory>
+				<directory>src/main/java/com/kakarote/${pom.artifactId}/</directory>
 				<includes>
 					<include>**/*.xml</include>
 				</includes>
@@ -110,6 +110,7 @@
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<configuration>
+					<finalName>${artifactId}</finalName>
 					<appendAssemblyId>false</appendAssemblyId>
 					<descriptors>
 						<descriptor>../assembly.xml</descriptor>

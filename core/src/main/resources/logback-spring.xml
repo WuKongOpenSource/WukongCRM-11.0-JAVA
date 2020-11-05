@@ -23,23 +23,21 @@
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %contextName [%thread] %-5level %logger{100} - %msg %n</pattern>
         </encoder>
+        <!--日志文件最大的大小-->
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <MaxFileSize>10MB</MaxFileSize>
+        </triggeringPolicy>
     </appender>
 
-    <root level="INFO" additivity="false">
+    <root level="ERROR" additivity="false">
         <appender-ref ref="console" />
         <appender-ref ref="file" />
     </root>
     <!--自定义配置-->
-    <logger name="com.kakarote" level="DEBUG" additivity="false">
+    <logger name="com.kakarote" level="INFO" additivity="false">
         <appender-ref ref="console"/>
         <appender-ref ref="file"/>
     </logger>
 
-    <logger name="com.alibaba.nacos" level="DEBUG" additivity="false"/>
-
-    <logger name="org.springframework.web.servlet.mvc" level="INFO" additivity="false">
-        <appender-ref ref="console" />
-        <appender-ref ref="file" />
-    </logger>
 </configuration>
 

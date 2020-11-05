@@ -2,7 +2,6 @@ package com.kakarote.crm.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
@@ -45,7 +44,6 @@ import com.kakarote.crm.constant.*;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.entity.VO.*;
-import com.kakarote.crm.mapper.CrmBackLogMapper;
 import com.kakarote.crm.mapper.CrmCustomerMapper;
 import com.kakarote.crm.service.*;
 import lombok.extern.slf4j.Slf4j;
@@ -127,7 +125,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
     private ICrmCustomerPoolService crmCustomerPoolService;
 
     @Autowired
-    private CrmBackLogMapper mapper;
+    private ICrmCustomerPoolRelationService customerPoolRelationService;
 
     /**
      * 查询字段配置
@@ -170,27 +168,31 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             if (ObjectUtil.isNotEmpty(contactsId)) {
                 CrmContacts contacts = crmContactsService.lambdaQuery().select(CrmContacts::getName, CrmContacts::getMobile, CrmContacts::getAddress)
                         .eq(CrmContacts::getContactsId, contactsId).one();
-                if (contacts != null){
+                if (contacts != null) {
                     map.put("contactsName", contacts.getName());
                     map.put("contactsMobile", contacts.getMobile());
                     map.put("contactsAddress", contacts.getAddress());
                 }
             }
         });
-//        setPoolDay(basePage.getList());
+        setPoolDay(basePage.getList());
         return basePage;
     }
 
 
-    public List<Map<String, Object>> setPoolDay(List<Map<String, Object>> list) {
+    /**
+     * 为客户设置距进入公海时间
+     *
+     * @param list
+     * @return java.util.List<java.util.Map       <       java.lang.String       ,       java.lang.Object>>
+     * @date 2020/10/26 10:16
+     **/
+    private List<Map<String, Object>> setPoolDay(List<Map<String, Object>> list) {
         Long userId = UserUtil.getUserId();
+        Date date = new Date();
         List<CrmCustomerPool> poolList = crmCustomerPoolService.lambdaQuery().eq(CrmCustomerPool::getStatus, 1).eq(CrmCustomerPool::getPutInRule, 1).eq(CrmCustomerPool::getRemindSetting, 1).list();
-        Map<Integer, Integer> customerMap = new HashMap<>();
-        Map<Integer, Set<Integer>> remindPoolMap = new HashMap<>();
         poolList.forEach(pool -> {
             List<Long> userIdsList = new ArrayList<>();
-            List<JSONObject> recordList = new ArrayList<>();
-            List<Integer> customerIdList = new ArrayList<>();
             List<Integer> deptIds = StrUtil.splitTrim(pool.getMemberDeptId(), Const.SEPARATOR).stream().map(Integer::valueOf).collect(Collectors.toList());
             if (deptIds.size() > 0) {
                 userIdsList.addAll(adminService.queryUserByDeptIds(deptIds).getData());
@@ -200,45 +202,93 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             }
             List<CrmCustomerPoolRule> ruleList = ApplicationContextHolder.getBean(ICrmCustomerPoolRuleService.class).lambdaQuery().eq(CrmCustomerPoolRule::getPoolId, pool.getPoolId()).list();
             for (CrmCustomerPoolRule rule : ruleList) {
-                Map<String, Object> record = BeanUtil.beanToMap(rule);
-                record.put("remindDay", pool.getRemindDay());
+                Integer remindDay = pool.getRemindDay();
+                //已成交客户是否进入公海 0不进入 1进入
+                Integer dealHandle = rule.getDealHandle();
+                //有商机客户是否进入公海 0不进入 1进入
+                Integer businessHandle = rule.getBusinessHandle();
+                Integer limitDay = rule.getLimitDay();
+                //客户级别设置 1全部 2根据级别分别设置
+                Integer levelSetting = rule.getCustomerLevelSetting();
+                String level = rule.getLevel();
                 userIdsList.add(userId);
-                record.put("ids", userIdsList);
-                if (rule.getType().equals(1)) {
-                    recordList.addAll(mapper.putInPoolByRecord(record));
-                } else if (rule.getType().equals(2)) {
-                    recordList.addAll(mapper.putInPoolByBusiness(record));
-                } else if (rule.getType().equals(3)) {
-                    Integer startDay = rule.getLimitDay() - pool.getRemindDay();
-                    record.put("startDay", startDay);
-                    recordList.addAll(mapper.putInPoolByDealStatus(record));
-                }
-                recordList.forEach(r -> {
-                    Integer customerId = r.getInteger("customerId");
-                    customerIdList.add(customerId);
-                    if (customerMap.containsKey(customerId) && customerMap.get(customerId) <= r.getInteger("poolDay")) {
-                        return;
+                for (Map<String, Object> map : list) {
+                    //成交状态 0 未成交 1 已成交
+                    Integer dealStatus = (Integer) map.get("dealStatus");
+                    //商机个数
+                    Integer businessCount = (Integer) map.get("businessCount");
+                    Long ownerUserId = TypeUtils.castToLong(map.get("ownerUserId"));
+                    String customerLevel = (String) map.get("level");
+                    //判断负责人
+                    if (!userIdsList.contains(ownerUserId)) {
+                        continue;
                     }
-                    customerMap.put(customerId, r.getInteger("poolDay"));
-                });
-            }
-            //此处是为了记录客户id是由于哪些公海规则提醒的，返回给前端，当单个标记已处理时，提交回来，保存到数据库待办事项提醒表里
-            customerIdList.forEach(customerId -> {
-                Set<Integer> poolIdSet = new HashSet<>();
-                if (remindPoolMap.containsKey(customerId)) {
-                    poolIdSet = remindPoolMap.get(customerId);
-                    poolIdSet.add(pool.getPoolId());
-                } else {
-                    poolIdSet.add(pool.getPoolId());
+                    //成交状态
+                    if (Objects.equals(dealHandle, 0) && Objects.equals(dealStatus, 1)) {
+                        continue;
+                    }
+                    //商机数量
+                    if (Objects.equals(businessHandle, 0) && businessCount > 0) {
+                        continue;
+                    }
+                    //客户级别
+                    if (Objects.equals(levelSetting, 2) && !Objects.equals(level, customerLevel)) {
+                        continue;
+                    }
+                    Date receiveTime = map.get("receiveTime") != null ? DateUtil.parse((String) map.get("receiveTime")) : null;
+                    if (rule.getType().equals(1)) {
+                        //跟进时间
+                        Date lastTime = DateUtil.parse((String) map.get("lastTime"));
+                        if (lastTime == null) {
+                            lastTime = DateUtil.parse((String) map.get("createTime"));
+                        }
+                        if (receiveTime != null) {
+                            lastTime = lastTime.getTime() > receiveTime.getTime() ? lastTime : receiveTime;
+                        }
+                        setPoolDayForCustomer(lastTime, date, limitDay, levelSetting, map);
+                    }
+                    if (rule.getType().equals(2)) {
+                        setPoolDayForCustomer(receiveTime, date, limitDay, levelSetting, map);
+                    }
+                    if (rule.getType().equals(3)) {
+                        setPoolDayForCustomer(receiveTime, date, limitDay, levelSetting, map);
+                    }
                 }
-                remindPoolMap.put(customerId, poolIdSet);
-            });
-        });
-        list.forEach(record -> {
-            record.put("poolDay", customerMap.get(record.get("customerId")));
-            record.put("poolIds", CollectionUtil.join(remindPoolMap.get(record.get("customerId")), ","));
+            }
         });
         return list;
+    }
+
+
+    /**
+     * 计算客户的距进入公海时间
+     *
+     * @param startTime
+     * @param date
+     * @param limitDay
+     * @param levelSetting
+     * @param map
+     * @return void
+     * @date 2020/10/26 10:02
+     **/
+    private static void setPoolDayForCustomer(Date startTime, Date date, Integer limitDay, Integer levelSetting, Map<String, Object> map) {
+        if (startTime == null) {
+            return;
+        }
+        long betweenDay = DateUtil.betweenDay(startTime, date, true);
+        Integer poolDay = limitDay - (int) betweenDay;
+        Integer customerPoolDay = (Integer) map.get("poolDay");
+        if (customerPoolDay != null) {
+            poolDay = poolDay < customerPoolDay ? poolDay : customerPoolDay;
+        }
+        poolDay = poolDay > 0 ? poolDay : 0;
+        if (Objects.equals(levelSetting, 1)) {
+            //所有客户
+            map.put("poolDay", poolDay);
+        } else if (Objects.equals(levelSetting, 2)) {
+            //客户级别
+            map.put("poolDay", poolDay);
+        }
     }
 
     /**
@@ -284,7 +334,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> addOrUpdate(CrmModelSaveBO crmModel, boolean isExcel) {
+    public Map<String, Object> addOrUpdate(CrmModelSaveBO crmModel, boolean isExcel, Integer poolId) {
         CrmCustomer crmCustomer = BeanUtil.copyProperties(crmModel.getEntity(), CrmCustomer.class);
         if (crmCustomer.getCustomerId() != null) {
             if (!UserUtil.isAdmin() && getBaseMapper().queryIsRoUser(crmCustomer.getCustomerId(), UserUtil.getUserId()) > 0) {
@@ -310,21 +360,39 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             crmCustomer.setUpdateTime(DateUtil.date());
             crmCustomer.setReceiveTime(DateUtil.date());
             crmCustomer.setCreateUserId(UserUtil.getUserId());
-            crmCustomer.setOwnerUserId(UserUtil.getUserId());
+            if (!isExcel && crmCustomer.getOwnerUserId() == null) {
+                //导入会手动选择负责人,需要判断
+                crmCustomer.setOwnerUserId(UserUtil.getUserId());
+            }
             crmCustomer.setBatchId(batchId);
             crmCustomer.setRwUserId(",");
             crmCustomer.setLastTime(new Date());
             crmCustomer.setRoUserId(",");
             crmCustomer.setStatus(1);
             crmCustomer.setDealStatus(0);
-            if (!crmCustomerSettingService.queryCustomerSettingNum(1, crmCustomer.getOwnerUserId())) {
-                throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_SETTING_USER_ERROR);
+            if (crmCustomer.getOwnerUserId() != null) {
+                if (!crmCustomerSettingService.queryCustomerSettingNum(1, crmCustomer.getOwnerUserId())) {
+                    throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_SETTING_USER_ERROR);
+                }
             }
             save(crmCustomer);
             crmActivityService.addActivity(2, CrmActivityEnum.CUSTOMER, crmCustomer.getCustomerId(), "");
             actionRecordUtil.addRecord(crmCustomer.getCustomerId(), CrmEnum.CUSTOMER, crmCustomer.getCustomerName());
+            if (isExcel && poolId != null) {
+                CrmCustomerPoolRelation relation = new CrmCustomerPoolRelation();
+                relation.setCustomerId(crmCustomer.getCustomerId());
+                relation.setPoolId(poolId);
+                customerPoolRelationService.save(relation);
+            }
         }
         crmModel.setEntity(BeanUtil.beanToMap(crmCustomer));
+        if (isExcel && poolId != null) {
+            List<CrmCustomerPoolRelation> poolRelations = customerPoolRelationService.lambdaQuery()
+                    .select(CrmCustomerPoolRelation::getPoolId)
+                    .eq(CrmCustomerPoolRelation::getCustomerId, crmCustomer.getCustomerId())
+                    .list();
+            crmModel.getEntity().put("poolId", poolRelations.stream().map(CrmCustomerPoolRelation::getPoolId).collect(Collectors.toList()));
+        }
         savePage(crmModel, crmCustomer.getCustomerId(), isExcel);
         Map<String, Object> map = new HashMap<>();
         map.put("customerId", crmCustomer.getCustomerId());
@@ -359,8 +427,11 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         }
         lambdaUpdate().set(CrmCustomer::getUpdateTime, new Date()).set(CrmCustomer::getStatus, 3).in(CrmCustomer::getCustomerId, ids).update();
         for (Integer id : ids) {
-            String name = lambdaQuery().select(CrmCustomer::getCustomerName).eq(CrmCustomer::getCustomerId, id).one().getCustomerName();
-            actionRecordUtil.addDeleteActionRecord(CrmEnum.CUSTOMER, name, id);
+            CrmCustomer crmCustomer = lambdaQuery().select(CrmCustomer::getCustomerName).eq(CrmCustomer::getCustomerId, id).one();
+            if (crmCustomer != null) {
+                String name = crmCustomer.getCustomerName();
+                actionRecordUtil.addDeleteActionRecord(CrmEnum.CUSTOMER, name, id);
+            }
         }
         LambdaQueryWrapper<CrmCustomer> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(CrmCustomer::getCustomerId, ids);
@@ -482,7 +553,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                 dataList.add(record);
             }
             dataList.forEach(record -> {
-                record.put("dealStatus", Objects.equals(1, record.get("deal_status")) ? "已成交" : "未成交");
+                record.put("dealStatus", Objects.equals(1, record.get("dealStatus")) ? "已成交" : "未成交");
                 record.put("status", Objects.equals(1, record.get("status")) ? "未锁定" : "已锁定");
             });
             writer.setOnlyAlias(true);
@@ -533,8 +604,8 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             if (crmCustomer.getOwnerUserId() == null) {
                 continue;
             }
-            boolean isUser = Objects.equals(userId, crmCustomer.getOwnerUserId()) || StrUtil.splitTrim(crmCustomer.getRwUserId(), Const.SEPARATOR).contains(userId.toString());
-            if (!UserUtil.isAdmin() && !isUser) {
+            boolean isUser = StrUtil.splitTrim(crmCustomer.getRoUserId(), Const.SEPARATOR).contains(userId.toString());
+            if (isUser) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
             CrmOwnerRecord crmOwnerRecord = new CrmOwnerRecord();
@@ -561,7 +632,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             ApplicationContextHolder.getBean(ICrmOwnerRecordService.class).saveBatch(ownerRecordList);
         }
         if (poolRelationList.size() > 0) {
-            ApplicationContextHolder.getBean(ICrmCustomerPoolRelationService.class).saveBatch(poolRelationList);
+            customerPoolRelationService.saveBatch(poolRelationList);
         }
         LambdaUpdateWrapper<CrmContacts> wrapper = new LambdaUpdateWrapper<>();
         wrapper.set(CrmContacts::getOwnerUserId, null);
@@ -709,7 +780,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         ApplicationContextHolder.getBean(ICrmOwnerRecordService.class).saveBatch(records);
         LambdaQueryWrapper<CrmCustomerPoolRelation> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(CrmCustomerPoolRelation::getCustomerId, poolBO.getIds());
-        ApplicationContextHolder.getBean(ICrmCustomerPoolRelationService.class).remove(wrapper);
+        customerPoolRelationService.remove(wrapper);
         List<Integer> contactsIds = crmContactsService.lambdaQuery().select(CrmContacts::getContactsId).in(CrmContacts::getCustomerId, poolBO.getIds()).list()
                 .stream().map(CrmContacts::getContactsId).collect(Collectors.toList());
         crmContactsService.lambdaUpdate().set(CrmContacts::getOwnerUserId, poolBO.getUserId()).in(CrmContacts::getCustomerId, poolBO.getIds()).update();
@@ -721,7 +792,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                 .set(CrmCustomer::getIsReceive, isReceive)
                 .in(CrmCustomer::getCustomerId, poolBO.getIds())
                 .update();
-        receiveCustomer(poolBO, isReceive,contactsIds);
+        receiveCustomer(poolBO, isReceive, contactsIds);
     }
 
     /**
@@ -1168,6 +1239,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         String conditions = AuthUtil.getCrmAuthSql(CrmEnum.CONTACTS, 1);
         return getBaseMapper().queryContacts(contactsBasePage, pageEntity.getCustomerId(), pageEntity.getSearch(), conditions);
     }
+
     @Autowired
     private ICrmBusinessTypeService businessTypeService;
 
@@ -1178,7 +1250,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         BasePage<Map<String, Object>> page = getBaseMapper().queryBusiness(basePage, pageEntity.getCustomerId(), pageEntity.getSearch(), condition);
         for (Map<String, Object> map : page.getList()) {
             CrmListBusinessStatusVO crmListBusinessStatusVO = businessTypeService.queryListBusinessStatus((Integer) map.get("typeId"), (Integer) map.get("statusId"), (Integer) map.get("isEnd"));
-            map.put("businessStatusCount",crmListBusinessStatusVO);
+            map.put("businessStatusCount", crmListBusinessStatusVO);
         }
         return page;
     }
@@ -1189,12 +1261,12 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         String conditions = AuthUtil.getCrmAuthSql(CrmEnum.CONTRACT, "a", 1);
         BasePage<Map<String, Object>> page = getBaseMapper().queryContract(basePage, pageEntity.getCustomerId(), pageEntity.getSearch(), pageEntity.getCheckStatus(), conditions);
         for (Map<String, Object> map : page.getList()) {
-            Double contractMoney =map.get("money")!=null?Double.parseDouble(map.get("money").toString()):0D;
+            Double contractMoney = map.get("money") != null ? Double.parseDouble(map.get("money").toString()) : 0D;
             BigDecimal receivedProgress = new BigDecimal(100);
-            if (!(contractMoney.intValue() == 0)){
-                receivedProgress = ((map.get("receivedMoney")!=null?(BigDecimal) map.get("receivedMoney"):new BigDecimal(0)).divide(new BigDecimal(contractMoney), 4, BigDecimal.ROUND_HALF_UP)).multiply(new BigDecimal(100));
+            if (!(contractMoney.intValue() == 0)) {
+                receivedProgress = ((map.get("receivedMoney") != null ? (BigDecimal) map.get("receivedMoney") : new BigDecimal(0)).divide(new BigDecimal(contractMoney), 4, BigDecimal.ROUND_HALF_UP)).multiply(new BigDecimal(100));
             }
-            map.put("receivedProgress",receivedProgress);
+            map.put("receivedProgress", receivedProgress);
         }
         return page;
     }
@@ -1265,13 +1337,23 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 跟进客户名称查询客户
+     *
+     * @param name name
+     * @return data
+     */
     @Override
     public SimpleCrmEntity queryFirstCustomerByName(String name) {
         CrmCustomer crmCustomer = query().select("customer_id", "customer_name").eq("customer_name", name).eq("status", 1).one();
-        SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
-        simpleCrmEntity.setId(crmCustomer.getCustomerId());
-        simpleCrmEntity.setName(crmCustomer.getCustomerName());
-        return simpleCrmEntity;
+        if (crmCustomer != null) {
+            SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
+            simpleCrmEntity.setId(crmCustomer.getCustomerId());
+            simpleCrmEntity.setName(crmCustomer.getCustomerName());
+            return simpleCrmEntity;
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -1514,7 +1596,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             if (crmDataCheckVO.getOwnerUserId() != null) {
                 crmDataCheckVO.setOwnerUserName(adminService.queryUserName(crmDataCheckVO.getOwnerUserId()).getData());
             }
-            if (crmDataCheckVO.getContactsId() != null){
+            if (crmDataCheckVO.getContactsId() != null) {
                 crmDataCheckVO.setContactsName(Optional.ofNullable(crmContactsService.getById(crmDataCheckVO.getContactsId())).map(CrmContacts::getName).orElse(null));
             }
         }
@@ -1630,8 +1712,8 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
     }
 
     @Override
-    public List<Integer> forgottenCustomer(Integer day, List<Long> userIds) {
-        return getBaseMapper().forgottenCustomer(day, userIds);
+    public List<Integer> forgottenCustomer(Integer day, List<Long> userIds, String search) {
+        return getBaseMapper().forgottenCustomer(day, userIds, search);
     }
 
     @Override

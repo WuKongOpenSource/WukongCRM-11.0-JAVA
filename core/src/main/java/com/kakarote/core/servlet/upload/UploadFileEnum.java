@@ -13,7 +13,15 @@ public enum UploadFileEnum {
     /**
      * 阿里云OSS
      */
-    ALI_OSS(2);
+    ALI_OSS(2),
+    /**
+     * 腾讯云COS
+     */
+    ALI_COS(3),
+    /**
+     * 七牛云QNC
+     */
+    ALI_QNC(4);
 
     private UploadFileEnum(Integer config) {
         this.config = config;

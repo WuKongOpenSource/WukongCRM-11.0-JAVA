@@ -12,20 +12,19 @@ import com.kakarote.admin.entity.PO.AdminMessage;
 import com.kakarote.admin.entity.VO.AdminMessageVO;
 import com.kakarote.admin.service.IAdminMessageService;
 import com.kakarote.core.common.ApiExplain;
-import com.kakarote.core.common.Const;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.cache.AdminCacheKey;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.admin.entity.AdminMessageBO;
 import com.kakarote.core.redis.Redis;
 import com.kakarote.core.utils.UserUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
-
-import static com.kakarote.core.common.Const.UPLOAD_EXCEL_MESSAGE_PREFIX;
 
 /**
  * <p>
@@ -38,6 +37,7 @@ import static com.kakarote.core.common.Const.UPLOAD_EXCEL_MESSAGE_PREFIX;
 @RestController
 @RequestMapping("/adminMessage")
 @Api(tags = "系统消息")
+@Slf4j
 public class AdminMessageController {
 
     @Autowired
@@ -50,6 +50,7 @@ public class AdminMessageController {
     public Result<AdminMessage> save(@RequestBody com.kakarote.core.feign.admin.entity.AdminMessage adminMessage) {
         AdminMessage adminMessage1 = BeanUtil.copyProperties(adminMessage, AdminMessage.class);
         if (adminMessage.getCreateTime() != null){
+            log.info("saveMessage:{}",adminMessage.getCreateTime());
             adminMessage1.setCreateTime(DateUtil.parseDateTime(adminMessage.getCreateTime()));
         }
         messageService.save(adminMessage1);
@@ -132,10 +133,10 @@ public class AdminMessageController {
     @PostMapping("/queryImportNum")
     @ApiOperation("查询导入数量")
     public Result<Integer> queryImportNum(Long messageId) {
-        boolean exists = redis.exists(Const.UPLOAD_EXCEL_MESSAGE_PREFIX + messageId.toString());
+        boolean exists = redis.exists(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + messageId.toString());
         Integer num = null;
         if (exists) {
-            num = redis.get(Const.UPLOAD_EXCEL_MESSAGE_PREFIX + messageId.toString());
+            num = redis.get(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + messageId.toString());
         }
         return Result.ok(num);
     }
@@ -157,7 +158,7 @@ public class AdminMessageController {
     @PostMapping("/downImportError")
     @ApiOperation("下载错误模板")
     public void downImportError(@RequestParam("messageId") Long messageId, HttpServletResponse response) {
-        String str = redis.get(UPLOAD_EXCEL_MESSAGE_PREFIX + "file:" + messageId.toString());
+        String str = redis.get(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + "file:" + messageId.toString());
         final boolean exist = FileUtil.exist(str);
         if (exist) {
             ServletUtil.write(response, FileUtil.file(str));

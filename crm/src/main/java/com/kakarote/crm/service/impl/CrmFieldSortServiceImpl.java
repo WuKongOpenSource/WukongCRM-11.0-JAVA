@@ -3,6 +3,7 @@ package com.kakarote.crm.service.impl;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.constant.CrmEnum;
@@ -58,6 +59,7 @@ public class CrmFieldSortServiceImpl extends BaseServiceImpl<CrmFieldSortMapper,
      * @param userId 用户ID
      */
     private void saveUserFieldSort(Integer label, Long userId) {
+        UserInfo user = UserUtil.getUser();
         List<CrmField> crmFieldList = crmFieldService.list(label, false);
         CrmEnum crmEnum = CrmEnum.parse(label);
         switch (crmEnum) {

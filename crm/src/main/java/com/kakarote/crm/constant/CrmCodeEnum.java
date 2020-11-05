@@ -90,6 +90,7 @@ public enum CrmCodeEnum implements ResultCode {
     CRM_FIELD_ALREADY_EXISTS(2079, "%s已存在！"),
     SYSTEM_RELATED_FIELDS_CANNOT_BE_HIDDEN(2080, "系统关联字段不能隐藏！"),
     REQUIRED_OPTIONS_CANNOT_BE_HIDDEN(2081, "必填选项不能隐藏！"),
+    INDEX_CREATE_FAILED(2082, "%s索引创建失败,数据初始化异常！"),
     ;
 
 

@@ -41,12 +41,11 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public Result<List<String>> queryNoAuthMenu(Long userId) {
-        return Result.ok(new ArrayList<>());
+        return Result.error(SystemCodeEnum.SYSTEM_NO_FOUND);
     }
 
     @Override
     public Result setUserStatus(AdminUserStatusBO adminUserStatusBO) {
         return Result.ok();
     }
-
 }

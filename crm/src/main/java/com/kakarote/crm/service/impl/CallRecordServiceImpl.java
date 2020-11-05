@@ -256,7 +256,7 @@ public class CallRecordServiceImpl extends BaseServiceImpl<CallRecordMapper, Cal
         if (StrUtil.isEmpty(callRecord.getFilePath())){
             throw new CrmException(CrmCodeEnum.CRM_CALL_DOWNLOAD_ERROR);
         }
-        if (Objects.equals(UploadFileEnum.LOCAL.getConfig(), callRecord.getCallUpload()+1)) {
+        if (Objects.equals(UploadFileEnum.LOCAL.getConfig(), callRecord.getCallUpload())) {
             ServletUtil.write(response, FileUtil.file(callRecord.getFilePath()));
             return;
         }

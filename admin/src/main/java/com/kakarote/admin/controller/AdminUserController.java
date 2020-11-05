@@ -12,6 +12,7 @@ import com.kakarote.admin.entity.BO.*;
 import com.kakarote.admin.entity.PO.AdminConfig;
 import com.kakarote.admin.entity.PO.AdminUser;
 import com.kakarote.admin.entity.PO.AdminUserConfig;
+import com.kakarote.admin.entity.VO.AdminSuperUserVo;
 import com.kakarote.admin.entity.VO.AdminUserVO;
 import com.kakarote.admin.entity.VO.HrmSimpleUserVO;
 import com.kakarote.admin.service.*;
@@ -36,6 +37,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
 import java.io.BufferedInputStream;
@@ -191,13 +193,13 @@ public class AdminUserController {
 
     @PostMapping("/queryLoginUser")
     @ApiOperation("查询当前登录用户")
-    public Result<AdminUserVO> queryLoginUser() {
+    public Result<AdminUserVO> queryLoginUser(HttpServletRequest request, HttpServletResponse response) {
         String name = "readNotice";
-        AdminUser user = adminUserService.getById(UserUtil.getUser().getUserId());
+        AdminUser user = adminUserService.getById(UserUtil.getUserId());
         if (user == null) {
             throw new NoLoginException();
         }
-        AdminUserVO adminUser = BeanUtil.copyProperties(user, AdminUserVO.class);
+        AdminSuperUserVo adminUser = BeanUtil.copyProperties(user, AdminSuperUserVo.class);
         adminUser.setIsAdmin(UserUtil.isAdmin());
         AdminUserConfig userConfig = adminUserConfigService.queryUserConfigByName(name);
         adminUser.setIsReadNotice(userConfig != null ? userConfig.getStatus() : 0);
@@ -367,5 +369,6 @@ public class AdminUserController {
         adminUserService.initUser(systemUserBO);
         return R.ok();
     }
+
 }
 

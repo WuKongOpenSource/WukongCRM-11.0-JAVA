@@ -4,8 +4,10 @@ package com.kakarote.admin.controller;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.admin.common.AdminRoleTypeEnum;
+import com.kakarote.admin.entity.PO.AdminModelSort;
 import com.kakarote.admin.entity.PO.AdminRole;
 import com.kakarote.admin.entity.VO.AdminRoleVO;
+import com.kakarote.admin.service.IAdminModelSortService;
 import com.kakarote.admin.service.IAdminRoleService;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.Const;
@@ -38,10 +40,15 @@ public class AdminRoleController {
     @Autowired
     private IAdminRoleService adminRoleService;
 
+    @Autowired
+    private IAdminModelSortService adminModelSortService;
+
     @PostMapping("/auth")
     @ApiOperation("角色权限")
     public Result<JSONObject> auth() {
         JSONObject object = adminRoleService.auth(UserUtil.getUserId());
+        AdminModelSort one = adminModelSortService.lambdaQuery().select(AdminModelSort::getModel).eq(AdminModelSort::getType, 1).eq(AdminModelSort::getUserId, UserUtil.getUserId()).orderByAsc(AdminModelSort::getSort).last(" limit 1").one();
+        object.put("firstModel", one != null ? one.getModel() : "");
         return R.ok(object);
     }
 
@@ -66,6 +73,8 @@ public class AdminRoleController {
         data.add(new JSONObject().fluentPut("name", "办公管理角色").fluentPut("roleType", 7));
         data.add(new JSONObject().fluentPut("name", "客户管理角色").fluentPut("roleType", 2));
         data.add(new JSONObject().fluentPut("name", "项目管理角色").fluentPut("roleType", 8));
+        data.add(new JSONObject().fluentPut("name", "人力资源管理角色").fluentPut("roleType", 9));
+        data.add(new JSONObject().fluentPut("name", "进销存管理角色").fluentPut("roleType", 10));
         return R.ok(data);
     }
 
@@ -96,6 +105,7 @@ public class AdminRoleController {
         Integer dataType = adminRoleService.queryMaxDataType(userId, menuId);
         return R.ok(dataType);
     }
+
     @PostMapping("/queryUserByAuth")
     @ApiExplain("查询数据权限")
     public Result<List<Long>> queryUserByAuth(@RequestParam("userId") Long userId, @RequestParam("realm") String realm) {
@@ -105,83 +115,84 @@ public class AdminRoleController {
 
     @PostMapping("/add")
     @ApiOperation("添加角色")
-    public Result add(@RequestBody AdminRole adminRole){
+    public Result add(@RequestBody AdminRole adminRole) {
         adminRoleService.add(adminRole);
         return R.ok();
     }
 
     @PostMapping("/update")
     @ApiOperation("修改角色")
-    public Result update(@RequestBody AdminRole adminRole){
+    public Result update(@RequestBody AdminRole adminRole) {
         adminRoleService.add(adminRole);
         return R.ok();
     }
 
     @PostMapping("/delete")
     @ApiOperation("删除角色")
-    public Result delete(@RequestParam("roleId") Integer roleId){
+    public Result delete(@RequestParam("roleId") Integer roleId) {
         adminRoleService.delete(roleId);
         return R.ok();
     }
 
     @PostMapping("/copy")
     @ApiOperation("复制角色")
-    public Result copy(@RequestParam("roleId") Integer roleId){
+    public Result copy(@RequestParam("roleId") Integer roleId) {
         adminRoleService.copy(roleId);
         return R.ok();
     }
 
     @PostMapping("/relatedUser")
     @ApiOperation("角色关联员工")
-    public Result relatedUser(@RequestParam("userIds") String userIds,@RequestParam("roleIds") String roleIds){
-        adminRoleService.relatedUser(StrUtil.splitTrim(userIds, Const.SEPARATOR),StrUtil.splitTrim(roleIds, Const.SEPARATOR));
+    public Result relatedUser(@RequestParam("userIds") String userIds, @RequestParam("roleIds") String roleIds) {
+        adminRoleService.relatedUser(StrUtil.splitTrim(userIds, Const.SEPARATOR), StrUtil.splitTrim(roleIds, Const.SEPARATOR));
         return R.ok();
     }
 
     @PostMapping("/unbindingUser")
     @ApiOperation("取消角色关联员工")
-    public Result unbindingUser(@RequestParam("userId") Long userId,@RequestParam("roleId") Integer roleId){
-        adminRoleService.unbindingUser(userId,roleId);
+    public Result unbindingUser(@RequestParam("userId") Long userId, @RequestParam("roleId") Integer roleId) {
+        adminRoleService.unbindingUser(userId, roleId);
         return R.ok();
     }
+
     @PostMapping("/updateRoleMenu")
     @ApiOperation("保存角色菜单关系")
-    public Result updateRoleMenu(@RequestBody AdminRole adminRole){
+    public Result updateRoleMenu(@RequestBody AdminRole adminRole) {
         adminRoleService.updateRoleMenu(adminRole);
         return R.ok();
     }
 
     @PostMapping(value = "/queryWorkRole")
     @ApiExplain("查询项目管理角色")
-    public Result<Integer> queryWorkRole(@RequestParam("label") Integer label){
+    public Result<Integer> queryWorkRole(@RequestParam("label") Integer label) {
         Integer role = adminRoleService.queryWorkRole(label);
         return R.ok(role);
     }
 
     @PostMapping(value = "/setWorkRole")
     @ApiExplain("设置项目管理角色")
-    public Result setWorkRole(@RequestBody JSONObject object){
+    public Result setWorkRole(@RequestBody JSONObject object) {
         adminRoleService.setWorkRole(object);
         return R.ok();
     }
 
     @PostMapping(value = "/deleteWorkRole")
     @ApiExplain("删除项目管理角色")
-    public Result deleteWorkRole(@RequestParam("roleId") Integer roleId){
+    public Result deleteWorkRole(@RequestParam("roleId") Integer roleId) {
         adminRoleService.deleteWorkRole(roleId);
         return R.ok();
     }
 
     @PostMapping(value = "/queryProjectRoleList")
     @ApiOperation("查询项目管理角色列表")
-    public Result<List<AdminRole>> queryProjectRoleList(){
+    public Result<List<AdminRole>> queryProjectRoleList() {
         List<AdminRole> adminRoles = adminRoleService.queryProjectRoleList();
         return R.ok(adminRoles);
     }
 
-    @PostMapping(value ="/queryWorkRoleList")
+    @PostMapping(value = "/queryWorkRoleList")
     @ApiOperation("查询项目管理角色列表")
-    public Result<List<AdminRole>> queryWorkRoleList(){
+    public Result<List<AdminRole>> queryWorkRoleList() {
         List<AdminRole> adminRoles = adminRoleService.queryRoleList();
         return R.ok(adminRoles);
     }

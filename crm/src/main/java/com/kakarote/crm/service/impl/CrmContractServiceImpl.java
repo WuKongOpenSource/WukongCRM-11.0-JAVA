@@ -449,7 +449,8 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             map.put("contactsName", "");
         }
         if (map.containsKey("companyUserId") && ObjectUtil.isNotEmpty(map.get("companyUserId"))) {
-            String companyUserName = adminService.queryUserName(Long.valueOf(map.get("companyUserId").toString())).getData();
+            String companyUserName = adminService.queryUserByIds(TagUtil.toLongSet(map.get("companyUserId").toString())).getData()
+                    .stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
             map.put("companyUserName", companyUserName);
         } else {
             map.put("companyUserName", "");

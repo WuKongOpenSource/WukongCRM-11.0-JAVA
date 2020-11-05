@@ -12,7 +12,7 @@ public class Const implements Serializable {
     /**
      * 项目版本
      */
-    public static final String PROJECT_VERSION = "11.0.0";
+    public static final String PROJECT_VERSION = "11.0.2";
 
     /**
      * 默认分隔符
@@ -74,5 +74,10 @@ public class Const implements Serializable {
      */
     public static final String ADMIN_DEPT_NAME_CACHE_NAME = "ADMIN:DEPT:CACHE:";
 
-    public static final String UPLOAD_EXCEL_MESSAGE_PREFIX = "upload:excel:message:";
+    /**
+     * 默认的企业人数
+     */
+    public static final Integer DEFAULT_COMPANY_NUMBER = 2;
+
+
 }

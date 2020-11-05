@@ -365,7 +365,7 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
                             }
                         }
                     }
-                    customerService.addOrUpdate(crmModelSaveBO,false);
+                    customerService.addOrUpdate(crmModelSaveBO,false,null);
                     crmMarketingInfoService.lambdaUpdate().set(CrmMarketingInfo::getStatus,1).eq(CrmMarketingInfo::getRId,marketingInfo.getRId()).update();
                 }
             }catch (CrmException e){

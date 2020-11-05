@@ -6,6 +6,7 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
+import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
@@ -40,11 +41,13 @@ public class ActionRecordUtil {
     public static class ActionRecordTask implements Runnable {
         private static final Integer BATCH_NUMBER = 1;
         private static volatile List<CrmActionRecord> SQL_LIST = new CopyOnWriteArrayList<>();
+        private UserInfo userInfo;
 
-        ActionRecordTask(CrmActionRecord actionRecord) {
+        public ActionRecordTask(CrmActionRecord actionRecord) {
             if (actionRecord != null) {
                 SQL_LIST.add(actionRecord);
             }
+            userInfo = UserUtil.getUser();
         }
 
         @Override
@@ -53,10 +56,12 @@ public class ActionRecordUtil {
                 List<CrmActionRecord> list = new ArrayList<>(SQL_LIST);
                 //底层已经做过size为0的判断，此处不再限制
                 try {
+                    UserUtil.setUser(userInfo);
                     ApplicationContextHolder.getBean(ICrmActionRecordService.class).saveBatch(list, BATCH_NUMBER);
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
+                    UserUtil.removeUser();
                     SQL_LIST.clear();
                 }
             }
@@ -325,6 +330,7 @@ public class ActionRecordUtil {
         strings.add("将" + crmEnum.getRemarks() + "转移给：" + userName);
         crmActionRecord.setContent(JSON.toJSONString(strings));
         crmActionRecord.setIpAddress(BaseUtil.getIp());
+//        String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         crmActionRecord.setDetail("将" + crmEnum.getRemarks() + "：" + name + "转移给：" + userName);
         crmActionRecord.setBehavior(BehaviorEnum.CHANGE_OWNER.getType());
         crmActionRecord.setObject(name);
@@ -481,6 +487,7 @@ public class ActionRecordUtil {
         actionRecord.setIpAddress(BaseUtil.getIp());
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setActionId(actionId);
+//        String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         if (isSelf) {
             actionRecord.setBehavior(BehaviorEnum.EXIT_MEMBER.getType());
             actionRecord.setDetail("退出了" + crmEnum.getRemarks() + "：" + name + "的团队成员");
@@ -515,6 +522,7 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setActionId(actionId);
         actionRecord.setBehavior(BehaviorEnum.FOLLOW_UP.getType());
+//        String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         actionRecord.setDetail("给" + crmEnum.getRemarks() + "：" + name + "新建了跟进记录");
         actionRecord.setObject(name);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
@@ -529,6 +537,7 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setBehavior(BehaviorEnum.CANCEL_EXAMINE.getType());
         actionRecord.setActionId(actionId);
+//        String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         actionRecord.setDetail("将" + crmEnum.getRemarks() + "：" + name + "作废");
         actionRecord.setObject(name);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
@@ -543,6 +552,7 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setBehavior(BehaviorEnum.SAVE.getType());
         actionRecord.setActionId(actionId);
+//        String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         actionRecord.setDetail("新建了" + crmEnum.getRemarks() + "：" + name);
         actionRecord.setObject(name);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
@@ -614,7 +624,6 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setBehavior(behaviorEnum.getType());
         actionRecord.setActionId(actionId);
-//        String content = Db.queryStr("select content from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         if (content.length() > 20) {
             content = content.substring(0, 20) + "...";
         }
@@ -655,6 +664,7 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setBehavior(behaviorEnum.getType());
         actionRecord.setActionId(actionId);
+//        String number = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where examine_record_id = ?", actionId);
         String prefix = "";
         switch (behaviorEnum) {
             case SUBMIT_EXAMINE:

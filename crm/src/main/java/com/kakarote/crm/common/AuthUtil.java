@@ -319,10 +319,11 @@ public class AuthUtil {
     }
 
     public static List<Long> filterUserIdListByDataType(Integer dataType, List<Long> allUserIdList) {
-        List<Long> authUserIdList = new ArrayList<>();
+        List<Long> authUserIdList = new ArrayList<>(allUserIdList);
         authUserIdList = getAuthUserIdByDataType(authUserIdList, allUserIdList, dataType);
-        allUserIdList.retainAll(authUserIdList);
-        return allUserIdList;
+        ArrayList<Long> longs = new ArrayList<>(allUserIdList);
+        longs.retainAll(authUserIdList);
+        return longs;
     }
 
     public static boolean isReadFollowRecord(Integer crmType) {

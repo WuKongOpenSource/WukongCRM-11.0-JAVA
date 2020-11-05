@@ -1,8 +1,6 @@
 package com.kakarote.core.feign.admin.service;
 
 import com.alibaba.fastjson.JSONObject;
-import com.alicp.jetcache.anno.CacheType;
-import com.alicp.jetcache.anno.Cached;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.UserInfo;
@@ -40,7 +38,6 @@ public interface AdminService {
      * @return data
      */
     @RequestMapping(value = "/adminUser/getNameByUserId")
-    @Cached(cacheType = CacheType.LOCAL)
     public Result<String> queryUserName(@RequestParam("userId") Long userId);
 
 
@@ -51,7 +48,6 @@ public interface AdminService {
      * @return 结果信息
      */
     @RequestMapping(value = "/adminDept/getNameByDeptId")
-    @Cached(cacheType = CacheType.LOCAL)
     public Result<String> queryDeptName(@RequestParam("deptId") Integer deptId);
 
     /**
@@ -209,9 +205,6 @@ public interface AdminService {
 
     @PostMapping("/adminUser/queryLoginUserInfo")
     @ApiExplain("模拟查询登陆用户信息")
-    Result<UserInfo> queryLoginUserInfo(@RequestParam("userId")Long userId);
+    public Result<UserInfo> queryLoginUserInfo(@RequestParam("userId")Long userId);
 
-    @PostMapping("/adminUser/querySystemStatus")
-    @ApiExplain("查询当前系统初始状态")
-    public Result<Integer> querySystemStatus();
 }

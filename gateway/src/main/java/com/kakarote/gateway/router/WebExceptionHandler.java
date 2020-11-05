@@ -5,7 +5,10 @@ import com.alibaba.csp.sentinel.adapter.gateway.sc.callback.BlockRequestHandler;
 import com.alibaba.fastjson.JSON;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.entity.UserExtraInfo;
 import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.exception.FeignServiceException;
+import com.kakarote.core.exception.NoLoginException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.boot.autoconfigure.web.reactive.error.AbstractErrorWebExceptionHandler;
@@ -55,6 +58,15 @@ public class WebExceptionHandler extends AbstractErrorWebExceptionHandler {
         log.error("网关请求错误：{}", JSON.toJSONString(errorAttributes));
         if (error instanceof CrmException) {
             result = BodyInserters.fromValue(Result.error((CrmException) error));
+            return ServerResponse.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(result);
+        } else if (error instanceof FeignServiceException) {
+            FeignServiceException fe = (FeignServiceException) error;
+            result = BodyInserters.fromValue(Result.error(fe.status(), fe.getMessage()));
+            return ServerResponse.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(result);
+        } else if (error instanceof NoLoginException) {
+            Result<UserExtraInfo> resultData = Result.error(SystemCodeEnum.SYSTEM_NOT_LOGIN);
+            resultData.setData(((NoLoginException) error).getInfo());
+            result = BodyInserters.fromValue(resultData);
             return ServerResponse.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(result);
         } else {
             Integer status = (Integer) errorAttributes.get("status");

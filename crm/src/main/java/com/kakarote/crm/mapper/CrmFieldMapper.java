@@ -48,4 +48,6 @@ public interface CrmFieldMapper extends BaseMapper<CrmField> {
 
     Integer updateFieldName(@Param("name") String name,@Param("type") Integer type,@Param("count") int count);
 
+    public Integer dataCheck(@Param("name")String name,@Param("label")Integer label,@Param("type")Integer type);
+
 }

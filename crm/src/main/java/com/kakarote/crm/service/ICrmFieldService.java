@@ -127,4 +127,7 @@ public interface ICrmFieldService extends BaseService<CrmField> {
     Integer queryCustomerFieldDuplicateByFixed(String name, Object value);
 
     void setPoolFieldStyle(CrmFieldStyleBO fieldStyle);
+
+    void changeEsIndex(List<Integer> labels);
+
 }

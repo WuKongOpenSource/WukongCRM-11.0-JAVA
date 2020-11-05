@@ -4,11 +4,13 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.bi.common.BiCodeEnum;
 import com.kakarote.bi.common.BiPatch;
 import com.kakarote.bi.mapper.BiCustomerMapper;
 import com.kakarote.bi.service.BiCustomerService;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.entity.BasePage;
+import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.feign.crm.service.CrmService;
@@ -47,7 +49,14 @@ public class BiCustomerServiceImpl implements BiCustomerService {
             timeList.add(beginTime);
             beginTime = BiTimeUtil.estimateTime(beginTime);
         }
-        List<JSONObject> jsonObjectList = biCustomerMapper.totalCustomerStats(timeEntity.toMap());
+        Integer finalTime = timeEntity.getFinalTime();
+        List<String> tableNameList = BiPatch.getYearsOrTableNameList( timeEntity.getBeginTime(),finalTime,true);
+        if (tableNameList.isEmpty()){
+            throw new CrmException(BiCodeEnum.BI_DATE_PARSE_ERROR);
+        }
+        Map<String, Object> map = timeEntity.toMap();
+        map.put("tableNameList",tableNameList);
+        List<JSONObject> jsonObjectList = biCustomerMapper.totalCustomerStats(map);
         BiPatch.supplementJsonList(jsonObjectList,"type",timeList, "customerNum","dealCustomerNum");
         return jsonObjectList;
     }
@@ -257,8 +266,13 @@ public class BiCustomerServiceImpl implements BiCustomerService {
             timeList.add(beginTime);
             beginTime = BiTimeUtil.estimateTime(beginTime);
         }
+        Integer finalTime = record.getFinalTime();
+        List<String> tableNameList = BiPatch.getYearsOrTableNameList(record.getBeginTime(),finalTime,true);
+        if (tableNameList.isEmpty()){
+            throw new CrmException(BiCodeEnum.BI_DATE_PARSE_ERROR);
+        }
         Map<String, Object> map = record.toMap();
-        map.put("timeList", timeList);
+        map.put("tableNameList",tableNameList);
         List<JSONObject> jsonObjectList = biCustomerMapper.employeeCycle(map);
         if (jsonObjectList != null) {
             jsonObjectList.forEach(jsonObject -> {

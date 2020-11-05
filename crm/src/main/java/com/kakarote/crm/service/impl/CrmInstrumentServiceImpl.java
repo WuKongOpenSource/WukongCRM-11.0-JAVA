@@ -329,10 +329,14 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
                         userIdList.add(UserUtil.getUserId());
                     }
                 } else {
-                    UserInfo userInfo = adminService.queryLoginUserInfo(biParams.getUserId()).getData();
-                    boolean isAdmin = userInfo.getUserId().equals(UserUtil.getSuperUser()) || Optional.ofNullable(userInfo.getRoles()).orElse(new ArrayList<>()).contains(userInfo.getSuperRoleId());
-                    if (!isAdmin){
+                    if(UserUtil.isAdmin()){
                         userIdList.add(biParams.getUserId());
+                    }else {
+                        UserInfo userInfo = adminService.queryLoginUserInfo(biParams.getUserId()).getData();
+                        boolean isAdmin = userInfo.getUserId().equals(UserUtil.getSuperUser()) || Optional.ofNullable(userInfo.getRoles()).orElse(new ArrayList<>()).contains(userInfo.getSuperRoleId());
+                        if (!isAdmin) {
+                            userIdList.add(biParams.getUserId());
+                        }
                     }
                 }
             } else if (0 == biParams.getIsUser() && biParams.getDeptId() != null) {
@@ -424,7 +428,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         Integer crmType = biParams.getLabel();
         Integer queryType = biParams.getQueryType();
         Integer subUser = biParams.getSubUser();
-        String search = biParams.getSearch();
+        String search = biParams.getSearch() == null ? null: biParams.getSearch().trim();
         BiAuthority biAuthority = handleDataType(biParams);
         List<Long> userIds = biAuthority.getUserIds();
         if (CollUtil.isEmpty(userIds)) {
@@ -531,7 +535,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         Integer day = biParams.getDay();
         Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
         AuthUtil.filterUserIdListByDataType(map.get("customer"), userIds);
-        List<Integer> customerIds = crmCustomerService.forgottenCustomer(day,userIds);
+        List<Integer> customerIds = crmCustomerService.forgottenCustomer(day,userIds,biParams.getSearch());
         if (customerIds.size() == 0) {
             return new BasePage<>();
         }

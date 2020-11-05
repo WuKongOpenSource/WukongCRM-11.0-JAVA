@@ -1,7 +1,6 @@
 package com.kakarote.core.utils;
 
 import com.alicp.jetcache.Cache;
-import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.CreateCache;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.entity.UserInfo;
@@ -28,10 +27,10 @@ public class UserCacheUtil {
         ME = this;
     }
 
-    @CreateCache(name = Const.ADMIN_USER_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS,cacheType = CacheType.LOCAL)
+    @CreateCache(name = Const.ADMIN_USER_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS)
     private Cache<Long, String> userCache;
 
-    @CreateCache(name = Const.ADMIN_DEPT_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS,cacheType = CacheType.LOCAL)
+    @CreateCache(name = Const.ADMIN_DEPT_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS)
     private Cache<Integer, String> deptCache;
 
     @Autowired
@@ -84,10 +83,11 @@ public class UserCacheUtil {
         if (userId == null) {
             return "";
         }
-        String name = ME.userCache.get(userId);
+        Long key = userId;
+        String name = ME.userCache.get(key);
         if (name == null) {
             name = ME.adminService.queryUserName(userId).getData();
-            ME.userCache.put(userId, name);
+            ME.userCache.put(key, name);
         }
         return name;
     }
@@ -126,9 +126,11 @@ public class UserCacheUtil {
         if (deptId == null) {
             return "";
         }
-        String name = ME.deptCache.get(deptId);
+        Integer key = deptId;
+        String name = ME.deptCache.get(key);
         if (name == null) {
             name = ME.adminService.queryDeptName(deptId).getData();
+            ME.deptCache.put(key, name);
         }
         return name;
     }

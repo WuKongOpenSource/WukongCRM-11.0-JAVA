@@ -1,6 +1,7 @@
 package com.kakarote.core.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
@@ -52,8 +53,10 @@ public class UserInfo implements Serializable {
 
     private List<String> authoritiesUrlList = new ArrayList<>();
 
+    @JsonIgnore
     private transient HttpServletRequest request;
 
+    @JsonIgnore
     private transient HttpServletResponse response;
 
     private List<Integer> roles;
@@ -81,10 +84,5 @@ public class UserInfo implements Serializable {
     }
 
     private String post;
-
-    /**
-     * 未授权菜单
-     * */
-    private List<String> noAuthMenuUrls;
 
 }

@@ -90,9 +90,4 @@
         FROM wk_admin_user as a
         where a.user_id = #{userId}
     </select>
-    <select id="queryByUserName" resultType="com.kakarote.admin.entity.PO.AdminUser">
-      select a.*
-      from wk_admin_user as a
-      where a.username = #{username}
-    </select>
 </mapper>

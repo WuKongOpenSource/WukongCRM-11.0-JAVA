@@ -30,7 +30,8 @@
         count(if(label = 2,1,null)) as logCount,
         count(if(label = 6,1,null)) as crmCount,
         count(if(label = 5 and create_time &lt; now(),1,null)) as eventCount,
-        count(if(label = 7,1,null)) as knowledgeCount
+        count(if(label = 7,1,null)) as knowledgeCount,
+        count(if(label = 9,1,null)) as jxcCount
         from wk_admin_message as a where is_read = 0 and recipient_user =  #{userId}  and create_time &lt; now()
     </select>
 </mapper>

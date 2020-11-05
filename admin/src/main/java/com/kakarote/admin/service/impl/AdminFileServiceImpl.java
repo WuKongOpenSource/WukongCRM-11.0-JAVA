@@ -214,13 +214,8 @@ public class AdminFileServiceImpl extends BaseServiceImpl<AdminFileMapper, Admin
         AdminFile adminFile = getById(fileId);
         if (adminFile != null) {
             if (Objects.equals(1, adminFile.getType())) {
-                try {
-                    ServletUtil.write(response, FileUtil.file(adminFile.getPath()));
-                    return;
-                }catch (Exception e){
-
-                }
-
+                ServletUtil.write(response, FileUtil.file(adminFile.getPath()));
+                return;
             }
             UploadEntity entity = new UploadEntity(adminFile.getFileId() + "", adminFile.getName(), adminFile.getSize(), adminFile.getBatchId(), "0");
             entity.setPath(adminFile.getPath());

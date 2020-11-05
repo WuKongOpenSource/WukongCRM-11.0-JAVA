@@ -8,6 +8,7 @@ import cn.hutool.extra.servlet.ServletUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.servlet.LoginFromCookie;
 import com.kakarote.core.utils.BaseUtil;
@@ -107,7 +108,7 @@ public class CrmPrintTemplateController {
     @RequestMapping("/down")
     @LoginFromCookie
     public void down(@RequestParam("type") Integer type, @RequestParam("key") String key, HttpServletResponse response) {
-        String object = BaseUtil.getRedis().get("CRM:PRINT:TEMPLATE:" + key);
+        String object = BaseUtil.getRedis().get(CrmCacheKey.CRM_PRINT_TEMPLATE_CACHE_KEY + key);
         if (StrUtil.isNotEmpty(object)) {
             JSONObject parse = JSON.parseObject(object);
             String path;
@@ -128,7 +129,7 @@ public class CrmPrintTemplateController {
     @RequestMapping("/preview.pdf")
     @LoginFromCookie
     public void preview(String key, HttpServletResponse response) {
-        String object = BaseUtil.getRedis().get("CRM:PRINT:TEMPLATE:" + key);
+        String object = BaseUtil.getRedis().get(CrmCacheKey.CRM_PRINT_TEMPLATE_CACHE_KEY + key);
         if (StrUtil.isNotEmpty(object)) {
             JSONObject parse = JSON.parseObject(object);
             String path = parse.getString("pdf");

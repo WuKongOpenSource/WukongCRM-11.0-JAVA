@@ -1,6 +1,5 @@
 package com.kakarote.admin.mapper;
 
-import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.admin.entity.BO.AdminUserBO;
 import com.kakarote.admin.entity.BO.UserBookBO;
 import com.kakarote.admin.entity.PO.AdminUser;
@@ -51,7 +50,4 @@ public interface AdminUserMapper extends BaseMapper<AdminUser> {
     List<HrmSimpleUserVO> querySimpleUserByDeptId(Integer deptId);
 
     UserInfo queryLoginUserInfo(@Param("userId") Long userId);
-
-    @SqlParser(filter = true)
-    List<AdminUser> queryByUserName(@Param("username") String phone);
 }

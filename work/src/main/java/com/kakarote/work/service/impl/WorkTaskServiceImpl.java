@@ -461,6 +461,8 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
         WorkTask task = new WorkTask().setTaskId(workTask.getTaskId()).setStopTime(workTask.getStopTime()).setName(workTask.getName());
         if (workTask.getMainUserId() == null) {
             update(null, Wrappers.<WorkTask>lambdaUpdate().set(WorkTask::getMainUserId, null).eq(WorkTask::getTaskId, workTask.getTaskId()));
+        }else {
+            task.setMainUserId(workTask.getMainUserId());
         }
         updateById(task.setTaskId(workTask.getTaskId()));
     }

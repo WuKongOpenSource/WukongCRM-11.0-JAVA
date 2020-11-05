@@ -11,6 +11,7 @@ import java.util.List;
 
 @FeignClient(name = "oa",contextId = "eventJob")
 public interface OaService {
+
     @PostMapping("/oaEventJob/eventNoticeCron")
     Result eventNoticeCron();
 

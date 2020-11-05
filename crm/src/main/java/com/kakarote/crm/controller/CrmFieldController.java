@@ -130,5 +130,12 @@ public class CrmFieldController {
         return R.ok();
     }
 
+    @PostMapping(value = "/changeEsIndex")
+    @ApiExplain("更新es索引")
+    public Result changeEsIndex(@RequestParam("labels") List<Integer> labels){
+        crmFieldService.changeEsIndex(labels);
+        return Result.ok();
+    }
+
 }
 

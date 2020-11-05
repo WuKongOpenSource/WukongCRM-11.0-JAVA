@@ -89,4 +89,7 @@ public interface CrmService {
     @PostMapping("/crmCustomerJob/putInInternational")
     Result putInInternational();
 
+    @PostMapping("/crmCustomerPool/queryPoolNameListByAuth")
+    Result<List> queryPoolNameListByAuth() ;
+
 }

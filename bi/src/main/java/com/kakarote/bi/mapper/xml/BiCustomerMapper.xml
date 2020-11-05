@@ -2,21 +2,22 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
 <mapper namespace="com.kakarote.bi.mapper.BiCustomerMapper">
     <select id="totalCustomerStats" resultType="com.alibaba.fastjson.JSONObject">
-        SELECT  count( 1 ) AS customerNum,  t.type,  count( IF ( t.deal_status = '1', 1, NULL )) AS dealCustomerNum
-        FROM
-        (
-        SELECT DATE_FORMAT( a.create_time, #{sqlDateFormat} ) AS type,  a.deal_status
-        FROM
-        wk_crm_customer AS a
-        WHERE
-        (DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
-        AND a.owner_user_id IN
-        <for collection="userIds" item="item">
-            #{item}
-        </for>
-        AND a.STATUS != 3
-        ) t
-        GROUP BY t.type
+        <foreach collection="tableNameList" item="x" separator="union all">
+            SELECT
+                DATE_FORMAT( s.create_date, #{sqlDateFormat} ) AS type,
+                SUM( s.customer_num ) AS customerNum,
+                SUM( IF ( s.deal_status = '1', s.customer_num, 0 )) AS dealCustomerNum
+            FROM
+                ${x} s
+            WHERE
+                DATE_FORMAT(s.create_date,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+                AND s.owner_user_id IN
+                <for collection="userIds" item="item">
+                    #{item}
+                </for>
+            GROUP BY
+                type
+        </foreach>
     </select>
 
 
@@ -54,7 +55,7 @@
             (SELECT count(v.customer_id) from (SELECT a.activity_type_id as customer_id
             FROM wk_crm_activity a
             left join wk_crm_customer c on a.activity_type_id = c.customer_id
-            WHERE c.status != 3 and  a.activity_type = 2
+            WHERE c.status != 3 and a.activity_type = 2
             AND a.type = 1
             AND DATE_FORMAT(a.create_time, '${sqlDateFormat}') = ${x}
             AND a.create_user_id in
@@ -154,7 +155,7 @@
         select a.category,IFNULL(count(a.activity_id),0) as recordNum,
         TRUNCATE(IFNULL(count(a.activity_id)*100/(select count(*) from wk_crm_activity a
         left join wk_crm_customer c on a.activity_type_id = c.customer_id
-        where if(a.activity_type = 2,c.status != 3,1=1) and  a.type = 1
+        where if(a.activity_type = 2,c.status != 3,1=1) and a.type = 1
         and DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
         and a.create_user_id in
         <for collection="userIds" item="item">
@@ -213,14 +214,16 @@
             (select count(a.type_id)
             from wk_crm_owner_record a
             left join wk_crm_customer c on a.type_id = c.customer_id
-            where c.status != 3 and DATE_FORMAT(a.create_time,'${sqlDateFormat}') = ${x}
+            where c.status != 3
+            and DATE_FORMAT(a.create_time,'${sqlDateFormat}') = ${x}
             and a.type = 9 and a.post_owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>) as receiveNum
             from wk_crm_owner_record a
             left join wk_crm_customer c on a.type_id = c.customer_id
-            where c.status != 3 and DATE_FORMAT(a.create_time,'${sqlDateFormat}') = ${x}
+            where c.status != 3
+            and DATE_FORMAT(a.create_time,'${sqlDateFormat}') = ${x}
             and a.type = 9 and a.pre_owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
@@ -248,24 +251,27 @@
     </select>
     <select id="querySatisfactionOptionList" resultType="com.alibaba.fastjson.JSONObject">
         select t.field_id, t.options from wk_crm_field t where t.label = 17 and t.field_name = 'satisficing'
-        and t.type = 3  limit 1
+        and t.type = 3 limit 1
     </select>
     <select id="employeeCycle" resultType="com.alibaba.fastjson.JSONObject">
-        SELECT t.type,
-        AVG( TIMESTAMPDIFF( DAY, t.create_time, t.deal_time )) as cycle,
-        count( customer_id ) AS customerNum
-        FROM (
-        SELECT DATE_FORMAT( create_time, #{sqlDateFormat} ) AS type, create_time, deal_time,customer_id
-        FROM wk_crm_customer
-        WHERE
-        STATUS != 3
-        AND (DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
-        AND deal_status = 1
-        AND owner_user_id IN
-        <for collection="userIds" item="item">
-            #{item}
-        </for>
-        ) t GROUP BY t.type
+        <foreach collection="tableNameList" item="x" separator="union all">
+            SELECT
+                DATE_FORMAT( t.create_date, #{sqlDateFormat} ) AS type,
+                AVG( TIMESTAMPDIFF( DAY, t.create_date, t.deal_date )) AS cycle,
+                SUM( t.customer_num ) AS customerNum
+            FROM
+                ${x} t
+            WHERE
+                DATE_FORMAT(t.create_date,#{sqlDateFormat}) BETWEEN #{beginTime} AND #{finalTime}
+                AND t.deal_status = 1
+                AND t.owner_user_id IN
+                <for collection="userIds" item="item">
+                    #{item}
+                </for>
+            GROUP BY
+                type
+        </foreach>
+
     </select>
 
     <select id="employeeCycleInfo" resultType="com.alibaba.fastjson.JSONObject">
@@ -274,7 +280,7 @@
             (TRUNCATE(IF(AVG(TIMESTAMPDIFF(DAY,b.create_time,b.deal_time)) &gt;= 0,AVG(TIMESTAMPDIFF(DAY,b.create_time,b.deal_time)),0),1)) as cycle,
             count(distinct b.customer_id) as customerNum
             from wk_admin_user as a left join wk_crm_customer as b on a.user_id = b.owner_user_id
-            where b.status != 3 and DATE_FORMAT(b.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+            where b.status != 3 DATE_FORMAT(b.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
             and b.deal_status = 1 and a.user_id = ${x}
         </foreach>
     </select>
@@ -337,7 +343,7 @@
             left join wk_crm_contract_product as c on b.contract_id = c.contract_id
             left join wk_crm_product as d on c.product_id = d.product_id
             left join wk_crm_return_visit_data as e on a.batch_id = e.batch_id and e.field_id = #{fieldId}
-            where d.status != 3 and  DATE_FORMAT(b.order_date,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+            where d.status != 3 and DATE_FORMAT(b.order_date,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
             and d.product_id = #{x.id} and a.owner_user_id in
             <for collection="userIds" item="item">
                 #{item}

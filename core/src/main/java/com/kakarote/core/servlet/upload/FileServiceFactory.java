@@ -15,6 +15,10 @@ public class FileServiceFactory {
             return new OssFileServiceImpl(uploadConfig.getOss());
         } else if (config.equals(UploadFileEnum.LOCAL.getConfig())) {
             return new LocalFileServiceImpl(uploadConfig.getLocal());
+        }else if(config.equals(UploadFileEnum.ALI_COS.getConfig())){
+            return new TencentFileServiceImpl(uploadConfig.getCos());
+        }else if(config.equals(UploadFileEnum.ALI_QNC.getConfig())){
+            return new QncFileServiceImpl(uploadConfig.getQnc());
         }
         return new LocalFileServiceImpl(uploadConfig.getLocal());
     }

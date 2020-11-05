@@ -206,7 +206,9 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
             crmProduct.setCreateUserId(UserUtil.getUserId());
             crmProduct.setCreateTime(DateUtil.date());
             crmProduct.setUpdateTime(DateUtil.date());
-            crmProduct.setOwnerUserId(UserUtil.getUserId());
+            if (crmProduct.getOwnerUserId() == null) {
+                crmProduct.setOwnerUserId(UserUtil.getUserId());
+            }
             crmProduct.setBatchId(batchId);
             save(crmProduct);
             actionRecordUtil.addRecord(crmProduct.getProductId(), CrmEnum.PRODUCT, crmProduct.getName());

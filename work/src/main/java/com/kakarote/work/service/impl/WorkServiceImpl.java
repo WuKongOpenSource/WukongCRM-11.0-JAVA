@@ -427,12 +427,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
                     } else if (r2.getStatus() == 5) {
                         return -1;
                     } else {
-                        if (r1.getUpdateTime() != null && r2.getUpdateTime() != null){
-                            return -r1.getUpdateTime().compareTo(r2.getUpdateTime());
-                        }else {
-                            return -r1.getCreateTime().compareTo(r2.getCreateTime());
-                        }
-
+                        return -r1.getUpdateTime().compareTo(r2.getUpdateTime());
                     }
                 });
                 user.setList(userTaskList).setCount(userTaskList.size());

@@ -7,7 +7,7 @@ import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,10 +21,18 @@ import java.util.concurrent.TimeUnit;
 @Service
 @Slf4j
 public class RedisImpl implements Redis {
+
     @Resource
-    private RedisTemplate<Object, Object> redisTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
 
     //key操作
+
+    private String appendKeyPrefix(Object key) {
+        if (key instanceof String) {
+            return ((String) key);
+        }
+        return key.toString();
+    }
 
     /**
      * 删除key 可传多个key
@@ -33,7 +41,11 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void del(Object... keys) {
-        redisTemplate.delete(Arrays.asList(keys));
+        List<String> keysList = new ArrayList<>();
+        for (Object key : keys) {
+            keysList.add(appendKeyPrefix(key));
+        }
+        redisTemplate.delete(keysList);
     }
 
     /**
@@ -44,7 +56,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public Long ttl(String key) {
-        return redisTemplate.getExpire(key);
+        return redisTemplate.getExpire(appendKeyPrefix(key));
     }
 
     /**
@@ -55,7 +67,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void expire(String key, Integer timeout) {
-        redisTemplate.expire(key, timeout, TimeUnit.SECONDS);
+        redisTemplate.expire(appendKeyPrefix(key), timeout, TimeUnit.SECONDS);
     }
 
 
@@ -66,7 +78,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void persist(String key) {
-        redisTemplate.persist(key);
+        redisTemplate.persist(appendKeyPrefix(key));
     }
 
     /**
@@ -76,7 +88,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public boolean exists(String key) {
-        Boolean exists = redisTemplate.hasKey(key);
+        Boolean exists = redisTemplate.hasKey(appendKeyPrefix(key));
         return exists != null ? exists : false;
     }
 
@@ -88,7 +100,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public DataType getType(String key) {
-        return redisTemplate.type(key);
+        return redisTemplate.type(appendKeyPrefix(key));
     }
 
 
@@ -100,7 +112,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void set(String key, Object value) {
-        redisTemplate.opsForValue().set(key, value);
+        redisTemplate.opsForValue().set(appendKeyPrefix(key), value);
 
     }
 
@@ -113,7 +125,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void setex(Object key, Integer second, Object value) {
-        redisTemplate.opsForValue().set(key, value, second, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(appendKeyPrefix(key), value, second, TimeUnit.SECONDS);
     }
 
     /**
@@ -125,7 +137,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public Boolean setNx(String key, Long timeout, Object value) {
-        return redisTemplate.opsForValue().setIfAbsent(key, value, timeout, TimeUnit.SECONDS);
+        return redisTemplate.opsForValue().setIfAbsent(appendKeyPrefix(key), value, timeout, TimeUnit.SECONDS);
     }
 
 
@@ -138,7 +150,7 @@ public class RedisImpl implements Redis {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T get(String key) {
-        return (T) redisTemplate.opsForValue().get(key);
+        return (T) redisTemplate.opsForValue().get(appendKeyPrefix(key));
     }
 
     /**
@@ -149,7 +161,11 @@ public class RedisImpl implements Redis {
      */
     @Override
     public List<Object> mGet(Object... keys) {
-        return redisTemplate.opsForValue().multiGet(Arrays.asList(keys));
+        List<String> keysList = new ArrayList<>();
+        for (Object key : keys) {
+            keysList.add(appendKeyPrefix(key));
+        }
+        return redisTemplate.opsForValue().multiGet(keysList);
     }
 
     /**
@@ -159,6 +175,10 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void mSet(Map<String, Object> map) {
+        for (String key : map.keySet()) {
+            Object value = map.remove(key);
+            map.put(appendKeyPrefix(key), value);
+        }
         redisTemplate.opsForValue().multiSet(map);
     }
 
@@ -169,6 +189,10 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void mSetNx(Map<String, Object> map) {
+        for (String key : map.keySet()) {
+            Object value = map.remove(key);
+            map.put(appendKeyPrefix(key), value);
+        }
         redisTemplate.opsForValue().multiSetIfAbsent(map);
     }
 
@@ -181,7 +205,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void appendStr(Object key, String value) {
-        redisTemplate.opsForValue().append(key, value);
+        redisTemplate.opsForValue().append(appendKeyPrefix(key), value);
     }
 
 
@@ -193,7 +217,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void hdel(Object key, Object... hashKeys) {
-        redisTemplate.opsForHash().delete(key, hashKeys);
+        redisTemplate.opsForHash().delete(appendKeyPrefix(key), hashKeys);
     }
 
     /**
@@ -205,7 +229,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void put(Object key, String hashKey, Object value) {
-        redisTemplate.opsForHash().put(key, hashKey, value);
+        redisTemplate.opsForHash().put(appendKeyPrefix(key), hashKey, value);
     }
 
 
@@ -217,7 +241,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void putAll(String key, Map<Object, Object> map) {
-        redisTemplate.opsForHash().putAll(key, map);
+        redisTemplate.opsForHash().putAll(appendKeyPrefix(key), map);
     }
 
     /**
@@ -228,7 +252,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public Map<Object, Object> getRedisMap(String key) {
-        return redisTemplate.opsForHash().entries(key);
+        return redisTemplate.opsForHash().entries(appendKeyPrefix(key));
     }
 
     /**
@@ -239,7 +263,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public List<Object> getValues(Object key) {
-        return redisTemplate.opsForHash().values(key);
+        return redisTemplate.opsForHash().values(appendKeyPrefix(key));
     }
 
     /**
@@ -250,7 +274,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public Boolean hashMapKey(Object key, String hashKey) {
-        return redisTemplate.opsForHash().hasKey(key, hashKey);
+        return redisTemplate.opsForHash().hasKey(appendKeyPrefix(key), hashKey);
     }
 
     /**
@@ -261,7 +285,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void lpush(String key, Object value) {
-        redisTemplate.opsForList().leftPush(key, value);
+        redisTemplate.opsForList().leftPush(appendKeyPrefix(key), value);
     }
 
     /**
@@ -272,7 +296,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void rpush(String key, Object value) {
-        redisTemplate.opsForList().rightPush(key, value);
+        redisTemplate.opsForList().rightPush(appendKeyPrefix(key), value);
     }
 
 
@@ -285,7 +309,7 @@ public class RedisImpl implements Redis {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T lPop(String key) {
-        return (T) redisTemplate.opsForList().leftPop(key);
+        return (T) redisTemplate.opsForList().leftPop(appendKeyPrefix(key));
     }
 
     /**
@@ -297,7 +321,7 @@ public class RedisImpl implements Redis {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T rPop(String key) {
-        return (T) redisTemplate.opsForList().rightPop(key);
+        return (T) redisTemplate.opsForList().rightPop(appendKeyPrefix(key));
     }
 
 
@@ -311,7 +335,7 @@ public class RedisImpl implements Redis {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getKeyIndex(String key, int index) {
-        return (T) redisTemplate.opsForList().index(key, index);
+        return (T) redisTemplate.opsForList().index(appendKeyPrefix(key), index);
     }
 
     /**
@@ -322,7 +346,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public Long getLength(String key) {
-        return redisTemplate.opsForList().size(key);
+        return redisTemplate.opsForList().size(appendKeyPrefix(key));
     }
 
     /**
@@ -335,7 +359,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public List<Object> range(String key, int start, int end) {
-        return redisTemplate.opsForList().range(key, start, end);
+        return redisTemplate.opsForList().range(appendKeyPrefix(key), start, end);
     }
 
 
@@ -349,7 +373,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void addSet(String key, Object... values) {
-        redisTemplate.opsForSet().add(key, values);
+        redisTemplate.opsForSet().add(appendKeyPrefix(key), values);
     }
 
     /**
@@ -361,7 +385,7 @@ public class RedisImpl implements Redis {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getSet(String key) {
-        return (T) redisTemplate.opsForSet().pop(key);
+        return (T) redisTemplate.opsForSet().pop(appendKeyPrefix(key));
     }
 
     /**
@@ -372,7 +396,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public Set<Object> getSets(String key) {
-        return redisTemplate.opsForSet().members(key);
+        return redisTemplate.opsForSet().members(appendKeyPrefix(key));
     }
 
 
@@ -384,7 +408,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public Long getSetsNum(String key) {
-        return redisTemplate.opsForSet().size(key);
+        return redisTemplate.opsForSet().size(appendKeyPrefix(key));
     }
 
     /**
@@ -395,7 +419,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public Set<Object> members(String key) {
-        return redisTemplate.opsForSet().members(key);
+        return redisTemplate.opsForSet().members(appendKeyPrefix(key));
     }
 
 
@@ -419,7 +443,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public void zadd(String key, Set<ZSetOperations.TypedTuple<Object>> tuples) {
-        redisTemplate.opsForZSet().add(key, tuples);
+        redisTemplate.opsForZSet().add(appendKeyPrefix(key), tuples);
     }
 
 
@@ -433,7 +457,7 @@ public class RedisImpl implements Redis {
      */
     @Override
     public Set<Object> reverseRange(String key, Double min, Double max) {
-        return redisTemplate.opsForZSet().reverseRangeByScore(key, min, max);
+        return redisTemplate.opsForZSet().reverseRangeByScore(appendKeyPrefix(key), min, max);
     }
 
 }

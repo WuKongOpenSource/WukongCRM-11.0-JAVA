@@ -34,14 +34,21 @@ feign:
   okhttp:
     enabled: true
 jetcache:
-  statIntervalMinutes: 15
+  statIntervalMinutes: 0
   areaInCacheName: false
-  local:
+  remote:
     default:
-      type: linkedhashmap
-      limit: 100
-      keyConvertor: none
-      expireAfterWriteInMillis: 100000
+      type: redis
+      keyConvertor: fastjson
+      poolConfig:
+        minIdle: 5
+        maxIdle: 20
+        maxTotal: 50
+      host: 127.0.0.1
+      port: 6379
+      password: 123456
+      expireAfterWriteInMillis: 1800000
+
 crm:
   upload:
     # 1 本地 2 阿里云OSS
@@ -52,11 +59,26 @@ crm:
       accessKeySecret:
       publicUrl:
       bucketName:
-        0: 72crm-cloud
-        1: 72crm-public
+        0:
+        1:
     local:
       publicUrl:
       uploadPath:
-        # 默认是文件上传是windows路径,若是其他系统许自行修改
-        0: D:\upload\wk-single\private
-        1: D:\upload\wk-single\public
+        0: D:/upload/private
+        1: D:/upload/public
+    cos:
+      region:
+      secretId:
+      secretKey:
+      publicUrl:
+      bucketName:
+        0:
+        1:
+    qnc:
+      accessKey:
+      secretKey:
+      publicUrl:
+      bucketName:
+        0:
+        1:
+

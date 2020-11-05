@@ -8,6 +8,7 @@ import cn.hutool.core.util.StrUtil;
 import com.google.common.collect.Lists;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.redis.Redis;
@@ -23,7 +24,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
@@ -67,12 +67,14 @@ public class CrmCustomerJobController {
     @Autowired
     private Redis redis;
 
+
+
     @ApiExplain("放入公海")
     @PostMapping("/putInInternational")
     @Transactional(rollbackFor = Exception.class)
-    public Result putInInternational(@RequestParam("host") String host){
+    public Result putInInternational(){
         try {
-            UserInfo userInfo = redis.get("CrmCustomerJob");
+            UserInfo userInfo = redis.get(CrmCacheKey.CRM_CUSTOMER_JOB_CACHE_KEY);
             List<CrmCustomerPool> poolList = crmCustomerPoolService.lambdaQuery()
                     .eq(CrmCustomerPool::getStatus, 1).eq(CrmCustomerPool::getPutInRule, 1).list();
             poolList.forEach(pool -> {

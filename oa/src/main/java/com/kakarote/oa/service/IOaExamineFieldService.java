@@ -20,7 +20,8 @@ public interface IOaExamineFieldService extends BaseService<OaExamineField> {
 
     void recordToFormType(List<OaExamineField> list);
 
-    List<OaExamineField> queryFieldByBatchId(Integer categoryId, String batchId);
+
+    String queryFieldValueByBatchId(Integer fieldId, String batchId);
 
     void transferFieldList(List<OaExamineField> recordList, Integer isDetail);
 

@@ -75,6 +75,7 @@ public interface IAdminUserService extends BaseService<AdminUser> {
      */
     public Integer usernameEdit(Integer id, String username, String password);
 
+
     /**
      * excel导入员工
      * @param file file
@@ -156,4 +157,5 @@ public interface IAdminUserService extends BaseService<AdminUser> {
      * 系统用户初始化
      */
     public void initUser(SystemUserBO systemUserBO);
+
 }

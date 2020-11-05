@@ -24,6 +24,16 @@ public class UploadConfig {
     private OssConfig oss;
 
     /**
+     * 腾讯云配置
+     */
+    private CosConfig cos;
+
+    /**
+     * 七牛云配置
+     */
+    private QncConfig qnc;
+
+    /**
      * 本地配置
      */
     private LocalConfig local;
@@ -37,6 +47,25 @@ public class UploadConfig {
         private String publicUrl;
 
     }
+
+    @Data
+    public static class CosConfig{
+        private String region;
+        private String secretId;
+        private String secretKey;
+        private Map<String,String> bucketName;
+        private String publicUrl;
+    }
+
+    @Data
+    public static class QncConfig{
+        private String accessKey;
+        private String secretKey;
+        private Map<String,String> bucketName;
+        private String publicUrl;
+    }
+
+
 
     @Data
     public static class LocalConfig {

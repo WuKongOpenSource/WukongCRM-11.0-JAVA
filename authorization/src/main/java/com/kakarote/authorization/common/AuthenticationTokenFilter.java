@@ -37,10 +37,12 @@ public class AuthenticationTokenFilter extends OncePerRequestFilter implements O
         logger.info(request.getRequestURI());
         response.setContentType(Const.DEFAULT_CONTENT_TYPE);
         if (StrUtil.isNotEmpty(token)) {
-            UserInfo user = redis.get(token);
-            AuthorizationUser authorizationUser = AuthorizationUser.toAuthorizationUser(user);
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authorizationUser, null, new ArrayList<>());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            Object user = redis.get(token);
+            if(user instanceof UserInfo){
+                AuthorizationUser authorizationUser = AuthorizationUser.toAuthorizationUser((UserInfo) user);
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authorizationUser, null, new ArrayList<>());
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
         }
         chain.doFilter(request, response);
     }

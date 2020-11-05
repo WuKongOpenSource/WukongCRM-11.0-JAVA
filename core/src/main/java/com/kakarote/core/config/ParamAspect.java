@@ -2,7 +2,6 @@ package com.kakarote.core.config;
 
 import cn.hutool.core.util.StrUtil;
 import com.alicp.jetcache.Cache;
-import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.CreateCache;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.entity.UserExtraInfo;
@@ -41,7 +40,7 @@ public class ParamAspect implements Ordered {
     @Autowired
     private Redis redis;
 
-    @CreateCache(name = Const.COMPANY_MANAGE_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS,cacheType = CacheType.LOCAL)
+    @CreateCache(name = Const.COMPANY_MANAGE_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS)
     private Cache<Long, Boolean> companyCache;
 
     @Autowired

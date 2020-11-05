@@ -11,15 +11,18 @@ import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmCustomerPoolBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
+import com.kakarote.crm.entity.BO.UploadExcelBO;
 import com.kakarote.crm.entity.PO.CrmCustomerPool;
 import com.kakarote.crm.entity.PO.CrmCustomerPoolFieldSort;
 import com.kakarote.crm.entity.VO.CrmCustomerPoolVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
+import com.kakarote.crm.service.CrmUploadExcelService;
 import com.kakarote.crm.service.ICrmCustomerPoolService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -27,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
@@ -52,6 +56,9 @@ public class CrmCustomerPoolController {
 
     @Autowired
     private ICrmCustomerPoolService crmCustomerPoolService;
+
+    @Autowired
+    private CrmUploadExcelService uploadExcelService;
 
     @ApiOperation("查看公海列表页")
     @PostMapping("/queryPageList")
@@ -94,6 +101,20 @@ public class CrmCustomerPoolController {
         List<CrmModelFiledVO> filedVOS = crmCustomerPoolService.queryPoolField();
         return Result.ok(filedVOS);
     }
+
+    @PostMapping("/uploadExcel")
+    @ApiOperation("导入客户")
+    public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("repeatHandling") Integer repeatHandling, @RequestParam("poolId") Integer poolId) {
+        UploadExcelBO uploadExcelBO = new UploadExcelBO();
+        uploadExcelBO.setOwnerUserId(null);
+        uploadExcelBO.setUserInfo(UserUtil.getUser());
+        uploadExcelBO.setCrmEnum(CrmEnum.CUSTOMER);
+        uploadExcelBO.setPoolId(poolId);
+        uploadExcelBO.setRepeatHandling(repeatHandling);
+        Long messageId = uploadExcelService.uploadExcel(file, uploadExcelBO);
+        return R.ok(messageId);
+    }
+
 
     @ApiOperation("公海全部导出")
     @PostMapping("/allExportExcel")

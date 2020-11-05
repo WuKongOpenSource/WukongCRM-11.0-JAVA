@@ -15,7 +15,6 @@ import com.alibaba.nacos.api.NacosFactory;
 import com.alibaba.nacos.api.config.ConfigService;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alicp.jetcache.Cache;
-import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.CreateCache;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -75,27 +74,27 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
 
     @Autowired
     private IAdminRoleService adminRoleService;
+
     @Autowired
     private IAdminDeptService adminDeptService;
+
     @Autowired
     private IAdminUserConfigService adminUserConfigService;
+
     @Autowired
     private IAdminUserRoleService adminUserRoleService;
+
     @Autowired
     private IAdminAttentionService adminAttentionService;
 
     @Autowired
     private CrmService crmService;
 
-    @CreateCache(name = Const.ADMIN_USER_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS,cacheType = CacheType.LOCAL)
+    @CreateCache(name = Const.ADMIN_USER_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS)
     private Cache<Long, String> userCache;
 
     @Override
     public List<Map<String, Object>> findByUsername(String username) {
-        Integer systemStatus = querySystemStatus();
-        if (systemStatus == 0) {
-            throw new CrmException(SystemCodeEnum.SYSTEM_USER_NOT_REGISTER_ERROR);
-        }
         return getBaseMapper().findByUsername(username);
     }
 
@@ -171,7 +170,8 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         adminUserRoleService.saveByUserId(adminUserVO.getUserId(), true, StrUtil.splitTrim(adminUserVO.getRoleId(), Const.SEPARATOR));
         updateById(adminUser);
         crmService.batchUpdateEsData(adminUser.getUserId().toString(), adminUser.getRealname());
-        userCache.put(adminUser.getUserId(), adminUser.getRealname());
+        Long key = adminUser.getUserId();
+        userCache.put(key, adminUser.getRealname());
     }
 
     @Override
@@ -200,7 +200,8 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         save(adminUserPO);
         adminUserConfigService.initUserConfig(adminUserPO.getUserId());
         adminUserRoleService.saveByUserId(adminUserPO.getUserId(), false, StrUtil.splitTrim(adminUser.getRoleId(), Const.SEPARATOR));
-        userCache.put(adminUserPO.getUserId(), adminUserPO.getRealname());
+        Long key = adminUserPO.getUserId();
+        userCache.put(key, adminUserPO.getRealname());
     }
 
     /**
@@ -248,7 +249,6 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         if (adminUser == null) {
             throw new CrmException(AdminCodeEnum.ADMIN_USER_NOT_EXIST_ERROR);
         }
-
         if (adminUser.getUsername().equals(username)) {
             throw new CrmException(AdminCodeEnum.ADMIN_ACCOUNT_ERROR);
         }
@@ -312,9 +312,9 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                 }
                 String password = rowList.get(1).toString().trim();
                 String realname = rowList.get(2).toString().trim();
-                String sex = rowList.get(3).toString().trim();
-                String email = rowList.get(4).toString().trim();
-                String post = rowList.get(5).toString().trim();
+                String sex = Optional.ofNullable(rowList.get(3)).orElse("").toString().trim();
+                String email = Optional.ofNullable(rowList.get(4)).orElse("").toString().trim();
+                String post = Optional.ofNullable(rowList.get(5)).orElse("").toString().trim();
                 AdminUser adminUser = new AdminUser();
                 String salt = IdUtil.fastSimpleUUID();
                 adminUser.setUsername(username);
@@ -334,7 +334,6 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                         adminUser.setSex(1);
                     }
                 }
-
                 save(adminUser);
                 adminUserConfigService.initUserConfig(UserUtil.getUserId());
             }
@@ -441,23 +440,6 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         return adminUserRoleService.listObjs(queryWrapper, obj -> Integer.valueOf(obj.toString()));
     }
 
-    /**
-     * 递归查询该用户下级的用户
-     */
-    private List<Long> queryChildUserId(List<AdminUser> userList, Long parentId, int depth) {
-        depth--;
-        List<Long> arrList = new ArrayList<>();
-        if (depth < 0) {
-            return arrList;
-        }
-        for (AdminUser adminUser : userList) {
-            if (Objects.equals(parentId, adminUser.getParentId())) {
-                arrList.add(adminUser.getUserId());
-                arrList.addAll(queryChildUserId(userList, adminUser.getUserId(), depth));
-            }
-        }
-        return arrList;
-    }
 
     /**
      * 通讯录查询
@@ -609,7 +591,7 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
             userVOSet.addAll(hrmSimpleUserVOS);
         }
         if (CollUtil.isNotEmpty(deptUserListByHrmBO.getUserIdList())) {
-            List<AdminUser> userList = query().select("user_id", "realname", "img", "sex", "mobile", "post").in("user_id", deptUserListByHrmBO.getUserIdList())
+            List<AdminUser> userList = query().select("user_id", "realname", "img", "sex", "username as mobile", "post").in("user_id", deptUserListByHrmBO.getUserIdList())
                     .ne("status", 0).list();
             List<HrmSimpleUserVO> hrmSimpleUserVOS = TransferUtil.transferList(userList, HrmSimpleUserVO.class);
             userVOSet.addAll(hrmSimpleUserVOS);
@@ -620,7 +602,7 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
     private List<AdminUser> findChildUserList(List<Integer> deptIds) {
         List<AdminUser> empList = new ArrayList<>();
         for (Integer deptId : deptIds) {
-            List<AdminUser> list = query().select("user_id", "realname", "img", "sex", "mobile", "post").eq("dept_id", deptId).ne("status", 0).list();
+            List<AdminUser> list = query().select("user_id", "realname", "img", "sex", "username as mobile", "post").eq("dept_id", deptId).ne("status", 0).list();
             empList.addAll(list);
             List<AdminDept> childList = adminDeptService.lambdaQuery().select(AdminDept::getDeptId).eq(AdminDept::getPid, deptId).list();
             if (CollUtil.isNotEmpty(childList)) {
@@ -641,14 +623,18 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                 .list().stream().map(AdminUser::getUserId).collect(Collectors.toList());
     }
 
+
+
     @Override
     public UserInfo queryLoginUserInfo(Long userId) {
         UserInfo userInfo = getBaseMapper().queryLoginUserInfo(userId);
+        AdminUser adminUser = getById(userInfo.getUserId());
+        userInfo.setSuperUserId(adminUser.getUserId());
+        AdminRole role = adminRoleService.lambdaQuery().eq(AdminRole::getRemark, "admin").last(" limit 1").one();
+        userInfo.setSuperRoleId(role.getRoleId());
         userInfo.setRoles(queryUserRoleIds(userInfo.getUserId()));
-        userInfo.setNoAuthMenuUrls(adminRoleService.queryNoAuthMenu(userInfo.getUserId()));
         return userInfo;
     }
-
     /**
      * 查询当前系统有没有初始化
      *
@@ -659,7 +645,6 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         Integer count = lambdaQuery().count();
         return count > 0 ? 1 : 0;
     }
-
     /**
      * 系统用户初始化
      */
@@ -735,4 +720,5 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         });
 
     }
+
 }

@@ -26,15 +26,20 @@
         on a.field_id = b.field_id
         set a.`name`=b.field_name;
     </update>
+    <update id="dataCheck">
+        UPDATE `wk_crm_field`
+        SET `field_name`= #{name},tn='1' WHERE `field_id` IN (
+        SELECT id FROM (
+        SELECT max(field_id) AS id FROM wk_crm_field WHERE field_type='0' AND tn='0' and label=#{label} and type=#{type}
+        ) AS y)
+    </update>
     <select id="initData" resultType="java.util.HashMap">
         SELECT * FROM wk_crm_${tableName} as a
         JOIN (
         SELECT b.${table}_id as tid
-        <if test="fields.size() >0">
-        <for collection="fields" index="i" item="item" open="," separator="," close="">
+        <foreach collection="fields" index="i" item="item" open="," separator="," close="">
             max(CASE WHEN `a`.`name` = '${item.getFieldName}' THEN `a`.`value` END) AS '${item.getFieldName}'
-        </for>
-        </if>
+        </foreach>
         FROM wk_crm_${tableName}_data as a
         right JOIN wk_crm_${tableName} as b on a.batch_id = b.batch_id
         where b.${table}_id in (

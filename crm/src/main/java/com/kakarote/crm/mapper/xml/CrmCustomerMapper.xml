@@ -86,8 +86,8 @@
     </select>
     <select id="dataCheck" resultType="com.kakarote.crm.entity.VO.CrmDataCheckVO">
         select a.* from (
-        select a.customer_id as id,a.customer_name as name, a.create_time,a.owner_user_id, 2 as type,a.last_time,''as poolName
-        2 as type,a.last_time,'' as poolName,a.contacts_id
+        select a.customer_id as id,a.customer_name as name, a.create_time,a.owner_user_id, 2 as type,a.last_time,
+        '' as poolName,a.contacts_id
         from `wk_crm_customer` a
         where a.owner_user_id is not null and a.status != 3
         <if test="data.name != null">
@@ -262,6 +262,9 @@
         <foreach collection="userIds" index="index" item="id" separator="," open="(" close=")">
             #{id}
         </foreach>
+        <if test="search != null and search != ''">
+            and (customer_name like concat('%',#{search},'%') or mobile like concat('%',#{search},'%') or telephone like concat('%',#{search},'%'))
+        </if>
     </select>
     <select id="unContactCustomer" resultType="java.lang.Integer">
         select customer_id from wk_crm_customer

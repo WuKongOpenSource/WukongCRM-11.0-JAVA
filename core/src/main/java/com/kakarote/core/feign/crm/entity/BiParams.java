@@ -4,11 +4,13 @@ import com.kakarote.core.entity.PageEntity;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * @author zhangzhiwei
  * bi参数
  */
+@EqualsAndHashCode(callSuper = true)
 @ApiModel("bi查询相关参数")
 @Data
 public class BiParams extends PageEntity {

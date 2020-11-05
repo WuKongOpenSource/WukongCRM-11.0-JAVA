@@ -11,6 +11,7 @@ import cn.hutool.poi.excel.ExcelUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.cache.AdminCacheKey;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminMessage;
 import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
@@ -18,6 +19,7 @@ import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.redis.Redis;
 import com.kakarote.core.servlet.ApplicationContextHolder;
+import com.kakarote.core.servlet.upload.UploadConfig;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
@@ -53,8 +55,6 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.kakarote.core.common.Const.UPLOAD_EXCEL_MESSAGE_PREFIX;
-
 @Service
 @Slf4j
 public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
@@ -67,6 +67,8 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
 
     @Autowired
     private ElasticsearchRestTemplate restTemplate;
+
+    private String uploadPath = ApplicationContextHolder.getBean(UploadConfig.class).getLocal().getUploadPath().get("0");
 
     /**
      * 上传excel可查询时间
@@ -108,7 +110,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
         }
         Long messageId = adminService.saveOrUpdateMessage(adminMessage).getData();
         uploadExcelBO.setMessageId(messageId);
-        redis.setex(UPLOAD_EXCEL_MESSAGE_PREFIX + messageId.toString(), UPLOAD_EXCEL_EXIST_TIME, 0);
+        redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + messageId.toString(), UPLOAD_EXCEL_EXIST_TIME, 0);
         TaskExecutor taskExecutor = ApplicationContextHolder.getBean(TaskExecutor.class);
         taskExecutor.execute(uploadService);
         return messageId;
@@ -133,29 +135,29 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
 
     public abstract class UploadService implements Runnable {
 
-        protected List<List<Object>> errorList = new ArrayList<>();
+        protected volatile List<List<Object>> errorList = new ArrayList<>();
 
-        protected List<CrmModelFiledVO> fieldList = new ArrayList<>();
+        protected volatile List<CrmModelFiledVO> fieldList = new ArrayList<>();
 
-        protected List<CrmModelFiledVO> fixedFieldList = new ArrayList<>();
+        protected volatile List<CrmModelFiledVO> fixedFieldList = new ArrayList<>();
 
-        protected List<CrmModelFiledVO> uniqueList = new ArrayList<>();
+        protected volatile List<CrmModelFiledVO> uniqueList = new ArrayList<>();
 
         /**
          * 导入数量
          */
-        protected Integer num = -2;
+        protected volatile Integer num = -2;
 
         /**
          * 修改数量
          */
-        protected Integer updateNum = 0;
+        protected volatile Integer updateNum = 0;
 
-        protected List<Integer> isNullList = new ArrayList<>();
+        protected volatile List<Integer> isNullList = new ArrayList<>();
 
-        protected boolean templateErr = false;
+        protected volatile boolean templateErr = false;
 
-        protected JSONObject kv = new JSONObject();
+        protected volatile JSONObject kv = new JSONObject();
 
         public abstract void importExcel();
 
@@ -163,23 +165,26 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
 
         @Override
         public void run() {
-            boolean exists = redis.exists(UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId());
+            boolean exists = redis.exists(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId());
             if (!exists) {
                 return;
             }
             try {
+                UserUtil.setUser(getUploadExcelBO().getUserInfo());
                 importExcel();
+                restTemplate.refresh(getUploadExcelBO().getCrmEnum().getIndex());
             } catch (Exception e) {
                 log.error("导入出现错误", e);
             } finally {
-                redis.del(UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId());
+                redis.del(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId());
+                UserUtil.removeUser();
             }
 
             AdminMessage adminMessage = adminService.getMessageById(getUploadExcelBO().getMessageId()).getData();
             adminMessage.setTitle(String.valueOf(Math.max(num, 0)));
             adminMessage.setContent((errorList.size() - 2) + "," + updateNum);
             if (errorList.size() > 2) {
-                File file = new File(FileUtil.getTmpDirPath() + "/excel/" + BaseUtil.getDate() + "/" + IdUtil.simpleUUID() + ".xlsx");
+                File file = new File(uploadPath + "/excel/" + BaseUtil.getDate() + "/" + IdUtil.simpleUUID() + ".xlsx");
                 BigExcelWriter writer = ExcelUtil.getBigWriter(file);
                 CellStyle textStyle = writer.getWorkbook().createCellStyle();
                 DataFormat format = writer.getWorkbook().createDataFormat();
@@ -205,7 +210,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                 writer.close();
                 adminMessage.setTypeId(null);
                 //将错误信息的excel保存七天 604800 七天的秒数
-                redis.setex(UPLOAD_EXCEL_MESSAGE_PREFIX + "file:" + adminMessage.getMessageId().toString(), 604800, file.getAbsolutePath());
+                redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + "file:" + adminMessage.getMessageId().toString(), 604800, file.getAbsolutePath());
             }
             adminService.saveOrUpdateMessage(adminMessage);
             FileUtil.del(getUploadExcelBO().getFilePath());
@@ -353,10 +358,13 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
 
         @Override
         public void importExcel() {
+
+            ICrmCustomerPoolRelationService poolRelationService = ApplicationContextHolder.getBean(ICrmCustomerPoolRelationService.class);
+
             Map<String, List<String>> areaMap = CrmExcelUtil.getAreaMap();
             ExcelUtil.readBySax(uploadExcelBO.getFilePath(), 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
                 num++;
-                redis.setex(UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
+                redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
                 if (rowList.size() < kv.entrySet().size()) {
                     for (int i = rowList.size() - 1; i < kv.entrySet().size(); i++) {
                         rowList.add(null);
@@ -394,6 +402,16 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                                     rowList.add(0, "数据与多条唯一性字段重复");
                                     errorList.add(rowList);
                                     return;
+                                }
+                                if (getUploadExcelBO().getPoolId() != null) {
+                                    Integer count = poolRelationService.lambdaQuery()
+                                            .eq(CrmCustomerPoolRelation::getPoolId, getUploadExcelBO().getPoolId())
+                                            .eq(CrmCustomerPoolRelation::getCustomerId, customerList.get(0).getCustomerId()).count();
+                                    if (count == 0) {
+                                        rowList.add(0, "重复数据不在当前公海，无权覆盖");
+                                        errorList.add(rowList);
+                                        return;
+                                    }
                                 }
                                 isUpdate = true;
                             }
@@ -439,7 +457,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                                 return;
                             }
                             try {
-                                ApplicationContextHolder.getBean(ICrmCustomerService.class).addOrUpdate(object, true);
+                                ApplicationContextHolder.getBean(ICrmCustomerService.class).addOrUpdate(object, true,getUploadExcelBO().getPoolId());
                             } catch (CrmException e) {
                                 rowList.add(0, e.getMsg());
                                 errorList.add(rowList);
@@ -480,7 +498,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
         public void importExcel() {
             ExcelUtil.readBySax(uploadExcelBO.getFilePath(), 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
                 num++;
-                redis.setex(UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
+                redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
                 if (rowList.size() < kv.entrySet().size()) {
                     for (int i = rowList.size() - 1; i < kv.entrySet().size(); i++) {
                         rowList.add(null);
@@ -590,7 +608,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
         public void importExcel() {
             ExcelUtil.readBySax(uploadExcelBO.getFilePath(), 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
                 num++;
-                redis.setex(UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
+                redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
                 if (rowList.size() < kv.entrySet().size()) {
                     for (int i = rowList.size() - 1; i < kv.entrySet().size(); i++) {
                         rowList.add(null);
@@ -607,7 +625,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                         errorList.add(rowList);
                     } else {
                         try {
-                            String customerName = rowList.get(kv.getInteger("customer_id")).toString();
+                            String customerName = rowList.get(kv.getInteger("customerId")).toString();
                             SimpleCrmEntity customer = ApplicationContextHolder.getBean(ICrmCustomerService.class).queryFirstCustomerByName(customerName);
                             if (customer == null) {
                                 rowList.add(0, "填写的客户不存在");
@@ -711,7 +729,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
         public void importExcel() {
             ExcelUtil.readBySax(getUploadExcelBO().getFilePath(), 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
                 num++;
-                redis.setex(UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
+                redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
                 if (rowList.size() < kv.entrySet().size()) {
                     for (int i = rowList.size() - 1; i < kv.entrySet().size(); i++) {
                         rowList.add(null);

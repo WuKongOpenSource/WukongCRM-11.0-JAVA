@@ -1,5 +1,8 @@
 package com.kakarote.gateway.service;
 
+import org.springframework.http.HttpCookie;
+import org.springframework.util.MultiValueMap;
+
 /**
  * 统一鉴权service
  * @author zhangzhiwei
@@ -17,12 +20,11 @@ public interface PermissionService {
     boolean hasPermission(String authentication, String url, String method);
 
     /**
-     * 判断token是否有效
+     * 获取正确的token
      *
      * @param authentication 权限标识
-     * @return true为令牌已失效
      */
-    boolean invalidAccessToken(String authentication);
+    String invalidAccessToken(String authentication,String url, MultiValueMap<String, HttpCookie> cookies);
 
     /**
      * 判断url是否不需要授权

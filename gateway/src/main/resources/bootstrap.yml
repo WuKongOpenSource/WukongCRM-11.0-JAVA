@@ -9,9 +9,11 @@ spring:
     cache:
       cachecontrol:
         no-cache: true
-    static-locations: file:public/,classpath:public/,classpath:/static,classpath:/resources,classpath:/META-INF/resources,file:/usr/local/wk-single/upload/public
+    static-locations: file:public/,classpath:public/,classpath:/static,classpath:/resources,classpath:/META-INF/resources,file:D:/upload/public
   mvc:
     throw-exception-if-no-handler-found: true
+    favicon:
+      enabled: false
   servlet:
     multipart:
       max-file-size: 100MB
@@ -30,10 +32,10 @@ spring:
       filter:
         enabled: false
       transport:
-        dashboard: ${SENTINEL_DASHBOARD_HOST:localhost}:${SENTINEL_DASHBOARD_PORT:8079}
+        dashboard: ${SENTINEL_DASHBOARD_HOST:127.0.0.1}:${SENTINEL_DASHBOARD_PORT:8079}
       datasource:
         flow:
-          server-addr: localhost:8848
+          server-addr: 127.0.0.1:8848
           dataId: ${spring.application.name}-flow-rules
           groupId: SENTINEL_GROUP
           rule-type: flow

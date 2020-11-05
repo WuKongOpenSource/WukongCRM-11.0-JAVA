@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8666}
+  port: ${SERVER_PORT:0}
 spring:
   profiles:
     include: core,dev
@@ -15,7 +15,6 @@ spring:
       discovery:
         enabled: true
         server-addr: 127.0.0.1:8848
-
     sentinel:
       filter:
         enabled: false

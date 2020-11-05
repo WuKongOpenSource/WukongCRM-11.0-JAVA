@@ -65,7 +65,7 @@ public interface ICrmCustomerService extends BaseService<CrmCustomer> {
      *
      * @param crmModel model
      */
-    public Map<String,Object> addOrUpdate(CrmModelSaveBO crmModel,boolean isExcel);
+    public Map<String,Object> addOrUpdate(CrmModelSaveBO crmModel,boolean isExcel,Integer poolId);
 
     /**
      * 删除客户数据
@@ -234,7 +234,7 @@ public interface ICrmCustomerService extends BaseService<CrmCustomer> {
      * @param name name
      * @return data
      */
-    @Cached(expire = 3600, cacheType = CacheType.LOCAL)
+    @Cached(expire = 3600, cacheType = CacheType.REMOTE)
     public SimpleCrmEntity queryFirstCustomerByName(String name);
 
     /**
@@ -290,7 +290,7 @@ public interface ICrmCustomerService extends BaseService<CrmCustomer> {
 
     BasePage<Map<String,Object>> eventCustomerPageList(QueryEventCrmPageBO eventCrmPageBO);
 
-    List<Integer> forgottenCustomer(Integer day, List<Long> userIds);
+    List<Integer> forgottenCustomer(Integer day, List<Long> userIds, String search);
 
     List<Integer> unContactCustomer(String search, List<Long> userIds);
 }

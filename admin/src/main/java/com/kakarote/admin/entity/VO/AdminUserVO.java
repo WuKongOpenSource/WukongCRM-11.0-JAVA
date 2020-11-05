@@ -70,6 +70,7 @@ public class AdminUserVO {
     @ApiModelProperty(value = "用户头像")
     private String img;
 
+    @ApiModelProperty(value = "是否超级管理员")
     private Boolean isAdmin;
 
     private Integer isReadNotice;

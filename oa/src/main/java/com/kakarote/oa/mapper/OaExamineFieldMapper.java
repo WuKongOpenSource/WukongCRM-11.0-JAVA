@@ -16,8 +16,6 @@ import java.util.List;
  */
 public interface OaExamineFieldMapper extends BaseMapper<OaExamineField> {
 
-    List<OaExamineField> queryFieldByBatchId(@Param("categoryId") Integer categoryId,@Param("batchId") String batchId);
-
     void deleteByChooseId(@Param("ids") List<Integer> arr,@Param("categoryId") Integer categoryId);
 
     void deleteByFieldValue(@Param("ids") List<Integer> arr,@Param("categoryId") Integer categoryId);

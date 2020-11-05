@@ -4,11 +4,11 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
@@ -82,7 +82,7 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
     public JSONObject num() {
         Long userId = UserUtil.getUserId();
         List<String> authList = UserUtil.getUser().getAuthoritiesUrlList();
-        JSONObject kv = redis.get("queryBackLogNum:" + userId.toString());
+        JSONObject kv = redis.get(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + userId.toString());
         authList.add("crm:customer:index");
         authList.add("crm:leads:index");
         authList.add("crm:contract:index");
@@ -110,13 +110,6 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
             poolList.forEach(pool -> {
                 List<Long> userIdsList = new ArrayList<>();
                 List<JSONObject> recordList = new ArrayList<>();
-                List<Integer> deptIds = StrUtil.splitTrim(pool.getMemberDeptId(), Const.SEPARATOR).stream().map(Integer::valueOf).collect(Collectors.toList());
-                if (deptIds.size() > 0) {
-                    userIdsList.addAll(adminService.queryUserByDeptIds(deptIds).getData());
-                }
-                if (StrUtil.isNotEmpty(pool.getMemberUserId())) {
-                    userIdsList.addAll(Arrays.stream(pool.getMemberUserId().split(Const.SEPARATOR)).map(Long::parseLong).collect(Collectors.toList()));
-                }
                 List<CrmCustomerPoolRule> ruleList = ApplicationContextHolder.getBean(ICrmCustomerPoolRuleService.class).lambdaQuery().eq(CrmCustomerPoolRule::getPoolId, pool.getPoolId()).list();
                 for (CrmCustomerPoolRule rule : ruleList) {
                     Map<String, Object> record = BeanUtil.beanToMap(rule);
@@ -153,7 +146,6 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
             kv.put("followLeads", followLeads);
         }
         if (authList.contains("crm:contract:index")) {
-            log.info("queryFirstConfigByName(\"expiringContractDays\"),UserInfo:{}", JSON.toJSONString(UserUtil.getUser()));
             AdminConfig adminConfig = adminService.queryFirstConfigByName("expiringContractDays").getData();
             if (1 == adminConfig.getStatus()) {
                 paras.put("remindDay", adminConfig.getValue());
@@ -182,7 +174,7 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
             Integer checkInvoice = mapper.checkInvoiceNum(paras);
             kv.put("checkInvoice", checkInvoice);
         }
-        redis.setex("queryBackLogNum:" + userId.toString(), 60, kv);
+        redis.setex(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + userId.toString(), 60, kv);
         return kv;
     }
 
@@ -721,7 +713,6 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
     public BasePage<Map<String, Object>> putInPoolRemind(CrmBackLogBO crmBackLogBO) {
         Integer isSub = crmBackLogBO.getIsSub();
         Long userId = UserUtil.getUserId();
-        String userIds;
         if (isSub == 1) {
             crmBackLogBO.getData().add(new CrmSearchBO.Search("ownerUserId", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList(UserUtil.getUserId().toString())));
         } else if (isSub == 2) {
@@ -800,11 +791,12 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
             return new BasePage<>();
         }
         List<String> collect = customerIdSet.stream().map(Objects::toString).collect(Collectors.toList());
+        crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect));
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setPage(crmBackLogBO.getPage());
         searchBO.setLimit(crmBackLogBO.getLimit());
         searchBO.setLabel(CrmEnum.CUSTOMER.getType());
-        searchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect)));
+        searchBO.setSearchList(crmBackLogBO.getData());
         BasePage<Map<String, Object>> page = crmCustomerService.queryPageList(searchBO);
         List<Map<String, Object>> list = page.getList();
         list.forEach(record -> {

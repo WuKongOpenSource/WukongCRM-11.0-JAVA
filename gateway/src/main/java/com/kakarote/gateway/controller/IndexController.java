@@ -1,9 +1,6 @@
 package com.kakarote.gateway.controller;
 
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
-import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.R;
@@ -11,7 +8,6 @@ import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.ProjectVersionEntity;
 import com.kakarote.core.entity.UpdateConfigEntity;
 import com.kakarote.core.exception.CrmException;
-import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.projectupdate.UpdateProjectVersionUtil;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.gateway.service.ProjectUpdateService;
@@ -45,28 +41,14 @@ public class IndexController {
     private DataSource dataSource;
 
     @Autowired
-    private AdminService adminService;
-
-    @Autowired
     private ProjectUpdateService projectUpdateService;
 
     @RequestMapping("/")
     public Mono<Void> index(ServerHttpResponse response) {
-        Integer data = adminService.querySystemStatus().getData();
-        String str = data > 0 ? "#/login" : "#/welcome";
         return Mono.fromRunnable(() -> {
             response.setStatusCode(HttpStatus.FOUND);
-            response.getHeaders().setLocation(URI.create("./index.html" + str));
+            response.getHeaders().setLocation(URI.create("./index.html"));
         });
-    }
-
-    @RequestMapping("/updates/login")
-    public JSONObject login(@RequestBody JSONObject jsonObject) {
-        HttpRequest httpRequest = HttpUtil.createPost("https://center.72crm.com/updates/login");
-        httpRequest.form("username", jsonObject.getString("username"));
-        httpRequest.form("password", jsonObject.getString("password"));
-        HttpResponse execute = httpRequest.execute();
-        return JSONObject.parseObject(execute.body());
     }
 
     @RequestMapping("/ping")
@@ -121,8 +103,7 @@ public class IndexController {
     }
 
     @PostMapping("/backupDatabase")
-    public Result<String> backupDatabase(@RequestBody JSONObject jsonObject) {
-        UpdateConfigEntity entity = jsonObject.toJavaObject(UpdateConfigEntity.class);
+    public Result<String> backupDatabase(@RequestBody UpdateConfigEntity entity) {
         entity.setBackupPath(FileUtil.getParent(getClass().getProtectionDomain().getCodeSource().getLocation().getPath(), 2));
         String backupSql = UpdateProjectVersionUtil.backupSql(entity);
         return R.ok(FileUtil.normalize(backupSql));

@@ -410,7 +410,11 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
         object.put("userIds", userIds);
         if (bo.getType() == null) {
             //type== null 是自定义时间 需要把时间放到参数中
-            object.putAll(BeanUtil.beanToMap(bo));
+            BeanUtil.beanToMap(bo).forEach((key,value) -> {
+                if(value != null){
+                    object.put(key, value);
+                }
+            });
         }
         return object;
     }
@@ -474,9 +478,9 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
             dayOfWeek = dayOfWeek.equals(0) ? 7 : dayOfWeek - 1;
             String[] effectiveDayArr = rule.getEffectiveDay().split(",");
             List<Integer> dayList = Arrays.stream(effectiveDayArr).map(Integer::parseInt).collect(Collectors.toList());
-//            if (!dayList.contains(dayOfWeek)) {
-//                return new JSONObject();
-//            }
+            if (!dayList.contains(dayOfWeek)) {
+                return new JSONObject();
+            }
             String nowDay = DateUtil.format(new Date(), "yyyy-MM-dd");
             start = nowDay + " " + rule.getStartTime();
             end = nowDay + " " + rule.getEndTime();
@@ -511,6 +515,12 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
             object.put("file", new ArrayList<>());
         } else {
             object.putAll(collect);
+            if(collect.get("img") == null){
+                object.put("img", new ArrayList<>());
+            }
+            if(collect.get("file") == null){
+                object.put("file", new ArrayList<>());
+            }
         }
 
         List<String> sendUserIds = StrUtil.splitTrim(object.getString("sendUserIds"), Const.SEPARATOR);
@@ -532,7 +542,7 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
             object.put("businessList", new ArrayList<>());
         }
         List<String> contactsIds = StrUtil.splitTrim(object.getString("contactsIds"), Const.SEPARATOR);
-        if (customerIds.size() > 0) {
+        if (contactsIds.size() > 0) {
             object.put("contactsList", crmService.queryContactsInfo(contactsIds).getData());
         } else {
             object.put("contactsList", new ArrayList<>());

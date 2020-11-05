@@ -89,6 +89,9 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
         BasePage<Map<String, Object>> basePage = queryList(search);
+        for (Map<String, Object> map : basePage.getList()) {
+            map.put("visitId",map.remove("return_visitId"));
+        }
         return basePage;
     }
 
@@ -121,14 +124,14 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
             actionRecordUtil.addRecord(crmReturnVisit.getVisitId(), CrmEnum.RETURN_VISIT, crmReturnVisit.getVisitNumber());
         }
         crmModel.setEntity(BeanUtil.beanToMap(crmReturnVisit));
-        savePage(crmModel, crmReturnVisit.getVisitId(),false);
+        savePage(crmModel, crmReturnVisit.getVisitId(), false);
     }
 
 
     @Override
     public void setOtherField(Map<String, Object> map) {
         String customerName = crmCustomerService.getCustomerName((Integer) map.get("customerId"));
-        map.put("customerName",customerName);
+        map.put("customerName", customerName);
         if (map.containsKey("contactsId") && ObjectUtil.isNotEmpty(map.get("contactsId"))) {
             String contactsName = crmContactsService.getContactsName((Integer) map.get("contactsId"));
             map.put("contactsName", contactsName);
@@ -136,17 +139,17 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
             map.put("contactsName", "");
         }
         CrmContract contract = crmContractService.getById((Serializable) map.get("contractId"));
-        map.put("contractNum",contract.getNum());
+        map.put("contractNum", contract != null ? contract.getNum() : "");
         String ownerUserName = adminService.queryUserName((Long) map.get("ownerUserId")).getData();
-        map.put("ownerUserName",ownerUserName);
+        map.put("ownerUserName", ownerUserName);
         String createUserName = adminService.queryUserName((Long) map.get("createUserId")).getData();
-        map.put("createUserName",createUserName);
+        map.put("createUserName", createUserName);
     }
 
     @Override
     public Dict getSearchTransferMap() {
         return Dict.create()
-                .set("customerId","customerName").set("contractId","contractNum").set("contactsId","contactsName");
+                .set("customerId", "customerName").set("contractId", "contractNum").set("contactsId", "contactsName");
     }
 
     @Override
@@ -168,9 +171,9 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
     @Override
     public List<CrmModelFiledVO> queryField(Integer id) {
         CrmModel crmModel = queryById(id);
-        if (id != null){
+        if (id != null) {
             List<JSONObject> customerList = new ArrayList<>();
-            if (crmModel.get("customerId")!=null){
+            if (crmModel.get("customerId") != null) {
                 JSONObject customer = new JSONObject();
                 customerList.add(customer.fluentPut("customerId", crmModel.get("customerId")).fluentPut("customerName", crmModel.get("customerName")));
             }
@@ -189,9 +192,9 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
             }
         }
         List<CrmModelFiledVO> crmModelFiledVOS = crmFieldService.queryField(crmModel);
-        if (id == null){
-            crmModelFiledVOS.forEach(field->{
-                if ("ownerUserId".equals(field.getFieldName())){
+        if (id == null) {
+            crmModelFiledVOS.forEach(field -> {
+                if ("ownerUserId".equals(field.getFieldName())) {
                     SimpleUser user = new SimpleUser();
                     user.setUserId(UserUtil.getUserId());
                     user.setRealname(UserUtil.getUser().getRealname());
@@ -319,10 +322,10 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
     @Override
     public List<CrmModelFiledVO> queryDefaultField() {
         List<CrmModelFiledVO> filedList = crmFieldService.queryField(getLabel().getType());
-        filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME,1));
-        filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME,1));
-        filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER,1));
-        filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER,1));
+        filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
+        filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
+        filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
+        filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
         return filedList;
     }
 
@@ -339,10 +342,10 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
                 crmRetuenVisitMap.put(record.getString("fieldName"), record.get("value"));
                 CrmReturnVisit crmReturnVisit = BeanUtil.mapToBean(crmRetuenVisitMap, CrmReturnVisit.class, true);
                 actionRecordUtil.updateRecord(oldReturnVisitMap, crmRetuenVisitMap, CrmEnum.RETURN_VISIT, crmReturnVisit.getVisitNumber(), crmReturnVisit.getVisitId());
-                update().set(StrUtil.toUnderlineCase(record.getString("fieldName")), record.get("value")).eq("visit_id",updateInformationBO.getId()).update();
+                update().set(StrUtil.toUnderlineCase(record.getString("fieldName")), record.get("value")).eq("visit_id", updateInformationBO.getId()).update();
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
                 boolean bol = crmReturnVisitDataService.lambdaUpdate()
-                        .set(CrmReturnVisitData::getName,record.getString("fieldName"))
+                        .set(CrmReturnVisitData::getName, record.getString("fieldName"))
                         .set(CrmReturnVisitData::getValue, record.getString("value"))
                         .eq(CrmReturnVisitData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmReturnVisitData::getBatchId, batchId).update();
@@ -373,7 +376,7 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
                 String detail = "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
                 actionRecordUtil.publicContentRecord(CrmEnum.RETURN_VISIT, BehaviorEnum.UPDATE, visitId, oldReceivables.getVisitNumber(), detail);
             }
-            updateField(record,visitId);
+            updateField(record, visitId);
         });
     }
 }

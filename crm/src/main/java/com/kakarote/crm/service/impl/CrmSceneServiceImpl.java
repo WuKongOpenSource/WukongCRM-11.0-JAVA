@@ -160,7 +160,7 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
             fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));
             fieldList.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1));
             fieldList.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1));
-            fieldList.add(new CrmModelFiledVO("detail_address", FieldEnum.TEXTAREA, "详细地址", 1));
+            fieldList.add(new CrmModelFiledVO("detail_address", FieldEnum.TEXT, "详细地址", 1));
             fieldList.add(new CrmModelFiledVO("address", FieldEnum.MAP_ADDRESS, "地区定位", 1));
         } else if (CrmEnum.CONTACTS.getType().equals(label)) {
 
@@ -169,7 +169,6 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
             fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));
             fieldList.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1));
             fieldList.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1));
-            fieldList.add(new CrmModelFiledVO("pool_day", FieldEnum.CUSTOMER, "距进入公海天数", 1).setFormType("poolDay").setType(null));
         } else if (CrmEnum.PRODUCT.getType().equals(label)) {
             fieldList.add(new CrmModelFiledVO("owner_user_id", FieldEnum.USER, "负责人", 1));
             fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));

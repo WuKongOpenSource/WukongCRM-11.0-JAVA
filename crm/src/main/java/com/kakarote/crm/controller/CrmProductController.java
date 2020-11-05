@@ -8,6 +8,7 @@ import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
@@ -172,6 +173,7 @@ public class CrmProductController {
     public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("ownerUserId") Long ownerUserId, @RequestParam("repeatHandling") Integer repeatHandling) {
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
         uploadExcelBO.setOwnerUserId(ownerUserId);
+        uploadExcelBO.setUserInfo(UserUtil.getUser());
         uploadExcelBO.setCrmEnum(CrmEnum.PRODUCT);
         uploadExcelBO.setPoolId(null);
         uploadExcelBO.setRepeatHandling(repeatHandling);

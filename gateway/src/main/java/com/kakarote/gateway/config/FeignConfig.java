@@ -4,6 +4,8 @@ import com.kakarote.core.common.Result;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.exception.FeignServiceException;
 import feign.FeignException;
+import feign.RequestInterceptor;
+import feign.RequestTemplate;
 import feign.Response;
 import feign.codec.Decoder;
 import org.springframework.beans.factory.ObjectFactory;
@@ -25,7 +27,7 @@ import java.util.List;
  * feign客户端解码设置
  */
 @Configuration
-public class FeignConfig {
+public class FeignConfig implements RequestInterceptor {
     @Bean
     public Decoder feignDecoder() {
         return new ResponseEntityDecoder(new FeignDecode(feignHttpMessageConverter()));
@@ -35,6 +37,11 @@ public class FeignConfig {
         final HttpMessageConverters httpMessageConverters = new HttpMessageConverters(new GateWayMappingJackson2HttpMessageConverter());
 
         return () -> httpMessageConverters;
+    }
+
+    @Override
+    public void apply(RequestTemplate requestTemplate) {
+
     }
 
     private class GateWayMappingJackson2HttpMessageConverter extends MappingJackson2HttpMessageConverter {

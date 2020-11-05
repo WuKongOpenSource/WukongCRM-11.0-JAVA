@@ -73,12 +73,6 @@ public class AdminUserHisTableServiceImpl extends BaseServiceImpl<AdminUserHisTa
     @Override
     public boolean checkAuth(){
         Long userId= UserUtil.getUserId();
-        //查看用户权限
-        AdminConfig adminConfig = adminConfigService.lambdaQuery()
-                .eq(AdminConfig::getName,"call").last(" limit 1").one();
-        if(adminConfig == null|| adminConfig.getStatus() != 1){
-            return false;
-        }
         AdminUser adminUser = adminUserService.getById(userId);
         if(adminUser==null){
             throw new CrmException(AdminCodeEnum.ADMIN_USER_NOT_EXIST_ERROR);

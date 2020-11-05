@@ -2,7 +2,7 @@ server:
   port: ${SERVER_PORT:8999}
 spring:
   profiles:
-    include: core,dev
+    include: core,test
   application:
     name: job
   cloud:
@@ -15,4 +15,3 @@ spring:
       discovery:
         enabled: true
         server-addr: 127.0.0.1:8848
-

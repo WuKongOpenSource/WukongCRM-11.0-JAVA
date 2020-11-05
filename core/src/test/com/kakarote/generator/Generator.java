@@ -46,7 +46,7 @@ public class Generator {
 
     private static DataSourceConfig getDataSourceConfig(){
         DataSourceConfig dataSourceConfig = new DataSourceConfig();
-        dataSourceConfig.setUrl("jdbc:mysql://192.168.1.116:3306/cloud?characterEncoding=utf8&useSSL=false&zeroDateTimeBehavior=convertToNull&tinyInt1isBit=false&serverTimezone=Asia/Shanghai");
+        dataSourceConfig.setUrl("jdbc:mysql://127.0.0.1:3306/wk_crm_single?characterEncoding=utf8&useSSL=false&zeroDateTimeBehavior=convertToNull&tinyInt1isBit=false&serverTimezone=Asia/Shanghai");
         dataSourceConfig.setDriverName("com.mysql.cj.jdbc.Driver");
         dataSourceConfig.setUsername("root");
         dataSourceConfig.setPassword("password");
@@ -57,7 +57,7 @@ public class Generator {
     private static StrategyConfig getStrategyConfig(String modelName){
         StrategyConfig strategyConfig=new StrategyConfig();
         strategyConfig.setTablePrefix("wk_");
-       strategyConfig.setLikeTable(new LikeTable("wk_"+modelName, SqlLike.RIGHT));
+        strategyConfig.setLikeTable(new LikeTable("wk_"+modelName, SqlLike.RIGHT));
         strategyConfig.setRestControllerStyle(true);
         strategyConfig.setSkipView(true);
         strategyConfig.setNaming(NamingStrategy.underline_to_camel);

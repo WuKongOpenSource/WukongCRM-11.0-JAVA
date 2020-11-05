@@ -1,5 +1,6 @@
 package com.kakarote.admin.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
@@ -19,6 +20,8 @@ import com.kakarote.admin.service.*;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.feign.crm.service.CrmService;
+import com.kakarote.core.redis.Redis;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.UserUtil;
@@ -61,6 +64,12 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
 
     @Autowired
     private AdminMenuMapper adminMenuMapper;
+
+    @Autowired
+    private CrmService crmService;
+
+    @Autowired
+    private Redis redis;
 
     /**
      * 查询用户所属权限
@@ -150,10 +159,22 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
             jsonObject.getJSONObject(AdminModuleEnum.CRM.getValue()).put("pool", authObject);
         }
         jsonObject.remove("work");
+        if (jsonObject.containsKey("jxc") && jsonObject.getJSONObject("jxc").isEmpty()){
+            jsonObject.remove("jxc");
+        }
+        if (jsonObject.containsKey("hrm") && jsonObject.getJSONObject("hrm").isEmpty()){
+            jsonObject.remove("hrm");
+        }
         //TODO 暂时先去掉名片小程序
         if (jsonObject.containsKey("manage") && jsonObject.getJSONObject("manage").containsKey("card")){
             JSONObject manage = jsonObject.getJSONObject("manage");
             manage.remove("card");
+        }
+        List data = crmService.queryPoolNameListByAuth().getData();
+        if (CollUtil.isEmpty(data)){
+            JSONObject crm = jsonObject.getJSONObject("crm");
+            crm.remove("pool");
+            jsonObject.put("crm",crm);
         }
         return jsonObject;
     }
@@ -620,18 +641,27 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
 
     @Override
     public List<String> queryNoAuthMenu(Long userId) {
-        UserInfo user = UserUtil.getUser();
-        Long superUserId = user.getSuperUserId();
-        Integer superRoleId = user.getSuperRoleId();
+        long superUserId = UserUtil.getSuperUser();
+        AdminRole role = adminRoleService.lambdaQuery()
+                .eq(AdminRole::getRemark, "admin")
+                .last(" limit 1")
+                .one();
+        Integer superRoleId = role.getRoleId();
+
         List<Integer> roles = adminUserService.queryUserRoleIds(userId);
+        String key = userId.toString();
         List<String> noAuthMenuUrls = new ArrayList<>();
-        if (userId.equals(superUserId) || roles.contains(superRoleId)) {
+        if (userId == superUserId || roles.contains(superRoleId)) {
+            //缓存
+            redis.setex(key,60 * 30,noAuthMenuUrls);
             return noAuthMenuUrls;
         }
 
         List<AdminMenu> adminMenus = adminMenuMapper.queryMenuList(userId);
         if (adminMenus.isEmpty()){
             noAuthMenuUrls.add("/*/**");
+            //缓存
+            redis.setex(key,60 * 30,noAuthMenuUrls);
             return noAuthMenuUrls;
         }
 
@@ -642,8 +672,13 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
         List<AdminMenu> noAuthMenus = adminMenuService.list(lambdaQueryWrapper);
         noAuthMenus.removeIf(node -> StringUtils.isEmpty(node.getRealmUrl()));
         if(!noAuthMenus.isEmpty()){
-            return noAuthMenus.stream().map(AdminMenu::getRealmUrl).collect(Collectors.toList());
+            noAuthMenuUrls.addAll(noAuthMenus.stream().map(AdminMenu::getRealmUrl).collect(Collectors.toList()));
+            //缓存
+            redis.setex(key,60 * 30,noAuthMenuUrls);
+            return noAuthMenuUrls;
         }
+        //缓存
+        redis.setex(key,60 * 30,noAuthMenuUrls);
         return noAuthMenuUrls;
     }
 

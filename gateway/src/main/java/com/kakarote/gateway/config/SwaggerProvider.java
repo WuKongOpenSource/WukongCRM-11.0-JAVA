@@ -26,7 +26,7 @@ public class SwaggerProvider implements SwaggerResourcesProvider, WebFluxConfigu
     /**
      * swagger2默认的url后缀
      */
-    static final String API_URI = "/v2/api-docs";
+    public static final String API_URI = "/v2/api-docs";
 
     @Autowired
     private final GatewayRouteService gatewayRouteService;

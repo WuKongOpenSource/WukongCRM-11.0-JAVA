@@ -1,4 +1,5 @@
 package com.kakarote.job.work;
+
 import com.kakarote.core.feign.work.WorkService;
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.handler.annotation.XxlJob;
@@ -13,8 +14,8 @@ public class TaskJob {
     private WorkService workService;
 
     @XxlJob("TaskJob")
-    public ReturnT<String> TaskJobHandler(String host){
-        workService.updateTaskJob(host);
+    public ReturnT<String> TaskJobHandler(String param){
+        workService.updateTaskJob();
         return ReturnT.SUCCESS;
     }
 }

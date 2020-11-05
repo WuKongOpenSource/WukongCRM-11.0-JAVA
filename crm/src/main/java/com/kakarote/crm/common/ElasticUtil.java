@@ -101,10 +101,10 @@ public class ElasticUtil {
         }
     }
 
-    public static void initData(RestHighLevelClient client, List<Map<String, Object>> mapList, CrmEnum crmEnum) {
+    public static void initData(RestHighLevelClient client, List<Map<String, Object>> mapList, CrmEnum crmEnum,String index) {
         BulkRequest bulkRequest = new BulkRequest();
         mapList.forEach(map -> {
-            IndexRequest request = new IndexRequest(crmEnum.getIndex(), "_doc");
+            IndexRequest request = new IndexRequest(index, "_doc");
             request.id(map.get((crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable()) + "Id").toString());
             try {
                 request.source(map);
@@ -119,14 +119,24 @@ public class ElasticUtil {
         }
         try {
             BulkResponse bulk = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-            System.out.println(JSONObject.toJSONString(bulk));
+            log.info("bulkHasFailures:{}",bulk.hasFailures());
+            boolean hasFailures = bulk.hasFailures();
+            if (bulk.hasFailures()){
+                log.info(JSON.toJSONString(bulk.buildFailureMessage()));
+                int count= 3;
+                while (count > 0 && hasFailures){
+                    count--;
+                    BulkResponse bulk1 = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                    hasFailures = bulk1.hasFailures();
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
     }
 
-    private static Map<String, Object> parseType(Integer type) {
+    public static Map<String, Object> parseType(Integer type) {
         FieldEnum fieldEnum = FieldEnum.parse(type);
         Map<String, Object> map = new HashMap<>();
         String name;

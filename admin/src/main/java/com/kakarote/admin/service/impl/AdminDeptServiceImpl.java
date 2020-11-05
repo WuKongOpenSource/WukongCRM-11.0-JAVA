@@ -2,7 +2,6 @@ package com.kakarote.admin.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.alicp.jetcache.Cache;
-import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.CreateCache;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.admin.common.AdminCodeEnum;
@@ -43,7 +42,7 @@ public class AdminDeptServiceImpl extends BaseServiceImpl<AdminDeptMapper, Admin
     @Autowired
     private IAdminUserService adminUserService;
 
-    @CreateCache(name = Const.ADMIN_DEPT_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS,cacheType = CacheType.LOCAL)
+    @CreateCache(name = Const.ADMIN_DEPT_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS)
     private Cache<Integer, String> deptCache;
 
     /**
@@ -113,6 +112,7 @@ public class AdminDeptServiceImpl extends BaseServiceImpl<AdminDeptMapper, Admin
         adminDept.setName(adminDeptBO.getName());
         adminDept.setPid(adminDeptBO.getPid());
         updateById(adminDept);
+        deptCache.remove(adminDeptBO.getDeptId());
     }
 
     /**
@@ -131,6 +131,7 @@ public class AdminDeptServiceImpl extends BaseServiceImpl<AdminDeptMapper, Admin
             throw new CrmException(AdminCodeEnum.ADMIN_DEPT_REMOVE_EXIST_DEPT_ERROR);
         }
         removeById(deptId);
+        deptCache.remove(deptId);
     }
 
     /**
@@ -141,6 +142,9 @@ public class AdminDeptServiceImpl extends BaseServiceImpl<AdminDeptMapper, Admin
      */
     @Override
     public String getNameByDeptId(Integer deptId) {
+        if (deptCache.get(deptId) != null){
+            return deptCache.get(deptId);
+        }
         AdminDept adminDept = query().select("name").eq("dept_id", deptId).one();
         if (adminDept == null) {
             return "";

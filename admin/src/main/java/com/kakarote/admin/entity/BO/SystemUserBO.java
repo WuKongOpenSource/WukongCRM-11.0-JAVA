@@ -24,3 +24,4 @@ public class SystemUserBO implements Serializable {
     @NotNull
     private String password;
 }
+

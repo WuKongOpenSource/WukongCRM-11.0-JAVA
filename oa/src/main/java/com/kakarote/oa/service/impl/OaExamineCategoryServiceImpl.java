@@ -168,8 +168,8 @@ public class OaExamineCategoryServiceImpl extends BaseServiceImpl<OaExamineCateg
             }
             OaExamineCategoryVO oaExamineCategoryVO = new OaExamineCategoryVO();
             BeanUtils.copyProperties(category,oaExamineCategoryVO);
-            oaExamineCategoryVO.setUserIds(category.getUserList());
-            oaExamineCategoryVO.setDeptIds(category.getDeptList());
+            oaExamineCategoryVO.setUserList(category.getUserList());
+            oaExamineCategoryVO.setDeptList(category.getDeptList());
             list.add(oaExamineCategoryVO);
         });
         pageVO.setRecords(list);

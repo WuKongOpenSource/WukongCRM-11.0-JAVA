@@ -303,12 +303,19 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
                         .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1);
                 break;
             default:
-                fieldUtil.oaFieldAdd("content", "审批事由", "textarea", arr, 1, 0, oaExamineInfo.getContent(), "", 1, 1)
-                        .oaFieldAdd("remark", "备注", "textarea", arr, 1, 0, oaExamineInfo.getRemark(), "", 1, 1);
-                List<OaExamineField> list = examineFieldService.queryFieldByBatchId(categoryId, oaExamineInfo.getBatchId());
-                examineFieldService.recordToFormType(list);
-                examineFieldService.transferFieldList(list, getExamineFieldBO.getIsDetail());
-                recordList.addAll(list);
+                List<OaExamineField> examineFields = examineFieldService.queryField(categoryId);
+                examineFields.forEach(field->{
+                    if ("content".equals(field.getFieldName())){
+                        field.setValue(oaExamineInfo.getContent());
+                    }else if ("remark".equals(field.getFieldName())){
+                        field.setValue(oaExamineInfo.getRemark());
+                    }else {
+                        String value = examineFieldService.queryFieldValueByBatchId(field.getFieldId(), oaExamineInfo.getBatchId());
+                        field.setValue(value);
+                    }
+                });
+                examineFieldService.transferFieldList(examineFields, getExamineFieldBO.getIsDetail());
+                recordList.addAll(examineFields);
                 break;
         }
         return fieldUtil.getRecordList();

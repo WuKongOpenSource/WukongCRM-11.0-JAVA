@@ -50,7 +50,7 @@ public class FeignConfig implements RequestInterceptor {
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
             requestTemplate.header(Const.TOKEN_NAME, request.getHeader(Const.TOKEN_NAME));
-            requestTemplate.header("X-Forwarded-Host", request.getHeader("X-Forwarded-Host"));
+
         }
     }
 

@@ -24,9 +24,9 @@ public class BodyReaderFilter implements Filter, Ordered {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         ServletRequest requestWrapper = null;
         if (servletRequest instanceof HttpServletRequest) {
-            if (((HttpServletRequest) servletRequest).getHeader("Content-Type") != null &&
-                    ((HttpServletRequest) servletRequest).getHeader("Content-Type").startsWith("application/json")) {
-                requestWrapper = new BodyReaderHttpServletRequestWrapper((HttpServletRequest) servletRequest);
+            HttpServletRequest request = ((HttpServletRequest) servletRequest);
+            if (request.getHeader("Content-Type") != null && request.getHeader("Content-Type").startsWith("application/json")) {
+                requestWrapper = new BodyReaderHttpServletRequestWrapper(request);
             }
         }
         if (requestWrapper == null) {

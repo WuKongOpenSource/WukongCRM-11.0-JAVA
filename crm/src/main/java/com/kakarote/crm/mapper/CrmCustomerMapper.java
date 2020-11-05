@@ -99,7 +99,7 @@ public interface CrmCustomerMapper extends BaseMapper<CrmCustomer> {
 
     List<Integer> eventCustomerList(@Param("userId") Long userId,@Param("time") Date time);
 
-    List<Integer> forgottenCustomer(@Param("day") Integer day,@Param("userIds") List<Long> userIds);
+    List<Integer> forgottenCustomer(@Param("day") Integer day, @Param("userIds") List<Long> userIds,@Param("search") String search);
 
     List<Integer> unContactCustomer(@Param("search") String search,@Param("userIds") List<Long> userIds);
 }

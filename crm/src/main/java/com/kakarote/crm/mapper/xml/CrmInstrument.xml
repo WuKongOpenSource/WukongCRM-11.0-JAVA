@@ -48,7 +48,7 @@
         </for>
         ) as businessCount,
         COUNT(*) as contractCount,
-        IFNULL(SUM(CASE WHEN a.check_status = 1 THEN a.money END),0) as contractMoney,
+        IFNULL(SUM(a.money),0) as contractMoney,
         (SELECT COUNT(*) FROM wk_crm_contacts as c WHERE DATE_FORMAT(c.create_time,#{time.sqlDateFormat})
         <choose>
             <when test="time.cycleNum==1">
@@ -104,7 +104,7 @@
         <for collection="map.leadsUserIds" index="i" item="id" open="(" separator="," close=")">
             #{id}
         </for>
-        )or (activity_type = 2 and create_user_id in
+        ) or (activity_type = 2 and create_user_id in
         <for collection="map.customerUserIds" index="i" item="id" open="(" separator="," close=")">
             #{id}
         </for>) or (activity_type = 3 and create_user_id in
@@ -132,7 +132,7 @@
             #{id}
         </for>) as businessMoney
         from wk_crm_contract as a
-        WHERE a.check_status != 7 and
+        WHERE a.check_status = '1' and
         DATE_FORMAT(a.order_date,#{time.sqlDateFormat})
         <choose>
             <when test="time.cycleNum==1">
@@ -265,7 +265,8 @@
         left join (
           SELECT IFNULL(SUM(money),0) as planMoney,contract_id FROM wk_crm_receivables_plan group by contract_id
         ) AS b on b.contract_id = a.contract_id and a.check_status='1'
-        WHERE a.check_status != 7 and DATE_FORMAT(a.order_date,#{time.sqlDateFormat})
+        WHERE a.check_status != 7
+        and DATE_FORMAT(a.order_date,#{time.sqlDateFormat})
         <choose>
             <when test="time.cycleNum==1">
                 = #{time.beginTime}
@@ -300,7 +301,8 @@
 
     <select id="dataInfoActivity" resultType="java.util.HashMap">
         SELECT COUNT(*) as activityNum,
-        COUNT(CASE WHEN b.activity_type_id in (SELECT customer_id FROM wk_crm_customer where status != 3 and
+        COUNT(CASE WHEN b.activity_type_id in (SELECT customer_id FROM wk_crm_customer where
+        status != 3 and
         DATE_FORMAT(create_time,#{time.sqlDateFormat})
         <choose>
             <when test="time.cycleNum==1">
@@ -378,7 +380,7 @@
         where check_status='1' and DATE_FORMAT(
         <choose>
             <when test="label==1">
-                create_time
+                order_date
             </when>
             <when test="label==2">
                 return_time
@@ -400,9 +402,9 @@
     <select id="queryRecordCount" resultType="com.alibaba.fastjson.JSONObject">
         SELECT activity_type as crmType,COUNT(activity_type) as count FROM wk_crm_activity
         WHERE type in (1,4) and ((activity_type = 1 and create_user_id in
-        <foreach collection="data.leadsUserIds" open="(" close=")" separator="," item="id" index="index">
+        <for collection="data.leadsUserIds" open="(" close=")" separator="," item="id" index="index">
             #{id}
-        </foreach>
+        </for>
         or (activity_type = 2 and create_user_id in
         <foreach collection="data.customerUserIds" open="(" close=")" separator="," item="id" index="index">
             #{id}

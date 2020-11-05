@@ -1,5 +1,6 @@
 package com.kakarote.job.oa;
-import com.kakarote.core.feign.admin.service.AdminService;
+
+import com.kakarote.core.common.cache.OaCacheKey;
 import com.kakarote.core.feign.oa.OaService;
 import com.kakarote.core.redis.Redis;
 import com.kakarote.core.utils.UserUtil;
@@ -15,9 +16,6 @@ public class EventNoticeJob {
     private OaService oaService;
 
     @Autowired
-    private AdminService adminService;
-
-    @Autowired
     private Redis redis;
 
 
@@ -26,8 +24,10 @@ public class EventNoticeJob {
         try {
             oaService.eventNoticeCron();
         } finally {
+            redis.del(OaCacheKey.EVENT_NOTICE_JOB_KEY);
             UserUtil.removeUser();
         }
+
         return ReturnT.SUCCESS;
     }
 }

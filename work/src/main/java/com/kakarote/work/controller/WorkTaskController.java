@@ -270,7 +270,7 @@ public class WorkTaskController {
     }
 
     @PostMapping("/updateTaskJob")
-    public Result updateTaskJob(@RequestParam("host")String host){
+    public Result updateTaskJob(){
         workTaskService.lambdaUpdate()
                 .set(WorkTask::getStatus,2)
                 .eq(WorkTask::getStatus,1).apply("stop_time < now()").update();

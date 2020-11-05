@@ -11,6 +11,7 @@ import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.constant.CrmCodeEnum;
@@ -72,14 +73,14 @@ public class CrmCustomerController {
     @PostMapping("/add")
     @ApiOperation("保存数据")
     public Result<Map<String, Object>> add(@RequestBody CrmBusinessSaveBO crmModel) {
-        Map<String, Object> map = crmCustomerService.addOrUpdate(crmModel,false);
+        Map<String, Object> map = crmCustomerService.addOrUpdate(crmModel,false,null);
         return R.ok(map);
     }
 
     @PostMapping("/update")
     @ApiOperation("修改数据")
     public Result<Map<String, Object>> update(@RequestBody CrmBusinessSaveBO crmModel) {
-        Map<String, Object> map = crmCustomerService.addOrUpdate(crmModel,false);
+        Map<String, Object> map = crmCustomerService.addOrUpdate(crmModel,false,null);
         return R.ok(map);
     }
 
@@ -386,6 +387,7 @@ public class CrmCustomerController {
     public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("ownerUserId") Long ownerUserId, @RequestParam("repeatHandling") Integer repeatHandling) {
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
         uploadExcelBO.setOwnerUserId(ownerUserId);
+        uploadExcelBO.setUserInfo(UserUtil.getUser());
         uploadExcelBO.setCrmEnum(CrmEnum.CUSTOMER);
         uploadExcelBO.setPoolId(null);
         uploadExcelBO.setRepeatHandling(repeatHandling);

@@ -112,12 +112,11 @@
         ( sum( type = 1 ), sum( type = 1 and state = 2 ) / sum( type = 1 ), 0 ) AS `rate_answer_in`
         FROM
         `wk_call_record`
-        WHERE
-        owner_user_id in
+        WHERE owner_user_id in
         <for collection="userIds" item="item">
             #{item}
         </for>
-        and (DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+        and DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
         GROUP BY owner_user_id
     </select>
 </mapper>

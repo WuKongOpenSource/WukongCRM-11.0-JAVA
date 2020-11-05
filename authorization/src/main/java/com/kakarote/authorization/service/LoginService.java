@@ -3,6 +3,8 @@ package com.kakarote.authorization.service;
 import com.kakarote.authorization.entity.AuthorizationUser;
 import com.kakarote.core.common.Result;
 
+import javax.servlet.http.HttpServletResponse;
+
 /**
  * @author z
  */
@@ -12,18 +14,29 @@ public interface LoginService {
      * @param user 用户对象
      * @return Result
      */
-    public Result login(AuthorizationUser user);
+    public Result login(AuthorizationUser user, HttpServletResponse response);
 
     /**
      * 预登录
      * @param user 用户对象
      * @return Result
      */
-    public Result doLogin(AuthorizationUser user);
+    public Result doLogin(AuthorizationUser user,HttpServletResponse response);
+
+
+    /**
+     * 权限验证
+     * @param authentication
+     * @param url
+     * @param method
+     * @return Result
+     */
+    Result permission(String authentication, String url, String method);
 
     /**
      * 退出登陆
+     * @param authentication
      * @return Result
      */
-    Result logout();
+    Result logout(String authentication);
 }

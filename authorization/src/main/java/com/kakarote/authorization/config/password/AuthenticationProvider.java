@@ -5,8 +5,6 @@ import com.kakarote.authorization.common.AuthorizationCodeEnum;
 import com.kakarote.authorization.entity.AuthorizationUser;
 import com.kakarote.authorization.entity.AuthorizationUserInfo;
 import com.kakarote.core.entity.UserInfo;
-import com.kakarote.core.exception.CrmException;
-import com.kakarote.core.exception.FeignServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -71,9 +69,7 @@ public class AuthenticationProvider extends AbstractUserDetailsAuthenticationPro
             return loadedUser;
         } catch (UsernameNotFoundException ex) {
             throw ex;
-        }catch (FeignServiceException e){
-            throw new CrmException(e.status(),e.getMessage());
-        }catch (Exception ex) {
+        } catch (Exception ex) {
             throw new InternalAuthenticationServiceException(ex.getMessage(), ex);
         }
     }

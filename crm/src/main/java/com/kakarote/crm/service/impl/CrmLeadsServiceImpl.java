@@ -369,10 +369,10 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
                             customerExtraMap.put(customerField.getFieldName(), leadsMap.get(StrUtil.toCamelCase(leadsField.getFieldName())));
                         } else {
                             CrmCustomerData crmCustomerData = new CrmCustomerData();
-                            crmCustomerData.setValue((String) leadsMap.get(leadsField.getName()));
+                            crmCustomerData.setValue((String) leadsMap.get(StrUtil.toCamelCase(leadsField.getFieldName())));
                             crmCustomerData.setFieldId(customerField.getFieldId());
                             crmCustomerData.setName(customerField.getName());
-                            crmCustomerData.setFieldName(customerField.getFieldName());
+                            crmCustomerData.setFieldName(StrUtil.toCamelCase(customerField.getFieldName()));
                             customerDataList.add(crmCustomerData);
                         }
                     }

@@ -93,4 +93,9 @@ public class CrmServiceImpl implements CrmService {
     public Result putInInternational() {
         return Result.ok();
     }
+
+    @Override
+    public Result<List> queryPoolNameListByAuth() {
+        return Result.ok(new ArrayList());
+    }
 }

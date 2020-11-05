@@ -16,6 +16,7 @@ import com.itextpdf.text.pdf.PdfWriter;
 import com.itextpdf.tool.xml.XMLWorkerHelper;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.SimpleDept;
@@ -470,7 +471,7 @@ public class CrmPrintTemplateServiceImpl extends BaseServiceImpl<CrmPrintTemplat
         }
         String uuid = IdUtil.simpleUUID();
         object.put("pdf", path);
-        redis.setex("CRM:PRINT:TEMPLATE:" + uuid, 3600 * 24, object.toJSONString());
+        redis.setex(CrmCacheKey.CRM_PRINT_TEMPLATE_CACHE_KEY + uuid, 3600 * 24, object.toJSONString());
         return uuid;
     }
 

@@ -1,7 +1,6 @@
 package com.kakarote.core.utils;
 
 import cn.hutool.crypto.SecureUtil;
-import com.alibaba.ttl.TransmittableThreadLocal;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.entity.UserExtraInfo;
 import com.kakarote.core.entity.UserInfo;
@@ -19,7 +18,7 @@ import java.util.Objects;
 @Slf4j
 public class UserUtil {
 
-    private static ThreadLocal<UserInfo> threadLocal = new TransmittableThreadLocal<>();
+    private static ThreadLocal<UserInfo> threadLocal = new ThreadLocal<>();
 
 
     public static UserInfo getUser() {
@@ -27,11 +26,9 @@ public class UserUtil {
     }
 
     public static Long getUserId() {
-        if (threadLocal.get() == null) {
-            return null;
-        }
         return threadLocal.get().getUserId();
     }
+
 
     public static void setUser(UserInfo adminUser) {
         threadLocal.set(adminUser);
@@ -57,7 +54,7 @@ public class UserUtil {
      * @return 是否正确 true为正确
      */
     public static boolean verify(String key, String salt, String sign) {
-        return sign.equals(sign(key, salt)) || sign.equals(signP(key, salt)) || sign.equals(signP2(key, salt));
+        return sign.equals(sign(key, salt));
     }
 
     /**
@@ -71,26 +68,6 @@ public class UserUtil {
         return SecureUtil.md5(key.concat("erp").concat(salt));
     }
 
-    /**
-     * 签名数据
-     * PHP端签名
-     *
-     * @param key  key
-     * @param salt 盐
-     * @return 加密后的字符串
-     */
-    private static String signP(String key, String salt) {
-        String username = key.substring(0, 11);
-        String password = key.substring(11);
-        return SecureUtil.md5(SecureUtil.md5(SecureUtil.sha1(username.concat(password))) + SecureUtil.md5(password.concat(salt)));
-    }
-
-    private static String signP2(String key, String salt) {
-        String username = key.substring(0, 11);
-        String password = key.substring(11);
-        return SecureUtil.md5(SecureUtil.sha1(password) + SecureUtil.md5(password.concat(salt)));
-    }
-
     public static void userExpire(String token) {
         Redis redis = BaseUtil.getRedis();
         if (redis.exists(token)) {
@@ -101,10 +78,19 @@ public class UserUtil {
         }
     }
 
-    public static void userToken(String token, UserInfo userInfo) {
+    /**
+     * @param token    用户token
+     * @param userInfo 用户登录信息
+     * @param type     type 1 PC登录 2 mobile登录
+     */
+    public static void userToken(String token, UserInfo userInfo, Integer type) {
+        userExit(userInfo.getUserId(), type, 1);
         Redis redis = BaseUtil.getRedis();
-        redis.setex(Const.USER_ADMIN_TOKEN + userInfo.getUserId(), Const.MAX_USER_EXIST_TIME, token);
-        redis.setex(Const.USER_MOBILE_TOKEN + userInfo.getUserId(), Const.MAX_USER_EXIST_TIME, token);
+        if (Objects.equals(1, type)) {
+            redis.setex(Const.USER_ADMIN_TOKEN + userInfo.getUserId(), Const.MAX_USER_EXIST_TIME, token);
+        } else if (Objects.equals(2, type)) {
+            redis.setex(Const.USER_MOBILE_TOKEN + userInfo.getUserId(), Const.MAX_USER_EXIST_TIME, token);
+        }
         redis.setex(token, Const.MAX_USER_EXIST_TIME, userInfo);
         Cookie cookie = new Cookie(Const.TOKEN_NAME, token);
         cookie.setMaxAge(157680000);

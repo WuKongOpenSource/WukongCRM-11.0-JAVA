@@ -3,8 +3,11 @@ package com.kakarote.crm.controller;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.entity.BasePage;
+import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.entity.CallUser;
+import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.admin.service.CallUserService;
 import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.redis.Redis;
@@ -34,25 +37,29 @@ public class CallController {
     private ICallRecordService callRecordService;
     @Autowired
     private CallUserService callUserService;
+
     @Autowired
     private Redis redis;
+
+    @Autowired
+    private AdminService adminService;
 
 
     @PostMapping("/save")
     @ApiOperation("添加通话记录")
-    public Result save(@RequestBody CallRecord callRecord){
-        String id="call_" + callRecord.getNumber();
-        if(redis.exists(id)){
+    public Result save(@RequestBody CallRecord callRecord) {
+        String id = CrmCacheKey.CRM_CALL_CACHE_KEY + callRecord.getNumber();
+        if (redis.exists(id)) {
             return R.ok();
         }
-        redis.setex(id,5,1);
+        redis.setex(id, 5, 1);
         return R.ok(callRecordService.saveRecord(callRecord));
     }
 
 
     @PostMapping("/index")
     @ApiOperation("查询通话记录")
-    public Result<BasePage<JSONObject>> index(@RequestBody CallRecordBO callRecordBO){
+    public Result<BasePage<JSONObject>> index(@RequestBody CallRecordBO callRecordBO) {
         return R.ok(callRecordService.pageCallRecordList(callRecordBO));
     }
 
@@ -61,47 +68,51 @@ public class CallController {
      */
     @PostMapping("/upload")
     @ApiOperation("上传文件")
-    public Result upload(@RequestParam("file") MultipartFile file,@RequestParam("id") String id){
-        String prefix= BaseUtil.getDate();
-        callRecordService.upload(file,id,prefix);
+    public Result upload(@RequestParam("file") MultipartFile file, @RequestParam("id") String id) {
+        String prefix = BaseUtil.getDate();
+        callRecordService.upload(file, id, prefix);
         return R.ok();
     }
 
     @PostMapping("/download")
     @ApiOperation("录音下载")
-    public void download(@RequestParam("id") String id, HttpServletResponse response){
-        callRecordService.download(id,response);
+    public void download(@RequestParam("id") String id, HttpServletResponse response) {
+        callRecordService.download(id, response);
     }
 
     @PostMapping("/searchPhone")
     @ApiOperation("搜索呼入电话")
-    public Result<JSONObject> searchPhone(@RequestParam("search") String search){
+    public Result<JSONObject> searchPhone(@RequestParam("search") String search) {
         return R.ok(callRecordService.searchPhone(search));
     }
 
     @PostMapping("/queryPhoneNumber")
     @ApiOperation("查询可呼出电话")
-    public Result<List<JSONObject>> queryPhoneNumber(@RequestParam("model") String model,@RequestParam("modelId") String modelId){
-        return R.ok(callRecordService.queryPhoneNumber(model,modelId));
+    public Result<List<JSONObject>> queryPhoneNumber(@RequestParam("model") String model, @RequestParam("modelId") String modelId) {
+        return R.ok(callRecordService.queryPhoneNumber(model, modelId));
     }
 
     @PostMapping("/analysis")
     @ApiOperation("通话记录分析")
-    public Result<BasePage<JSONObject>> analysis(@RequestBody BiParams biParams){
+    public Result<BasePage<JSONObject>> analysis(@RequestBody BiParams biParams) {
         return R.ok(callRecordService.analysis(biParams));
     }
 
     @PostMapping("/authorize")
     @ApiOperation("员工呼叫中心授权")
-    public Result authorize(@RequestBody CallUser callUser){
-       return R.ok(callUserService.authorize(callUser).getData());
+    public Result authorize(@RequestBody CallUser callUser) {
+        return R.ok(callUserService.authorize(callUser).getData());
     }
 
     @PostMapping("/checkAuth")
     @ApiOperation("判断当前用户是否开启呼叫中心")
-    public Result<JSONObject> checkAuth(){
+    public Result<JSONObject> checkAuth() {
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put("auth",callUserService.checkAuth().getData());
+        //查看用户权限
+        AdminConfig adminConfig = adminService.queryFirstConfigByName("call").getData();
+        boolean isStart = adminConfig != null && adminConfig.getStatus() == 1;
+        jsonObject.put("auth", callUserService.checkAuth().getData() && isStart);
+        jsonObject.put("status", isStart ? 1 : 0);
         return R.ok(jsonObject);
     }
 }

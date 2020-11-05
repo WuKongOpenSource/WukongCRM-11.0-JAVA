@@ -70,7 +70,7 @@ public class CrmMarketingController {
     @PostMapping("/queryPageList")
     @ApiOperation(value = "查询推广列表")
     public Result<BasePage<CrmMarketing>> queryPageList(@RequestBody CrmMarketingPageBO crmMarketingPageBO) {
-        BasePage<CrmMarketing> page  = crmMarketingService.queryPageList(crmMarketingPageBO,null);
+        BasePage<CrmMarketing> page = crmMarketingService.queryPageList(crmMarketingPageBO, null);
         return Result.ok(page);
     }
 
@@ -79,28 +79,37 @@ public class CrmMarketingController {
     @ParamAspect
     public Result<BasePage<CrmMarketing>> queryMiNiPageList(@RequestBody CrmMarketingPageBO crmMarketingPageBO) {
         UserUtil.setUser(ApplicationContextHolder.getBean(AdminService.class).queryLoginUserInfo(crmMarketingPageBO.getUserId()).getData());
-        BasePage<CrmMarketing> page  = crmMarketingService.queryPageList(crmMarketingPageBO,1);
-        return Result.ok(page);
+        try {
+            BasePage<CrmMarketing> page = crmMarketingService.queryPageList(crmMarketingPageBO, 1);
+            return Result.ok(page);
+        } finally {
+            UserUtil.removeUser();
+        }
     }
 
     /**
      * 推广详情
+     *
      * @param marketingId
      */
     @PostMapping("/queryById")
     @ApiOperation(value = "推广详情")
     public Result<JSONObject> queryById(@RequestParam("marketingId") Integer marketingId) {
-        JSONObject data = crmMarketingService.queryById(marketingId,null);
+        JSONObject data = crmMarketingService.queryById(marketingId, null);
         return Result.ok(data);
     }
 
     @ParamAspect
     @PostMapping("/queryMiNiById")
     @ApiOperation(value = "小程序推广详情")
-    public Result<JSONObject> queryMiNiById(@RequestParam("marketingId") Integer marketingId,@RequestParam("userId") Long userId) {
+    public Result<JSONObject> queryMiNiById(@RequestParam("marketingId") Integer marketingId, @RequestParam("userId") Long userId) {
         UserUtil.setUser(ApplicationContextHolder.getBean(AdminService.class).queryLoginUserInfo(userId).getData());
-        JSONObject data = crmMarketingService.queryById(marketingId,null);
-        return Result.ok(data);
+        try {
+            JSONObject data = crmMarketingService.queryById(marketingId, null);
+            return Result.ok(data);
+        } finally {
+            UserUtil.removeUser();
+        }
     }
 
     /**
@@ -115,6 +124,7 @@ public class CrmMarketingController {
 
     /**
      * 查询自定义字段
+     *
      * @param marketingId
      */
     @PostMapping("/queryField")
@@ -137,7 +147,7 @@ public class CrmMarketingController {
     @ParamAspect
     @PostMapping("/updateShareNum")
     @ApiOperation(value = "修改分享次数")
-    public Result updateShareNum(@RequestParam("marketingId") Integer marketingId, @RequestParam("num") Integer num){
+    public Result updateShareNum(@RequestParam("marketingId") Integer marketingId, @RequestParam("num") Integer num) {
         crmMarketingService.updateShareNum(marketingId, num);
         return Result.ok();
     }
@@ -152,7 +162,6 @@ public class CrmMarketingController {
 
     /**
      * 查询自定义字段
-     *
      */
     @ParamAspect
     @PostMapping("/queryAddField")
@@ -169,7 +178,11 @@ public class CrmMarketingController {
     @PostMapping("/saveMarketingInfo")
     @ApiOperation("保存推广客户信息")
     public Result saveMarketingInfo(@RequestBody JSONObject data) {
-        crmMarketingService.saveMarketingInfo(data);
+        try {
+            crmMarketingService.saveMarketingInfo(data);
+        } finally {
+            UserUtil.removeUser();
+        }
         return Result.ok();
     }
 
@@ -181,9 +194,13 @@ public class CrmMarketingController {
         Integer marketingId = Integer.valueOf(aes.decryptStr(data.getString("marketingId")));
         Long currentUserId = Long.valueOf(aes.decryptStr(data.getString("currentUserId")));
         UserUtil.setUser(ApplicationContextHolder.getBean(AdminService.class).queryLoginUserInfo(currentUserId).getData());
-        String device = data.getString("device");
-        JSONObject jsonObject = crmMarketingService.queryById(marketingId, device);
-        return Result.ok(jsonObject);
+        try {
+            String device = data.getString("device");
+            JSONObject jsonObject = crmMarketingService.queryById(marketingId, device);
+            return Result.ok(jsonObject);
+        } finally {
+            UserUtil.removeUser();
+        }
     }
 
     /**
@@ -197,7 +214,7 @@ public class CrmMarketingController {
     }
 
     @PostMapping("/customerExportExcel")
-    public void customerExportExcel(@RequestParam("marketingId") Integer marketingId,@RequestParam("status") Integer status){
+    public void customerExportExcel(@RequestParam("marketingId") Integer marketingId, @RequestParam("status") Integer status) {
         Long userId = UserUtil.getUserId();
         List<Long> userIds = ApplicationContextHolder.getBean(AdminService.class).queryChildUserId(userId).getData();
         userIds.add(userId);
@@ -208,13 +225,13 @@ public class CrmMarketingController {
         ExcelWriter writer = ExcelUtil.getWriter();
         try {
             nameList.forEach(record -> writer.addHeaderAlias(record.getFieldName(), record.getName()));
-            writer.addHeaderAlias("ownerUserName","负责人");
-            writer.merge(nameList.size()-1, "客户信息");
-            List<Map<String, Object>> list = fieldList.stream().map(record->{
+            writer.addHeaderAlias("ownerUserName", "负责人");
+            writer.merge(nameList.size() - 1, "客户信息");
+            List<Map<String, Object>> list = fieldList.stream().map(record -> {
                 CrmModelSaveBO jsonObject = JSON.parseObject(record.getString("fieldInfo"), CrmModelSaveBO.class);
                 Map<String, Object> entity = jsonObject.getEntity();
-                jsonObject.getField().forEach(field->{
-                    entity.put(field.getFieldName(),field.getValue());
+                jsonObject.getField().forEach(field -> {
+                    entity.put(field.getFieldName(), field.getValue());
                 });
                 entity.put("ownerUserName", UserCacheUtil.getUserName(record.getLong("ownerUserId")));
                 return entity;

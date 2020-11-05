@@ -60,7 +60,7 @@ public interface ICrmProductCategoryService extends BaseService<CrmProductCatego
      * @param name name
      * @return data
      */
-    @Cached(expire = 3600, cacheType = CacheType.LOCAL)
+    @Cached(expire = 3600, cacheType = CacheType.REMOTE)
     public CrmProductCategory queryFirstCategoryByName(String name);
 
     String getProductCategoryName(int categoryId);

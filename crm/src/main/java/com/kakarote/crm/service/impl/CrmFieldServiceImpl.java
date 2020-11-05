@@ -1,8 +1,8 @@
 package com.kakarote.crm.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
-import cn.hutool.core.thread.NamedThreadFactory;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
@@ -33,20 +33,24 @@ import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmFieldMapper;
 import com.kakarote.crm.service.*;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
+import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.client.GetAliasesResponse;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.indices.CreateIndexRequest;
+import org.elasticsearch.client.indices.CreateIndexResponse;
+import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -109,6 +113,10 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
     @Transactional(rollbackFor = Exception.class)
     public void saveField(CrmFieldBO crmFieldBO) {
         Integer label = crmFieldBO.getLabel();
+        CrmEnum crmEnum = CrmEnum.parse(label);
+        if (crmFieldBO.getData().size() == 0) {
+            throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
+        }
         if (crmFieldBO.getData().size() > Const.QUERY_MAX_SIZE) {
             throw new CrmException(CrmCodeEnum.CRM_FIELD_NUM_ERROR);
         }
@@ -167,7 +175,6 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             ElasticUtil.removeField(restTemplate.getClient(), field.getFieldName(), label);
             //删除字段授权
             crmRoleFieldService.deleteRoleField(field.getFieldId());
-            CrmEnum crmEnum = CrmEnum.parse(label);
             switch (crmEnum) {
                 case LEADS:
                     ApplicationContextHolder.getBean(ICrmLeadsDataService.class).lambdaUpdate().eq(CrmLeadsData::getFieldId, field.getFieldId()).remove();
@@ -214,20 +221,20 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                 updateById(field);
                 UpdateWrapper<CrmRoleField> updateWrapper = new UpdateWrapper<>();
                 updateWrapper.set("field_name", field.getFieldName());
+                updateWrapper.set("name", field.getName());
                 updateWrapper.eq("field_id", field.getFieldId());
                 crmRoleFieldService.update(updateWrapper);
                 UpdateWrapper<CrmFieldSort> wrapper = new UpdateWrapper<>();
-                wrapper.set("field_name", StrUtil.toCamelCase(field.getFieldName()));
                 wrapper.set("name", field.getName());
                 wrapper.set("type", field.getType());
                 wrapper.eq("field_id", field.getFieldId());
                 crmFieldSortService.update(wrapper);
-                if (field.getIsHidden() == 1){
-                    crmFieldSortService.lambdaUpdate().eq(CrmFieldSort::getFieldId,field.getFieldId()).remove();
-                }else {
+                if (field.getIsHidden() == 1) {
+                    crmFieldSortService.lambdaUpdate().eq(CrmFieldSort::getFieldId, field.getFieldId()).remove();
+                } else {
                     Integer count = crmFieldSortService.lambdaQuery().eq(CrmFieldSort::getFieldId, field.getFieldId()).count();
-                    if (count == 0){
-                        crmFieldSortService.lambdaUpdate().eq(CrmFieldSort::getFieldId,field.getFieldId()).remove();
+                    if (count == 0) {
+                        crmFieldSortService.lambdaUpdate().eq(CrmFieldSort::getFieldId, field.getFieldId()).remove();
                         userIdList.forEach(userId -> {
                             CrmFieldSort fieldSort = new CrmFieldSort();
                             fieldSort.setFieldName(StrUtil.toCamelCase(field.getFieldName()));
@@ -246,11 +253,11 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             } else {
                 QueryWrapper<CrmField> wrapper = new QueryWrapper<>();
                 wrapper.select("field_name").eq("label", label);
-                String fieldName = crmFieldConfigService.getNextFieldName(label, field.getType(), listObjs(wrapper, Object::toString), Const.AUTH_DATA_RECURSION_NUM, true);
-                field.setFieldName(fieldName);
+                String nextFieldName = crmFieldConfigService.getNextFieldName(label, field.getType(), listObjs(wrapper, Object::toString), Const.AUTH_DATA_RECURSION_NUM, true);
+                field.setFieldName(nextFieldName);
                 save(field);
                 crmRoleFieldService.saveRoleField(field);
-                if (field.getIsHidden() == 0){
+                if (field.getIsHidden() == 0) {
                     userIdList.forEach(userId -> {
                         CrmFieldSort fieldSort = new CrmFieldSort();
                         fieldSort.setFieldName(StrUtil.toCamelCase(field.getFieldName()));
@@ -398,7 +405,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                 return fieldName;
             }
         }).collect(Collectors.toList());
-        if (label.equals(CrmEnum.CUSTOMER.getType()) || label.equals(CrmEnum.CUSTOMER_POOL.getType())){
+        if (label.equals(CrmEnum.CUSTOMER.getType()) || label.equals(CrmEnum.CUSTOMER_POOL.getType())) {
             //地区定位,详细地址不在字段授权配置,这这里默认展示
             nameList.add("detailAddress");
             nameList.add("address");
@@ -523,40 +530,40 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             Integer count = getBaseMapper().verifyFixedField(crmEnum.getTable(), field.getFieldName(), verifyBO.getValue().trim(), verifyBO.getBatchId(), crmEnum.getType());
             if (count < 1) {
                 verifyBO.setStatus(1);
-            }else {
+            } else {
                 //添加特殊验证
-                if (crmEnum.equals(CrmEnum.LEADS)){
-                    if ("leads_name".equals(field.getFieldName())){
-                        CrmLeads leads = leadsService.lambdaQuery().select(CrmLeads::getLeadsId,CrmLeads::getOwnerUserId)
+                if (crmEnum.equals(CrmEnum.LEADS)) {
+                    if ("leads_name".equals(field.getFieldName())) {
+                        CrmLeads leads = leadsService.lambdaQuery().select(CrmLeads::getLeadsId, CrmLeads::getOwnerUserId)
                                 .eq(CrmLeads::getLeadsName, verifyBO.getValue().trim())
                                 .ne(StrUtil.isNotEmpty(verifyBO.getBatchId()), CrmLeads::getBatchId, verifyBO.getBatchId()).last("limit 1").one();
                         verifyBO.setOwnerUserName(UserCacheUtil.getUserInfo(leads.getOwnerUserId()).getRealname());
-                    }else if ("mobile".equals(field.getFieldName())){
-                        CrmLeads leads = leadsService.lambdaQuery().select(CrmLeads::getLeadsId,CrmLeads::getOwnerUserId)
+                    } else if ("mobile".equals(field.getFieldName())) {
+                        CrmLeads leads = leadsService.lambdaQuery().select(CrmLeads::getLeadsId, CrmLeads::getOwnerUserId)
                                 .eq(CrmLeads::getMobile, verifyBO.getValue().trim())
                                 .ne(StrUtil.isNotEmpty(verifyBO.getBatchId()), CrmLeads::getBatchId, verifyBO.getBatchId()).last("limit 1").one();
                         verifyBO.setOwnerUserName(UserCacheUtil.getUserInfo(leads.getOwnerUserId()).getRealname());
                     }
-                }else if (crmEnum.equals(CrmEnum.CUSTOMER)){
-                    if ("customer_name".equals(field.getFieldName())){
-                        CrmCustomer customer = customerService.lambdaQuery().select(CrmCustomer::getCustomerId,CrmCustomer::getOwnerUserId).
+                } else if (crmEnum.equals(CrmEnum.CUSTOMER)) {
+                    if ("customer_name".equals(field.getFieldName())) {
+                        CrmCustomer customer = customerService.lambdaQuery().select(CrmCustomer::getCustomerId, CrmCustomer::getOwnerUserId).
                                 eq(CrmCustomer::getCustomerName, verifyBO.getValue().trim()).ne(CrmCustomer::getStatus, 3)
                                 .ne(StrUtil.isNotEmpty(verifyBO.getBatchId()), CrmCustomer::getBatchId, verifyBO.getBatchId()).last("limit 1").one();
-                        if (customer.getOwnerUserId() != null){
+                        if (customer.getOwnerUserId() != null) {
                             verifyBO.setOwnerUserName(UserCacheUtil.getUserInfo(customer.getOwnerUserId()).getRealname());
-                        }else {
+                        } else {
                             List<Integer> poolIds = customerPoolRelationService.lambdaQuery().select(CrmCustomerPoolRelation::getPoolId).eq(CrmCustomerPoolRelation::getCustomerId, customer.getCustomerId()).list()
                                     .stream().map(CrmCustomerPoolRelation::getPoolId).collect(Collectors.toList());
                             List<String> poolNames = customerPoolService.lambdaQuery().select(CrmCustomerPool::getPoolName).in(CrmCustomerPool::getPoolId, poolIds).list()
                                     .stream().map(CrmCustomerPool::getPoolName).collect(Collectors.toList());
                             verifyBO.setPoolNames(poolNames);
                         }
-                    }else if ("mobile".equals(field.getFieldName())){
-                        CrmCustomer customer = customerService.lambdaQuery().eq(CrmCustomer::getMobile,verifyBO.getValue().trim()).ne(CrmCustomer::getStatus,3)
+                    } else if ("mobile".equals(field.getFieldName())) {
+                        CrmCustomer customer = customerService.lambdaQuery().eq(CrmCustomer::getMobile, verifyBO.getValue().trim()).ne(CrmCustomer::getStatus, 3)
                                 .ne(StrUtil.isNotEmpty(verifyBO.getBatchId()), CrmCustomer::getBatchId, verifyBO.getBatchId()).last("limit 1").one();
-                        if (customer.getOwnerUserId() != null){
+                        if (customer.getOwnerUserId() != null) {
                             verifyBO.setOwnerUserName(UserCacheUtil.getUserInfo(customer.getOwnerUserId()).getRealname());
-                        }else {
+                        } else {
                             List<Integer> poolIds = customerPoolRelationService.lambdaQuery().select(CrmCustomerPoolRelation::getPoolId).eq(CrmCustomerPoolRelation::getCustomerId, customer.getCustomerId()).list()
                                     .stream().map(CrmCustomerPoolRelation::getPoolId).collect(Collectors.toList());
                             List<String> poolNames = customerPoolService.lambdaQuery().select(CrmCustomerPool::getPoolName).in(CrmCustomerPool::getPoolId, poolIds).list()
@@ -585,26 +592,34 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
         return lambdaQuery().eq(CrmField::getType, FieldEnum.FILE.getType()).list();
     }
 
-
-    private ExecutorService executorService = new ThreadPoolExecutor(10, 20, 5L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(200), new NamedThreadFactory("SaveEs-", true), new ThreadPoolExecutor.CallerRunsPolicy());
-
+    @Autowired
+    private TaskExecutor executorService;
 
     public class SaveEs implements Runnable {
         CrmEnum crmEnum;
         List<CrmModelFiledVO> crmModelFiledList;
         List<Map<String, Object>> mapList;
+        String index;
 
         public SaveEs(CrmEnum crmEnum, List<CrmModelFiledVO> crmModelFiledList, List<Map<String, Object>> mapList) {
             this.crmEnum = crmEnum;
             this.crmModelFiledList = crmModelFiledList;
             this.mapList = mapList;
+            this.index = crmEnum.getIndex();
+        }
+
+        public SaveEs(CrmEnum crmEnum, List<CrmModelFiledVO> crmModelFiledList, List<Map<String, Object>> mapList,String index) {
+            this.crmEnum = crmEnum;
+            this.crmModelFiledList = crmModelFiledList;
+            this.mapList = mapList;
+            this.index = index;
         }
 
         @Override
         public void run() {
             log.warn("线程id{}", Thread.currentThread().getName());
             mapList.forEach(map -> {
+                map.remove("cid");
                 map.remove("tid");
                 crmModelFiledList.forEach(modelField -> {
                     if (map.get(modelField.getFieldName()) == null) {
@@ -673,7 +688,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                     }
                 });
             });
-            ElasticUtil.initData(restTemplate.getClient(), mapList, crmEnum);
+            ElasticUtil.initData(restTemplate.getClient(), mapList, crmEnum,index);
             mapList.clear();
         }
     }
@@ -696,7 +711,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
         dataMap.put("table", crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable());
         dataMap.put("tableName", crmEnum.getTable());
         List<CrmField> crmFields = lambdaQuery().eq(CrmField::getLabel, type).groupBy(CrmField::getFieldName).list()
-                .stream().filter(field->field.getFieldType()==0).peek(field -> field.setFieldName(StrUtil.toCamelCase(field.getFieldName()))).collect(Collectors.toList());
+                .stream().filter(field -> field.getFieldType() == 0).peek(field -> field.setFieldName(StrUtil.toCamelCase(field.getFieldName()))).collect(Collectors.toList());
         dataMap.put("fields", crmFields);
         dataMap.put("label", type);
         dataMap.put("lastId", lastId);
@@ -901,6 +916,15 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
         return filedList;
     }
 
+    private void dateCheck(Integer label, Integer type) {
+        List<String> name = lambdaQuery().select(CrmField::getFieldName).eq(CrmField::getLabel, label).list().stream().map(CrmField::getFieldName).collect(Collectors.toList());
+        String nextFieldName = crmFieldConfigService.getNextFieldName(label, type, name, Const.AUTH_DATA_RECURSION_NUM, false);
+        Integer integer = getBaseMapper().dataCheck(nextFieldName, label, type);
+        if (integer > 0) {
+            dateCheck(label, type);
+        }
+    }
+
     @Override
     public void recordToFormType(CrmModelFiledVO record, FieldEnum typeEnum) {
         record.setFormType(typeEnum.getFormType());
@@ -909,7 +933,9 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                 record.setDefaultValue(StrUtil.splitTrim((CharSequence) record.getDefaultValue(), Const.SEPARATOR));
                 record.setValue(StrUtil.splitTrim((CharSequence) record.getValue(), Const.SEPARATOR));
             case SELECT:
-                record.setSetting(new ArrayList<>(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR)));
+                if (CollUtil.isEmpty(record.getSetting())) {
+                    record.setSetting(new ArrayList<>(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR)));
+                }
                 break;
             case USER:
             case STRUCTURE:
@@ -969,4 +995,71 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             crmCustomerPoolFieldStyleService.save(fleldStyle);
         }
     }
+
+    @Override
+    public void changeEsIndex(List<Integer> labels) {
+        for (Integer label : labels) {
+            List<CrmModelFiledVO> crmModelFiledList = queryInitField(label);
+            Map<String, Object> properties = new HashMap<>(crmModelFiledList.size());
+            crmModelFiledList.forEach(crmField -> properties.put(crmField.getFieldName(), ElasticUtil.parseType(crmField.getType())));
+            Map<String, Object> mapping = new HashMap<>();
+            mapping.put("properties", properties);
+            CrmEnum crmEnum = CrmEnum.parse(label);
+            String indexAlias = crmEnum.getIndex();
+            String createIndex = indexAlias+":"+DateUtil.formatDate(DateUtil.date());
+            CreateIndexRequest createIndexRequest = new CreateIndexRequest(createIndex);
+            createIndexRequest.mapping(mapping);
+            try {
+                restTemplate.deleteIndex(createIndex);
+                CreateIndexResponse createIndexResponse = restTemplate.getClient().indices().create(createIndexRequest, RequestOptions.DEFAULT);
+                boolean acknowledged = createIndexResponse.isAcknowledged();
+                if (acknowledged){
+                    //初始化数据
+                    Integer lastId = 0;
+                    Map<String, Object> dataMap = new HashMap<>();
+                    dataMap.put("table", crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable());
+                    dataMap.put("tableName", crmEnum.getTable());
+                    List<CrmField> crmFields = lambdaQuery().eq(CrmField::getLabel, crmEnum.getType()).groupBy(CrmField::getFieldName).list()
+                            .stream().filter(field -> field.getFieldType() == 0).peek(field -> field.setFieldName(StrUtil.toCamelCase(field.getFieldName()))).collect(Collectors.toList());
+                    dataMap.put("fields", crmFields);
+                    dataMap.put("label", crmEnum.getType());
+                    dataMap.put("lastId", lastId);
+                    while (true) {
+                        List<Map<String, Object>> mapList = getBaseMapper().initData(dataMap);
+                        if (mapList.size() == 0) {
+                            break;
+                        }
+                        Object o = mapList.get(mapList.size() - 1).get((crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable()) + "Id");
+                        lastId = TypeUtils.castToInt(o);
+                        dataMap.put("lastId", lastId);
+                        log.warn("最后数据id:{},线程id{}", lastId, Thread.currentThread().getName());
+                        executorService.execute(new SaveEs(crmEnum, crmModelFiledList, mapList,createIndex));
+                    }
+                    //修改索引别名
+                    IndicesAliasesRequest aliasRequest = new IndicesAliasesRequest();
+                    GetAliasesResponse alias = restTemplate.getClient().indices().getAlias(new GetAliasesRequest(indexAlias,indexAlias+"_backup"), RequestOptions.DEFAULT);
+                    Map<String, Set<AliasMetaData>> oldAliases = alias.getAliases();
+                    if (CollUtil.isNotEmpty(oldAliases)){
+                        TreeSet<String> oldIndexSet = new TreeSet<>(oldAliases.keySet());
+                        String lastIndex = oldIndexSet.last();
+                        aliasRequest.addAliasAction(IndicesAliasesRequest.AliasActions.remove().index(lastIndex).alias(indexAlias));
+                        aliasRequest.addAliasAction(IndicesAliasesRequest.AliasActions.add().index(lastIndex).alias(indexAlias+"_backup"));
+                        Set<String> deleteIndexs = oldIndexSet.stream().filter(index -> !index.equals(lastIndex)).collect(Collectors.toSet());
+                        if (CollUtil.isNotEmpty(deleteIndexs)){
+                            restTemplate.getClient().indices().delete(new DeleteIndexRequest(deleteIndexs.toArray(new String[0])),RequestOptions.DEFAULT);
+                        }
+                    }
+                    aliasRequest.addAliasAction(IndicesAliasesRequest.AliasActions.add().index(createIndex).alias(indexAlias));
+                    restTemplate.getClient().indices().updateAliases(aliasRequest,RequestOptions.DEFAULT);
+                }else {
+                    throw new CrmException(CrmCodeEnum.INDEX_CREATE_FAILED);
+                }
+            } catch (IOException e) {
+                log.error("数据初始化异常:{}",e.getMessage());
+                throw new CrmException(CrmCodeEnum.INDEX_CREATE_FAILED);
+            }
+        }
+    }
+
+
 }

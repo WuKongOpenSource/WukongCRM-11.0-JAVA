@@ -6,6 +6,7 @@ import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
@@ -177,6 +178,7 @@ public class CrmLeadsController {
     public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("ownerUserId") Long ownerUserId, @RequestParam("repeatHandling") Integer repeatHandling) {
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
         uploadExcelBO.setOwnerUserId(ownerUserId);
+        uploadExcelBO.setUserInfo(UserUtil.getUser());
         uploadExcelBO.setCrmEnum(CrmEnum.LEADS);
         uploadExcelBO.setPoolId(null);
         uploadExcelBO.setRepeatHandling(repeatHandling);

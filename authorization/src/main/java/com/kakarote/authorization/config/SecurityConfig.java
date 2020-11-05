@@ -82,7 +82,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         auth.userDetailsService(userDetailsService)
                 .passwordEncoder(passwordEncoder())
                 .and()
-                //添加自定义的认证管理类
                 .authenticationProvider(authenticationProvider());
     }
 

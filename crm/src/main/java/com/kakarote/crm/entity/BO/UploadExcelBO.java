@@ -1,5 +1,6 @@
 package com.kakarote.crm.entity.BO;
 
+import com.kakarote.core.entity.UserInfo;
 import com.kakarote.crm.constant.CrmEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -27,5 +28,6 @@ public class UploadExcelBO {
     @ApiModelProperty("messageId")
     private Long messageId;
 
-    private String host;
+    @ApiModelProperty("上传人ID")
+    private UserInfo userInfo;
 }

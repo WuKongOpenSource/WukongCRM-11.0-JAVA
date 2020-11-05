@@ -30,8 +30,6 @@ public enum SystemCodeEnum implements ResultCode {
     SYSTEM_NO_SUCH_PARAMENT_ERROR(1003, "参数不存在!"),
     //上传文件失败
     SYSTEM_UPLOAD_FILE_ERROR(1004, "文件上传失败!"),
-    //用户尚未注册
-    SYSTEM_USER_NOT_REGISTER_ERROR(1005, "用户尚未注册!"),
     ;
 
     SystemCodeEnum(int code, String msg) {

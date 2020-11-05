@@ -16,7 +16,6 @@ import com.kakarote.admin.entity.PO.AdminModelSort;
 import com.kakarote.admin.entity.PO.AdminUserConfig;
 import com.kakarote.admin.entity.VO.ModuleSettingVO;
 import com.kakarote.admin.service.IAdminConfigService;
-import com.kakarote.admin.service.IAdminFileService;
 import com.kakarote.admin.service.IAdminModelSortService;
 import com.kakarote.admin.service.IAdminUserConfigService;
 import com.kakarote.core.common.ApiExplain;
@@ -24,7 +23,6 @@ import com.kakarote.core.common.Const;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.redis.Redis;
-import com.kakarote.core.servlet.upload.UploadEntity;
 import com.kakarote.core.utils.UserUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -32,11 +30,9 @@ import io.swagger.annotations.ApiParam;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -59,8 +55,6 @@ public class AdminConfigController {
     @Autowired
     private IAdminConfigService adminConfigService;
 
-    @Autowired
-    private IAdminFileService adminFileService;
 
     @Autowired
     private IAdminUserConfigService adminUserConfigService;
@@ -74,18 +68,7 @@ public class AdminConfigController {
      */
     @ApiOperation(value = "设置企业配置")
     @PostMapping("/setAdminConfig")
-    public Result setAdminConfig(@RequestParam(value = "file",required = false)
-                                 @ApiParam("文件") MultipartFile file,
-                                 @ApiParam("name") String name) {
-        AdminCompanyBO adminCompanyBO = new AdminCompanyBO();
-        adminCompanyBO.setCompanyName(name);
-        try {
-            if (file != null && file.getSize() > 1) {
-                UploadEntity img = adminFileService.upload(file, null, "img","0");
-                adminCompanyBO.setCompanyLogo(img.getUrl());
-            }
-        } catch (IOException ignored) {
-        }
+    public Result setAdminConfig(@RequestBody AdminCompanyBO adminCompanyBO) {
         adminConfigService.setAdminConfig(adminCompanyBO);
         return Result.ok();
     }

@@ -49,6 +49,9 @@ public class AuthorizationUser extends UserInfo implements UserDetails {
     @ApiModelProperty(value = "登录类型", allowableValues = "1,2")
     private Integer loginType;
 
+    @ApiModelProperty(value = "类型 1 pc 2 ", allowableValues = "1,2")
+    private Integer type = 1;
+
     private List<UserInfo> userInfoList = new ArrayList<>();
 
     public AuthorizationUser setUserInfoList(List<Object> objList) {

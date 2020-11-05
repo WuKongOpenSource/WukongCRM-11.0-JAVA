@@ -1,5 +1,7 @@
 package com.kakarote.oa.entity.VO;
 
+import com.kakarote.core.feign.admin.entity.SimpleDept;
+import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.oa.entity.PO.OaExamineStep;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -40,11 +42,9 @@ public class OaExamineCategoryVO {
     @ApiModelProperty(value = "1固定2自选")
     private Integer examineType;
 
-    @ApiModelProperty(value = "可见范围（员工）")
-    private Object userIds;
+    private List<SimpleUser> userList;
 
-    @ApiModelProperty(value = "可见范围（部门）")
-    private Object deptIds;
+    private List<SimpleDept> deptList;
 
     @ApiModelProperty(value = "创建时间")
     private Date createTime;

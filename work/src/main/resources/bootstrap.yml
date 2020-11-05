@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8447}
+  port: ${SERVER_PORT:0}
 spring:
   profiles:
     active: core

@@ -19,7 +19,7 @@ public interface HrmService {
     Result<Set<HrmEmployee>> queryEmployeeListByIds(@RequestBody List<Integer> employeeIds);
 
     @PostMapping("/hrmJob/employeeChangeRecords")
-    public void employeeChangeRecords(@RequestParam("host")String host);
+    public void employeeChangeRecords();
 
 
 }
