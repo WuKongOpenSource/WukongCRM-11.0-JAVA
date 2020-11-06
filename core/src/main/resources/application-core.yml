@@ -44,9 +44,9 @@ jetcache:
         minIdle: 5
         maxIdle: 20
         maxTotal: 50
-      host: 127.0.0.1
-      port: 6379
-      password: 123456
+      host: ${spring.redis.host}
+      port: ${spring.redis.port}
+      password: ${spring.redis.password}
       expireAfterWriteInMillis: 1800000
 
 crm:
