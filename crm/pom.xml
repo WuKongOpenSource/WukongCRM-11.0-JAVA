@@ -52,7 +52,7 @@
 		<resources>
 			<resource>
 				<!-- xml放在java目录下-->
-				<directory>src/main/java/com/kakarote/${pom.artifactId}/</directory>
+				<directory>src/main/java/com/kakarote/crm/</directory>
 				<includes>
 					<include>**/*.xml</include>
 				</includes>
