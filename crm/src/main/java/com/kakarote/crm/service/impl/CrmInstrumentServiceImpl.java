@@ -141,9 +141,9 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         searchBO.getSearchList().add(new CrmSearchBO.Search("ownerUserId", "text", CrmSearchBO.FieldSearchEnum.IS, userIds.stream().map(Object::toString).collect(Collectors.toList())));
         if (biParams.getMoneyType() != null) {
             if (biParams.getMoneyType() == 1) {
-                searchBO.getSearchList().add(new CrmSearchBO.Search("orderDate", "date", CrmSearchBO.FieldSearchEnum.DATE, Arrays.asList(DateUtil.formatDate(biTimeEntity.getBeginDate()), DateUtil.formatDate(biTimeEntity.getEndDate()))));
+                searchBO.getSearchList().add(new CrmSearchBO.Search("orderDate", "date", CrmSearchBO.FieldSearchEnum.DATE, Arrays.asList(DateUtil.formatDate(biTimeEntity.getBeginDate()), DateUtil.formatDate(DateUtil.offsetDay(biTimeEntity.getEndDate(),1)))));
             } else if (biParams.getMoneyType() == 2) {
-                searchBO.getSearchList().add(new CrmSearchBO.Search("returnTime", "date", CrmSearchBO.FieldSearchEnum.DATE, Arrays.asList(DateUtil.formatDate(biTimeEntity.getBeginDate()), DateUtil.formatDate(biTimeEntity.getEndDate()))));
+                searchBO.getSearchList().add(new CrmSearchBO.Search("returnTime", "date", CrmSearchBO.FieldSearchEnum.DATE, Arrays.asList(DateUtil.formatDate(biTimeEntity.getBeginDate()), DateUtil.formatDate(DateUtil.offsetDay(biTimeEntity.getEndDate(),1)))));
             }
         } else {
             searchBO.getSearchList().add(new CrmSearchBO.Search("createTime", "date", CrmSearchBO.FieldSearchEnum.DATE_TIME, Arrays.asList(DateUtil.formatDateTime(biTimeEntity.getBeginDate()), DateUtil.formatDateTime(biTimeEntity.getEndDate()))));
