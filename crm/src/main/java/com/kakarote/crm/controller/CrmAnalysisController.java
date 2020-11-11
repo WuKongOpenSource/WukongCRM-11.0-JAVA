@@ -24,7 +24,11 @@ public class CrmAnalysisController {
     @PostMapping("/customerStats")
     @ApiOperation("查询跟进方式列表")
     public Result<Boolean> customerStats() {
-        return Result.ok(crmAnalysisService.saveCustomerStats());
+        boolean run = true;
+        while (run) {
+            run = !crmAnalysisService.saveCustomerStats();
+        }
+        return Result.ok(Boolean.TRUE);
     }
 
 }

@@ -1,7 +1,7 @@
 package com.kakarote.crm.service.impl;
 
+import cn.hutool.core.date.DateUtil;
 import com.kakarote.core.feign.crm.entity.CustomerStats;
-import com.kakarote.core.redis.Redis;
 import com.kakarote.crm.mapper.CustomerStatsMapper;
 import com.kakarote.crm.service.ICrmAnalysisService;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
+import javax.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,89 +24,52 @@ import java.util.stream.Collectors;
 public class CrmAnalysisServiceImpl implements ICrmAnalysisService {
 
     private static final String DEFAULT_TABLE_NAME_PREFIX = "wk_crm_customer_stats_";
-    private static final String STATS_MAX_NUM_NAME = "customerStatsMaxNum";
-    private static final String ALREADY_EXIST_YEAR_NAME = "customerStatsAlreadyExistYear";
-    private static final Long DEFAULT_EACH_NUM = 100000L;
+
     private static final Integer BATCH_COUNT = 500;
 
     @Autowired
     private CustomerStatsMapper customerStatsMapper;
 
-    @Autowired
-    private Redis redis;
+    @PostConstruct
+    private void initDataTable() {
+        customerStatsMapper.createTableForCustomerStats(DEFAULT_TABLE_NAME_PREFIX + DateUtil.thisYear());
+    }
 
+    /**
+     * 因为数据保
+     *
+     * @return
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveCustomerStats() {
-        Long maxCustomerId = customerStatsMapper.maxCustomerId();
-        if (maxCustomerId == null) {
-            //无数据
-            log.info("没有数据可以同步");
-            return true;
+        Integer startCustomerId = customerStatsMapper.queryStartCustomerId();
+        if (startCustomerId == null) {
+            startCustomerId = 0;
         }
-        Long maxNum = redis.get(STATS_MAX_NUM_NAME);
-        List<String> yearList = redis.get(ALREADY_EXIST_YEAR_NAME);
-        if (maxNum == null || yearList == null) {
-            //首次
-            Long abortNum;
-            List<CustomerStats> customerStatsList;
-            if (DEFAULT_EACH_NUM >= maxCustomerId) {
-                customerStatsList = customerStatsMapper.selectCustomerStats(0L, maxCustomerId);
-                abortNum = maxCustomerId;
-            } else {
-                customerStatsList = customerStatsMapper.selectCustomerStats(0L, DEFAULT_EACH_NUM);
-                abortNum = DEFAULT_EACH_NUM;
-            }
-            Map<String, List<CustomerStats>> customerStatsGroupMap = customerStatsList.stream()
-                    .collect(Collectors.groupingBy(x -> x.getCreateDate().substring(0, 4)));
-            List<String> years = new ArrayList<>();
-            customerStatsGroupMap.forEach((key, value) -> {
-                if (key != null) {
-                    String tableName = DEFAULT_TABLE_NAME_PREFIX + key;
-                    customerStatsMapper.createTableForCustomerStats(tableName);
-                    years.add(key);
-                    this.batchInsertData(tableName, value);
-                }
-            });
-            log.info("本次同步截止到【0-{}】，已完成",abortNum);
-            redis.set(STATS_MAX_NUM_NAME, abortNum);
-            redis.set(ALREADY_EXIST_YEAR_NAME, years);
-            return true;
-        }
-        //每次
-        Long newMaxNum = maxNum + DEFAULT_EACH_NUM;
-        List<CustomerStats> customerStatsList;
-        Long abortNum;
-        if (newMaxNum >= maxCustomerId) {
-            customerStatsList = customerStatsMapper.selectCustomerStats(maxNum + 1, maxCustomerId);
-            abortNum = maxCustomerId;
-        } else {
-            customerStatsList = customerStatsMapper.selectCustomerStats(maxNum + 1, newMaxNum);
-            abortNum = newMaxNum;
-        }
-        if (customerStatsList.isEmpty()){
-            //无最新数据
-            log.info("本次同步截止到【0-{}】，同步已完成100%", abortNum);
+        log.info("同步开始，同步起始数据ID：{}", startCustomerId);
+        List<CustomerStats> customerStatsList = customerStatsMapper.selectCustomerStats(startCustomerId);
+        if (customerStatsList.size() == 0) {
+            log.info("没有可供同步的数据，同步结束");
             return true;
         }
         Map<String, List<CustomerStats>> customerStatsGroupMap = customerStatsList.stream()
                 .collect(Collectors.groupingBy(x -> x.getCreateDate().substring(0, 4)));
+
         customerStatsGroupMap.forEach((key, value) -> {
             if (key != null) {
+                log.info("同步数据开始，当前年份：{}", key);
                 String tableName = DEFAULT_TABLE_NAME_PREFIX + key;
-                if (yearList.contains(key)) {
-                    this.batchInsertData(tableName, value);
-                } else {
-                    customerStatsMapper.createTableForCustomerStats(tableName);
-                    yearList.add(key);
-                    this.batchInsertData(tableName, value);
-                }
+                customerStatsMapper.createTableForCustomerStats(tableName);
+                this.batchInsertData(tableName, value);
+                log.info("同步数据结束，同步数量：{}", value.size());
             }
         });
-        log.info("本次同步截止到【0-{}】，已完成", abortNum);
-        redis.set(STATS_MAX_NUM_NAME, abortNum);
-        redis.set(ALREADY_EXIST_YEAR_NAME, yearList);
-        return true;
+
+        Integer lastCustomerId = customerStatsMapper.queryLastCustomerId(startCustomerId);
+        customerStatsMapper.saveStatsInfo(lastCustomerId, customerStatsList.size());
+        return false;
+
     }
 
 
@@ -147,7 +110,7 @@ public class CrmAnalysisServiceImpl implements ICrmAnalysisService {
      *
      * @param tableName
      * @param customerStatsList
-     * @return java.util.Map<java.lang.String, java.lang.Object>
+     * @return java.util.Map<java.lang.String                                                                                                                               ,                                                                                                                                                                                                                                                               java.lang.Object>
      * @date 2020/9/17 13:46
      **/
     private Map<String, Object> supplementMapInfo(String tableName, List<CustomerStats> customerStatsList) {

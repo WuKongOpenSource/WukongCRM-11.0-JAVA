@@ -13,21 +13,18 @@ import java.util.Map;
  * @date 2020/9/16
  */
 @Repository
-public interface CustomerStatsMapper{
+public interface CustomerStatsMapper {
 
-    @SqlParser(filter = true)
-    List<CustomerStats> selectCustomerStats(@Param("startId") Long startId,@Param("endId") Long endId);
+    public List<CustomerStats> selectCustomerStats(@Param("startId") Integer startId);
 
-    @SqlParser(filter = true)
-    Long maxCustomerId();
+    public Integer queryLastCustomerId(@Param("startId") Integer startId);
 
-    @SqlParser(filter = true)
-    Long countCustomerStats(@Param("tableName") String tableName);
+    public Integer queryStartCustomerId();
 
-    @SqlParser(filter = true)
-    Integer createTableForCustomerStats(@Param("tableName") String tableName);
+    public Integer createTableForCustomerStats(@Param("tableName") String tableName);
 
-    @SqlParser(filter = true)
-    Integer saveBatchByCustomerStats(@Param("map") Map<String,Object> map);
+    public void saveStatsInfo(@Param("lastCustomerId") Integer lastCustomerId, @Param("num") Integer num);
+
+    public void saveBatchByCustomerStats(@Param("map") Map<String, Object> map);
 
 }
