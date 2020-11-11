@@ -710,8 +710,8 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
         Map<String, Object> dataMap = new HashMap<>();
         dataMap.put("table", crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable());
         dataMap.put("tableName", crmEnum.getTable());
-        List<CrmField> crmFields = lambdaQuery().eq(CrmField::getLabel, type).groupBy(CrmField::getFieldName).list()
-                .stream().filter(field -> field.getFieldType() == 0).peek(field -> field.setFieldName(StrUtil.toCamelCase(field.getFieldName()))).collect(Collectors.toList());
+        List<CrmField> crmFields = lambdaQuery().eq(CrmField::getLabel, type).in(CrmField::getFieldType,0,2).groupBy(CrmField::getFieldName).list()
+                .stream().peek(field -> field.setFieldName(StrUtil.toCamelCase(field.getFieldName()))).collect(Collectors.toList());
         dataMap.put("fields", crmFields);
         dataMap.put("label", type);
         dataMap.put("lastId", lastId);
