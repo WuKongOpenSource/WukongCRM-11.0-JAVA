@@ -7423,4 +7423,12 @@ CREATE TABLE `wk_work_user`  (
 -- Records of wk_work_user
 -- ----------------------------
 
+CREATE TABLE `wk_crm_customer_stats_info` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `last_customer_id` int(11) NOT NULL COMMENT '最后同步客户ID',
+  `create_time` datetime NOT NULL COMMENT '同步时间',
+  `sync_num` int(11) DEFAULT NULL COMMENT '同步数量',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=130 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='客户数量统计汇总表';
+
 SET FOREIGN_KEY_CHECKS = 1;
