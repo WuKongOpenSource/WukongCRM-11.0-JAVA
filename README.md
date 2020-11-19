@@ -96,7 +96,7 @@ wk_crm
 
 ### 常见问题
 
-[常见问题以及解决方案](https://bbs.72crm.com/portal.php?fid=44)
+<a href="https://bbs.72crm.com/portal.php?fid=44" target="_blank">常见问题以及解决方案</a>
 
 
 
