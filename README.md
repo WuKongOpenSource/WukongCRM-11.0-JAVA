@@ -94,6 +94,10 @@ wk_crm
 
 本项目支持Docker一键安装，[查看具体安装方法](https://gitee.com/wukongcrm/crm_pro/wikis/Docker一键安装教程?sort_id=3033975)
 
+### 常见问题
+
+[常见问题以及解决方案](https://gitee.com/wukongcrm/crm_pro/wikis/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E4%BB%A5%E5%8F%8A%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88?sort_id=2927430)
+
 
 
 ### 手动安装说明
