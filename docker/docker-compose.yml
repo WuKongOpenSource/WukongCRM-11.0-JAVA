@@ -2,7 +2,6 @@ version: '3'
 services:
   db:
     image: 'registry.cn-hangzhou.aliyuncs.com/72crm/mysql:5.7'
-    restart: always
     container_name: mysql
     volumes:
       - ./conf/mysql/mysqld.cnf:/etc/mysql/conf.d/source/mysqld.cnf
@@ -16,13 +15,12 @@ services:
       - LANG=en_US.UTF-8
     networks:
       wkcrm_network:
-        ipv4_address: 172.20.0.2
     ports:
       - '3306:3306'
     entrypoint: /mysql.sh
+    restart: always
   redis:
     image: 'registry.cn-hangzhou.aliyuncs.com/72crm/redis:6.0.8'
-    restart: on-failure
     container_name: redis
     volumes:
       - ./conf/redis/redis.conf:/etc/redis.conf
@@ -30,8 +28,8 @@ services:
       - '6379:6379'
     networks:
       wkcrm_network:
-        ipv4_address: 172.20.0.3
     command: [ "redis-server", "/etc/redis.conf" ]
+    restart: always
   elasticsearch:
     image: registry.cn-hangzhou.aliyuncs.com/72crm/elasticsearch:6.8.6
     container_name: elasticsearch
@@ -46,7 +44,7 @@ services:
       - "9200:9200"
     networks:
       wkcrm_network:
-        ipv4_address: 172.20.0.4
+    restart: always
   nacos:
     image: registry.cn-hangzhou.aliyuncs.com/72crm/nacos:1.2.1
     container_name: nacos
@@ -65,7 +63,7 @@ services:
       - "8848:8848"
     networks:
       wkcrm_network:
-        ipv4_address: 172.20.0.5
+    restart: always
   xxl-job-admin:
     image: registry.cn-hangzhou.aliyuncs.com/72crm/xxl-job:2.1.2
     container_name: xxl-job-admin
@@ -77,7 +75,7 @@ services:
       - "8080:8080"
     networks:
       wkcrm_network:
-        ipv4_address: 172.20.0.6
+    restart: always
   nginx:
     image: registry.cn-hangzhou.aliyuncs.com/72crm/nginx:latest
     container_name: "nginx"
@@ -89,10 +87,9 @@ services:
       - ./conf/nginx/nginx.conf:/etc/nginx/nginx.conf
     networks:
       wkcrm_network:
-        ipv4_address: 172.20.0.7
     restart: always
   wkcrm:
-    image: registry.cn-hangzhou.aliyuncs.com/72crm/crm:11.0.2
+    image: registry.cn-hangzhou.aliyuncs.com/72crm/crm:11.1.0
     container_name: "wkcrm"
     environment:
       - TZ=Asia/Shanghai
@@ -105,7 +102,6 @@ services:
       - "8443:8443"
     networks:
       wkcrm_network:
-        ipv4_address: 172.20.0.8
     entrypoint: /wkcrm.sh restart
     restart: always
 

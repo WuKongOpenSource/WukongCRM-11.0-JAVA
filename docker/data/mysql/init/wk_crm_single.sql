@@ -490,7 +490,7 @@ INSERT INTO `wk_admin_role` VALUES (180166, '工作台管理员', 1, NULL, 1, 5,
 INSERT INTO `wk_admin_role` VALUES (180167, '客户管理员', 1, NULL, 1, 5, 1, 10);
 INSERT INTO `wk_admin_role` VALUES (180168, '公告管理员', 7, NULL, 1, 5, 1, 11);
 INSERT INTO `wk_admin_role` VALUES (180169, '销售经理角色', 2, NULL, 1, 5, 1, NULL);
-INSERT INTO `wk_admin_role` VALUES (180170, '销售员角色', 2, NULL, 1, 5, 1, NULL);
+INSERT INTO `wk_admin_role` VALUES (180170, '销售员角色', 2, NULL, 1, 1, 1, NULL);
 INSERT INTO `wk_admin_role` VALUES (180171, '项目管理员', 8, 'project', 1, 5, 1, 1);
 INSERT INTO `wk_admin_role` VALUES (180172, '管理', 5, '系统默认权限，包含所在项目所有权限', 1, 5, 0, 2);
 INSERT INTO `wk_admin_role` VALUES (180173, '编辑', 5, '成员初始加入时默认享有的权限', 1, 5, 1, 3);
@@ -7432,3 +7432,21 @@ CREATE TABLE `wk_crm_customer_stats_info` (
 ) ENGINE=InnoDB AUTO_INCREMENT=130 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='客户数量统计汇总表';
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+DROP TABLE IF EXISTS `wk_oa_examine_sort`;
+CREATE TABLE `wk_oa_examine_sort`  (
+                                       `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                       `category_id` int(11) NULL DEFAULT NULL COMMENT '审批类型id',
+                                       `sort` int(6) NULL DEFAULT NULL COMMENT '排序',
+                                       `user_id` bigint(20) NULL DEFAULT NULL COMMENT '用户id',
+                                       `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+                                       `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
+                                       PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '审批类型排序' ROW_FORMAT = Dynamic;
+
+
+INSERT INTO `wk_admin_menu`(`menu_id`, `parent_id`, `menu_name`, `realm`, `realm_url`, `realm_module`, `menu_type`, `sort`, `status`, `remarks`) VALUES (923, 3, '初始化', 'init', NULL, NULL, 1, 0, 1, NULL);
+INSERT INTO `wk_admin_menu`(`menu_id`, `parent_id`, `menu_name`, `realm`, `realm_url`, `realm_module`, `menu_type`, `sort`, `status`, `remarks`) VALUES (924, 923, '初始化管理', 'initData', '/adminConfig/moduleInitData', NULL, 3, 0, 1, NULL);
+
+ALTER TABLE `wk_work` ADD COLUMN `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间' AFTER `owner_user_id`;
