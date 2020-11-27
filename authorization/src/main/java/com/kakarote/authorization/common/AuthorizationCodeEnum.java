@@ -14,7 +14,11 @@ public enum AuthorizationCodeEnum implements ResultCode {
     AUTHORIZATION_PASSWORD_REQUIRED(1003, "请输入密码或短信验证码"),
     AUTHORIZATION_LOGIN_NO_USER(1004, "账号或密码错误"),
     AUTHORIZATION_LOGIN_ERR(1005, "登录认证失败"),
-    AUTHORIZATION_USER_DISABLE_ERROR(1007, "账户被禁用!");
+    AUTHORIZATION_COMPANY_NOT_EXIST(1006, "未找到该企业!"),
+    AUTHORIZATION_USER_DISABLE_ERROR(1007, "账户被禁用!"),
+    AUTHORIZATION_USER_SMS_CODE_ERROR(1008, "验证码错误!"),
+    AUTHORIZATION_USER_DOES_NOT_EXIST(1009, "用户不存在,请先注册！"),
+    AUTHORIZATION_LOGIN_PASSWORD_TO_MANY_ERROR(1010, "密码错误次数过多，请在s%后重试！");
 
 
     AuthorizationCodeEnum(int code, String msg) {

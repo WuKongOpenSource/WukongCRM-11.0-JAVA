@@ -4,12 +4,14 @@ package com.kakarote.oa.controller;
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.oa.entity.BO.LogBO;
 import com.kakarote.oa.entity.PO.OaLogRule;
+import com.kakarote.oa.service.IOaCommonService;
 import com.kakarote.oa.service.IOaLogRuleService;
 import com.kakarote.oa.service.IOaLogService;
 import io.swagger.annotations.Api;
@@ -43,6 +45,27 @@ public class OaLogController {
 
     @Autowired
     private IOaLogRuleService oaLogRuleService;
+
+    @Autowired
+    private IOaCommonService oaCommonService;
+
+    @PostMapping("/initOaData")
+    @ApiExplain("初始化日志数据")
+    public Result<Boolean> initOaData() {
+        return R.ok(oaCommonService.initOaData());
+    }
+
+    @PostMapping("/initCalendarData")
+    @ApiExplain("初始化日历数据")
+    public Result<Boolean> initCalendarData() {
+        return R.ok(oaCommonService.initCalendarData());
+    }
+
+    @PostMapping("/initOaExamineData")
+    @ApiExplain("初始化OA审批数据")
+    public Result<Boolean> initOaExamineData() {
+        return R.ok(oaCommonService.initOaExamineData());
+    }
 
     @PostMapping("/queryList")
     @ApiOperation("日志列表")

@@ -1,6 +1,7 @@
 package com.kakarote.admin.service;
 
 import com.kakarote.admin.entity.BO.AdminCompanyBO;
+import com.kakarote.admin.entity.BO.AdminInitDataBO;
 import com.kakarote.admin.entity.BO.LogWelcomeSpeechBO;
 import com.kakarote.admin.entity.PO.AdminConfig;
 import com.kakarote.admin.entity.VO.ModuleSettingVO;
@@ -82,4 +83,8 @@ public interface IAdminConfigService extends BaseService<AdminConfig> {
     void setMarketing(Integer status);
 
     Integer queryMarketing();
+
+    String verifyPassword(AdminInitDataBO adminInitDataBO);
+
+    boolean moduleInitData(AdminInitDataBO adminInitDataBO);
 }

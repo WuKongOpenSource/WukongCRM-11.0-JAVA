@@ -208,8 +208,9 @@ public class CrmExamineServiceImpl extends BaseServiceImpl<CrmExamineMapper, Crm
     public CrmQueryExamineStepVO queryExamineStep(CrmQueryExamineStepBO queryExamineStepBO) {
         Integer categoryType = queryExamineStepBO.getCategoryType();
         Integer id = queryExamineStepBO.getId();
-        CrmExamine examine = lambdaQuery().eq(CrmExamine::getCategoryType, categoryType)
-                .eq(CrmExamine::getStatus, 1).orderByDesc(CrmExamine::getUpdateTime).last("limit 1").one();
+//        CrmExamine examine = lambdaQuery().eq(CrmExamine::getCategoryType, categoryType)
+//                .eq(CrmExamine::getStatus, 1).orderByDesc(CrmExamine::getUpdateTime).last("limit 1").one();
+        CrmExamine examine = examineMapper.selectCrmExamineByUser(categoryType,UserUtil.isAdmin(),UserUtil.getUserId(),UserUtil.getUser().getDeptId());
         if (examine != null) {
             CrmQueryExamineStepVO examineStepVO = BeanUtil.copyProperties(examine, CrmQueryExamineStepVO.class);
             if (examine.getExamineType() == 1) {

@@ -101,7 +101,13 @@ public class AdminMenuServiceImpl extends BaseServiceImpl<AdminMenuMapper, Admin
                 break;
         }
         AdminMenuVO data = queryMenuListByRealm(realm);
-        data.setChildMenu(getMenuList(data.getMenuId()));
+        List<AdminMenuVO> menuList = getMenuList(data.getMenuId());
+        if (typeEnum.equals(AdminRoleTypeEnum.JXC)){
+            AdminMenuVO bi = menuList.stream().filter(menu -> "bi".equals(menu.getRealm())).findFirst().get();
+            menuList.removeIf(menu -> "bi".equals(menu.getRealm()));
+            object.put("bi", bi);
+        }
+        data.setChildMenu(menuList);
         object.put("data",data);
         return object;
     }

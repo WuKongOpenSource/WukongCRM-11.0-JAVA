@@ -38,6 +38,9 @@ public enum AdminCodeEnum implements ResultCode {
     ADMIN_PARENT_USER_ERROR1(1130, "直属上级不能为自己！"),
     ADMIN_PRODUCT_DATA_ERROR(1131, "产品不存在！"),
     ADMIN_MARKETING_DATA_ERROR(1132, "积分不足！"),
+    ADMIN_USER_NEEDS_AT_LEAST_ONE_ROLE(1133, "用户至少需要一个角色！"),
+    ADMIN_PASSWORD_EXPIRE_ERROR(1134, "密码验证已过期，请重新进行验证！"),
+    ADMIN_PASSWORD_INVALID_ERROR(1135, "无效的密码！"),
     ;
 
     AdminCodeEnum(int code, String msg) {

@@ -5,6 +5,7 @@ import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.extra.servlet.ServletUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.BasePage;
@@ -16,6 +17,7 @@ import com.kakarote.work.entity.BO.*;
 import com.kakarote.work.entity.PO.Work;
 import com.kakarote.work.entity.VO.TaskInfoVO;
 import com.kakarote.work.entity.VO.WorkInfoVo;
+import com.kakarote.work.service.IWorkCommonService;
 import com.kakarote.work.service.IWorkService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -53,6 +55,16 @@ public class WorkController {
     @Autowired
     private IWorkService workService;
 
+    @Autowired
+    private IWorkCommonService workCommonService;
+
+    @PostMapping("/initWorkData")
+    @ApiExplain("初始化项目数据")
+    public Result<Boolean> initWorkData() {
+        return R.ok(workCommonService.initWorkData());
+    }
+
+
     @PostMapping("/addWork")
     @ApiOperation("新建项目")
     public Result<Work> addWork(@RequestBody Work work) {
@@ -83,8 +95,14 @@ public class WorkController {
 
     @PostMapping("/queryWorkNameList")
     @ApiOperation("查询项目信息列表")
-    public Result queryWorkNameList() {
-        return R.ok(workService.queryWorkNameList());
+    public Result queryWorkNameList(@RequestBody WorkTaskQueryBO workTaskQueryBO) {
+        return R.ok(workService.queryWorkNameList(workTaskQueryBO));
+    }
+
+    @PostMapping("/queryWorkTaskList")
+    @ApiOperation("查询项目信息列表")
+    public Result<List<TaskInfoVO>> queryWorkAndTaskList(@RequestBody WorkTaskQueryBO workTaskQueryBO) {
+        return R.ok(workService.queryWorkTaskList(workTaskQueryBO));
     }
 
     @PostMapping("/queryTaskByWorkId")
@@ -122,6 +140,12 @@ public class WorkController {
     @ApiOperation("查询项目成员列表")
     public Result queryWorkOwnerList(@PathVariable @NotNull Integer workId) {
         return R.ok(workService.queryWorkOwnerList(workId));
+    }
+
+    @PostMapping("/queryMemberList")
+    @ApiOperation("查询项目成员列表")
+    public Result queryMemberListByParticipateWork() {
+        return R.ok(workService.queryMemberListByWorkOrTask(false));
     }
 
     @PostMapping("/updateOrder")

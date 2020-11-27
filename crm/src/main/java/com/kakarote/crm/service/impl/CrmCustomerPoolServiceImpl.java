@@ -405,7 +405,7 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
                 if (field.getIsHidden() == 1) {
                     bean.removeByMap(new JSONObject().fluentPut("field_name", fieldName).fluentPut("pool_id", customerPool.getPoolId()));
                 } else {
-                    bean.lambdaUpdate().set(CrmCustomerPoolFieldSort::getFieldName, field.getFieldName())
+                    bean.lambdaUpdate()
                             .set(CrmCustomerPoolFieldSort::getName, field.getName())
                             .eq(CrmCustomerPoolFieldSort::getPoolId, customerPool.getPoolId())
                             .eq(CrmCustomerPoolFieldSort::getFieldId, field.getFieldId())
@@ -569,12 +569,12 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
             for (int i = 0; i < settings.size(); i++) {
                 CrmCustomerPoolFieldSetting setting = settings.get(i);
                 CrmCustomerPoolFieldSort sort = BeanUtil.copyProperties(setting, CrmCustomerPoolFieldSort.class);
-                sort.setFieldName(StrUtil.toCamelCase(setting.getFieldName()));
-                if ("preOwnerUserId".equals(sort.getFieldName())){
-                    sort.setFieldName("preOwnerUserName");
-                }else if ("createUserId".equals(sort.getFieldName())){
-                    sort.setFieldName("createUserName");
+                if ("preOwnerUserId".equals(setting.getFieldName())){
+                    setting.setFieldName("preOwnerUserName");
+                }else if ("createUserId".equals(setting.getFieldName())){
+                    setting.setFieldName("createUserName");
                 }
+                sort.setFieldName(StrUtil.toCamelCase(setting.getFieldName()));
                 sort.setUserId(userId).setSort(i).setIsHidden(0);
                 sort.setFieldId(setting.getFieldId());
                 list.add(sort);
@@ -614,6 +614,44 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
         JSONObject record = new JSONObject().fluentPut("index", true).fluentPut("receive", true).fluentPut("delete", false).fluentPut("distribute", false).fluentPut("excelexport", false);
         if (adminUserIdList.contains(UserUtil.getUserId()) || UserUtil.isAdmin()) {
             record.fluentPut("delete", true).fluentPut("distribute", true).fluentPut("excelexport", true);
+        }
+        return record;
+    }
+
+
+    @Override
+    public JSONObject getOnePoolAuthByPoolIds(List<Integer> poolIdList) {
+        JSONObject record = new JSONObject();
+        if (CollUtil.isEmpty(poolIdList)){
+            return record;
+        }
+        if (!UserUtil.isAdmin()){
+            List<Integer> poolIds = this.queryPoolIdByUserId();
+            if (CollUtil.isEmpty(poolIds)){
+                return record;
+            }
+            poolIdList.removeIf(poolIds::contains);
+            if (CollUtil.isEmpty(poolIdList)){
+                return record;
+            }
+        }
+        LambdaQueryWrapper<CrmCustomerPool> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(CrmCustomerPool::getAdminUserId,CrmCustomerPool::getPoolId);
+        wrapper.in(CrmCustomerPool::getPoolId, poolIdList);
+        List<CrmCustomerPool> crmCustomerPoolList = list(wrapper);
+        if (CollUtil.isNotEmpty(crmCustomerPoolList)){
+            record.fluentPut("index", true).fluentPut("receive", true).fluentPut("delete", false)
+                    .fluentPut("distribute", false).fluentPut("excelexport", false);
+            for (CrmCustomerPool crmCustomerPool : crmCustomerPoolList) {
+                String adminUserIds = crmCustomerPool.getAdminUserId();
+                List<Long> adminUserIdList = Arrays.stream(adminUserIds.split(",")).map(Long::parseLong).collect(Collectors.toList());
+                if (adminUserIdList.contains(UserUtil.getUserId()) || UserUtil.isAdmin()) {
+                    record.fluentPut("delete", true).fluentPut("distribute", true).fluentPut("excelexport", true);
+                    record.fluentPut("poolId",crmCustomerPool.getPoolId());
+                    return record;
+                }
+            }
+            record.fluentPut("poolId",crmCustomerPoolList.get(0).getPoolId());
         }
         return record;
     }

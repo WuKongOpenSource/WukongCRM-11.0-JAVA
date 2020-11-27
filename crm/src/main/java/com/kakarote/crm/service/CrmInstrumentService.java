@@ -3,6 +3,7 @@ package com.kakarote.crm.service;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.BiParams;
+import com.kakarote.crm.entity.BO.CrmSearchParamsBO;
 import com.kakarote.crm.entity.PO.CrmActivity;
 
 import java.util.List;
@@ -38,6 +39,9 @@ public interface CrmInstrumentService {
      */
     public JSONObject sellFunnel(BiParams biParams);
 
+
+    BasePage<Map<String, Object>> sellFunnelBusinessList(CrmSearchParamsBO crmSearchParamsBO);
+
     /**
      * 销售趋势
      * @param biParams params
@@ -64,4 +68,5 @@ public interface CrmInstrumentService {
     BasePage<Map<String, Object>> forgottenCustomerPageList(BiParams biParams);
 
     BasePage<Map<String, Object>> unContactCustomerPageList(BiParams biParams);
+
 }

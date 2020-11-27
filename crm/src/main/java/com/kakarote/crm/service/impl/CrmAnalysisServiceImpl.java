@@ -24,7 +24,9 @@ import java.util.stream.Collectors;
 public class CrmAnalysisServiceImpl implements ICrmAnalysisService {
 
     private static final String DEFAULT_TABLE_NAME_PREFIX = "wk_crm_customer_stats_";
-
+    private static final String STATS_MAX_NUM_NAME = "customerStatsMaxNum";
+    private static final String ALREADY_EXIST_YEAR_NAME = "customerStatsAlreadyExistYear";
+    private static final Long DEFAULT_EACH_NUM = 100000L;
     private static final Integer BATCH_COUNT = 500;
 
     @Autowired
@@ -44,9 +46,6 @@ public class CrmAnalysisServiceImpl implements ICrmAnalysisService {
     @Transactional(rollbackFor = Exception.class)
     public boolean saveCustomerStats() {
         Integer startCustomerId = customerStatsMapper.queryStartCustomerId();
-        if (startCustomerId == null) {
-            startCustomerId = 0;
-        }
         log.info("同步开始，同步起始数据ID：{}", startCustomerId);
         List<CustomerStats> customerStatsList = customerStatsMapper.selectCustomerStats(startCustomerId);
         if (customerStatsList.size() == 0) {
@@ -110,7 +109,7 @@ public class CrmAnalysisServiceImpl implements ICrmAnalysisService {
      *
      * @param tableName
      * @param customerStatsList
-     * @return java.util.Map<java.lang.String                                                                                                                               ,                                                                                                                                                                                                                                                               java.lang.Object>
+     * @return java.util.Map<java.lang.String                                                               ,                                                                                                                               java.lang.Object>
      * @date 2020/9/17 13:46
      **/
     private Map<String, Object> supplementMapInfo(String tableName, List<CustomerStats> customerStatsList) {

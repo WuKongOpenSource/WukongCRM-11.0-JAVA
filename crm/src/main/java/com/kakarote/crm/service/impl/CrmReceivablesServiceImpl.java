@@ -14,14 +14,11 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
-import com.kakarote.core.feign.admin.entity.SimpleDept;
-import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
-import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
@@ -451,6 +448,9 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
                 dataList.add(record);
             }
             dataList.forEach(record -> {
+                if (record.get("checkStatus") == null || "".equals(record.get("checkStatus"))) {
+                    return;
+                }
                 String checkStatus;
                 //0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交
                 switch ((Integer) record.get("checkStatus")) {
@@ -619,6 +619,12 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
                 actionRecordUtil.updateRecord(oldReceivablesMap, crmReceivablesMap, CrmEnum.RECEIVABLES, crmReceivables.getNumber(), crmReceivables.getReceivablesId());
                 update().set(StrUtil.toUnderlineCase(record.getString("fieldName")), record.get("value")).eq("receivables_id",updateInformationBO.getId()).update();
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
+
+                CrmReceivablesData receivablesData = crmReceivablesDataService.lambdaQuery().select(CrmReceivablesData::getValue).eq(CrmReceivablesData::getFieldId, record.getInteger("fieldId"))
+                        .eq(CrmReceivablesData::getBatchId, batchId).one();
+                String value = receivablesData != null ? receivablesData.getValue() : null;
+                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
+                actionRecordUtil.publicContentRecord(CrmEnum.RECEIVABLES, BehaviorEnum.UPDATE, receivablesId, oldReceivables.getNumber(), detail);
                 boolean bol = crmReceivablesDataService.lambdaUpdate()
                         .set(CrmReceivablesData::getName,record.getString("fieldName"))
                         .set(CrmReceivablesData::getValue, record.getString("value"))
@@ -633,23 +639,6 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
                     crmReceivabelsData.setBatchId(batchId);
                     crmReceivablesDataService.save(crmReceivabelsData);
                 }
-                String oldFieldValue = crmReceivablesDataService.lambdaQuery().select(CrmReceivablesData::getValue).eq(CrmReceivablesData::getFieldId, record.getInteger("fieldId"))
-                        .eq(CrmReceivablesData::getBatchId, batchId).one().getValue();
-                String formType = record.getString("formType");
-                String newValue = record.getString("value");
-                if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
-                    oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                    newValue = adminService.queryUserByIds(TagUtil.toLongSet(record.getString("value"))).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                } else if (formType.equals(FieldEnum.STRUCTURE.getFormType())) {
-                    oldFieldValue = adminService.queryDeptByIds(TagUtil.toSet(oldFieldValue)).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                    newValue = adminService.queryDeptByIds(TagUtil.toSet(record.getString("value"))).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                } else if (formType.equals(FieldEnum.FILE.getFormType())) {
-                    oldFieldValue = adminFileService.queryFileList(oldFieldValue).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
-                    newValue = adminFileService.queryFileList(record.getString("value")).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
-                }
-                String oldValue = StrUtil.isEmpty(oldFieldValue) ? "空" : oldFieldValue;
-                String detail = "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
-                actionRecordUtil.publicContentRecord(CrmEnum.RECEIVABLES, BehaviorEnum.UPDATE, receivablesId, oldReceivables.getNumber(), detail);
             }
             updateField(record, receivablesId);
         });

@@ -1,6 +1,8 @@
 package com.kakarote.core.feign.crm.service.impl;
 
 import com.kakarote.core.common.Result;
+import com.kakarote.core.entity.BasePage;
+import com.kakarote.core.feign.crm.entity.CrmSearchBO;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.feign.crm.service.CrmService;
 import org.springframework.stereotype.Component;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class CrmServiceImpl implements CrmService {
@@ -97,5 +100,10 @@ public class CrmServiceImpl implements CrmService {
     @Override
     public Result<List> queryPoolNameListByAuth() {
         return Result.ok(new ArrayList());
+    }
+
+    @Override
+    public Result<BasePage<Map<String, Object>>> queryCustomerPageList(CrmSearchBO search) {
+        return Result.ok(new BasePage<>());
     }
 }

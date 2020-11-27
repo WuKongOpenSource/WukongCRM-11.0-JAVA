@@ -5,6 +5,7 @@ import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.BiParams;
+import com.kakarote.crm.entity.BO.CrmSearchParamsBO;
 import com.kakarote.crm.entity.PO.CrmActivity;
 import com.kakarote.crm.service.CrmInstrumentService;
 import com.kakarote.crm.service.ICrmInstrumentSortService;
@@ -28,7 +29,7 @@ import java.util.Map;
  * @since 2020-05-25
  */
 @RestController
-@RequestMapping("/crmInstrument")
+@RequestMapping("/crmInstrument/")
 @Api(tags = "仪表盘相关接口")
 public class CrmInstrumentController {
 
@@ -80,6 +81,14 @@ public class CrmInstrumentController {
     public Result<JSONObject> sellFunnel(@RequestBody BiParams biParams) {
         JSONObject jsonObject = instrumentService.sellFunnel(biParams);
         return R.ok(jsonObject);
+    }
+
+
+    @PostMapping("/sellFunnelBusinessList")
+    @ApiOperation("销售漏斗商机状态列表")
+    public Result<BasePage<Map<String, Object>>> sellFunnelBusinessList(@RequestBody CrmSearchParamsBO crmSearchParamsBO) {
+        BasePage<Map<String, Object>> mapBasePage = instrumentService.sellFunnelBusinessList(crmSearchParamsBO);
+        return R.ok(mapBasePage);
     }
 
     @PostMapping("/salesTrend")

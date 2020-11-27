@@ -8,6 +8,7 @@ import com.kakarote.core.servlet.BaseMapper;
 import com.kakarote.work.entity.BO.OaTaskListBO;
 import com.kakarote.work.entity.BO.TaskLabelBO;
 import com.kakarote.work.entity.BO.WorkTaskLabelBO;
+import com.kakarote.work.entity.BO.WorkTaskNameBO;
 import com.kakarote.work.entity.PO.WorkTask;
 import com.kakarote.work.entity.VO.OaTaskListVO;
 import com.kakarote.work.entity.VO.TaskDetailVO;
@@ -26,9 +27,9 @@ import java.util.List;
  */
 public interface WorkTaskMapper extends BaseMapper<WorkTask> {
 
-    List<TaskInfoVO> queryMyTaskList(@Param("isTop")Integer isTop,@Param("userId")Long userId);
+    List<TaskInfoVO> queryMyTaskList(@Param("isTop")Integer isTop,@Param("userId")Long userId,@Param("data")WorkTaskNameBO workTaskNameBO);
 
-    BasePage<TaskInfoVO> queryMyTaskList(PageEntity page, @Param("isTop")Integer isTop, @Param("userId")Long userId);
+    BasePage<TaskInfoVO> queryMyTaskList(PageEntity page, @Param("isTop")Integer isTop, @Param("userId")Long userId );
 
     List<TaskLabelBO> queryTaskLabel(@Param("list")List<Integer> taskIdList);
 

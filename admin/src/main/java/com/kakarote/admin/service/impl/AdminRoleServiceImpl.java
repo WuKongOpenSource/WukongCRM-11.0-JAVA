@@ -98,7 +98,54 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
             jsonObject.remove("manage");
         }
         List<AdminConfig> adminConfigList = adminConfigService.queryConfigListByName((Object[]) AdminModuleEnum.getValues());
-        /*
+
+        //为crm模块根据用户权限添加公海权限
+        if (jsonObject.containsKey(AdminModuleEnum.CRM.getValue())) {
+            JSONObject authObject = new JSONObject();
+            UserInfo userInfo = UserUtil.getUser();
+            Map<String, Long> read = adminMenuService.queryPoolReadAuth(userInfo.getUserId(), userInfo.getDeptId());
+            if (UserUtil.isAdmin() || read.get("adminNum") > 0 || read.get("userNum") > 0) {
+                authObject.fluentPut("index", true).fluentPut("receive", true);
+                if (UserUtil.isAdmin() || read.get("adminNum") > 0) {
+                    authObject.fluentPut("distribute", true).fluentPut("excelexport", true).fluentPut("delete", true);
+                }
+            }
+            jsonObject.getJSONObject(AdminModuleEnum.CRM.getValue()).put("pool", authObject);
+        }
+        jsonObject.remove("work");
+        if (jsonObject.containsKey("jxc")) {
+            JSONObject jxc = jsonObject.getJSONObject("jxc");
+            if (jxc.isEmpty()) {
+                jsonObject.remove("jxc");
+            } else {
+                if (jxc.containsKey("bi") && !jxc.getJSONObject("bi").isEmpty()) {
+                    JSONObject jxcBi = jxc.getJSONObject("bi");
+                    jxc.remove("bi");
+                    if (jsonObject.containsKey("bi")) {
+                        JSONObject bi = jsonObject.getJSONObject("bi");
+                        bi.putAll(jxcBi);
+                        jsonObject.put("bi", bi);
+                    } else {
+                        jsonObject.put("bi", jxcBi);
+                    }
+                }
+            }
+        }
+        if (jsonObject.containsKey("hrm") && jsonObject.getJSONObject("hrm").isEmpty()) {
+            jsonObject.remove("hrm");
+        }
+        //TODO 暂时先去掉名片小程序
+        if (jsonObject.containsKey("manage") && jsonObject.getJSONObject("manage").containsKey("card")) {
+            JSONObject manage = jsonObject.getJSONObject("manage");
+            manage.remove("card");
+        }
+        List data = crmService.queryPoolNameListByAuth().getData();
+        if (CollUtil.isEmpty(data)) {
+            JSONObject crm = jsonObject.getJSONObject("crm");
+            crm.remove("pool");
+            jsonObject.put("crm", crm);
+        }
+            /*
           循环模块配置，把禁用的模块菜单隐藏掉
          */
         adminConfigList.forEach(adminConfig -> {
@@ -144,38 +191,6 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
                 }
             }
         });
-
-        //为crm模块根据用户权限添加公海权限
-        if (jsonObject.containsKey(AdminModuleEnum.CRM.getValue())) {
-            JSONObject authObject = new JSONObject();
-            UserInfo userInfo = UserUtil.getUser();
-            Map<String, Long> read = adminMenuService.queryPoolReadAuth(userInfo.getUserId(), userInfo.getDeptId());
-            if (UserUtil.isAdmin() || read.get("adminNum") > 0 || read.get("userNum") > 0) {
-                authObject.fluentPut("index", true).fluentPut("receive", true);
-                if (UserUtil.isAdmin() || read.get("adminNum") > 0) {
-                    authObject.fluentPut("distribute", true).fluentPut("excelexport", true).fluentPut("delete", true);
-                }
-            }
-            jsonObject.getJSONObject(AdminModuleEnum.CRM.getValue()).put("pool", authObject);
-        }
-        jsonObject.remove("work");
-        if (jsonObject.containsKey("jxc") && jsonObject.getJSONObject("jxc").isEmpty()){
-            jsonObject.remove("jxc");
-        }
-        if (jsonObject.containsKey("hrm") && jsonObject.getJSONObject("hrm").isEmpty()){
-            jsonObject.remove("hrm");
-        }
-        //TODO 暂时先去掉名片小程序
-        if (jsonObject.containsKey("manage") && jsonObject.getJSONObject("manage").containsKey("card")){
-            JSONObject manage = jsonObject.getJSONObject("manage");
-            manage.remove("card");
-        }
-        List data = crmService.queryPoolNameListByAuth().getData();
-        if (CollUtil.isEmpty(data)){
-            JSONObject crm = jsonObject.getJSONObject("crm");
-            crm.remove("pool");
-            jsonObject.put("crm",crm);
-        }
         return jsonObject;
     }
 
@@ -204,8 +219,20 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
         if (roleIdList.size() > 0) {
             return listByIds(roleIdList);
         }
-        return new ArrayList<AdminRole>();
+        return new ArrayList<>();
+    }
 
+    @Override
+    public List<AdminRole> queryRoleListByUserId(List<Long> userIds) {
+        QueryWrapper<AdminUserRole> wrapper = new QueryWrapper<>();
+        wrapper.select("role_id");
+        wrapper.in("user_id", userIds);
+        List<Integer> roleIdList = adminUserRoleService.list(wrapper).stream().map(AdminUserRole::getRoleId).collect(Collectors.toList());
+        if (roleIdList.size() > 0) {
+            roleIdList = roleIdList.stream().distinct().collect(Collectors.toList());
+            return listByIds(roleIdList);
+        }
+        return new ArrayList<>();
     }
 
     /**
@@ -265,7 +292,7 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
     public List<AdminRoleVO> getAllRoleList() {
         List<AdminRoleVO> records = new ArrayList<>();
         for (AdminRoleTypeEnum typeEnum : AdminRoleTypeEnum.values()) {
-            if (Arrays.asList(3, 4, 5).contains(typeEnum.getType())) {
+            if (Arrays.asList(0, 3, 4, 5).contains(typeEnum.getType())) {
                 continue;
             }
             AdminRoleVO record = new AdminRoleVO();
@@ -463,17 +490,48 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
      * @param roleIds 角色列表
      */
     @Override
-    public void relatedUser(List<String> userIds, List<String> roleIds) {
+    public void relatedUser(List<Long> userIds, List<Integer> roleIds) {
+        if (CollUtil.isNotEmpty(roleIds)) {
+            roleIds = roleIds.stream().distinct().collect(Collectors.toList());
+        }
         List<AdminUserRole> adminUserRoleList = new ArrayList<>();
-        for (String userId : userIds) {
-            for (String roleId : roleIds) {
+        for (Long userId : userIds) {
+            for (Integer roleId : roleIds) {
                 Integer count = adminUserRoleService.lambdaQuery().eq(AdminUserRole::getRoleId, roleId).eq(AdminUserRole::getUserId, userId).count();
                 if (count == 0) {
                     AdminUserRole userRole = new AdminUserRole();
-                    userRole.setUserId(Long.valueOf(userId));
-                    userRole.setRoleId(Integer.valueOf(roleId));
+                    userRole.setUserId(userId);
+                    userRole.setRoleId(roleId);
                     adminUserRoleList.add(userRole);
                 }
+            }
+        }
+        adminUserRoleService.saveBatch(adminUserRoleList, Const.BATCH_SAVE_SIZE);
+    }
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void relatedDeptUser(List<Long> userIds, List<Integer> deptIds, List<Integer> roleIds) {
+        Set<Long> userIdList = new HashSet<>();
+        if (CollUtil.isNotEmpty(userIds)) {
+            userIdList.addAll(userIds);
+        }
+        if (CollUtil.isNotEmpty(deptIds)) {
+            List<Long> list = adminUserService.queryUserByDeptIds(deptIds);
+            userIdList.addAll(list);
+        }
+        if (CollUtil.isNotEmpty(roleIds)) {
+            roleIds = roleIds.stream().distinct().collect(Collectors.toList());
+        }
+        List<AdminUserRole> adminUserRoleList = new ArrayList<>();
+        for (Long userId : userIdList) {
+            adminUserRoleService.lambdaUpdate().eq(AdminUserRole::getUserId, userId).remove();
+            for (Integer roleId : roleIds) {
+                AdminUserRole userRole = new AdminUserRole();
+                userRole.setUserId(userId);
+                userRole.setRoleId(roleId);
+                adminUserRoleList.add(userRole);
             }
         }
         adminUserRoleService.saveBatch(adminUserRoleList, Const.BATCH_SAVE_SIZE);
@@ -487,7 +545,11 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
      */
     @Override
     public void unbindingUser(Long userId, Integer roleId) {
-        adminUserRoleService.lambdaUpdate().eq(AdminUserRole::getRoleId,roleId).eq(AdminUserRole::getUserId,userId).remove();
+        Integer count = adminUserRoleService.lambdaQuery().eq(AdminUserRole::getUserId, userId).ne(AdminUserRole::getRoleId, roleId).count();
+        if (count == 0) {
+            throw new CrmException(AdminCodeEnum.ADMIN_USER_NEEDS_AT_LEAST_ONE_ROLE);
+        }
+        adminUserRoleService.lambdaUpdate().eq(AdminUserRole::getRoleId, roleId).eq(AdminUserRole::getUserId, userId).remove();
     }
 
     /**
@@ -562,8 +624,8 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
     @Transactional(rollbackFor = Exception.class)
     public void deleteWorkRole(Integer roleId) {
         removeById(roleId);
-        adminRoleMenuService.removeByMap(new JSONObject().fluentPut("role_id",roleId));
-        getBaseMapper().deleteWorkRole(queryWorkRole(3),roleId);
+        adminRoleMenuService.removeByMap(new JSONObject().fluentPut("role_id", roleId));
+        getBaseMapper().deleteWorkRole(queryWorkRole(3), roleId);
     }
 
     /**
@@ -635,7 +697,7 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
 
     @Override
     public List<AdminRole> queryRoleList() {
-        return  lambdaQuery().eq(AdminRole::getStatus,1).in(AdminRole::getRoleType,Arrays.asList(5,6)).list();
+        return lambdaQuery().eq(AdminRole::getStatus, 1).in(AdminRole::getRoleType, Arrays.asList(5, 6)).list();
 
     }
 
@@ -653,7 +715,7 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
         List<String> noAuthMenuUrls = new ArrayList<>();
         if (userId == superUserId || roles.contains(superRoleId)) {
             //缓存
-            redis.setex(key,60 * 30,noAuthMenuUrls);
+            redis.setex(key, 60 * 30, noAuthMenuUrls);
             return noAuthMenuUrls;
         }
 
@@ -661,24 +723,24 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
         if (adminMenus.isEmpty()){
             noAuthMenuUrls.add("/*/**");
             //缓存
-            redis.setex(key,60 * 30,noAuthMenuUrls);
+            redis.setex(key, 60 * 30, noAuthMenuUrls);
             return noAuthMenuUrls;
         }
 
         List<Integer> menuIdList = adminMenus.stream().map(AdminMenu::getMenuId).collect(Collectors.toList());
         LambdaQueryWrapper<AdminMenu> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         //非空
-        lambdaQueryWrapper.notIn(AdminMenu::getMenuId,menuIdList);
+        lambdaQueryWrapper.notIn(AdminMenu::getMenuId, menuIdList);
         List<AdminMenu> noAuthMenus = adminMenuService.list(lambdaQueryWrapper);
         noAuthMenus.removeIf(node -> StringUtils.isEmpty(node.getRealmUrl()));
-        if(!noAuthMenus.isEmpty()){
+        if (!noAuthMenus.isEmpty()) {
             noAuthMenuUrls.addAll(noAuthMenus.stream().map(AdminMenu::getRealmUrl).collect(Collectors.toList()));
             //缓存
-            redis.setex(key,60 * 30,noAuthMenuUrls);
+            redis.setex(key, 60 * 30, noAuthMenuUrls);
             return noAuthMenuUrls;
         }
         //缓存
-        redis.setex(key,60 * 30,noAuthMenuUrls);
+        redis.setex(key, 60 * 30, noAuthMenuUrls);
         return noAuthMenuUrls;
     }
 

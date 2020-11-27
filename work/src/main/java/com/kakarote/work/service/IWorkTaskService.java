@@ -21,13 +21,15 @@ import java.util.Map;
  */
 public interface IWorkTaskService extends BaseService<WorkTask> {
 
-    public List<MyTaskVO> myTask();
+    public List<MyTaskVO> myTask(WorkTaskNameBO workTaskNameBO,boolean isInternal);
 
     public void taskListTransfer(List<TaskInfoVO> taskList);
 
     public void updateTop(UpdateTaskTopBo updateTaskClassBo);
 
     public void saveWorkTask(WorkTask workTask);
+
+    public boolean updateWorkTask(WorkTask task);
 
     public void setWorkTaskStatus(WorkTaskStatusBO workTaskStatusBO);
 

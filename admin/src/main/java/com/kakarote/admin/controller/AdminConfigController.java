@@ -9,6 +9,7 @@ import com.kakarote.admin.common.AdminCodeEnum;
 import com.kakarote.admin.common.AdminConst;
 import com.kakarote.admin.common.AdminModuleEnum;
 import com.kakarote.admin.entity.BO.AdminCompanyBO;
+import com.kakarote.admin.entity.BO.AdminInitDataBO;
 import com.kakarote.admin.entity.BO.LogWelcomeSpeechBO;
 import com.kakarote.admin.entity.BO.ModuleSettingBO;
 import com.kakarote.admin.entity.PO.AdminConfig;
@@ -312,6 +313,25 @@ public class AdminConfigController {
                                                                                                    @RequestParam("value") String value) {
         AdminConfig config = adminConfigService.queryFirstConfigByNameAndValue(name, value);
         return Result.ok(BeanUtil.copyProperties(config, com.kakarote.core.feign.admin.entity.AdminConfig.class));
+    }
+
+    /**
+     * 查询跟进记录常用语
+     */
+    @ApiOperation(value = "验证密码")
+    @PostMapping("/verifyPassword")
+    public Result<String> verifyPassword(@RequestBody AdminInitDataBO adminInitDataBO) {
+        return Result.ok(adminConfigService.verifyPassword(adminInitDataBO));
+    }
+
+
+    /**
+     * 查询跟进记录常用语
+     */
+    @ApiOperation(value = "模块初始化")
+    @PostMapping("/moduleInitData")
+    public Result<Boolean> moduleInitData(@RequestBody AdminInitDataBO adminInitDataBO) {
+        return Result.ok(adminConfigService.moduleInitData(adminInitDataBO));
     }
 }
 

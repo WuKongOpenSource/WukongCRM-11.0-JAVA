@@ -6,6 +6,7 @@ import com.kakarote.core.servlet.BaseService;
 import com.kakarote.oa.entity.BO.SetExamineCategoryBO;
 import com.kakarote.oa.entity.BO.UpdateCategoryStatus;
 import com.kakarote.oa.entity.PO.OaExamineCategory;
+import com.kakarote.oa.entity.PO.OaExamineSort;
 import com.kakarote.oa.entity.VO.OaExamineCategoryVO;
 
 import java.util.List;
@@ -26,6 +27,8 @@ public interface IOaExamineCategoryService extends BaseService<OaExamineCategory
     BasePage<OaExamineCategoryVO> queryExamineCategoryList(PageEntity pageEntity);
 
     List<OaExamineCategory> queryAllExamineCategoryList();
+
+    void saveOrUpdateOaExamineSort(List<OaExamineSort> oaExamineSortList);
 
     void deleteExamineCategory(Integer id);
 

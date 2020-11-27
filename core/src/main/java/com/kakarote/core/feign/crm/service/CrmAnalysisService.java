@@ -15,12 +15,17 @@ public interface CrmAnalysisService {
     /**
     * 统计客户信息
     * @date 2020/9/16 13:45
-    * @param host
     * @return
     **/
     @PostMapping("/crmAnalysis/customerStats")
     Result<Boolean> customerStats();
 
-
+    /**
+     * 初始化数据
+     * @date 2020/9/16 13:45
+     * @return
+     **/
+    @PostMapping("/crmAnalysis/initCrmData")
+    Result<Boolean> initCrmData();
 
 }

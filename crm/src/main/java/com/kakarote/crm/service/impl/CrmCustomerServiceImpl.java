@@ -36,7 +36,6 @@ import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
-import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.*;
@@ -184,7 +183,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
      * 为客户设置距进入公海时间
      *
      * @param list
-     * @return java.util.List<java.util.Map       <       java.lang.String       ,       java.lang.Object>>
+     * @return java.util.List<java.util.Map < java.lang.String, java.lang.Object>>
      * @date 2020/10/26 10:16
      **/
     private List<Map<String, Object>> setPoolDay(List<Map<String, Object>> list) {
@@ -313,6 +312,19 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                 wrapper.eq(CrmCustomerPoolFieldSetting::getPoolId, poolId).eq(CrmCustomerPoolFieldSetting::getIsHidden, 1);
                 List<String> nameList = ApplicationContextHolder.getBean(ICrmCustomerPoolFieldSettingService.class).listObjs(wrapper, Object::toString);
                 nameList.forEach(crmModel::remove);
+                JSONObject poolAuthList = crmCustomerPoolService.queryAuthByPoolId(poolId);
+                crmModel.put("poolAuthList", poolAuthList);
+            }else{
+                Long isPool = (Long) crmModel.get("isPool");
+                if (Objects.equals(isPool,1L)){
+                    String poolIdStr = baseMapper.queryPoolIdsByCustomer(id);
+                    if (StrUtil.isNotEmpty(poolIdStr)){
+                        List<String> poolIds = StrUtil.splitTrim(poolIdStr, Const.SEPARATOR);
+                        List<Integer> poolIdList = poolIds.stream().map(Integer::valueOf).collect(Collectors.toList());
+                        JSONObject poolAuthList = crmCustomerPoolService.getOnePoolAuthByPoolIds(poolIdList);
+                        crmModel.put("poolAuthList", poolAuthList);
+                    }
+                }
             }
             Integer contactsId = (Integer) crmModel.get("contactsId");
             if (contactsId != null) {
@@ -446,6 +458,16 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         crmCustomerDataService.deleteByBatchId(batchList);
         deletePage(ids);
 
+    }
+
+
+    @Override
+    public JSONObject detectionDataCanBeDelete(List<Integer> ids) {
+        Integer contactsNum = crmContactsService.lambdaQuery().in(CrmContacts::getCustomerId, ids).count();
+        Integer businessNum = crmBusinessService.lambdaQuery().in(CrmBusiness::getCustomerId, ids).eq(CrmBusiness::getStatus, 1).count();
+        JSONObject record = new JSONObject();
+        record.fluentPut("contactsNum",contactsNum).fluentPut("businessNum",businessNum).fluentPut("isMore",ids.size() > 1);
+        return record;
     }
 
     /**
@@ -1553,6 +1575,11 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                     ElasticUtil.batchUpdateEsData(elasticsearchRestTemplate.getClient(), "customer", crmCustomer.getCustomerId().toString(), crmCustomer.getCustomerName());
                 }
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
+                CrmCustomerData customerData = crmCustomerDataService.lambdaQuery().select(CrmCustomerData::getValue).eq(CrmCustomerData::getFieldId, record.getInteger("fieldId"))
+                        .eq(CrmCustomerData::getBatchId, batchId).last("limit 1").one();
+                String value = customerData != null ? customerData.getValue() : null;
+                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
+                actionRecordUtil.publicContentRecord(CrmEnum.CUSTOMER, BehaviorEnum.UPDATE, customerId, oldCustomer.getCustomerName(), detail);
                 boolean bol = crmCustomerDataService.lambdaUpdate()
                         .set(CrmCustomerData::getName, record.getString("fieldName"))
                         .set(CrmCustomerData::getValue, record.getString("value"))
@@ -1567,23 +1594,6 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                     crmCustomerData.setBatchId(batchId);
                     crmCustomerDataService.save(crmCustomerData);
                 }
-                String oldFieldValue = crmCustomerDataService.lambdaQuery().select(CrmCustomerData::getValue).eq(CrmCustomerData::getFieldId, record.getInteger("fieldId"))
-                        .eq(CrmCustomerData::getBatchId, batchId).last("limit 1").one().getValue();
-                String formType = record.getString("formType");
-                String newValue = record.getString("value");
-                if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
-                    oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                    newValue = adminService.queryUserByIds(TagUtil.toLongSet(record.getString("value"))).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                } else if (formType.equals(FieldEnum.STRUCTURE.getFormType())) {
-                    oldFieldValue = adminService.queryDeptByIds(TagUtil.toSet(oldFieldValue)).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                    newValue = adminService.queryDeptByIds(TagUtil.toSet(record.getString("value"))).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                } else if (formType.equals(FieldEnum.FILE.getFormType())) {
-                    oldFieldValue = adminFileService.queryFileList(oldFieldValue).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
-                    newValue = adminFileService.queryFileList(record.getString("value")).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
-                }
-                String oldValue = StrUtil.isEmpty(oldFieldValue) ? "空" : oldFieldValue;
-                String detail = "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
-                actionRecordUtil.publicContentRecord(CrmEnum.CUSTOMER, BehaviorEnum.UPDATE, customerId, oldCustomer.getCustomerName(), detail);
             }
             updateField(record, customerId);
         });
@@ -1593,6 +1603,11 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
     public List<CrmDataCheckVO> dataCheck(CrmDataCheckBO dataCheckBO) {
         List<CrmDataCheckVO> list = getBaseMapper().dataCheck(dataCheckBO);
         for (CrmDataCheckVO crmDataCheckVO : list) {
+            if (StrUtil.isNotEmpty(crmDataCheckVO.getPoolIds())){
+                List<String> poolIds = StrUtil.splitTrim(crmDataCheckVO.getPoolIds(), Const.SEPARATOR);
+                List<Integer> poolIdList = poolIds.stream().map(Integer::valueOf).collect(Collectors.toList());
+                crmDataCheckVO.setPoolAuthList(crmCustomerPoolService.getOnePoolAuthByPoolIds(poolIdList));
+            }
             if (crmDataCheckVO.getOwnerUserId() != null) {
                 crmDataCheckVO.setOwnerUserName(adminService.queryUserName(crmDataCheckVO.getOwnerUserId()).getData());
             }

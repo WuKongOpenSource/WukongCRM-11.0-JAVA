@@ -10,4 +10,8 @@ public interface WorkService {
     @PostMapping("/workTask/updateTaskJob")
     Result updateTaskJob();
 
+
+    @PostMapping("/work/initWorkData")
+    Result<Boolean> initWorkData();
+
 }

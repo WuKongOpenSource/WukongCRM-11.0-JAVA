@@ -12,7 +12,7 @@
 
 	<artifactId>wk_crm</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>wk_crm</name>
+	<name>crm</name>
 	<description>客户关系管理</description>
 
 
@@ -52,7 +52,7 @@
 		<resources>
 			<resource>
 				<!-- xml放在java目录下-->
-				<directory>src/main/java/com/kakarote/crm/</directory>
+				<directory>src/main/java/com/kakarote/${name}/</directory>
 				<includes>
 					<include>**/*.xml</include>
 				</includes>
@@ -134,7 +134,7 @@
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<configuration>
-					<finalName>${artifactId}</finalName>
+					<finalName>${name}</finalName>
 					<appendAssemblyId>false</appendAssemblyId>
 					<descriptors>
 						<descriptor>../assembly.xml</descriptor>

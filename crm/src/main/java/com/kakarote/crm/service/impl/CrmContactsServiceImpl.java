@@ -14,15 +14,12 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
-import com.kakarote.core.feign.admin.entity.SimpleDept;
-import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
-import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
@@ -190,6 +187,9 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
                 crmContacts.setOwnerUserId(UserUtil.getUserId());
             }
             crmContacts.setBatchId(batchId);
+            if (crmContacts.getCustomerId() == null){
+                throw new CrmException(CrmCodeEnum.CRM_CONTACTS_DATA_ERROR);
+            }
             save(crmContacts);
             if (crmModel.getBusinessId() != null) {
                 crmContactsBusinessService.save(crmModel.getBusinessId(), crmContacts.getContactsId());
@@ -616,6 +616,12 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
                     ElasticUtil.batchUpdateEsData(elasticsearchRestTemplate.getClient(),"contacts",crmContacts.getContactsId().toString(),crmContacts.getName());
                 }
             }else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2){
+
+                CrmContactsData contactsData  = crmContactsDataService.lambdaQuery().select(CrmContactsData::getValue).eq(CrmContactsData::getFieldId, record.getInteger("fieldId"))
+                        .eq(CrmContactsData::getBatchId, batchId).one();
+                String value = contactsData != null ? contactsData.getValue() : null;
+                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
+                actionRecordUtil.publicContentRecord(CrmEnum.CONTACTS, BehaviorEnum.UPDATE,contactsId,oldContacts.getName(),detail);
                 boolean bol = crmContactsDataService.lambdaUpdate()
                         .set(CrmContactsData::getName,record.getString("fieldName"))
                         .set(CrmContactsData::getValue,record.getString("value"))
@@ -630,23 +636,6 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
                     crmContactsData.setBatchId(batchId);
                     crmContactsDataService.save(crmContactsData);
                 }
-                String oldFieldValue = crmContactsDataService.lambdaQuery().select(CrmContactsData::getValue).eq(CrmContactsData::getFieldId,record.getInteger("fieldId"))
-                        .eq(CrmContactsData::getBatchId,batchId).one().getValue();
-                String formType = record.getString("formType");
-                String newValue = record.getString("value");
-                if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())){
-                    oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                    newValue = adminService.queryUserByIds(TagUtil.toLongSet(record.getString("value"))).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                }else if (formType.equals(FieldEnum.STRUCTURE.getFormType())){
-                    oldFieldValue = adminService.queryDeptByIds(TagUtil.toSet(oldFieldValue)).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                    newValue = adminService.queryDeptByIds(TagUtil.toSet(record.getString("value"))).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                }else if (formType.equals(FieldEnum.FILE.getFormType())){
-                    oldFieldValue = adminFileService.queryFileList(oldFieldValue).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
-                    newValue = adminFileService.queryFileList(record.getString("value")).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
-                }
-                String oldValue = StrUtil.isEmpty(oldFieldValue) ? "空" : oldFieldValue;
-                String detail = "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
-                actionRecordUtil.publicContentRecord(CrmEnum.CONTACTS, BehaviorEnum.UPDATE,contactsId,oldContacts.getName(),detail);
             }
             updateField(record,contactsId);
         });

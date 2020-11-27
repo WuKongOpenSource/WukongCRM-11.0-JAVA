@@ -133,6 +133,13 @@ public class CrmCustomerController {
         return R.ok();
     }
 
+
+    @PostMapping("/detectionDataCanBeDelete")
+    @ApiOperation("根据ID删除数据")
+    public Result detectionDataCanBeDelete(@ApiParam(name = "ids", value = "id列表") @RequestBody List<Integer> ids) {
+        return R.ok(crmCustomerService.detectionDataCanBeDelete(ids));
+    }
+
     @PostMapping("/queryBusiness")
     @ApiOperation("查询客户下商机")
     public Result<BasePage<Map<String, Object>>> queryBusiness(@RequestBody CrmContactsPageBO pageEntity) {

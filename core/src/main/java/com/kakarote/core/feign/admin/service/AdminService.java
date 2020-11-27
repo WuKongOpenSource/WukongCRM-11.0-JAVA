@@ -207,4 +207,8 @@ public interface AdminService {
     @ApiExplain("模拟查询登陆用户信息")
     public Result<UserInfo> queryLoginUserInfo(@RequestParam("userId")Long userId);
 
+    @PostMapping("/adminUser/queryUserIdByUserName")
+    @ApiExplain("查询用户id通过用户名")
+    Result<Long> queryUserIdByUserName(@RequestParam("userName")String userName);
+
 }

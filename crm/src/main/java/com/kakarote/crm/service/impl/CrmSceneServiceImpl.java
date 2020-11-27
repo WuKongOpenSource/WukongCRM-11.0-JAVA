@@ -1,6 +1,7 @@
 package com.kakarote.crm.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -141,6 +142,9 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
         List<CrmModelFiledVO> fieldList = crmFieldService.list(wrapper).stream()
                 .map(field -> {
                     CrmModelFiledVO filedVO = BeanUtil.copyProperties(field, CrmModelFiledVO.class);
+                    if (ListUtil.toList(14,15,16,17,20).contains(filedVO.getType())){
+                        filedVO.setType(1);
+                    }
                     crmFieldService.recordToFormType(filedVO, FieldEnum.parse(filedVO.getType()));
                     return filedVO;
                 }).collect(Collectors.toList());
@@ -207,6 +211,13 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
             fieldList.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1));
             fieldList.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1));
         } else if (CrmEnum.RECEIVABLES.getType().equals(label)) {
+            List<Object> checkList = new ArrayList<>();
+            checkList.add(new JSONObject().fluentPut("name", "待审核").fluentPut("value", 0));
+            checkList.add(new JSONObject().fluentPut("name", "通过").fluentPut("value", 1));
+            checkList.add(new JSONObject().fluentPut("name", "拒绝").fluentPut("value", 2));
+            checkList.add(new JSONObject().fluentPut("name", "审核中").fluentPut("value", 3));
+            checkList.add(new JSONObject().fluentPut("name", "未提交").fluentPut("value", 5));
+            fieldList.add(new CrmModelFiledVO("check_status", FieldEnum.CHECKBOX, "审核状态", 1).setFormType("checkStatus").setType(null).setSetting(checkList));
             fieldList.add(new CrmModelFiledVO("owner_user_id", FieldEnum.USER, "负责人", 1));
             fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));
             fieldList.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1));

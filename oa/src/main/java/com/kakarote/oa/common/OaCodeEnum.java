@@ -19,6 +19,8 @@ public enum OaCodeEnum implements ResultCode {
     LOG_ALREADY_DELETE(509,"日志已删除"),
     ANNOUNCEMENT_ALREADY_DELETE(510,"公告已删除"),
     EXAMINE_ALREADY_DELETE(511,"审批已删除"),
+    TOTAL_REIMBURSEMENT_ERROR(512,"请完善明细！"),
+    TOTAL_AMOUNT_OF_EXPENSE_DETAILS_ERROR(513,"报销费用明细(s%)合计应大于零")
     ;
 
     OaCodeEnum(int code, String msg) {

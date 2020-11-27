@@ -17,6 +17,46 @@
       <if test="userId != null">
           and ((a.owner_user_id like concat('%,',#{userId},',%') and a.is_open = 0) or a.is_open = 1)
       </if>
+      <if test="data.name != null and data.name != ''">
+          and (a.name like concat('%',#{data.name},'%')  or a.description like concat('%',#{data.name},'%'))
+      </if>
+      <if test="data.type != null">
+          <choose>
+              <when test="data.type == 1">
+                and to_days(a.create_time) = to_days(now())
+              </when>
+              <when test="data.type == 2">
+                and yearweek(a.create_time) = yearweek(now())-1
+              </when>
+              <when test="data.type == 3">
+                and month(a.create_time) = month(now())-1
+              </when>
+              <when test="data.type == 4">
+                and year(a.create_time) = year(now())-1
+              </when>
+              <when test="data.type == 5">
+                  <if test="data.startTime != null">
+                    and a.create_time >= #{data.startTime}
+                  </if>
+                  <if test="data.endTime != null">
+                    and a.create_time &lt;= #{data.endTime}
+                  </if>
+              </when>
+            </choose>
+       </if>
+       <if test="data.workSort != null">
+           <choose>
+               <when test="data.workSort == 1">
+                  order by a.create_time asc
+               </when>
+               <when test="data.workSort == 2">
+                  order by a.create_time desc
+               </when>
+               <when test="data.workSort == 3">
+                   order by a.update_time desc
+               </when>
+           </choose>
+       </if>
     </select>
     <select id="queryWorkTaskTemplateClass" resultType="com.kakarote.work.entity.VO.WorkTaskTemplateClassVO">
         select class_id, name as class_name from `wk_work_task_class` where work_id = #{taskId} order by order_num
@@ -58,9 +98,24 @@
             when 7 then  date_format(a.update_time,'%Y-%m-%d') = date_format(now(),'%Y-%m-%d') end
         </if>
         <if test="data.taskName != null and data.taskName != ''">
-            and a.name like concat('%',#{data.taskName},'%')
+            and (a.name like concat('%',#{data.taskName},'%')  or a.description like concat('%',#{data.taskName},'%'))
         </if>
-        order by b.order_num
+        <if test="data.sort != null">
+            <choose>
+                <when test="data.sort == 2">
+                    order by a.create_time desc
+                </when>
+                <when test="data.sort == 3">
+                    order by a.stop_time desc
+                </when>
+                <when test="data.sort == 4">
+                    order by a.update_time desc
+                </when>
+                <when test="data.sort == 5">
+                    order by a.priority desc
+                </when>
+            </choose>
+        </if>
     </select>
     <select id="workStatistics" resultType="com.kakarote.work.entity.VO.WorkTaskStatsVO">
       select count(*) as allCount,
@@ -128,5 +183,84 @@
         from wk_work_user as a left join wk_admin_user as b on a.user_id = b.user_id
         left join wk_admin_role as c on a.role_id = c.role_id
         where a.work_id = #{workId}
+    </select>
+    <select id="queryWorkTaskByCondition" resultType="com.kakarote.work.entity.VO.TaskInfoVO">
+        select a.*,ifnull(b.class_id,-1) as classId,b.order_num as classOrder,
+        d.customer_ids,d.contacts_ids,d.business_ids,d.contract_ids,
+        (select count(*) from wk_work_task_comment where type_id = a.task_id and type = 1) as commentCount,
+        e.childWCCount,e.childAllCount
+        from wk_work_task a left join wk_work_task_class b on a.class_id = b.class_id
+        left join wk_work_task_relation as d on a.task_id = d.task_id
+        LEFT JOIN (
+        SELECT COUNT(*) as childAllCount,COUNT(status=5 or null) as childWCCount,pid FROM wk_work_task GROUP BY pid
+        ) as e on e.pid = a.task_id
+        where a.status != 3  and a.ishidden = 0 and is_archive = 0
+        and a.work_id in
+        <foreach collection="workIdList" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+        <if test="data.userIdList != null and data.userIdList.size > 0">
+            and
+            <foreach collection="data.userIdList" item="userId" open="(" close=")" separator="or">
+                a.owner_user_id like concat('%,',#{userId},',%') or  a.main_user_id = #{userId}
+            </foreach>
+        </if>
+        <if test="data.labelIdList != null and data.labelIdList.size > 0">
+            and
+            <foreach collection="data.labelIdList" item="labelId" open="(" close=")" separator="or">
+                a.label_id like  concat('%,',#{labelId},',%')
+            </foreach>
+        </if>
+        <if test="data.type != null">
+            <choose>
+                <when test="data.type == 1">
+                    and to_days(a.create_time) = to_days(now())
+                </when>
+                <when test="data.type == 2">
+                    and yearweek(a.create_time) = yearweek(now())-1
+                </when>
+                <when test="data.type == 3">
+                    and month(a.create_time) = month(now())-1
+                </when>
+                <when test="data.type == 4">
+                    and year(a.create_time) = year(now())-1
+                </when>
+                <when test="data.type == 5">
+                    <if test="data.startTime != null">
+                        and a.create_time >= #{data.startTime}
+                    </if>
+                    <if test="data.endTime != null">
+                        and a.create_time &lt;= #{data.endTime}
+                    </if>
+                </when>
+            </choose>
+        </if>
+        <if test="data.name != null and data.name != ''">
+            and (a.name like concat('%',#{data.name},'%')  or a.description like concat('%',#{data.name},'%'))
+        </if>
+        <if test="data.sort != null">
+            <choose>
+                <when test="data.sort == 2">
+                    order by a.create_time desc
+                </when>
+                <when test="data.sort == 3">
+                    order by a.stop_time desc
+                </when>
+                <when test="data.sort == 4">
+                    order by a.update_time desc
+                </when>
+                <when test="data.sort == 5">
+                    order by a.priority desc
+                </when>
+            </choose>
+        </if>
+    </select>
+    <select id="queryTaskOwnerUser" resultType="java.lang.String">
+    select a.owner_user_id
+    from wk_work_task a left join wk_work b on a.work_id = b.work_id
+      left join wk_work_task_relation as d on a.task_id = d.task_id
+    where a.ishidden = 0 and (a.status = 1 or a.status = 2 or a.status = 5) and a.is_archive = 0
+    and (a.owner_user_id like concat('%,',#{userId},',%') or a.main_user_id = #{userId})
+    and a.pid = 0
     </select>
 </mapper>

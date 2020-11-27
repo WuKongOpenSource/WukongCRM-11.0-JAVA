@@ -11,6 +11,7 @@ import com.kakarote.authorization.service.AdminUserService;
 import com.kakarote.authorization.service.LoginService;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.cache.AdminCacheKey;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.redis.Redis;
@@ -30,6 +31,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Administrator
@@ -64,15 +66,15 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
      * @return Result
      */
     @Override
-    public Result login(AuthorizationUser user,HttpServletResponse response) {
+    public Result login(AuthorizationUser user, HttpServletResponse response) {
         String token = IdUtil.simpleUUID();
         UserInfo userInfo = user.toUserInfo();
-        if(userInfo.getStatus() == 0){
+        if (userInfo.getStatus() == 0) {
             throw new CrmException(AuthorizationCodeEnum.AUTHORIZATION_USER_DISABLE_ERROR);
         }
         userInfo.setRoles(adminUserService.queryUserRoleIds(userInfo.getUserId()).getData());
-        UserUtil.userToken(token, userInfo,user.getType());
-        if (userInfo.getStatus() == 2){
+        UserUtil.userToken(token, userInfo, user.getType());
+        if (userInfo.getStatus() == 2) {
             adminUserService.setUserStatus(AdminUserStatusBO.builder().status(1).ids(Collections.singletonList(userInfo.getUserId())).build());
         }
         return Result.ok(new LoginVO().setAdminToken(token));
@@ -85,22 +87,67 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
      * @return Result
      */
     @Override
-    public Result doLogin(AuthorizationUser user,HttpServletResponse response) {
+    public Result doLogin(AuthorizationUser user, HttpServletResponse response) {
+        String key = AdminCacheKey.PASSWORD_ERROR_CACHE_KEY + user.getUsername().trim();
+        Integer errorNum = redis.get(key);
+        if (errorNum != null && errorNum > 2) {
+            Integer second = Optional.ofNullable(redis.ttl(key)).orElse(0L).intValue();
+            if (second > 0) {
+                String errorTimeDesc = this.getErrorTimeDesc(second);
+                return Result.error(AuthorizationCodeEnum.AUTHORIZATION_LOGIN_PASSWORD_TO_MANY_ERROR, "密码错误次数过多，请在"+errorTimeDesc+"后重试！");
+            }
+        }
         try {
             AbstractAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user.getUsername().trim(), user.getPassword().trim());
-
             Authentication authentication = authenticationManager.authenticate(authenticationToken);
             AuthorizationUserInfo userInfo = (AuthorizationUserInfo) authentication.getDetails();
             if (userInfo.getAuthorizationUserList().size() == 0) {
-                return Result.error(AuthorizationCodeEnum.AUTHORIZATION_LOGIN_NO_USER);
+                return this.handleLoginPassWordToManyError(key,user.getUsername().trim());
             }
-            return login(userInfo.getAuthorizationUserList().get(0).setType(user.getType()),response);
+            return login(userInfo.getAuthorizationUserList().get(0).setType(user.getType()), response);
         } catch (AuthException e) {
             return Result.error(e.getResultCode());
-        } catch (BadCredentialsException e){
-            return Result.error(AuthorizationCodeEnum.AUTHORIZATION_LOGIN_NO_USER);
+        } catch (BadCredentialsException e) {
+            return this.handleLoginPassWordToManyError(key,user.getUsername().trim());
         }
 
+    }
+
+
+    /**
+     * 时间描述
+     * @date 2020/11/9 16:57
+     * @param second
+     * @return java.lang.String
+     **/
+    private String getErrorTimeDesc(Integer second){
+        String errorTimeDesc;
+        if (Arrays.asList(300, 240, 180, 120, 60).contains(second)) {
+            errorTimeDesc = second / 60 + "分";
+        } else if (second < 60) {
+            errorTimeDesc = second + "秒";
+        } else {
+            errorTimeDesc = second / 60 + "分" + second % 60 + "秒";
+        }
+        return errorTimeDesc;
+    }
+
+    /**
+     * 密码失败次数处理
+     * @date 2020/11/9 15:42
+     * @param key
+     * @param userName
+     * @return com.kakarote.core.common.Result
+     **/
+    private Result handleLoginPassWordToManyError(String key,String userName){
+        Integer errorNum = redis.get(key);
+        if (errorNum == null) {
+            redis.setex(AdminCacheKey.PASSWORD_ERROR_CACHE_KEY + userName, 60 * 3, 1);
+        }else if(errorNum < 3){
+            Integer defineTime = errorNum == 2 ? 60 * 2 : 60 * 3;
+            redis.setex(AdminCacheKey.PASSWORD_ERROR_CACHE_KEY + userName, defineTime, errorNum + 1);
+        }
+        return Result.error(AuthorizationCodeEnum.AUTHORIZATION_LOGIN_NO_USER);
     }
 
     @Override
@@ -112,24 +159,23 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
         Long userId = userInfo.getUserId();
         String key = userId.toString();
         List<String> noAuthMenuUrls = redis.get(key);
-        if (noAuthMenuUrls == null){
+        if (noAuthMenuUrls == null) {
             noAuthMenuUrls = adminUserService.queryNoAuthMenu(userId).getData();
         }
-        boolean permission =  isHasPermission(noAuthMenuUrls, url);
+        boolean permission = isHasPermission(noAuthMenuUrls, url);
         return permission ? Result.ok() : Result.noAuth();
     }
 
     @Override
     public Result logout(String authentication) {
         Object data = redis.get(authentication);
-        if(data instanceof UserInfo){
+        if (data instanceof UserInfo) {
             UserInfo userInfo = (UserInfo) data;
             redis.del(authentication);
             redis.del(userInfo.getUserId());
         }
         return Result.ok();
     }
-
 
 
     /**

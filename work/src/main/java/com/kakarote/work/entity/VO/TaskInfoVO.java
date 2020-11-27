@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.work.entity.BO.TaskLabelBO;
 import io.swagger.annotations.ApiModel;
@@ -28,6 +29,11 @@ public class TaskInfoVO {
 
     @ApiModelProperty(value = "任务名称")
     private String name;
+
+    @ApiModelProperty(value = "项目名称")
+    private String workName;
+    @ApiModelProperty(value = "附件数")
+    private Integer fileNum;
 
     @ApiModelProperty(value = "创建人ID")
     @TableField(fill = FieldFill.INSERT)
@@ -72,9 +78,11 @@ public class TaskInfoVO {
     private Integer pid;
 
     @ApiModelProperty(value = "开始时间")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private Date startTime;
 
     @ApiModelProperty(value = "结束时间")
+    @JsonFormat(pattern="yyyy-MM-dd")
     private Date stopTime;
 
     @ApiModelProperty(value = "优先级 从大到小 3高 2中 1低 0无")

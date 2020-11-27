@@ -34,7 +34,9 @@ public interface IWorkService extends BaseService<Work> {
 
     public void leave(Integer workId, Long userId);
 
-    public List<WorkInfoVo> queryWorkNameList();
+    public List<WorkInfoVo> queryWorkNameList(WorkTaskQueryBO workTaskQueryBO);
+
+    public List<TaskInfoVO> queryWorkTaskList(WorkTaskQueryBO workTaskQueryBO);
 
     public List<WorkTaskTemplateClassVO> queryTaskByWorkId(WorkTaskTemplateBO workTaskTemplateBO);
 
@@ -45,6 +47,8 @@ public interface IWorkService extends BaseService<Work> {
     public WorkStatsVO workStatistics(String workId);
 
     public List<SimpleUser> queryWorkOwnerList(Integer workId);
+
+    public List<SimpleUser> queryMemberListByWorkOrTask(boolean isWork);
 
     public void updateOrder(UpdateTaskClassBO updateTaskClassBo);
 

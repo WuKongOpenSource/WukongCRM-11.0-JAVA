@@ -22,19 +22,6 @@
         <module>job</module>
         <module>core</module>
     </modules>
-    <repositories>
-        <repository>
-            <id>central</id>
-            <name>central</name>
-            <url>http://nexus.72crm.com/repository/maven-public/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -46,7 +33,7 @@
         <swagger.version>2.9.2</swagger.version>
         <hutool.version>5.3.1</hutool.version>
         <lombok.version>1.18.10</lombok.version>
-        <core.version>0.5.4-SNAPSHOT</core.version>
+        <core.version>0.7.0</core.version>
     </properties>
 
     <dependencyManagement>

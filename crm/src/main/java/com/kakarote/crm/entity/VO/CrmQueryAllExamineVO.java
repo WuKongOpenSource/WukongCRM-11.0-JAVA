@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kakarote.crm.entity.PO.CrmExamineStep;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
@@ -34,9 +35,11 @@ public class CrmQueryAllExamineVO {
     private String icon;
 
     @ApiModelProperty(value = "部门ID（0为全部）")
+    @JsonProperty("deptList")
     private Object deptIds;
 
     @ApiModelProperty(value = "员工ID")
+    @JsonProperty("userList")
     private Object userIds;
 
     @ApiModelProperty(value = "创建时间")
@@ -69,7 +72,5 @@ public class CrmQueryAllExamineVO {
 
     @ApiModelProperty("审核步骤")
     private List<CrmExamineStep> stepList;
-
-
 
 }

@@ -1,20 +1,37 @@
 package com.kakarote.admin.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.kakarote.admin.common.AdminCodeEnum;
 import com.kakarote.admin.common.AdminConst;
 import com.kakarote.admin.common.AdminModuleEnum;
+import com.kakarote.admin.common.AuthPasswordUtil;
 import com.kakarote.admin.entity.BO.AdminCompanyBO;
+import com.kakarote.admin.entity.BO.AdminInitDataBO;
 import com.kakarote.admin.entity.BO.LogWelcomeSpeechBO;
+import com.kakarote.admin.entity.PO.AdminAttention;
 import com.kakarote.admin.entity.PO.AdminConfig;
+import com.kakarote.admin.entity.PO.AdminUser;
+import com.kakarote.admin.entity.PO.AdminUserRole;
 import com.kakarote.admin.entity.VO.AdminUserVO;
 import com.kakarote.admin.entity.VO.ModuleSettingVO;
 import com.kakarote.admin.mapper.AdminConfigMapper;
-import com.kakarote.admin.service.IAdminConfigService;
-import com.kakarote.admin.service.IAdminRoleService;
-import com.kakarote.admin.service.IAdminUserService;
+import com.kakarote.admin.service.*;
+import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.cache.AdminCacheKey;
+import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.feign.crm.service.CrmAnalysisService;
+import com.kakarote.core.feign.km.KmService;
+import com.kakarote.core.feign.oa.OaService;
+import com.kakarote.core.feign.work.WorkService;
 import com.kakarote.core.servlet.BaseServiceImpl;
+import com.kakarote.core.utils.BaseUtil;
+import com.kakarote.core.utils.UserUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +49,7 @@ import java.util.stream.Collectors;
  * @since 2020-04-27
  */
 @Service
+@Slf4j
 public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, AdminConfig> implements IAdminConfigService {
 
     @Autowired
@@ -40,6 +58,20 @@ public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, A
     private IAdminUserService adminUserService;
 
     private static String logConfigName = "logWelcomeSpeech";
+
+
+    @Autowired
+    private IAdminAttentionService adminAttentionService;
+    @Autowired
+    private IAdminUserRoleService adminUserRoleService;
+    @Autowired
+    private CrmAnalysisService crmAnalysisService;
+    @Autowired
+    private WorkService workService;
+    @Autowired
+    private OaService oaService;
+    @Autowired
+    private KmService kmService;
 
     /**
      * 通过name查询系统配置
@@ -55,6 +87,7 @@ public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, A
     /**
      * 设置企业配置
      *
+     * @param adminConfig config
      */
     @Override
     public void setAdminConfig(AdminCompanyBO adminCompanyBO) {
@@ -160,7 +193,7 @@ public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, A
      */
     @Override
     public AdminConfig queryConfigByName(String name) {
-        return query().in("name", name).one();
+        return query().in("name", name).last(" limit 1").one();
     }
 
     /**
@@ -188,21 +221,21 @@ public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, A
 
     @Override
     public AdminConfig queryFirstConfigByNameAndValue(String name, String value) {
-        return lambdaQuery().eq(AdminConfig::getName, name).eq(AdminConfig::getValue,value).one();
+        return lambdaQuery().eq(AdminConfig::getName, name).eq(AdminConfig::getValue, value).one();
     }
 
     @Override
     public void setMarketing(Integer status) {
         String name = "marketing";
-        AdminConfig adminConfig = this.lambdaQuery().eq(AdminConfig::getName,name).last(" limit 1").one();
+        AdminConfig adminConfig = this.lambdaQuery().eq(AdminConfig::getName, name).last(" limit 1").one();
         if (adminConfig == null) {
             AdminConfig config = new AdminConfig();
             config.setName(name);
-            config.setStatus(Objects.equals(1,status) ? 1 : 0);
+            config.setStatus(Objects.equals(1, status) ? 1 : 0);
             config.setDescription("是否开启营销活动");
             this.save(config);
         } else {
-            adminConfig.setStatus(Objects.equals(1,status) ? 1 : 0);
+            adminConfig.setStatus(Objects.equals(1, status) ? 1 : 0);
             this.updateById(adminConfig);
         }
     }
@@ -210,7 +243,7 @@ public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, A
     @Override
     public Integer queryMarketing() {
         String name = "marketing";
-        AdminConfig adminConfig = this.lambdaQuery().eq(AdminConfig::getName,name).last(" limit 1").one();
+        AdminConfig adminConfig = this.lambdaQuery().eq(AdminConfig::getName, name).last(" limit 1").one();
         if (adminConfig == null) {
             adminConfig = new AdminConfig();
             adminConfig.setName(name);
@@ -219,5 +252,118 @@ public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, A
             this.save(adminConfig);
         }
         return adminConfig.getStatus();
+    }
+
+    @Override
+    public String verifyPassword(AdminInitDataBO adminInitDataBO) {
+        Long userId = UserUtil.getUserId();
+        AdminUser user = adminUserService.getById(userId);
+        String userName = UserUtil.getUser().getUsername();
+        boolean isPass = AuthPasswordUtil.verify(userName + adminInitDataBO.getPassword(), user.getSalt(), user.getPassword());
+        if (isPass) {
+            String cacheName = AdminCacheKey.TEMPORARY_ACCESS_CODE_CACHE_KEY + userId;
+            String value = String.valueOf(RandomUtil.randomInt(100000, 999999));
+            BaseUtil.getRedis().setex(cacheName, 600, value);
+            return value;
+        }
+        throw new CrmException(AdminCodeEnum.ADMIN_PASSWORD_INVALID_ERROR);
+    }
+
+
+    @Override
+    public boolean moduleInitData(AdminInitDataBO adminInitDataBO) {
+        Long userId = UserUtil.getUserId();
+        String cacheName = AdminCacheKey.TEMPORARY_ACCESS_CODE_CACHE_KEY + userId;
+        String temporaryCode = BaseUtil.getRedis().get(cacheName);
+        if (StrUtil.isEmpty(temporaryCode)) {
+            //超时未操作
+            throw new CrmException(AdminCodeEnum.ADMIN_PASSWORD_EXPIRE_ERROR);
+        }
+        if (!temporaryCode.equals(adminInitDataBO.getTemporaryCode())) {
+            throw new CrmException(AdminCodeEnum.ADMIN_PASSWORD_INVALID_ERROR);
+        }
+        List<String> modules = adminInitDataBO.getModules();
+        if (CollUtil.isNotEmpty(modules)) {
+            for (String module : modules) {
+                AdminModuleEnum adminModuleEnum = AdminModuleEnum.parse(module);
+                if (adminModuleEnum == null) {
+                    continue;
+                }
+                switch (adminModuleEnum) {
+                    case TASK_EXAMINE:
+                        //oa、work
+                        oaService.initOaExamineData();
+                        break;
+                    case CRM:
+                        crmAnalysisService.initCrmData();
+                        break;
+                    case PROJECT:
+                        workService.initWorkData();
+                        break;
+                    case LOG:
+                    case OA:
+                        oaService.initOaData();
+                        break;
+                    case BOOK:
+                        if (!UserUtil.isAdmin()) {
+                            if (this.verifyInitAuth()) {
+                                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+                            }
+                        }
+                        log.info("开始初始化通讯录模块数据！");
+                        List<AdminUser> adminUsers = adminUserService.lambdaQuery().select(AdminUser::getUserId)
+                                .ne(AdminUser::getUserId, UserUtil.getUserId()).list();
+                        if (CollUtil.isNotEmpty(adminUsers)){
+                            List<Long> userIds = adminUsers.stream().map(AdminUser::getUserId).collect(Collectors.toList());
+                            adminAttentionService.lambdaUpdate().in(AdminAttention::getBeUserId,userIds)
+                                    .or().in(AdminAttention::getAttentionUserId,userIds)
+                                    .remove();
+                            adminUserRoleService.lambdaUpdate().in(AdminUserRole::getUserId,userIds)
+                                    .remove();
+                            adminUserService.removeByIds(userIds);
+                        }
+                        log.info("通讯录模块数据初始化完成！");
+                        break;
+                    case CALENDAR:
+                        //oa
+                        oaService.initCalendarData();
+                        break;
+                    case KNOWLEDGE:
+                        kmService.initKmData();
+                        break;
+                    case JXC:
+                        log.info("进销存模块数据初始化暂未提供！");
+                        break;
+                    case HRM:
+                        log.info("人资模块数据初始化暂未提供！");
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        return true;
+    }
+
+
+    private static final String INIT_AUTH_URL = "/adminConfig/moduleInitData";
+
+
+    /**
+     * 验证非管理员有无权限
+     *
+     * @param
+     * @return boolean
+     * @date 2020/11/23 10:35
+     **/
+    private boolean verifyInitAuth() {
+        boolean isNoAuth = false;
+        Long userId = UserUtil.getUserId();
+        String key = userId.toString();
+        List<String> noAuthMenuUrls = BaseUtil.getRedis().get(key);
+        if (noAuthMenuUrls != null && noAuthMenuUrls.contains(INIT_AUTH_URL)) {
+            isNoAuth = true;
+        }
+        return isNoAuth;
     }
 }

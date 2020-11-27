@@ -2,6 +2,7 @@ package com.kakarote.oa.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
@@ -16,15 +17,18 @@ import com.kakarote.oa.entity.BO.SetExamineCategoryBO;
 import com.kakarote.oa.entity.BO.UpdateCategoryStatus;
 import com.kakarote.oa.entity.PO.OaExamineCategory;
 import com.kakarote.oa.entity.PO.OaExamineField;
+import com.kakarote.oa.entity.PO.OaExamineSort;
 import com.kakarote.oa.entity.PO.OaExamineStep;
 import com.kakarote.oa.entity.VO.OaExamineCategoryVO;
 import com.kakarote.oa.mapper.OaExamineCategoryMapper;
+import com.kakarote.oa.mapper.OaExamineSortMapper;
 import com.kakarote.oa.service.IOaExamineCategoryService;
 import com.kakarote.oa.service.IOaExamineFieldService;
 import com.kakarote.oa.service.IOaExamineStepService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -50,6 +54,9 @@ public class OaExamineCategoryServiceImpl extends BaseServiceImpl<OaExamineCateg
 
     @Autowired
     private OaExamineCategoryMapper examineCategoryMapper;
+
+    @Autowired
+    private OaExamineSortMapper oaExamineSortMapper;
 
     @Override
     public Map<String,Integer> setExamineCategory(SetExamineCategoryBO setExamineCategoryBO) {
@@ -108,7 +115,7 @@ public class OaExamineCategoryServiceImpl extends BaseServiceImpl<OaExamineCateg
             Integer isSys = newOaExamineCategory.getIsSys();
             Integer type = newOaExamineCategory.getType();
             deleteExamineCategory(oldCategoryId);
-            BeanUtil.copyProperties(oaExamineCategory, newOaExamineCategory);
+            BeanUtil.copyProperties(oaExamineCategory, newOaExamineCategory,"createTime");
             newOaExamineCategory.setIsSys(isSys);
             newOaExamineCategory.setType(type);
             newOaExamineCategory.setUpdateTime(new Date());
@@ -137,8 +144,8 @@ public class OaExamineCategoryServiceImpl extends BaseServiceImpl<OaExamineCateg
     @Override
     public BasePage<OaExamineCategoryVO> queryExamineCategoryList(PageEntity pageEntity) {
         BasePage<OaExamineCategoryVO> pageVO = new BasePage<>(pageEntity.getPage(),pageEntity.getLimit());
-        BasePage<OaExamineCategory> page = lambdaQuery().eq(OaExamineCategory::getIsDeleted,0).orderByDesc(OaExamineCategory::getIsSys)
-                .orderByAsc(OaExamineCategory::getCreateTime).page(pageEntity.parse());
+        BasePage<OaExamineCategory> page = lambdaQuery().eq(OaExamineCategory::getIsDeleted,0).orderByDesc(OaExamineCategory::getCreateTime)
+                .orderByAsc(OaExamineCategory::getIsSys).page(pageEntity.parse());
         List<OaExamineCategoryVO> list = new ArrayList<>();
         page.getList().forEach(category->{
             List<OaExamineStep> stepList = examineStepService.lambdaQuery().eq(OaExamineStep::getCategoryId, category.getCategoryId()).list();
@@ -173,6 +180,9 @@ public class OaExamineCategoryServiceImpl extends BaseServiceImpl<OaExamineCateg
             list.add(oaExamineCategoryVO);
         });
         pageVO.setRecords(list);
+        pageVO.setTotal(page.getTotal());
+        pageVO.setPageNumber(page.getPageNumber());
+        pageVO.setSize(page.getSize());
         return pageVO;
     }
 
@@ -180,6 +190,20 @@ public class OaExamineCategoryServiceImpl extends BaseServiceImpl<OaExamineCateg
     public List<OaExamineCategory> queryAllExamineCategoryList() {
         UserInfo user = UserUtil.getUser();
         return examineCategoryMapper.queryAllExamineCategoryList(UserUtil.isAdmin(),user.getUserId(),user.getDeptId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void saveOrUpdateOaExamineSort(List<OaExamineSort> oaExamineSortList) {
+        LambdaQueryWrapper<OaExamineSort> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        lambdaQueryWrapper.eq(OaExamineSort::getUserId,UserUtil.getUserId());
+        oaExamineSortMapper.delete(lambdaQueryWrapper);
+        for (int i = 0; i < oaExamineSortList.size(); i++) {
+            OaExamineSort oaExamineSort = oaExamineSortList.get(i);
+            oaExamineSort.setUserId(UserUtil.getUserId());
+            oaExamineSort.setSort(i);
+            oaExamineSortMapper.insert(oaExamineSort);
+        }
     }
 
     @Override

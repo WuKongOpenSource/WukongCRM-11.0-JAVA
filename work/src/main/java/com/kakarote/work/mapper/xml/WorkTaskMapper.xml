@@ -8,8 +8,65 @@
       (select count(*) from wk_work_task where pid = a.task_id) as childAllCount
     from wk_work_task a left join wk_work b on a.work_id = b.work_id
       left join wk_work_task_relation as d on a.task_id = d.task_id
-    where (a.owner_user_id like concat('%,',#{userId},',%') or a.main_user_id = #{userId}) and a.pid = 0
-    and a.ishidden = 0 and a.is_top = #{isTop} and (a.status = 1 or a.status = 2) and a.is_archive = 0
+    where a.ishidden = 0 and a.is_top = #{isTop} and (a.status = 1 or a.status = 2 or a.status = 5) and a.is_archive = 0
+    and (a.owner_user_id like concat('%,',#{userId},',%') or a.main_user_id = #{userId})
+    and a.pid = 0
+    <if test="data.userIdList != null and data.userIdList.size > 0">
+        and
+        <foreach collection="data.userIdList" item="userId" open="(" close=")" separator="or">
+            a.owner_user_id like concat('%,',#{userId},',%') or  a.main_user_id = #{userId}
+        </foreach>
+    </if>
+    <if test="data.labelIdList != null and data.labelIdList.size > 0">
+        and
+        <foreach collection="data.labelIdList" item="labelId" open="(" close=")" separator="or">
+            a.label_id like  concat('%,',#{labelId},',%')
+        </foreach>
+    </if>
+    <if test="data.stopTimeType != null">
+        <choose>
+            <when test="data.stopTimeType == 1">
+                and date_format(a.stop_time,'%Y-%m-%d') = date_format(now(),'%Y-%m-%d')
+            </when>
+            <when test="data.stopTimeType == 2">
+                and date_format(a.stop_time,'%Y-%m-%d') = date_format(DATE_ADD(NOW(),INTERVAL 1 DAY),'%Y-%m-%d')
+            </when>
+            <when test="data.stopTimeType == 3">
+                and YEARWEEK(date_format(a.stop_time,'%Y-%m-%d')) = YEARWEEK(now())
+            </when>
+            <when test="data.stopTimeType == 4">
+                and date_format(a.stop_time,'%Y%m') = DATE_FORMAT( CURDATE() , '%Y%m' )
+            </when>
+            <when test="data.stopTimeType == 5">
+                and a.stop_time is null
+            </when>
+            <when test="data.stopTimeType == 6">
+                and a.stop_time &lt; now()
+            </when>
+            <when test="data.stopTimeType == 7">
+               and date_format(a.update_time,'%Y-%m-%d') = date_format(now(),'%Y-%m-%d')
+            </when>
+        </choose>
+    </if>
+    <if test="data.name != null and data.name != ''">
+        and (a.name like concat('%',#{data.name},'%')  or a.description like concat('%',#{data.name},'%'))
+    </if>
+    <if test="data.sort != null">
+        <choose>
+            <when test="data.sort == 2">
+                order by a.create_time desc
+            </when>
+            <when test="data.sort == 3">
+                order by a.stop_time desc
+            </when>
+            <when test="data.sort == 4">
+                order by a.update_time desc
+            </when>
+            <when test="data.sort == 5">
+                order by a.priority desc
+            </when>
+        </choose>
+    </if>
     </select>
     <select id="queryTaskLabel" resultType="com.kakarote.work.entity.BO.TaskLabelBO">
     select b.task_id,a.label_id,a.name as label_name,a.color

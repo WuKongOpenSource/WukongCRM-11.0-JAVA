@@ -14,4 +14,13 @@ public interface HrmCacheKey {
      * 社保比例缓存key
      */
     String INSURANCE_SCALE_CACHE_KEY = "INSURANCE_SCALE:";
+    /**
+     * 员工手机号缓存key
+     */
+    String HRM_EMPLOYEE_MOBILE_CACHE = "HRM:EMPLOYEE:MOBILE:CACHE:";
+
+    /**
+     * 员工用户id缓存key
+     */
+    String HRM_EMPLOYEE_USER_CACHE = "HRM:EMPLOYEE:USER:CACHE:";
 }

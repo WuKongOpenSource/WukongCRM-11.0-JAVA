@@ -13,6 +13,8 @@ import java.util.Map;
 public interface CrmInstrumentMapper {
 
     public List<JSONObject> sellFunnel(Map<String,Object> map);
+
+    public List<String> sellFunnelBusinessList(Map<String,Object> map);
     /**
      * 查询销售简报
      *

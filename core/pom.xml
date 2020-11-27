@@ -21,20 +21,6 @@
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
 
-    <!-- 定义snapshots库和releases库的nexus地址 -->
-    <distributionManagement>
-        <repository>
-            <!-- 库的id -->
-            <id>kakarote</id>
-            <!-- 库的url -->
-            <url>http://nexus.72crm.com/repository/public/</url>
-        </repository>
-        <snapshotRepository>
-            <id>kakarote</id>
-            <url>http://nexus.72crm.com/repository/maven-snapshots/</url>
-        </snapshotRepository>
-    </distributionManagement>
-
     <dependencies>
         <!--web依赖包-->
         <dependency>

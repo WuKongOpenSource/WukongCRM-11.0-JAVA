@@ -9,7 +9,8 @@
             ccbs.`name`,
             ccbs.order_num,
             IFNULL(SUM(ccb.money),0) as money,
-            ccb.type_id
+            ccb.type_id,
+            ccbs.status_id
         </if>
         <if test="isEnd != null">
             IFNULL(SUM(ccb.money),0) as money,
@@ -29,6 +30,25 @@
         and DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
         GROUP BY ccbs.`name`,ccbs.order_num,ccb.type_id order by ccbs.order_num
     </select>
+
+
+    <select id="sellFunnelBusinessList" resultType="java.lang.String">
+        SELECT ccb.business_id as businessId
+        FROM wk_crm_business as ccb
+        LEFT JOIN wk_crm_business_status as ccbs ON ccbs.status_id = ccb.status_id and ccb.status = 1
+        where ccbs.type_id = #{typeId}
+        <if test="name != null and name != ''">
+            and ccb.business_name like concat('%',#{name},'%')
+        </if>
+        and ccb.status_id = #{statusId}
+        and ccb.is_end = 0
+        and  ccb.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        and DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+    </select>
+
 
     <select id="queryBulletin" resultType="java.util.HashMap">
         select

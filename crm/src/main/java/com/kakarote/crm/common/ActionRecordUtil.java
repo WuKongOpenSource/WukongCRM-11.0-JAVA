@@ -6,16 +6,22 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.common.Const;
 import com.kakarote.core.entity.UserInfo;
+import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
+import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
+import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.constant.BehaviorEnum;
 import com.kakarote.crm.constant.CrmEnum;
+import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.PO.CrmActionRecord;
 import com.kakarote.crm.entity.PO.CrmCustomer;
 import com.kakarote.crm.entity.PO.CrmMarketing;
@@ -66,6 +72,39 @@ public class ActionRecordUtil {
                 }
             }
         }
+    }
+
+
+    public String getDetailByFormTypeAndValue(JSONObject record,String value){
+        if (record == null){
+            return "";
+        }
+        FieldEnum fieldEnum = FieldEnum.parse(record.getString("formType"));
+        String oldFieldValue = this.parseValueByFieldEnum(value,fieldEnum);
+        String newFieldValue = this.parseValueByFieldEnum(record.getString("value"),fieldEnum);
+        String oldValue = StrUtil.isEmpty(oldFieldValue) ? "空" : oldFieldValue;
+        String newValue = StrUtil.isEmpty(newFieldValue) ? "空" : newFieldValue;
+        return  "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
+    }
+
+
+
+    private String parseValueByFieldEnum(String value, FieldEnum fieldEnum){
+        if(StrUtil.isEmpty(value)){
+            return null;
+        }
+        if (Arrays.asList(FieldEnum.USER,FieldEnum.SINGLE_USER).contains(fieldEnum)) {
+            List<SimpleUser> simpleUsers = adminService.queryUserByIds(TagUtil.toLongSet(value)).getData();
+            value = simpleUsers.stream().map(SimpleUser::getRealname).collect(Collectors.joining(Const.SEPARATOR));
+        } else if (FieldEnum.STRUCTURE.equals(fieldEnum)) {
+            List<SimpleDept> simpleDepts = adminService.queryDeptByIds(TagUtil.toSet(value)).getData();
+            value = simpleDepts.stream().map(SimpleDept::getName).collect(Collectors.joining(Const.SEPARATOR));
+        } else if (FieldEnum.FILE.equals(fieldEnum)) {
+            AdminFileService adminFileService = ApplicationContextHolder.getBean(AdminFileService.class);
+            List<FileEntity> fileEntities = adminFileService.queryFileList(value).getData();
+            value = fileEntities.stream().map(FileEntity::getName).collect(Collectors.joining(Const.SEPARATOR));
+        }
+        return value;
     }
 
     /**

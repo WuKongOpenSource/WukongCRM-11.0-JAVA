@@ -38,8 +38,8 @@ public class WorkTaskController {
 
     @PostMapping("/myTask")
     @ApiOperation("工作台我的任务")
-    public Result myTask(){
-        return R.ok(workTaskService.myTask());
+    public Result myTask(@RequestBody WorkTaskNameBO workTaskNameBO){
+        return R.ok(workTaskService.myTask(workTaskNameBO,false));
     }
 
     @PostMapping("/updateTop")
@@ -54,6 +54,13 @@ public class WorkTaskController {
     public Result saveWorkTask(@RequestBody WorkTask workTask){
         workTaskService.saveWorkTask(workTask);
         return R.ok();
+    }
+
+
+    @PostMapping("/updateWorkTask")
+    @ApiOperation("编辑项目任务")
+    public Result<Boolean> updateWorkTask(@RequestBody WorkTask workTask){
+        return R.ok( workTaskService.updateWorkTask(workTask));
     }
 
     @PostMapping("/setWorkTaskStatus")

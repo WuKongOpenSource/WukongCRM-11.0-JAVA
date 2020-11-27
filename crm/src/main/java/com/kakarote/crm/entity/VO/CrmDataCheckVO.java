@@ -1,5 +1,6 @@
 package com.kakarote.crm.entity.VO;
 
+import com.alibaba.fastjson.JSONObject;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -25,7 +26,11 @@ public class CrmDataCheckVO {
 
     private String poolName;
 
+    private String poolIds;
+
     private Integer contactsId;
 
     private String contactsName;
+
+    private JSONObject poolAuthList;
 }

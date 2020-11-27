@@ -1,6 +1,5 @@
 package com.kakarote.crm.mapper;
 
-import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.feign.crm.entity.CustomerStats;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;

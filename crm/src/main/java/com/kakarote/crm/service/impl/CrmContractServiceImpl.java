@@ -18,7 +18,6 @@ import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
-import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
@@ -352,11 +351,14 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         } else {
             CrmContract contract = getById(crmContract.getContractId());
             if (contract.getCheckStatus() == 8) {
-                throw new CrmException(CrmCodeEnum.CRM_CONTRACT_CANCELLATION_ERROR);
+                contract.setCheckStatus(5);
             }
             if (contract.getCheckStatus() == 1) {
-                throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_PASS_ERROR);
+                throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_PASS_HINT_ERROR);
             }
+//            if (contract.getCheckStatus() == 0){
+//                contract.setCheckStatus(4);
+//            }
             if (contract.getCheckStatus() != 4 && contract.getCheckStatus() != 2 && contract.getCheckStatus() != 5) {
                 throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EDIT_ERROR);
             }
@@ -573,6 +575,9 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
                 dataList.add(record);
             }
             for (Map<String, Object> map : dataList) {
+                if(map.get("checkStatus")==null||"".equals(map.get("checkStatus"))){
+                    continue;
+                }
                 String checkStatus;
                 //0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交 6 创建 7 已删除 8 作废
                 switch ((Integer) map.get("checkStatus")) {
@@ -784,14 +789,6 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         if (crmModel.get("unreceivedMoney") != null){
             crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("unreceivedMoney").setName("未收款金额").setValue(new BigDecimal(crmModel.get("unreceivedMoney").toString())).setFormType(FieldEnum.NUMBER.getFormType()).setFieldType(1));
         }
-        crmModelFiledVOS.forEach(record1 -> {
-            String name = record1.getName();
-            if ("下单时间".equals(name) || "合同开始时间".equals(name) || "合同结束时间".equals(name)) {
-                if (ObjectUtil.isNotEmpty(record1.getValue())) {
-                    record1.setValue(DateUtil.formatDate((Date) record1.getValue()));
-                }
-            }
-        });
         List<CrmModelFiledVO> filedVOS = crmModelFiledVOS.stream().sorted(Comparator.comparingInt(r -> -r.getFieldType())).peek(r -> {
             r.setFieldType(null);
             r.setSetting(null);
@@ -850,7 +847,6 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
     @Override
     public CrmInfoNumVO num(Integer contractId) {
         CrmContract crmContract = getById(contractId);
-        AdminFileService fileService = ApplicationContextHolder.getBean(AdminFileService.class);
         List<CrmField> crmFields = crmFieldService.queryFileField();
         List<String> batchIdList = new ArrayList<>();
         if (crmFields.size() > 0) {
@@ -871,7 +867,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         map.put("returnVisitCon", returnVisitCon);
         map.put("invoiceCon", invoiceCon);
         CrmInfoNumVO infoNumVO = getBaseMapper().queryNum(map);
-        infoNumVO.setFileCount(fileService.queryNum(batchIdList).getData());
+        infoNumVO.setFileCount(adminFileService.queryNum(batchIdList).getData());
         Set<String> member = new HashSet<>();
         member.addAll(StrUtil.splitTrim(crmContract.getRoUserId(), Const.SEPARATOR));
         member.addAll(StrUtil.splitTrim(crmContract.getRwUserId(), Const.SEPARATOR));
@@ -892,8 +888,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
     public List<FileEntity> queryFileList(Integer contractId) {
         List<FileEntity> fileEntityList = new ArrayList<>();
         CrmContract crmContract = getById(contractId);
-        AdminFileService fileService = ApplicationContextHolder.getBean(AdminFileService.class);
-        fileService.queryFileList(crmContract.getBatchId()).getData().forEach(fileEntity -> {
+        adminFileService.queryFileList(crmContract.getBatchId()).getData().forEach(fileEntity -> {
             fileEntity.setSource("附件上传");
             fileEntity.setReadOnly(0);
             fileEntityList.add(fileEntity);
@@ -904,7 +899,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             wrapper.select(CrmContractData::getValue);
             wrapper.eq(CrmContractData::getBatchId, crmContract.getBatchId());
             wrapper.in(CrmContractData::getFieldId, crmFields.stream().map(CrmField::getFieldId).collect(Collectors.toList()));
-            List<FileEntity> data = fileService.queryFileList(crmContractDataService.listObjs(wrapper, Object::toString)).getData();
+            List<FileEntity> data = adminFileService.queryFileList(crmContractDataService.listObjs(wrapper, Object::toString)).getData();
             data.forEach(fileEntity -> {
                 fileEntity.setSource("合同详情");
                 fileEntity.setReadOnly(1);
@@ -913,7 +908,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         }
         List<String> stringList = crmActivityService.queryFileBatchId(crmContract.getContractId(), getLabel().getType());
         if (stringList.size() > 0) {
-            List<FileEntity> data = fileService.queryFileList(stringList).getData();
+            List<FileEntity> data = adminFileService.queryFileList(stringList).getData();
             data.forEach(fileEntity -> {
                 fileEntity.setSource("跟进记录");
                 fileEntity.setReadOnly(1);
@@ -971,12 +966,19 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
                 Map<String, Object> crmContractMap = new HashMap<>(oldContractMap);
                 crmContractMap.put(record.getString("fieldName"), record.get("value"));
                 CrmContract crmContract = BeanUtil.mapToBean(crmContractMap, CrmContract.class, true);
-                actionRecordUtil.updateRecord(oldContractMap, crmContractMap, CrmEnum.CONTRACT, crmContract.getName(), crmContract.getContactsId());
+                actionRecordUtil.updateRecord(oldContractMap, crmContractMap, CrmEnum.CONTRACT, crmContract.getName(), crmContract.getContractId());
                 update().set(StrUtil.toUnderlineCase(record.getString("fieldName")), record.get("value")).eq("contract_id",updateInformationBO.getId()).update();
                 if ("name".equals(record.getString("fieldName"))) {
                     ElasticUtil.batchUpdateEsData(elasticsearchRestTemplate.getClient(), "contract", crmContract.getContractId().toString(), crmContract.getName());
                 }
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
+                CrmContractData contractData = crmContractDataService.lambdaQuery()
+                        .select(CrmContractData::getValue)
+                        .eq(CrmContractData::getFieldId, record.getInteger("fieldId"))
+                        .eq(CrmContractData::getBatchId, batchId).last("limit 1").one();
+                String value = contractData != null ? contractData.getValue() : null;
+                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
+                actionRecordUtil.publicContentRecord(CrmEnum.CONTRACT, BehaviorEnum.UPDATE, contractId, oldContract.getName(), detail);
                 boolean bol = crmContractDataService.lambdaUpdate()
                         .set(CrmContractData::getName,record.getString("fieldName"))
                         .set(CrmContractData::getValue, record.getString("value"))
@@ -991,23 +993,6 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
                     crmContractData.setBatchId(batchId);
                     crmContractDataService.save(crmContractData);
                 }
-                String oldFieldValue = crmContractDataService.lambdaQuery().select(CrmContractData::getValue).eq(CrmContractData::getFieldId, record.getInteger("fieldId"))
-                        .eq(CrmContractData::getBatchId, batchId).last("limit 1").one().getValue();
-                String formType = record.getString("formType");
-                String newValue = record.getString("value");
-                if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
-                    oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                    newValue = adminService.queryUserByIds(TagUtil.toLongSet(record.getString("value"))).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                } else if (formType.equals(FieldEnum.STRUCTURE.getFormType())) {
-                    oldFieldValue = adminService.queryDeptByIds(TagUtil.toSet(oldFieldValue)).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                    newValue = adminService.queryDeptByIds(TagUtil.toSet(record.getString("value"))).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                } else if (formType.equals(FieldEnum.FILE.getFormType())) {
-                    oldFieldValue = adminFileService.queryFileList(oldFieldValue).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
-                    newValue = adminFileService.queryFileList(record.getString("value")).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
-                }
-                String oldValue = StrUtil.isEmpty(oldFieldValue) ? "空" : oldFieldValue;
-                String detail = "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
-                actionRecordUtil.publicContentRecord(CrmEnum.CONTRACT, BehaviorEnum.UPDATE, contractId, oldContract.getName(), detail);
             }
             updateField(record, contractId);
         });

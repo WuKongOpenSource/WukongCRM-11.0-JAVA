@@ -20,8 +20,10 @@ import com.kakarote.core.utils.BiTimeUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.constant.CrmEnum;
+import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.constant.MonthEnum;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
+import com.kakarote.crm.entity.BO.CrmSearchParamsBO;
 import com.kakarote.crm.entity.PO.CrmActivity;
 import com.kakarote.crm.mapper.CrmActivityMapper;
 import com.kakarote.crm.mapper.CrmInstrumentMapper;
@@ -54,7 +56,11 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
     private ICrmActivityService crmActivityService;
 
     @Autowired
+    private ICrmBusinessService crmBusinessService;
+
+    @Autowired
     private CrmActivityMapper crmActivityMapper;
+
     @Override
     public JSONObject queryBulletin(BiParams biParams) {
         BiTimeUtil.BiTimeEntity biTimeEntity = BiTimeUtil.analyzeTime(biParams);
@@ -146,10 +152,10 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
                 searchBO.getSearchList().add(new CrmSearchBO.Search("returnTime", "date", CrmSearchBO.FieldSearchEnum.DATE, Arrays.asList(DateUtil.formatDate(biTimeEntity.getBeginDate()), DateUtil.formatDate(DateUtil.offsetDay(biTimeEntity.getEndDate(),1)))));
             }
         } else {
-            searchBO.getSearchList().add(new CrmSearchBO.Search("createTime", "date", CrmSearchBO.FieldSearchEnum.DATE_TIME, Arrays.asList(DateUtil.formatDateTime(biTimeEntity.getBeginDate()), DateUtil.formatDateTime(biTimeEntity.getEndDate()))));
+            searchBO.getSearchList().add(new CrmSearchBO.Search("createTime", "date", CrmSearchBO.FieldSearchEnum.DATE_TIME, Arrays.asList(DateUtil.formatDateTime(biTimeEntity.getBeginDate()), DateUtil.formatDateTime(DateUtil.endOfDay(biTimeEntity.getEndDate())))));
         }
         if (biParams.getCheckStatus() != null && biParams.getCheckStatus() == 1) {
-            searchBO.getSearchList().add(new CrmSearchBO.Search("checkStatus", "date", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
+            searchBO.getSearchList().add(new CrmSearchBO.Search("checkStatus", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
         }
         switch (crmEnum) {
             case CUSTOMER:
@@ -159,6 +165,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             case BUSINESS:
                 return ApplicationContextHolder.getBean(ICrmBusinessService.class).queryPageList(searchBO);
             case CONTRACT:
+                searchBO.getSearchList().add(new CrmSearchBO.Search("checkStatus", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
                 return ApplicationContextHolder.getBean(ICrmContractService.class).queryPageList(searchBO);
             case RECEIVABLES:
                 return ApplicationContextHolder.getBean(ICrmReceivablesService.class).queryPageList(searchBO);
@@ -207,7 +214,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         List<JSONObject> list = crmInstrumentMapper.sellFunnel(map);
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("list", list);
-        map.put("isEnd",1);
+        map.put("isEnd", 1);
         List<JSONObject> otherList = crmInstrumentMapper.sellFunnel(map);
         BigDecimal sum_money = new BigDecimal("0");
         BigDecimal sum_shu = new BigDecimal("0");
@@ -216,18 +223,52 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             sum_money = sum_money.add(object.getBigDecimal("money"));
             sum_shu = sum_shu.add(object.getBigDecimal("lose"));
             sum_ying = sum_ying.add(object.getBigDecimal("win"));
-        };
+        }
+        ;
         jsonObject.put("sum_money", sum_money);
         jsonObject.put("sum_shu", sum_shu);
         jsonObject.put("sum_ying", sum_ying);
         return jsonObject;
     }
 
+
+    @Override
+    public BasePage<Map<String, Object>> sellFunnelBusinessList(CrmSearchParamsBO crmSearchParamsBO) {
+        BiTimeUtil.BiTimeEntity record = BiTimeUtil.analyzeType(crmSearchParamsBO);
+        List<Long> userIds = record.getUserIds();
+        if (CollUtil.isEmpty(userIds)){
+            return new BasePage<>();
+        }
+        Map<String, Object> map = record.toMap();
+        CrmSearchBO search = new CrmSearchBO();
+        search.setPage(crmSearchParamsBO.getPage());
+        search.setLimit(crmSearchParamsBO.getLimit());
+        search.setLabel(CrmEnum.BUSINESS.getType());
+        List<CrmSearchBO.Search> searchList = new ArrayList<>();
+        if (StrUtil.isNotEmpty(crmSearchParamsBO.getSearch())){
+            map.put("name", crmSearchParamsBO.getSearch());
+        }
+        CrmSearchBO.Search entity = crmSearchParamsBO.getEntity();
+        map.put("typeId", entity.getValues().get(0));
+        map.put("statusId", entity.getValues().get(1));
+        List<String> businessIdList = crmInstrumentMapper.sellFunnelBusinessList(map);
+
+        CrmSearchBO.Search entity2 = new CrmSearchBO.Search();
+        entity2.setName("businessId");
+        entity2.setFormType(FieldEnum.TEXT.getFormType());
+        entity2.setSearchEnum(CrmSearchBO.FieldSearchEnum.IS);
+        entity2.setValues(businessIdList);
+        searchList.add(entity2);
+
+        search.setSearchList(searchList);
+        return crmBusinessService.queryPageList(search);
+    }
+
     @Override
     public JSONObject salesTrend(BiParams biParams) {
         BiTimeUtil.BiTimeEntity record = null;
         if (StrUtil.isNotEmpty(biParams.getType())) {
-            if (biParams.getType().equals("year") || biParams.getType().equals("lastYear")) {
+            if ("year".equals(biParams.getType()) || "lastYear".equals(biParams.getType())) {
                 biParams.setType(biParams.getType());
                 record = BiTimeUtil.analyzeTime(biParams);
             } else {
@@ -329,9 +370,9 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
                         userIdList.add(UserUtil.getUserId());
                     }
                 } else {
-                    if(UserUtil.isAdmin()){
+                    if (UserUtil.isAdmin()) {
                         userIdList.add(biParams.getUserId());
-                    }else {
+                    } else {
                         UserInfo userInfo = adminService.queryLoginUserInfo(biParams.getUserId()).getData();
                         boolean isAdmin = userInfo.getUserId().equals(UserUtil.getSuperUser()) || Optional.ofNullable(userInfo.getRoles()).orElse(new ArrayList<>()).contains(userInfo.getSuperRoleId());
                         if (!isAdmin) {
@@ -428,7 +469,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         Integer crmType = biParams.getLabel();
         Integer queryType = biParams.getQueryType();
         Integer subUser = biParams.getSubUser();
-        String search = biParams.getSearch() == null ? null: biParams.getSearch().trim();
+        String search = biParams.getSearch() == null ? null : biParams.getSearch().trim();
         BiAuthority biAuthority = handleDataType(biParams);
         List<Long> userIds = biAuthority.getUserIds();
         if (CollUtil.isEmpty(userIds)) {
@@ -535,7 +576,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         Integer day = biParams.getDay();
         Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
         AuthUtil.filterUserIdListByDataType(map.get("customer"), userIds);
-        List<Integer> customerIds = crmCustomerService.forgottenCustomer(day,userIds,biParams.getSearch());
+        List<Integer> customerIds = crmCustomerService.forgottenCustomer(day, userIds, biParams.getSearch());
         if (customerIds.size() == 0) {
             return new BasePage<>();
         }
@@ -558,7 +599,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         String search = biParams.getSearch();
         Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
         AuthUtil.filterUserIdListByDataType(map.get("customer"), userIds);
-        List<Integer> customerIds = crmCustomerService.unContactCustomer(search,userIds);
+        List<Integer> customerIds = crmCustomerService.unContactCustomer(search, userIds);
         if (customerIds.size() == 0) {
             return new BasePage<>();
         }

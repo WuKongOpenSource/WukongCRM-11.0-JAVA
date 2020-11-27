@@ -1,16 +1,15 @@
 package com.kakarote.admin.controller;
 
 
-import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.admin.common.AdminRoleTypeEnum;
+import com.kakarote.admin.entity.BO.AdminRoleBO;
 import com.kakarote.admin.entity.PO.AdminModelSort;
 import com.kakarote.admin.entity.PO.AdminRole;
 import com.kakarote.admin.entity.VO.AdminRoleVO;
 import com.kakarote.admin.service.IAdminModelSortService;
 import com.kakarote.admin.service.IAdminRoleService;
 import com.kakarote.core.common.ApiExplain;
-import com.kakarote.core.common.Const;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.utils.UserUtil;
@@ -73,8 +72,6 @@ public class AdminRoleController {
         data.add(new JSONObject().fluentPut("name", "办公管理角色").fluentPut("roleType", 7));
         data.add(new JSONObject().fluentPut("name", "客户管理角色").fluentPut("roleType", 2));
         data.add(new JSONObject().fluentPut("name", "项目管理角色").fluentPut("roleType", 8));
-        data.add(new JSONObject().fluentPut("name", "人力资源管理角色").fluentPut("roleType", 9));
-        data.add(new JSONObject().fluentPut("name", "进销存管理角色").fluentPut("roleType", 10));
         return R.ok(data);
     }
 
@@ -90,6 +87,13 @@ public class AdminRoleController {
     public Result<List<Integer>> queryRoleByRoleType(@RequestParam("type") Integer type) {
         List<AdminRole> recordList = adminRoleService.lambdaQuery().select(AdminRole::getRoleId).eq(AdminRole::getRoleType, type).list();
         return R.ok(recordList.stream().map(AdminRole::getRoleId).collect(Collectors.toList()));
+    }
+
+
+    @PostMapping("/queryRoleListByUserId")
+    @ApiExplain("通过用户id查询角色")
+    public Result<List<AdminRole>> queryRoleListByUserId(@RequestBody List<Long> userIds) {
+        return R.ok(adminRoleService.queryRoleListByUserId(userIds));
     }
 
     @PostMapping("/queryDataType")
@@ -141,10 +145,17 @@ public class AdminRoleController {
         return R.ok();
     }
 
+    @PostMapping("/relatedDeptUser")
+    @ApiOperation("角色关联员工部门")
+    public Result relatedDeptUser(@RequestBody AdminRoleBO adminRoleBO) {
+        adminRoleService.relatedDeptUser(adminRoleBO.getUserIds(),adminRoleBO.getDeptIds(),adminRoleBO.getRoleIds());
+        return R.ok();
+    }
+
     @PostMapping("/relatedUser")
     @ApiOperation("角色关联员工")
-    public Result relatedUser(@RequestParam("userIds") String userIds, @RequestParam("roleIds") String roleIds) {
-        adminRoleService.relatedUser(StrUtil.splitTrim(userIds, Const.SEPARATOR), StrUtil.splitTrim(roleIds, Const.SEPARATOR));
+    public Result relatedUser(@RequestBody AdminRoleBO adminRoleBO) {
+        adminRoleService.relatedUser(adminRoleBO.getUserIds(), adminRoleBO.getRoleIds());
         return R.ok();
     }
 

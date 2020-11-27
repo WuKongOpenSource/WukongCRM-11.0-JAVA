@@ -87,7 +87,7 @@
     <select id="dataCheck" resultType="com.kakarote.crm.entity.VO.CrmDataCheckVO">
         select a.* from (
         select a.customer_id as id,a.customer_name as name, a.create_time,a.owner_user_id, 2 as type,a.last_time,
-        '' as poolName,a.contacts_id
+        '' as poolName, '' as poolIds,a.contacts_id
         from `wk_crm_customer` a
         where a.owner_user_id is not null and a.status != 3
         <if test="data.name != null">
@@ -100,6 +100,8 @@
         select a.customer_id as id,a.customer_name as name, a.create_time, null as owner_user_id,
         9 as type,a.last_time,
         (select GROUP_CONCAT(y.pool_name) from wk_crm_customer_pool_relation as x join wk_crm_customer_pool as y on x.pool_id = y.pool_id where x.customer_id = a.customer_id) as poolName,
+        (select GROUP_CONCAT(y.pool_id) from wk_crm_customer_pool_relation as x join wk_crm_customer_pool as y on x.pool_id = y.pool_id
+        where x.customer_id = a.customer_id ) as poolIds,
         a.contacts_id
         from `wk_crm_customer` a
         where a.owner_user_id is null and a.status != 3
@@ -111,7 +113,7 @@
         </if>
         union all
         select a.leads_id as id,a.leads_name as name, a.create_time,a.owner_user_id,
-        1 as type,a.last_time,'' as poolName,0 as contacts_id
+        1 as type,a.last_time,'' as poolName,'' as poolIds,0 as contacts_id
         from `wk_crm_leads` a
         where  a.is_transform = 0
         <if test="data.name != null">
@@ -277,5 +279,14 @@
             telephone like concat('%',#{search},'%') or
             mobile like concat('%',#{search},'%'))
         </if>
+    </select>
+
+    <select id="queryPoolIdsByCustomer" resultType="java.lang.String">
+        select
+            (select GROUP_CONCAT(y.pool_id) from wk_crm_customer_pool_relation as x join wk_crm_customer_pool as y on x.pool_id = y.pool_id
+            where x.customer_id = a.customer_id) as poolIds
+        from `wk_crm_customer` a
+        where a.owner_user_id is null and a.status != 3
+        and a.customer_id = #{customerId}
     </select>
 </mapper>

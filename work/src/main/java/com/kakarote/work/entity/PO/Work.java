@@ -43,6 +43,10 @@ public class Work implements Serializable {
     @TableField(fill = FieldFill.INSERT)
     private Date createTime;
 
+    @ApiModelProperty(value = "更新时间")
+    @TableField(fill = FieldFill.UPDATE)
+    private Date updateTime;
+
     @ApiModelProperty(value = "创建人ID")
     @TableField(fill = FieldFill.INSERT)
     private Long createUserId;

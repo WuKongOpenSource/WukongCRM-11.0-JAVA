@@ -319,8 +319,12 @@ public class AuthUtil {
     }
 
     public static List<Long> filterUserIdListByDataType(Integer dataType, List<Long> allUserIdList) {
-        List<Long> authUserIdList = new ArrayList<>(allUserIdList);
-        authUserIdList = getAuthUserIdByDataType(authUserIdList, allUserIdList, dataType);
+        List<Long> authUserIdList;
+        if (UserUtil.isAdmin()){
+            authUserIdList = allUserIdList;
+        }else {
+            authUserIdList = getAuthUserIdByDataType(new ArrayList<>(), allUserIdList, dataType);
+        }
         ArrayList<Long> longs = new ArrayList<>(allUserIdList);
         longs.retainAll(authUserIdList);
         return longs;

@@ -230,4 +230,8 @@ public class AdminServiceImpl implements AdminService {
         return Result.ok(new UserInfo());
     }
 
+    @Override
+    public Result<Long> queryUserIdByUserName(String userName) {
+        return Result.ok(0L);
+    }
 }

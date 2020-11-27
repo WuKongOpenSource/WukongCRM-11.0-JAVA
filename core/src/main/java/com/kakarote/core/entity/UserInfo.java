@@ -68,7 +68,7 @@ public class UserInfo implements Serializable {
     private Integer superRoleId;
 
     public Long getSuperUserId() {
-        return 14773L;
+        return 16360L;
     }
 
     public void setSuperUserId(Long superUserId) {

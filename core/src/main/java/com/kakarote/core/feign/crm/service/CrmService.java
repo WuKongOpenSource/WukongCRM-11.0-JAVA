@@ -1,8 +1,11 @@
 package com.kakarote.core.feign.crm.service;
 
 import com.kakarote.core.common.Result;
+import com.kakarote.core.entity.BasePage;
+import com.kakarote.core.feign.crm.entity.CrmSearchBO;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.feign.crm.service.impl.CrmServiceImpl;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -10,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 @FeignClient(name = "crm", contextId = "", fallback = CrmServiceImpl.class)
 public interface CrmService {
@@ -91,5 +95,9 @@ public interface CrmService {
 
     @PostMapping("/crmCustomerPool/queryPoolNameListByAuth")
     Result<List> queryPoolNameListByAuth() ;
+
+    @PostMapping("/crmCustomer/queryPageList")
+    @ApiOperation("查询列表页数据")
+    Result<BasePage<Map<String, Object>>> queryCustomerPageList(@RequestBody CrmSearchBO search);
 
 }

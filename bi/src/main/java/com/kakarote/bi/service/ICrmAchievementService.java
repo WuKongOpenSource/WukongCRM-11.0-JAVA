@@ -29,4 +29,13 @@ public interface ICrmAchievementService extends BaseService<CrmAchievement> {
      */
     public void addAchievement(CrmAchievement achievement);
 
+
+    /**
+     * 验证业绩目标数据
+     * @date 2020/11/19 14:39
+     * @param crmAchievements
+     * @return void
+     **/
+    public void verifyCrmAchievementData(List<CrmAchievement> crmAchievements);
+
 }

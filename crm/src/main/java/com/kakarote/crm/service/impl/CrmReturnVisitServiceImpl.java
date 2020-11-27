@@ -11,14 +11,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
-import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
-import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
@@ -344,6 +342,11 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
                 actionRecordUtil.updateRecord(oldReturnVisitMap, crmRetuenVisitMap, CrmEnum.RETURN_VISIT, crmReturnVisit.getVisitNumber(), crmReturnVisit.getVisitId());
                 update().set(StrUtil.toUnderlineCase(record.getString("fieldName")), record.get("value")).eq("visit_id", updateInformationBO.getId()).update();
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
+                CrmReturnVisitData returnVisitData = crmReturnVisitDataService.lambdaQuery().select(CrmReturnVisitData::getValue).eq(CrmReturnVisitData::getFieldId, record.getInteger("fieldId"))
+                        .eq(CrmReturnVisitData::getBatchId, batchId).one();
+                String value = returnVisitData != null ? returnVisitData.getValue() : null;
+                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
+                actionRecordUtil.publicContentRecord(CrmEnum.RETURN_VISIT, BehaviorEnum.UPDATE, visitId, oldReceivables.getVisitNumber(), detail);
                 boolean bol = crmReturnVisitDataService.lambdaUpdate()
                         .set(CrmReturnVisitData::getName, record.getString("fieldName"))
                         .set(CrmReturnVisitData::getValue, record.getString("value"))
@@ -358,23 +361,6 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
                     crmReturnVisitData.setBatchId(batchId);
                     crmReturnVisitDataService.save(crmReturnVisitData);
                 }
-                String oldFieldValue = crmReturnVisitDataService.lambdaQuery().select(CrmReturnVisitData::getValue).eq(CrmReturnVisitData::getFieldId, record.getInteger("fieldId"))
-                        .eq(CrmReturnVisitData::getBatchId, batchId).one().getValue();
-                String formType = record.getString("formType");
-                String newValue = record.getString("value");
-                if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
-                    oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                    newValue = adminService.queryUserByIds(TagUtil.toLongSet(record.getString("value"))).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                } else if (formType.equals(FieldEnum.STRUCTURE.getFormType())) {
-                    oldFieldValue = adminService.queryDeptByIds(TagUtil.toSet(oldFieldValue)).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                    newValue = adminService.queryDeptByIds(TagUtil.toSet(record.getString("value"))).getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                } else if (formType.equals(FieldEnum.FILE.getFormType())) {
-                    oldFieldValue = adminFileService.queryFileList(oldFieldValue).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
-                    newValue = adminFileService.queryFileList(record.getString("value")).getData().stream().map(FileEntity::getName).collect(Collectors.joining(","));
-                }
-                String oldValue = StrUtil.isEmpty(oldFieldValue) ? "空" : oldFieldValue;
-                String detail = "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
-                actionRecordUtil.publicContentRecord(CrmEnum.RETURN_VISIT, BehaviorEnum.UPDATE, visitId, oldReceivables.getVisitNumber(), detail);
             }
             updateField(record, visitId);
         });

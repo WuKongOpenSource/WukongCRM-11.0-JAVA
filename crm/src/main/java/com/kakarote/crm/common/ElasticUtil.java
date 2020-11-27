@@ -44,7 +44,7 @@ public class ElasticUtil {
         try {
             boolean b = client.indices().exists(indexRequest, RequestOptions.DEFAULT);
             if (b) {
-                System.out.println("索引存在:" + index);
+                log.info("索引存在:" + index);
                 return;
             }
         } catch (IOException e) {
@@ -63,7 +63,7 @@ public class ElasticUtil {
             CreateIndexResponse createIndexResponse = client.indices().create(request, RequestOptions.DEFAULT);
             boolean falg = createIndexResponse.isAcknowledged();
             if (falg) {
-                System.out.println("创建索引库:" + index + "成功！");
+                log.info("创建索引库:" + index + "成功！");
             }
         } catch (IOException e) {
             log.error("创建索引错误", e);

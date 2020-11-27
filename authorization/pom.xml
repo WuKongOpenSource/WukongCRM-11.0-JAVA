@@ -13,7 +13,7 @@
 
     <artifactId>wk_authorization</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>wk_authorization</name>
+    <name>authorization</name>
     <description>authorization鉴权</description>
     <dependencies>
         <dependency>
@@ -124,7 +124,7 @@
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
-                    <finalName>${artifactId}</finalName>
+                    <finalName>${name}</finalName>
                     <appendAssemblyId>false</appendAssemblyId>
                     <descriptors>
                         <descriptor>../assembly.xml</descriptor>

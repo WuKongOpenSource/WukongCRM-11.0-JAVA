@@ -133,6 +133,9 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
                 examineStepLambdaQueryWrapper.orderByAsc(CrmExamineStep::getStepNum);
                 examineStepLambdaQueryWrapper.last(" limit 1");
                 CrmExamineStep examineStep = examineStepService.getOne(examineStepLambdaQueryWrapper);
+                if (examineStep == null){
+                    throw new CrmException(CrmCodeEnum.NO_APPROVAL_STEP_CANNOT_BE_SAVED);
+                }
                 examineRecord.setExamineStepId(examineStep.getStepId());
                 examineLog.setExamineStepId(examineStep.getStepId());
                 if (recordId == null) {
@@ -479,7 +482,15 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
         } else {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
         }
-        jsonObject.put("realname", adminService.queryUserName(jsonObject.getLong("ownerUserId")).getData());
+        if (type == 4){
+            jsonObject.put("ownerUserId", record.getCreateUser());
+            jsonObject.put("createTime", record.getCreateTime());
+            jsonObject.put("examineStatus", record.getExamineStatus());
+            jsonObject.put("checkStatus", record.getExamineStatus());
+            jsonObject.put("realname", adminService.queryUserName(record.getCreateUser()).getData());
+        }else {
+            jsonObject.put("realname", adminService.queryUserName(jsonObject.getLong("ownerUserId")).getData());
+        }
         CrmExamineLogMapper mapper = (CrmExamineLogMapper) examineLogService.getBaseMapper();
         List<JSONObject> logs = mapper.queryExamineLogByRecordIdByStep(recordId);
         List<JSONObject> recordList = new ArrayList<>();

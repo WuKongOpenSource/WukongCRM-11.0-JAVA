@@ -30,7 +30,7 @@ public class SeparatorUtil {
 
     public static Set<Long> toLongSet(String tagStr){
         Set<Long> tag=new HashSet<>();
-        if(null==tagStr){
+        if(StrUtil.isEmpty(tagStr)){
             return tag;
         }
         for (String str : tagStr.split(SEPARATOR)) {

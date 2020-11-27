@@ -44,6 +44,13 @@ public interface IAdminRoleService extends BaseService<AdminRole> {
     public List<AdminRole> queryRoleListByUserId(Long userId);
 
     /**
+     * 通过用户ID查询角色列表
+     * @param userIds 用户ID
+     * @return data
+     */
+    public List<AdminRole> queryRoleListByUserId(List<Long> userIds);
+
+    /**
      * 根据类型查询角色
      * @param roleTypeEnum type
      * @return data
@@ -95,7 +102,9 @@ public interface IAdminRoleService extends BaseService<AdminRole> {
      * @param userIds 用户列表
      * @param roleIds 角色列表
      */
-    public void relatedUser(List<String> userIds, List<String> roleIds);
+    public void relatedUser(List<Long> userIds, List<Integer> roleIds);
+
+    void relatedDeptUser(List<Long> userIds, List<Integer> deptIds, List<Integer> roleIds);
 
     /**
      * 取消用户关联角色
@@ -144,4 +153,5 @@ public interface IAdminRoleService extends BaseService<AdminRole> {
      * 获取用户未授权菜单
      * */
     List<String> queryNoAuthMenu(Long userId);
+
 }

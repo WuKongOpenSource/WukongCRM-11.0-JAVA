@@ -54,6 +54,10 @@ public enum AdminMessageEnum {
     HRM_EMPLOYEE_IMPORT(50, 8, "人资员工导入通知"),
     HRM_EMPLOYEE_SALARY_PASS(51, 8, "人资薪资通过通知"),
     HRM_EMPLOYEE_SALARY_REJECT(52, 8, "人资薪资拒绝通知"),
+    HRM_SEND_SLIP(80, 8, "人资发送工资条通知"),
+    HRM_FIX_SALARY_IMPORT(81, 8, "人资导入定薪通知"),
+    HRM_CHANGE_SALARY_IMPORT(82, 8, "人资导入调薪通知"),
+    HRM_WRITE_ARCHIVES(83, 8, "邀请填写档案信息"),
     //JXC
     JXC_PURCHASE_EXAMINE(53,9,"采购订单待审核审批提醒"),
     JXC_PURCHASE_REJECT(54,9,"采购订单拒绝通知"),

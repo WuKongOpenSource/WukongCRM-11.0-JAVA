@@ -44,4 +44,6 @@ public interface BiCustomerMapper {
     public List<JSONObject> customerSatisfactionTable(Map<String,Object> map);
 
     public List<JSONObject> productSatisfactionTable(Map<String,Object> map);
+
+    public String queryFirstCustomerCreteTime();
 }

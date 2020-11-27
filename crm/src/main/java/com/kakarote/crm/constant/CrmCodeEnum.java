@@ -91,6 +91,8 @@ public enum CrmCodeEnum implements ResultCode {
     SYSTEM_RELATED_FIELDS_CANNOT_BE_HIDDEN(2080, "系统关联字段不能隐藏！"),
     REQUIRED_OPTIONS_CANNOT_BE_HIDDEN(2081, "必填选项不能隐藏！"),
     INDEX_CREATE_FAILED(2082, "%s索引创建失败,数据初始化异常！"),
+    CRM_CONTACTS_DATA_ERROR(2083, "检测到没有绑定客户，请确认！"),
+    CRM_CONTRACT_EXAMINE_PASS_HINT_ERROR(2085, "已通过的合同需要作废后才可编辑！"),
     ;
 
 

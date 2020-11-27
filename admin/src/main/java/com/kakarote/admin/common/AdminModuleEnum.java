@@ -78,4 +78,13 @@ public enum AdminModuleEnum {
         return values;
     }
 
+    public static AdminModuleEnum parse(String module) {
+        for (AdminModuleEnum adminModuleEnum : AdminModuleEnum.values()){
+            if (adminModuleEnum.getValue().equals(module)){
+                return adminModuleEnum;
+            }
+        }
+        return null;
+    }
+
 }

@@ -2,6 +2,7 @@ package com.kakarote.work.entity.PO;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.kakarote.work.entity.VO.TaskInfoVO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -10,6 +11,7 @@ import lombok.experimental.Accessors;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 /**
  * <p>
@@ -118,6 +120,9 @@ public class WorkTask implements Serializable {
     private String businessIds;
     @TableField(exist = false)
     private String contractIds;
+
+    @TableField(exist = false)
+    private List<TaskInfoVO> taskInfoList;
 
 
 }

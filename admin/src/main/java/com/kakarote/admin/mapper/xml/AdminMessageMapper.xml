@@ -12,9 +12,14 @@
         <if test="data.isRead != null">
             and is_read=#{data.isRead}
         </if>
-        <if test="data.label != null">
-            and label=#{data.label}
-        </if>
+        <choose>
+            <when test="data.label != null">
+                and label=#{data.label}
+            </when>
+            <otherwise>
+                and label != 4
+            </otherwise>
+        </choose>
         <if test="data.type != null">
             and type=#{data.type}
         </if>

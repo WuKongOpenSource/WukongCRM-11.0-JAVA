@@ -2,9 +2,7 @@ package com.kakarote.work.entity.VO;
 
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -18,7 +16,6 @@ import java.util.List;
 @Data
 public class WorkInfoVo{
     @ApiModelProperty(value = "项目ID")
-    @TableId(value = "work_id", type = IdType.AUTO)
     private Integer workId;
 
     @ApiModelProperty(value = "项目名字")

@@ -5,7 +5,7 @@
     <select id="myInitiate" resultType="com.kakarote.oa.entity.VO.ExamineVO">
         select a.*,b.examine_status,b.record_id as examine_record_id,
         b.examine_step_id ,c.title as
-        categoryTitle,c.examine_type,c.icon
+        categoryTitle,c.examine_type as type,c.icon
         from wk_oa_examine a left join wk_oa_examine_record b on a.examine_id = b.examine_id left join
         wk_oa_examine_category c on a.category_id = c.category_id
         where
@@ -58,7 +58,7 @@
     </select>
     <select id="myOaExamine" resultType="com.kakarote.oa.entity.VO.ExamineVO">
         select a.*,b.examine_status,b.record_id as examine_record_id,b.examine_step_id,c.title as
-        categoryTitle,c.icon,c.examine_type
+        categoryTitle,c.icon,c.examine_type as type
         from wk_oa_examine a
         left join wk_oa_examine_record b on a.examine_id = b.examine_id
         left join wk_oa_examine_category c on a.category_id = c.category_id

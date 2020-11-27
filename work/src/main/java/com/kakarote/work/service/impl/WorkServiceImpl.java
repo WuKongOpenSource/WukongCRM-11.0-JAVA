@@ -76,6 +76,9 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
     private IWorkTaskLabelService workTaskLabelService;
 
     @Autowired
+    private IWorkService workService;
+
+    @Autowired
     private AdminService adminService;
 
     @Autowired
@@ -291,7 +294,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
     }
 
     @Override
-    public List<WorkInfoVo> queryWorkNameList() {
+    public List<WorkInfoVo> queryWorkNameList(WorkTaskQueryBO workTaskQueryBO) {
         List<WorkInfoVo> workInfoList;
         Long userId = UserUtil.getUserId();
         QueryWrapper<WorkCollect> wapper = new QueryWrapper<WorkCollect>().eq("user_id", userId);
@@ -300,12 +303,16 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         List<WorkOrder> workOrder;
         if (workAuthUtil.isWorkAdmin()) {
             workOrder = workOrderService.list(new QueryWrapper<WorkOrder>().eq("user_id", userId));
-            workInfoList = getBaseMapper().queryWorkNameList(null);
+            workInfoList = getBaseMapper().queryWorkNameList(null,workTaskQueryBO);
         } else {
             workOrder = workOrderService.list(new QueryWrapper<WorkOrder>().eq("user_id", userId));
-            workInfoList = getBaseMapper().queryWorkNameList(UserUtil.getUserId());
+            workInfoList = getBaseMapper().queryWorkNameList(UserUtil.getUserId(),workTaskQueryBO);
         }
-
+        if (CollUtil.isNotEmpty(workTaskQueryBO.getUserIdList())){
+            if (CollUtil.isNotEmpty(workInfoList)){
+                workInfoList = workInfoList.stream().filter(t -> WorkUtil.verifyIntersection(t.getOwnerUserId(),workTaskQueryBO.getUserIdList())).collect(Collectors.toList());
+            }
+        }
         List<Integer> adminMenus = new ArrayList<>();
         adminMenus.add(301);
         workInfoList.forEach(workInfo -> {
@@ -364,6 +371,47 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         return workInfoList.stream().sorted(Comparator.comparingInt(WorkInfoVo::getOrderNum)).collect(Collectors.toList());
     }
 
+
+    @Override
+    public List<TaskInfoVO> queryWorkTaskList(WorkTaskQueryBO workTaskQueryBO) {
+        //项目
+        List<Integer> workIdList;
+        if (CollUtil.isNotEmpty(workTaskQueryBO.getWorkIdList())) {
+            workIdList = workTaskQueryBO.getWorkIdList();
+        }else {
+            List<WorkInfoVo> workInfoList;
+            if (workAuthUtil.isWorkAdmin()) {
+                workInfoList = getBaseMapper().queryWorkNameList(null, new WorkTaskQueryBO());
+            } else {
+                workInfoList = getBaseMapper().queryWorkNameList(UserUtil.getUserId(), new WorkTaskQueryBO());
+            }
+            if (CollUtil.isEmpty(workInfoList)) {
+                return new ArrayList<>();
+            }
+            workIdList = workInfoList.stream().map(WorkInfoVo::getWorkId).collect(Collectors.toList());
+        }
+        Integer taskSort = workTaskQueryBO.getSort();
+        if (taskSort != null){
+            workTaskQueryBO.setSort(taskSort + 1);
+        }
+        List<TaskInfoVO> taskList = getBaseMapper().queryWorkTaskByCondition(workTaskQueryBO, workIdList);
+        if (CollUtil.isNotEmpty(taskList)) {
+            taskList.forEach(taskInfo -> {
+                if (taskInfo.getWorkId() != null) {
+                    Work work = workService.getById(taskInfo.getWorkId());
+                    if (work != null) {
+                        taskInfo.setWorkName(work.getName());
+                    }
+                }
+                if (taskInfo.getBatchId() != null) {
+                    List<FileEntity> fileEntities = adminFileService.queryFileList(taskInfo.getBatchId()).getData();
+                    taskInfo.setFileNum(fileEntities.size());
+                }
+            });
+        }
+        return taskList;
+    }
+
     @Override
     public List<WorkTaskTemplateClassVO> queryTaskByWorkId(WorkTaskTemplateBO workTaskTemplateBO) {
         Integer workId = workTaskTemplateBO.getWorkId();
@@ -385,15 +433,15 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
             } else {
                 workTaskService.taskListTransfer(taskList);
                 //先保证已完成的在最后，再按照order_num排序
-                taskList.sort((r1, r2) -> {
-                    if (r1.getStatus() == 5) {
-                        return 1;
-                    } else if (r2.getStatus() == 5) {
-                        return -1;
-                    } else {
-                        return r1.getOrderNum().compareTo(r2.getOrderNum());
-                    }
-                });
+                if (Objects.equals(workTaskTemplateBO.getSort(),1)) {
+                    taskList.sort(Comparator.comparingInt(TaskInfoVO::getOrderNum));
+                }
+                boolean completedTask = Optional.ofNullable(workTaskTemplateBO.getCompletedTask()).orElse(false);
+                if (completedTask){
+                    List<TaskInfoVO> taskInfoVoS = taskList.stream().filter(t -> t.getStatus() == 5).collect(Collectors.toList());
+                    taskList.removeIf(t -> t.getStatus() == 5);
+                    taskList.addAll(taskInfoVoS);
+                }
                 workClass.setList(taskList);
             }
         });
@@ -559,6 +607,33 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
     public List<SimpleUser> queryWorkOwnerList(Integer workId) {
         String ownerUserId = getOne(new QueryWrapper<Work>().select("owner_user_id").eq("work_id", workId)).getOwnerUserId();
         return adminService.queryUserByIds(SeparatorUtil.toLongSet(ownerUserId)).getData();
+    }
+
+    @Override
+    public List<SimpleUser> queryMemberListByWorkOrTask(boolean isWork) {
+        StringBuilder ownerUserId = new StringBuilder();
+        if (isWork) {
+            List<WorkInfoVo> workInfoList;
+            if (workAuthUtil.isWorkAdmin()) {
+                workInfoList = getBaseMapper().queryWorkNameList(null, new WorkTaskQueryBO());
+            } else {
+                workInfoList = getBaseMapper().queryWorkNameList(UserUtil.getUserId(), new WorkTaskQueryBO());
+            }
+            for (WorkInfoVo workInfoVo : workInfoList) {
+                if (StrUtil.isNotEmpty(workInfoVo.getOwnerUserId())) {
+                    ownerUserId.append(workInfoVo.getOwnerUserId());
+                }
+            }
+        }else {
+            List<String> ownerUserList = getBaseMapper().queryTaskOwnerUser(UserUtil.getUserId());
+            for (String ownerUser : ownerUserList) {
+                if (StrUtil.isNotEmpty(ownerUser)) {
+                    ownerUserId.append(ownerUser);
+                }
+            }
+        }
+        ownerUserId.append(UserUtil.getUserId()).append(Const.SEPARATOR);
+        return adminService.queryUserByIds(SeparatorUtil.toLongSet(ownerUserId.toString())).getData();
     }
 
     @Override

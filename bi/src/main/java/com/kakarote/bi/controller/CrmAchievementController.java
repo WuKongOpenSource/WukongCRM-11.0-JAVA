@@ -45,6 +45,7 @@ public class CrmAchievementController {
     @PostMapping("/setAchievement")
     @ApiOperation("修改业绩目标")
     public Result setAchievement(@RequestBody List<CrmAchievement> crmAchievement) {
+        achievementService.verifyCrmAchievementData(crmAchievement);
         achievementService.updateBatchById(crmAchievement);
         return Result.ok();
     }

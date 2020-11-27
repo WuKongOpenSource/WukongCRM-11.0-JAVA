@@ -29,4 +29,9 @@ public class WorkTaskTemplateBO {
     @ApiModelProperty("任务名称关键字")
     private String taskName;
 
+    @ApiModelProperty("1 手动 2 最近创建 3 最近截止 4 最近更新 5 最高优先级")
+    private Integer sort;
+
+    @ApiModelProperty("已完成任务排序")
+    private Boolean completedTask;
 }

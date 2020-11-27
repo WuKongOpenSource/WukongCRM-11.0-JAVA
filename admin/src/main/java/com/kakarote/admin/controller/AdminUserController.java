@@ -370,5 +370,12 @@ public class AdminUserController {
         return R.ok();
     }
 
+
+    @PostMapping("/queryUserIdByUserName")
+    @ApiExplain("查询用户id通过用户名")
+    public Result<Long> queryUserIdByUserName(@RequestParam("userName")String userName){
+        Long userId = adminUserService.lambdaQuery().select(AdminUser::getUserId).eq(AdminUser::getUsername, userName).oneOpt().map(AdminUser::getUserId).orElse(0L);
+        return Result.ok(userId);
+    }
 }
 

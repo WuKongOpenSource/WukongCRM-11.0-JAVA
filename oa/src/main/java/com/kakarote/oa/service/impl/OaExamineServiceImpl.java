@@ -282,7 +282,7 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
                 fieldUtil.oaFieldAdd("content", "出差事由", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1)
                         .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1)
                         .oaFieldAdd("cause", "行程明细", "business_cause", arr, 1, 0, examineTravelList, "", 3, 1)
-                        .oaFieldAdd("duration", "时长(天)", "floatnumber", arr, 1, 0, String.valueOf(oaExamineInfo.getDuration()), "", 3, 1);
+                        .oaFieldAdd("duration", "出差总天数", "floatnumber", arr, 1, 0, String.valueOf(oaExamineInfo.getDuration()), "", 3, 1);
                 break;
             case 4:
                 fieldUtil.oaFieldAdd("content", "加班原因", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1)
@@ -326,14 +326,23 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         UserInfo user = UserUtil.getUser();
         OaExamine oaExamine = jsonObject.getObject("oaExamine", OaExamine.class);
         JSONArray oaExamineTravelList = jsonObject.getJSONArray("oaExamineTravelList");
+        //报销总金额
+        if(oaExamine.getMoney() != null && oaExamine.getMoney().doubleValue() <= 0){
+            throw new CrmException(OaCodeEnum.TOTAL_REIMBURSEMENT_ERROR);
+        }
         if (oaExamine.getStartTime() != null && oaExamine.getEndTime() != null) {
             if ((oaExamine.getStartTime().compareTo(oaExamine.getEndTime())) >= 0) {
                 throw new CrmException(OaCodeEnum.EXAMINE_END_TIME_IS_EARLIER_THAN_START_TIME);
             }
         }
         if (oaExamineTravelList != null) {
-            for (Object json : oaExamineTravelList) {
+            for (int i = 0; i < oaExamineTravelList.size(); i++) {
+                Object json = oaExamineTravelList.get(i);
                 OaExamineTravel oaExamineTravel = TypeUtils.castToJavaBean(json, OaExamineTravel.class);
+                //费用明细金额
+                if (oaExamineTravel.getMoney() != null && oaExamineTravel.getMoney().doubleValue() <= 0) {
+                    throw new CrmException(OaCodeEnum.TOTAL_AMOUNT_OF_EXPENSE_DETAILS_ERROR,i);
+                }
                 if (oaExamineTravel.getStartTime() != null && oaExamineTravel.getEndTime() != null) {
                     if ((oaExamineTravel.getStartTime().compareTo(oaExamineTravel.getEndTime())) >= 0) {
                         throw new CrmException(OaCodeEnum.TRAVEL_END_TIME_IS_EARLIER_THAN_START_TIME);

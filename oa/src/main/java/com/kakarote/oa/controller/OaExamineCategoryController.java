@@ -7,6 +7,7 @@ import com.kakarote.core.entity.PageEntity;
 import com.kakarote.oa.entity.BO.SetExamineCategoryBO;
 import com.kakarote.oa.entity.BO.UpdateCategoryStatus;
 import com.kakarote.oa.entity.PO.OaExamineCategory;
+import com.kakarote.oa.entity.PO.OaExamineSort;
 import com.kakarote.oa.entity.VO.OaExamineCategoryVO;
 import com.kakarote.oa.service.IOaExamineCategoryService;
 import io.swagger.annotations.ApiOperation;
@@ -52,6 +53,13 @@ public class OaExamineCategoryController {
     public Result<List<OaExamineCategory>> queryAllExamineCategoryList() {
         List<OaExamineCategory> examineCategoryList = examineCategoryService.queryAllExamineCategoryList();
         return Result.ok(examineCategoryList);
+    }
+
+    @ApiOperation("自定义审批类型排序")
+    @PostMapping("/saveOrUpdateOaExamineSort")
+    public Result saveOrUpdateOaExamineSort(@RequestBody List<OaExamineSort> oaExamineSortList) {
+        examineCategoryService.saveOrUpdateOaExamineSort(oaExamineSortList);
+        return Result.ok();
     }
 
 

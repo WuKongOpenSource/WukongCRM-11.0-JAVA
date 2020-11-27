@@ -2,6 +2,7 @@ package com.kakarote.bi.service.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.collection.ListUtil;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.bi.common.BiCodeEnum;
@@ -54,6 +55,7 @@ public class BiCustomerServiceImpl implements BiCustomerService {
         if (tableNameList.isEmpty()){
             throw new CrmException(BiCodeEnum.BI_DATE_PARSE_ERROR);
         }
+        this.handleTableName(tableNameList);
         Map<String, Object> map = timeEntity.toMap();
         map.put("tableNameList",tableNameList);
         List<JSONObject> jsonObjectList = biCustomerMapper.totalCustomerStats(map);
@@ -61,6 +63,25 @@ public class BiCustomerServiceImpl implements BiCustomerService {
         return jsonObjectList;
     }
 
+
+    /**
+     * 处理需要的表名
+     * @date 2020/11/21 17:22
+     * @param tableNameList
+     * @return void
+     **/
+    private void handleTableName(List<String> tableNameList){
+        String firstYear = biCustomerMapper.queryFirstCustomerCreteTime();
+        Integer minYear;
+        if (StrUtil.isNotEmpty(firstYear)){
+            minYear = Integer.valueOf(firstYear);
+        }else {
+            minYear = DateUtil.thisYear();
+        }
+        Integer thisYear = DateUtil.thisYear();
+        List<String> tableNames = BiPatch.getYearsOrTableNameList(minYear,thisYear,true);
+        tableNameList.removeIf(t -> !tableNames.contains(t));
+    }
     /**
      * 查询客户总量分析图
      *
@@ -271,6 +292,7 @@ public class BiCustomerServiceImpl implements BiCustomerService {
         if (tableNameList.isEmpty()){
             throw new CrmException(BiCodeEnum.BI_DATE_PARSE_ERROR);
         }
+        this.handleTableName(tableNameList);
         Map<String, Object> map = record.toMap();
         map.put("tableNameList",tableNameList);
         List<JSONObject> jsonObjectList = biCustomerMapper.employeeCycle(map);
@@ -306,8 +328,8 @@ public class BiCustomerServiceImpl implements BiCustomerService {
         List<JSONObject> recordList = biCustomerMapper.employeeCycleInfo(record);
         JSONObject total = new JSONObject().fluentPut("realname", "总计").fluentPut("customerNum", 0).fluentPut("cycle", 0);
         recordList.forEach(r -> {
-            total.put("customerNum", total.getInteger("customerNum") + r.getInteger("customerNum"));
-            total.put("cycle", total.getInteger("cycle") + r.getInteger("cycle"));
+            total.put("customerNum", total.getDouble("customerNum") + r.getDouble("customerNum"));
+            total.put("cycle", total.getDouble("cycle") + r.getDouble("cycle"));
         });
         return new JSONObject().fluentPut("list", recordList).fluentPut("total", total);
     }

@@ -86,4 +86,14 @@
         </if>
         order by create_time desc
     </select>
+    <select id="selectCrmExamineByUser" resultType="com.kakarote.crm.entity.PO.CrmExamine">
+        select * from wk_crm_examine where category_type = #{categoryType}
+        <if test="isAdmin == false">
+            and (
+            ( find_in_set(#{userId},user_ids) or find_in_set(#{deptId},dept_ids))
+            or ((dept_ids = '' or dept_ids is null) and (user_ids = '' or user_ids is null))
+            )
+        </if>
+        and status = 1 order by update_time desc limit 1
+    </select>
 </mapper>

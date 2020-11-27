@@ -18,4 +18,13 @@ public interface OaService {
     @PostMapping("/oaExamine/transfer")
     @ApiOperation("转换审批")
     public Result<List<ExamineVO>> transfer(@RequestBody List<ExamineVO> recordList);
+
+    @PostMapping("/oaLog/initOaData")
+    Result<Boolean> initOaData();
+
+    @PostMapping("/oaLog/initCalendarData")
+    Result<Boolean> initCalendarData();
+
+    @PostMapping("/oaLog/initOaExamineData")
+    Result<Boolean> initOaExamineData();
 }

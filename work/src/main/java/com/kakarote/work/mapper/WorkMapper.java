@@ -2,6 +2,7 @@ package com.kakarote.work.mapper;
 
 import com.kakarote.core.servlet.BaseMapper;
 import com.kakarote.work.entity.BO.WorkOwnerRoleBO;
+import com.kakarote.work.entity.BO.WorkTaskQueryBO;
 import com.kakarote.work.entity.BO.WorkTaskTemplateBO;
 import com.kakarote.work.entity.PO.Work;
 import com.kakarote.work.entity.PO.WorkTask;
@@ -23,11 +24,15 @@ public interface WorkMapper extends BaseMapper<Work> {
 
     void leaveTaskOwnerUser(@Param("workId") Integer workId, @Param("userId") Long userId);
 
-    List<WorkInfoVo> queryWorkNameList(@Param("userId") Long userId);
+    List<String> queryTaskOwnerUser(@Param("userId") Long userId);
+
+    List<WorkInfoVo> queryWorkNameList(@Param("userId") Long userId,@Param("data") WorkTaskQueryBO workTaskQueryBO);
 
     List<WorkTaskTemplateClassVO> queryWorkTaskTemplateClass(@Param("taskId") Integer taskId);
 
     List<TaskInfoVO> queryTaskByClassId(@Param("data") WorkTaskTemplateBO workTaskTemplateBO, @Param("classId") Integer classId);
+
+    List<TaskInfoVO> queryWorkTaskByCondition(@Param("data") WorkTaskQueryBO workTaskQueryBO, @Param("workIdList") List<Integer> workIdList);
 
     WorkTaskStatsVO workStatistics(@Param("workId") Integer workId, @Param("workIdList") List<Integer> workIdList, @Param("userId") Long userId, @Param("mainUserId") Long mainUserId);
 

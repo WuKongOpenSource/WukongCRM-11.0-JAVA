@@ -22,4 +22,6 @@ public interface CrmExamineMapper extends BaseMapper<CrmExamine> {
 
     BasePage<JSONObject> myExamine(BasePage<Object> parse, @Param("data") CrmMyExamineBO crmMyExamineBO,@Param("isAdmin") boolean isAdmin,
                                    @Param("userId") Long userId);
+
+    CrmExamine selectCrmExamineByUser(@Param("categoryType") Integer categoryType,@Param("isAdmin") boolean isAdmin, @Param("userId") Long userId, @Param("deptId") Integer deptId);
 }

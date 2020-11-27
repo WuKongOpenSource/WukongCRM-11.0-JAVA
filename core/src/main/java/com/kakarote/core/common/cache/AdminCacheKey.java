@@ -15,4 +15,9 @@ public interface AdminCacheKey {
      * &s: host
      */
     String SMS_CACHE_KEY = "send:sms:";
+
+
+    String PASSWORD_ERROR_CACHE_KEY = "password:error:";
+
+    String TEMPORARY_ACCESS_CODE_CACHE_KEY  = "temporary:access:code:";
 }

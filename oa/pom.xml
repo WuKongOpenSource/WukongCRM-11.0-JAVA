@@ -12,7 +12,7 @@
 
 	<artifactId>wk_oa</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>wk_oa</name>
+	<name>oa</name>
 	<description>办公管理</description>
 
 
@@ -28,7 +28,7 @@
 		<resources>
 			<resource>
 				<!-- xml放在java目录下-->
-				<directory>src/main/java/com/kakarote/oa/</directory>
+				<directory>src/main/java/com/kakarote/${name}/</directory>
 				<includes>
 					<include>**/*.xml</include>
 				</includes>
@@ -110,7 +110,7 @@
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<configuration>
-					<finalName>${artifactId}</finalName>
+					<finalName>${name}</finalName>
 					<appendAssemblyId>false</appendAssemblyId>
 					<descriptors>
 						<descriptor>../assembly.xml</descriptor>

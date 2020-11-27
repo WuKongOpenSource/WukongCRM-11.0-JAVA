@@ -18,6 +18,7 @@ import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
@@ -65,6 +66,8 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmField> implements ICrmFieldService {
+
+    private static final String PRODUCT_STATUS_URL = "/crmProduct/updateStatus";
 
     @Autowired
     private ICrmFieldSortService crmFieldSortService;
@@ -487,7 +490,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             AdminConfig numberSetting = adminService.queryFirstConfigByNameAndValue("numberSetting", crmEnum.getType().toString()).getData();
             Integer status = numberSetting.getStatus();
             if (status == 1) {
-                fieldList.forEach(field -> {
+                for (CrmModelFiledVO field : fieldList) {
                     String fieldName = field.getFieldName();
                     boolean b = "num".equals(fieldName) || "number".equals(fieldName) || "visitNumber".equals(fieldName);
                     if (b && field.getFieldType() == 1) {
@@ -495,7 +498,23 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                     } else {
                         field.setAutoGeneNumber(0);
                     }
-                });
+                }
+            }
+        }else if (crmEnum == CrmEnum.PRODUCT){
+            boolean isWithStatus = false;
+            Long userId = UserUtil.getUserId();
+            String key = userId.toString();
+            List<String> noAuthMenuUrls = BaseUtil.getRedis().get(key);
+            if (noAuthMenuUrls != null && noAuthMenuUrls.contains(PRODUCT_STATUS_URL)) {
+                isWithStatus = true;
+            }
+            if (isWithStatus) {
+                for (CrmModelFiledVO field : fieldList) {
+                    if ( "status".equals(field.getFieldName())) {
+                        field.setAuthLevel(2);
+                        break;
+                    }
+                }
             }
         }
         return fieldList;

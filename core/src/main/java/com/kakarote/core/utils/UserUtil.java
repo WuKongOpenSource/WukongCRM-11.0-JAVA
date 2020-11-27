@@ -86,10 +86,12 @@ public class UserUtil {
     public static void userToken(String token, UserInfo userInfo, Integer type) {
         userExit(userInfo.getUserId(), type, 1);
         Redis redis = BaseUtil.getRedis();
-        if (Objects.equals(1, type)) {
-            redis.setex(Const.USER_ADMIN_TOKEN + userInfo.getUserId(), Const.MAX_USER_EXIST_TIME, token);
-        } else if (Objects.equals(2, type)) {
-            redis.setex(Const.USER_MOBILE_TOKEN + userInfo.getUserId(), Const.MAX_USER_EXIST_TIME, token);
+        if (redis.exists(token)) {
+            if (Objects.equals(1, type)) {
+                redis.setex(Const.USER_ADMIN_TOKEN + userInfo.getUserId(), Const.MAX_USER_EXIST_TIME, token);
+            } else if (Objects.equals(2, type)) {
+                redis.setex(Const.USER_MOBILE_TOKEN + userInfo.getUserId(), Const.MAX_USER_EXIST_TIME, token);
+            }
         }
         redis.setex(token, Const.MAX_USER_EXIST_TIME, userInfo);
         Cookie cookie = new Cookie(Const.TOKEN_NAME, token);

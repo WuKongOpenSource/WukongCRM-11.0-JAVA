@@ -280,7 +280,7 @@
             (TRUNCATE(IF(AVG(TIMESTAMPDIFF(DAY,b.create_time,b.deal_time)) &gt;= 0,AVG(TIMESTAMPDIFF(DAY,b.create_time,b.deal_time)),0),1)) as cycle,
             count(distinct b.customer_id) as customerNum
             from wk_admin_user as a left join wk_crm_customer as b on a.user_id = b.owner_user_id
-            where b.status != 3 and DATE_FORMAT(b.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+            where b.status != 3 and  DATE_FORMAT(b.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
             and b.deal_status = 1 and a.user_id = ${x}
         </foreach>
     </select>
@@ -351,5 +351,11 @@
             ) as z
         </foreach>
 
+    </select>
+    <select id="queryFirstCustomerCreteTime" resultType="java.lang.String">
+        SELECT
+            DATE_FORMAT( t.create_time, '%Y' ) AS time
+        FROM
+        ( SELECT min( create_time ) AS create_time FROM wk_crm_customer ) t
     </select>
 </mapper>

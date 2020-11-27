@@ -3,10 +3,13 @@
 <mapper namespace="com.kakarote.oa.mapper.OaExamineCategoryMapper">
 
     <select id="queryAllExamineCategoryList" resultType="com.kakarote.oa.entity.PO.OaExamineCategory">
-      select category_id,title,type,icon from wk_oa_examine_category where is_deleted = 0 and status = 1
+        select t.category_id,t.title,t.type,t.icon from wk_oa_examine_category t
+        left join  wk_oa_examine_sort a on t.category_id = a.category_id and a.user_id = #{userId}
+        where t.is_deleted = 0 and t.status = 1
       <if test="!isAdmin">
-          AND ( user_ids = '' OR user_ids LIKE concat( '%,', #{userId}, ',%' ) )
-          AND ( dept_ids = '' OR dept_ids LIKE concat( '%,', #{deptId}, ',%' ))
+          AND ( t.user_ids = '' OR t.user_ids LIKE concat( '%,', #{userId}, ',%' ))
+          AND ( t.dept_ids = '' OR t.dept_ids LIKE concat( '%,', #{deptId}, ',%' ))
       </if>
+      order by a.sort is null,a.sort,t.create_time
     </select>
 </mapper>

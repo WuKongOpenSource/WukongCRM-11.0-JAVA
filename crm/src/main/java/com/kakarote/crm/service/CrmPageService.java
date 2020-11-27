@@ -360,10 +360,11 @@ public interface CrmPageService {
                 }
                 break;
             case IS_NULL:
-                queryBuilder.mustNot(QueryBuilders.existsQuery(search.getName()));
+                queryBuilder.filter(QueryBuilders.boolQuery().should(QueryBuilders.termQuery(search.getName(),"")).should(QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery(search.getName()))));
                 break;
             case IS_NOT_NULL:
                 queryBuilder.filter(QueryBuilders.existsQuery(search.getName()));
+                queryBuilder.filter(QueryBuilders.boolQuery().mustNot(QueryBuilders.termQuery(search.getName(),"")));
                 break;
             case GT:
                 if (search.getValues().size() > 0) {
@@ -400,12 +401,20 @@ public interface CrmPageService {
                 break;
             case CONTAINS:
                 if (search.getValues().size() > 0) {
-                    queryBuilder.filter(QueryBuilders.wildcardQuery(search.getName(), "*" + search.getValues().get(0) + "*"));
+                    if (fieldEnum.equals(FieldEnum.SINGLE_USER)){
+                        queryBuilder.filter(QueryBuilders.termsQuery(search.getName(),  search.getValues().get(0)));
+                    }else {
+                        queryBuilder.filter(QueryBuilders.wildcardQuery(search.getName(), "*" + search.getValues().get(0) + "*"));
+                    }
                 }
                 break;
             case NOT_CONTAINS:
                 if (search.getValues().size() > 0) {
-                    queryBuilder.mustNot(QueryBuilders.wildcardQuery(search.getName(), "*" + search.getValues().get(0) + "*"));
+                    if (fieldEnum.equals(FieldEnum.SINGLE_USER)){
+                        queryBuilder.mustNot(QueryBuilders.termsQuery(search.getName(),  search.getValues().get(0)));
+                    }else {
+                        queryBuilder.mustNot(QueryBuilders.wildcardQuery(search.getName(), "*" + search.getValues().get(0) + "*"));
+                    }
                 }
                 break;
             case DATE:

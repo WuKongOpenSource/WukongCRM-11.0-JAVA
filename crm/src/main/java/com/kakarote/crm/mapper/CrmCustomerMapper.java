@@ -76,6 +76,8 @@ public interface CrmCustomerMapper extends BaseMapper<CrmCustomer> {
 
     List<CrmDataCheckVO> dataCheck(@Param("data") CrmDataCheckBO dataCheckBO);
 
+    String queryPoolIdsByCustomer(@Param("customerId") Integer customerId);
+
     BasePage<JSONObject> queryReceivablesPlan(BasePage<JSONObject> page, @Param("customerId") Integer customerId,@Param("conditions") String conditions);
 
 

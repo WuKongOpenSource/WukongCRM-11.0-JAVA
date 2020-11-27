@@ -14,6 +14,10 @@ import java.util.Set;
 @FeignClient(name = "hrm",contextId = "hrm")
 public interface HrmService {
 
+    @PostMapping("/hrm/initData")
+    @ApiOperation("初始化数据")
+    Result<Integer> initData(@RequestParam("userId") Long userId);
+
     @PostMapping("/hrm/queryEmployeeListByIds")
     @ApiOperation("通过员工ids查询")
     Result<Set<HrmEmployee>> queryEmployeeListByIds(@RequestBody List<Integer> employeeIds);

@@ -12,7 +12,7 @@
 
     <artifactId>wk_gateway</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>wk_gateway</name>
+    <name>gateway</name>
     <description>gateway网关</description>
     <repositories>
         <repository>
@@ -192,7 +192,7 @@
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
-                    <finalName>${artifactId}</finalName>
+                    <finalName>${name}</finalName>
                     <appendAssemblyId>false</appendAssemblyId>
                     <descriptors>
                         <descriptor>../assembly.xml</descriptor>

@@ -1,5 +1,6 @@
 package com.kakarote.work.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
@@ -7,6 +8,7 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -86,21 +88,45 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
 
     @Autowired
     private IWorkTaskRelationService taskRelationService;
-    @Autowired
-    private IWorkTaskService workTaskService;
 
     @Override
-    public List<MyTaskVO> myTask() {
+    public List<MyTaskVO> myTask(WorkTaskNameBO workTaskNameBO,boolean isInternal) {
         List<MyTaskVO> result = new ArrayList<>();
         result.add(new MyTaskVO("收件箱", 0, 0, new ArrayList<>()));
-        result.add(new MyTaskVO("今天要做", 1, 0, new ArrayList<>()));
-        result.add(new MyTaskVO("下一步要做", 2, 0, new ArrayList<>()));
-        result.add(new MyTaskVO("以后要做", 3, 0, new ArrayList<>()));
+        if (!isInternal) {
+            result.add(new MyTaskVO("今天要做", 1, 0, new ArrayList<>()));
+            result.add(new MyTaskVO("下一步要做", 2, 0, new ArrayList<>()));
+            result.add(new MyTaskVO("以后要做", 3, 0, new ArrayList<>()));
+        }
         result.forEach(myTaskVO -> {
-            List<TaskInfoVO> taskList = getBaseMapper().queryMyTaskList(myTaskVO.getIsTop(), UserUtil.getUserId());
+            Integer userId = UserUtil.getUserId().intValue();
+            if (CollUtil.isNotEmpty(workTaskNameBO.getUserIdList())){
+                workTaskNameBO.getUserIdList().remove(userId);
+            }
+            List<TaskInfoVO> taskList = getBaseMapper().queryMyTaskList(myTaskVO.getIsTop(), UserUtil.getUserId(),workTaskNameBO);
             myTaskVO.setCount(taskList.size());
             if (taskList.size() > 0) {
-                taskList.sort(Comparator.comparingInt(TaskInfoVO::getTopOrderNum));
+                if (Objects.equals(workTaskNameBO.getSort(),1)) {
+                    taskList.sort(Comparator.comparingInt(TaskInfoVO::getTopOrderNum));
+                }
+                boolean completedTask = Optional.ofNullable(workTaskNameBO.getCompletedTask()).orElse(false);
+                if (completedTask){
+                    List<TaskInfoVO> taskInfoVoS = taskList.stream().filter(t -> t.getStatus() == 5).collect(Collectors.toList());
+                    taskList.removeIf(t -> t.getStatus() == 5);
+                    taskList.addAll(taskInfoVoS);
+                }
+                taskList.forEach(taskInfo -> {
+                    if (taskInfo.getWorkId() != null){
+                        Work work = workService.getById(taskInfo.getWorkId());
+                        if (work != null) {
+                            taskInfo.setWorkName(work.getName());
+                        }
+                    }
+                    if (taskInfo.getBatchId() != null){
+                        List<FileEntity> fileEntities = adminFileService.queryFileList(taskInfo.getBatchId()).getData();
+                        taskInfo.setFileNum(fileEntities.size());
+                    }
+                });
                 taskListTransfer(taskList);
                 myTaskVO.setList(taskList);
             }
@@ -182,7 +208,11 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
             task.setOwnerUserId("," + user.getUserId() + ",");
         }
         task.setCreateUserId(user.getUserId());
-        task.setBatchId(IdUtil.simpleUUID());
+        //标签
+        String labelId = task.getLabelId();
+        if (StrUtil.isNotEmpty(labelId)) {
+            task.setLabelId(SeparatorUtil.fromString(labelId));
+        }
         boolean isSave = save(task);
         WorkTaskLog workTaskLog = new WorkTaskLog();
         workTaskLog.setUserId(user.getUserId());
@@ -207,6 +237,28 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
             adminMessageBO.setIds(ids);
             //我参与的任务
             ApplicationContextHolder.getBean(AdminMessageService.class).sendMessage(adminMessageBO);
+            //子任务
+            List<TaskInfoVO> taskInfoList = task.getTaskInfoList();
+            if (CollUtil.isNotEmpty(taskInfoList)){
+                List<WorkTask> childTaskList = new ArrayList<>();
+                for (TaskInfoVO taskInfo : taskInfoList) {
+                    WorkTask childTask = new WorkTask()
+                            .setName(taskInfo.getName())
+                            .setStatus(taskInfo.getStatus())
+                            .setStopTime(taskInfo.getStopTime());
+                    if (taskInfo.getMainUserId() == null) {
+                        childTask.setMainUserId(user.getUserId());
+                    } else {
+                        childTask.setMainUserId(taskInfo.getMainUserId());
+                    }
+                    childTask.setOwnerUserId("," + user.getUserId() + ",");
+                    childTask.setCreateUserId(user.getUserId());
+                    childTask.setBatchId(task.getBatchId());
+                    childTask.setPid(task.getTaskId());
+                    childTaskList.add(childTask);
+                }
+                saveBatch(childTaskList);
+            }
         }
         WorkTaskRelation taskRelation = new WorkTaskRelation();
         if (task.getCustomerIds() != null || task.getContactsIds() != null || task.getBusinessIds() != null || task.getContractIds() != null) {
@@ -220,6 +272,195 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
             taskRelationService.save(taskRelation);
             crmService.addActivity(2, 11, task.getTaskId());
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateWorkTask(WorkTask task) {
+        Integer taskId = task.getTaskId();
+        WorkTask oldWorkTask = getById(taskId);
+        if(oldWorkTask == null){
+            throw new CrmException(WorkCodeEnum.WORK_TASK_EXIST_ERROR);
+        }
+
+        //任务名称
+        if (!Objects.equals(oldWorkTask.getName(),task.getName())){
+            this.saveWorkTaskLog(taskId,"将标题修改为:" + task.getName());
+        }
+        //描述
+        if (!Objects.equals(oldWorkTask.getDescription(),task.getDescription())){
+            this.saveWorkTaskLog(taskId,"将描述信息修改为:" + task.getDescription());
+        }
+        //负责人
+        Long mainUserId = task.getMainUserId();
+        if (!Objects.equals(oldWorkTask.getMainUserId(),mainUserId)){
+            if (mainUserId == null) {
+                this.saveWorkTaskLog(taskId,"将负责人修改为:无");
+            } else {
+                this.saveWorkTaskLog(taskId,"将负责人修改为:" + UserCacheUtil.getUserName(mainUserId));
+            }
+        }
+        //任务开始时间
+        if (!Objects.equals(oldWorkTask.getStartTime(),task.getStartTime())) {
+            this.saveWorkTaskLog(taskId,"把任务开始时间修改为:" + DateUtil.formatDate(task.getStartTime()));
+        }
+        //任务结束时间
+        if (!Objects.equals(oldWorkTask.getStopTime(),task.getStopTime())) {
+            this.saveWorkTaskLog(taskId,"把任务结束时间修改为:" + DateUtil.formatDate(task.getStopTime()));
+        }
+        //参与人
+        if (StrUtil.isEmpty(oldWorkTask.getOwnerUserId())) {
+            //判断旧数据没有参与人
+            String[] userIds = task.getOwnerUserId().split(",");
+            for (String id : userIds) {
+                if (StrUtil.isNotBlank(id)) {
+                    String userName = UserCacheUtil.getUserName(Long.valueOf(id));
+                    this.saveWorkTaskLog(taskId,"添加" + userName + "参与任务");
+                }
+            }
+        } else {
+            //判断旧数据有参与人
+            if (StrUtil.isNotEmpty(task.getOwnerUserId())) {
+                String[] userIds = task.getOwnerUserId().split(",");
+                List<Long> ids = new ArrayList<>();
+                for (String id : userIds) {
+                    if (StrUtil.isNotBlank(id)) {
+                        if (!oldWorkTask.getOwnerUserId().contains("," + id + ",")) {
+                            ids.add(Long.valueOf(id));
+                            String userName = UserCacheUtil.getUserName(Long.valueOf(id));
+                            this.saveWorkTaskLog(taskId,"添加" + userName + "参与任务");
+                        }
+                    }
+                }
+                if (ids.size() > 0) {
+                    AdminMessageBO adminMessageBO = new AdminMessageBO();
+                    adminMessageBO.setMessageType(AdminMessageEnum.OA_TASK_JOIN.getType());
+                    adminMessageBO.setTypeId(taskId);
+                    adminMessageBO.setUserId(UserUtil.getUserId());
+                    adminMessageBO.setTitle(task.getName());
+                    adminMessageBO.setIds(ids);
+                    ApplicationContextHolder.getBean(AdminMessageService.class).sendMessage(adminMessageBO);
+                }
+            }
+        }
+        String ownerUserId = task.getOwnerUserId();
+        if (StrUtil.isNotEmpty(ownerUserId)) {
+            task.setOwnerUserId(SeparatorUtil.fromString(ownerUserId));
+        }
+        //标签
+        if (StrUtil.isEmpty(oldWorkTask.getLabelId())) {
+            //旧数据没有标签 直接添加
+            String[] labelName = task.getLabelId().split(",");
+            for (String id : labelName) {
+                if (StrUtil.isNotBlank(id)) {
+                    WorkTaskLabel workTaskLabel = workTaskLabelService.getById(id);
+                    this.saveWorkTaskLog(taskId,"增加了标签:" + workTaskLabel.getName());
+                }
+            }
+        } else {
+            //旧数据有标签 自动添加或修改
+            if (StrUtil.isNotEmpty(task.getLabelId())) {
+                String[] labelName = task.getLabelId().split(",");
+                for (String id : labelName) {
+                    if (StrUtil.isNotBlank(id)) {
+                        if (!oldWorkTask.getLabelId().contains("," + id + ",")) {
+                            WorkTaskLabel workTaskLabel = workTaskLabelService.getById(id);
+                            this.saveWorkTaskLog(taskId,"增加了标签:" + workTaskLabel.getName());
+                        }
+                    }
+                }
+            }
+        }
+        String labelId = task.getLabelId();
+        if (StrUtil.isNotEmpty(labelId)) {
+            task.setLabelId(SeparatorUtil.fromString(labelId));
+        }
+        //优先级
+        if (!Objects.equals(oldWorkTask.getPriority(),task.getPriority())) {
+            this.saveWorkTaskLog(taskId, "将优先级修改为:" + this.getPriorityDesc(task.getPriority()));
+        }
+        //关联业务
+        if (task.getCustomerIds() != null || task.getContactsIds() != null || task.getBusinessIds() != null || task.getContractIds() != null) {
+            WorkTaskRelation taskRelation = new WorkTaskRelation();
+            taskRelation.setBusinessIds(TagUtil.fromString(task.getBusinessIds()));
+            taskRelation.setContactsIds(TagUtil.fromString(task.getContactsIds()));
+            taskRelation.setContractIds(TagUtil.fromString(task.getContractIds()));
+            taskRelation.setCustomerIds(TagUtil.fromString(task.getCustomerIds()));
+            taskRelationService.removeById(task.getTaskId());
+            taskRelation.setCreateTime(DateUtil.date());
+            taskRelation.setTaskId(task.getTaskId());
+            taskRelationService.save(taskRelation);
+            crmService.addActivity(2, 11, task.getTaskId());
+        }
+        //子任务
+        List<TaskInfoVO> taskInfoList = task.getTaskInfoList();
+        if (CollUtil.isNotEmpty(taskInfoList)){
+            LambdaQueryWrapper<WorkTask> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+            lambdaQueryWrapper.eq(WorkTask::getPid,taskId);
+            lambdaQueryWrapper.eq(WorkTask::getBatchId,task.getBatchId());
+            this.remove(lambdaQueryWrapper);
+            UserInfo user = UserUtil.getUser();
+            List<WorkTask> childTaskList = new ArrayList<>();
+            for (TaskInfoVO taskInfo : taskInfoList) {
+                WorkTask childTask = new WorkTask().setName(taskInfo.getName()).setStopTime(taskInfo.getStopTime());
+                if (taskInfo.getMainUserId() == null) {
+                    childTask.setMainUserId(user.getUserId());
+                } else {
+                    childTask.setMainUserId(taskInfo.getMainUserId());
+                }
+                childTask.setOwnerUserId("," + user.getUserId() + ",");
+                childTask.setCreateUserId(user.getUserId());
+                childTask.setBatchId(task.getBatchId());
+                childTask.setPid(taskId);
+                childTaskList.add(childTask);
+            }
+            this.saveBatch(childTaskList);
+        }
+        return this.updateById(task);
+    }
+
+
+
+    /**
+     * 保存任务日志
+     * @date 2020/11/11 16:15
+     * @param taskId
+     * @param content
+     * @return void
+     **/
+    private void saveWorkTaskLog(Integer taskId,String content){
+        WorkTaskLog workTaskLog = new WorkTaskLog();
+        workTaskLog.setUserId(UserUtil.getUserId());
+        workTaskLog.setTaskId(taskId);
+        workTaskLog.setContent(content);
+        workTaskLogService.saveWorkTaskLog(workTaskLog);
+    }
+
+    /**
+     * 获取优先级描述
+     * @date 2020/11/12 10:22
+     * @param priority
+     * @return java.lang.String
+     **/
+    private String getPriorityDesc(Integer priority){
+        String priorityDesc = "";
+        switch (priority) {
+            case 0:
+                priorityDesc = "无";
+                break;
+            case 1:
+                priorityDesc = "低";
+                break;
+            case 2:
+                priorityDesc = "中";
+                break;
+            case 3:
+                priorityDesc = "高";
+                break;
+            default:
+                break;
+        }
+        return priorityDesc;
     }
 
     @Override
@@ -408,23 +649,7 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
     @Override
     public void setWorkTaskPriority(WorkTaskPriorityBO workTaskPriorityBO) {
         updateById(new WorkTask().setTaskId(workTaskPriorityBO.getTaskId()).setPriority(workTaskPriorityBO.getPriority()));
-        String priority = "";
-        switch (workTaskPriorityBO.getPriority()) {
-            case 0:
-                priority = "无";
-                break;
-            case 1:
-                priority = "低";
-                break;
-            case 2:
-                priority = "中";
-                break;
-            case 3:
-                priority = "高";
-                break;
-            default:
-                break;
-        }
+        String priority = this.getPriorityDesc(workTaskPriorityBO.getPriority());
         WorkTaskLog workTaskLog = new WorkTaskLog();
         workTaskLog.setUserId(UserUtil.getUserId());
         workTaskLog.setTaskId(workTaskPriorityBO.getTaskId());
@@ -542,8 +767,12 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
             }
         }
         TaskDetailVO taskDetailVO = transfer(taskId);
-        List<FileEntity> data = adminFileService.queryFileList(taskDetailVO.getBatchId()).getData();
-        taskDetailVO.setFile(data);
+        if (StrUtil.isNotEmpty(taskDetailVO.getBatchId())) {
+            List<FileEntity> data = adminFileService.queryFileList(taskDetailVO.getBatchId()).getData();
+            taskDetailVO.setFile(data);
+        }else {
+            taskDetailVO.setFile(new ArrayList<>());
+        }
         List<Integer> childTaskIdList = listObjs(new QueryWrapper<WorkTask>().select("task_id").eq("pid", taskId), o -> Integer.valueOf(o.toString()));
         List<TaskDetailVO> childTaskList = new ArrayList<>();
         if (CollectionUtil.isNotEmpty(childTaskIdList)) {
@@ -662,6 +891,7 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
         }
 //        Db.delete("delete from wk_crm_activity where type = 2 and activity_type = 11 and activity_type_id = ?",taskId);
         removeById(taskId);
+        lambdaUpdate().eq(WorkTask::getPid,taskId).remove();
 
     }
 

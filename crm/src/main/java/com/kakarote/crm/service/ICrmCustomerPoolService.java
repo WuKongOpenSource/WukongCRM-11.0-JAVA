@@ -120,6 +120,13 @@ public interface ICrmCustomerPoolService extends BaseService<CrmCustomerPool> {
      */
     public JSONObject queryAuthByPoolId(Integer poolId);
 
+    /**
+     * 获取用户拥有最多权限的公海  如果没有默认取第一个
+     * @param poolIdList 公海ID列表
+     * @return auth
+     */
+    public JSONObject getOnePoolAuthByPoolIds(List<Integer> poolIdList);
+
     public List<Integer> queryPoolIdByUserId();
 
 }

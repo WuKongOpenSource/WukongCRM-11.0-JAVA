@@ -74,6 +74,14 @@ public interface ICrmCustomerService extends BaseService<CrmCustomer> {
      */
     public void deleteByIds(List<Integer> ids);
 
+
+    /**
+     * 检测数据有无关联
+     *
+     * @param ids ids
+     */
+    JSONObject detectionDataCanBeDelete(List<Integer> ids);
+
     /**
      * 修改客户负责人
      *
