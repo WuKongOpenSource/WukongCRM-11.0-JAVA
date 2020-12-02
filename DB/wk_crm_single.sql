@@ -1,4 +1,3 @@
-
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -33,7 +32,7 @@ CREATE TABLE `wk_admin_attention`  (
   `be_user_id` bigint(20) NOT NULL COMMENT '被关注人',
   `attention_user_id` bigint(20) NOT NULL COMMENT '关注人',
   PRIMARY KEY (`attention_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '通讯录用户关注表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '通讯录用户关注表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_attention
@@ -52,7 +51,7 @@ CREATE TABLE `wk_admin_config`  (
   `description` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
   PRIMARY KEY (`setting_id`) USING BTREE,
   INDEX `name`(`name`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '客户规则' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 262462 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '客户规则' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_config
@@ -98,7 +97,7 @@ CREATE TABLE `wk_admin_dept`  (
   `num` int(4) NULL DEFAULT NULL COMMENT '排序 越大越靠后',
   `remark` varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '部门备注',
   PRIMARY KEY (`dept_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 14853 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_dept
@@ -170,7 +169,7 @@ CREATE TABLE `wk_admin_menu`  (
   INDEX `menu_id`(`menu_id`) USING BTREE,
   INDEX `parent_id`(`parent_id`) USING BTREE,
   INDEX `realm`(`realm`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '后台菜单表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 504 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '后台菜单表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_menu
@@ -461,7 +460,7 @@ CREATE TABLE `wk_admin_role`  (
   `label` int(2) NULL DEFAULT NULL COMMENT '1 系统项目管理员角色 2 项目管理角色 3 项目编辑角色 4 项目只读角色',
   PRIMARY KEY (`role_id`) USING BTREE,
   INDEX `role_type`(`role_type`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 180175 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_role
@@ -491,7 +490,7 @@ CREATE TABLE `wk_admin_role_menu`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `role_id`(`role_id`) USING BTREE,
   INDEX `menu_id`(`menu_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色菜单对应关系表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2300822 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色菜单对应关系表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_role_menu
@@ -812,7 +811,7 @@ CREATE TABLE `wk_admin_user_config`  (
   `description` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
   PRIMARY KEY (`setting_id`) USING BTREE,
   INDEX `name`(`name`, `user_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '用户配置表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 114574 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '用户配置表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_user_config
@@ -856,7 +855,7 @@ CREATE TABLE `wk_admin_user_role`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `user_id`(`user_id`) USING BTREE,
   INDEX `role_id`(`role_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '用户角色对应关系表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 19221 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '用户角色对应关系表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_user_role
@@ -5101,7 +5100,7 @@ CREATE TABLE `wk_crm_business_status`  (
   `rate` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '赢单率',
   `order_num` int(4) NULL DEFAULT NULL COMMENT '排序',
   PRIMARY KEY (`status_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '商机状态' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 47646 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '商机状态' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_crm_business_status
@@ -5123,7 +5122,7 @@ CREATE TABLE `wk_crm_business_type`  (
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `status` int(1) NOT NULL DEFAULT 1 COMMENT '0禁用1启用2删除',
   PRIMARY KEY (`type_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '商机状态组类别' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 12367 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '商机状态组类别' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_crm_business_type
@@ -5396,7 +5395,7 @@ CREATE TABLE `wk_crm_customer_pool`  (
   `create_user_id` bigint(20) NOT NULL,
   `create_time` datetime(0) NOT NULL,
   PRIMARY KEY (`pool_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '公海表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 34553 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '公海表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_crm_customer_pool
@@ -5416,7 +5415,7 @@ CREATE TABLE `wk_crm_customer_pool_field_setting`  (
   `type` int(2) NOT NULL COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
   `is_hidden` int(2) NOT NULL DEFAULT 0 COMMENT '是否隐藏 0不隐藏 1隐藏',
   PRIMARY KEY (`setting_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '公海列表页字段设置表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 439856 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '公海列表页字段设置表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_crm_customer_pool_field_setting
@@ -5548,6 +5547,22 @@ CREATE TABLE `wk_crm_customer_setting_user`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for wk_crm_customer_stats_info
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_crm_customer_stats_info`;
+CREATE TABLE `wk_crm_customer_stats_info`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `last_customer_id` int(11) NOT NULL COMMENT '最后同步客户ID',
+  `create_time` datetime(0) NOT NULL COMMENT '同步时间',
+  `sync_num` int(11) NULL DEFAULT NULL COMMENT '同步数量',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 130 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '客户数量统计汇总表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_crm_customer_stats_info
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for wk_crm_customer_user_star
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_user_star`;
@@ -5582,7 +5597,7 @@ CREATE TABLE `wk_crm_examine`  (
   `status` int(1) NULL DEFAULT NULL COMMENT '状态 1 启用 0 禁用 2 删除',
   `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '流程说明',
   PRIMARY KEY (`examine_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '审批流程表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 25378 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '审批流程表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_crm_examine
@@ -7078,6 +7093,24 @@ CREATE TABLE `wk_oa_examine_relation`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for wk_oa_examine_sort
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_oa_examine_sort`;
+CREATE TABLE `wk_oa_examine_sort`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `category_id` int(11) NULL DEFAULT NULL COMMENT '审批类型id',
+  `sort` int(6) NULL DEFAULT NULL COMMENT '排序',
+  `user_id` bigint(20) NULL DEFAULT NULL COMMENT '用户id',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '审批类型排序' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_oa_examine_sort
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for wk_oa_examine_step
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_step`;
@@ -7252,6 +7285,7 @@ CREATE TABLE `wk_work`  (
   `cover_url` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '项目封面路径 仅系统自带封面需要',
   `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
   `owner_user_id` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '项目成员',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`work_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '项目表' ROW_FORMAT = Dynamic;
 
@@ -7458,13 +7492,5 @@ CREATE TABLE `wk_work_user`  (
 -- ----------------------------
 -- Records of wk_work_user
 -- ----------------------------
-
-CREATE TABLE `wk_crm_customer_stats_info` (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `last_customer_id` int(11) NOT NULL COMMENT '最后同步客户ID',
-  `create_time` datetime NOT NULL COMMENT '同步时间',
-  `sync_num` int(11) DEFAULT NULL COMMENT '同步数量',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=130 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='客户数量统计汇总表';
 
 SET FOREIGN_KEY_CHECKS = 1;
