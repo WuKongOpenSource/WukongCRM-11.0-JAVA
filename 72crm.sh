@@ -24,7 +24,7 @@ function start()
 function stop()
 {
     P_ID=`ps -ef | grep -w ${project.artifactId}-${project.version}.jar | grep -v "grep" | awk '{print $2}'`
-    kill -9 $P_ID
+    kill $P_ID
     echo "项目已关闭"
 }
 
