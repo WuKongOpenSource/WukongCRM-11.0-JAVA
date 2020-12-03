@@ -1,6 +1,9 @@
 package com.kakarote.gateway.controller;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.R;
@@ -49,6 +52,15 @@ public class IndexController {
             response.setStatusCode(HttpStatus.FOUND);
             response.getHeaders().setLocation(URI.create("./index.html"));
         });
+    }
+
+    @RequestMapping("/updates/login")
+    public JSONObject login(@RequestBody JSONObject jsonObject) {
+        HttpRequest httpRequest = HttpUtil.createPost("https://center.72crm.com/updates/login");
+        httpRequest.form("username", jsonObject.getString("username"));
+        httpRequest.form("password", jsonObject.getString("password"));
+        HttpResponse execute = httpRequest.execute();
+        return JSONObject.parseObject(execute.body());
     }
 
     @RequestMapping("/ping")

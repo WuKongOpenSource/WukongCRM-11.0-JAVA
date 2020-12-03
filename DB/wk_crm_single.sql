@@ -51,7 +51,7 @@ CREATE TABLE `wk_admin_config`  (
   `description` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
   PRIMARY KEY (`setting_id`) USING BTREE,
   INDEX `name`(`name`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 262462 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '客户规则' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '客户规则' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_config
@@ -97,7 +97,7 @@ CREATE TABLE `wk_admin_dept`  (
   `num` int(4) NULL DEFAULT NULL COMMENT '排序 越大越靠后',
   `remark` varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '部门备注',
   PRIMARY KEY (`dept_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 14853 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_dept
@@ -169,7 +169,7 @@ CREATE TABLE `wk_admin_menu`  (
   INDEX `menu_id`(`menu_id`) USING BTREE,
   INDEX `parent_id`(`parent_id`) USING BTREE,
   INDEX `realm`(`realm`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 504 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '后台菜单表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '后台菜单表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_menu
@@ -490,7 +490,7 @@ CREATE TABLE `wk_admin_role_menu`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `role_id`(`role_id`) USING BTREE,
   INDEX `menu_id`(`menu_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2300822 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色菜单对应关系表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色菜单对应关系表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_role_menu
@@ -811,7 +811,7 @@ CREATE TABLE `wk_admin_user_config`  (
   `description` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
   PRIMARY KEY (`setting_id`) USING BTREE,
   INDEX `name`(`name`, `user_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 114574 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '用户配置表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '用户配置表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_user_config
