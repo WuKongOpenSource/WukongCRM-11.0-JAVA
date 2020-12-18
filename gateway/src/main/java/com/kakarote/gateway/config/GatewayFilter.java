@@ -66,6 +66,13 @@ public class GatewayFilter implements GlobalFilter, Ordered {
         }
 
         String token = request.getHeaders().getFirst(Const.TOKEN_NAME);
+        /*
+         兼容微信小程序请求文件以及文件预览
+         */
+        if(url.startsWith("/adminFile/down/")){
+            token = request.getQueryParams().getFirst("c");
+            request = exchange.getRequest().mutate().header(Const.TOKEN_NAME, token).build();
+        }
         //验证token
         String authentication = permissionService.invalidAccessToken(token,url,request.getCookies());
         if (StrUtil.isEmpty(authentication)){
