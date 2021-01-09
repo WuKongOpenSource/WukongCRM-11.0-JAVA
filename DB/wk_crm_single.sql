@@ -1,3 +1,5 @@
+create database wk_crm_single character set utf8mb4 collate utf8mb4_general_ci;
+use wk_crm_single;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -51,7 +53,7 @@ CREATE TABLE `wk_admin_config`  (
   `description` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
   PRIMARY KEY (`setting_id`) USING BTREE,
   INDEX `name`(`name`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '客户规则' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 262462 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '客户规则' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_config
@@ -66,8 +68,8 @@ INSERT INTO `wk_admin_config` VALUES (262439, 1, 'project', '1', '项目管理')
 INSERT INTO `wk_admin_config` VALUES (262440, 1, 'calendar', '1', '日历');
 INSERT INTO `wk_admin_config` VALUES (262441, 0, 'email', '2', '邮箱');
 INSERT INTO `wk_admin_config` VALUES (262442, 0, 'knowledge', '2', '知识库');
-INSERT INTO `wk_admin_config` VALUES (262443, 0, 'hrm', '2', '人力资源管理');
-INSERT INTO `wk_admin_config` VALUES (262444, 0, 'jxc', '2', '进销存管理');
+INSERT INTO `wk_admin_config` VALUES (262443, 0, 'hrm', '3', '人力资源管理');
+INSERT INTO `wk_admin_config` VALUES (262444, 0, 'jxc', '3', '进销存管理');
 INSERT INTO `wk_admin_config` VALUES (262445, 0, 'call', '3', '呼叫中心');
 INSERT INTO `wk_admin_config` VALUES (262446, 0, 'followRecordOption', '打电话', '跟进记录选项');
 INSERT INTO `wk_admin_config` VALUES (262447, 0, 'followRecordOption', '发邮件', '跟进记录选项');
@@ -97,7 +99,7 @@ CREATE TABLE `wk_admin_dept`  (
   `num` int(4) NULL DEFAULT NULL COMMENT '排序 越大越靠后',
   `remark` varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '部门备注',
   PRIMARY KEY (`dept_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 14853 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_dept
@@ -169,7 +171,7 @@ CREATE TABLE `wk_admin_menu`  (
   INDEX `menu_id`(`menu_id`) USING BTREE,
   INDEX `parent_id`(`parent_id`) USING BTREE,
   INDEX `realm`(`realm`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '后台菜单表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 932 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '后台菜单表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_menu
@@ -280,10 +282,10 @@ INSERT INTO `wk_admin_menu` VALUES (172, 166, '部门编辑', 'deptUpdate', '/ad
 INSERT INTO `wk_admin_menu` VALUES (173, 166, '部门删除', 'deptDelete', '/adminDept/deleteDept', NULL, 3, 7, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (174, 3, '角色权限管理', 'permission', NULL, NULL, 1, 4, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (175, 174, '角色权限设置', 'update', '/adminRole/getRoleByType/*', NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (176, 3, '工作台设置', 'oa', NULL, NULL, 1, 5, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (177, 176, '办公审批管理', 'examine', '/oaExamineCategory/queryExamineCategoryList', NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (178, 3, '审批流程管理', 'examineFlow', NULL, NULL, 1, 6, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (179, 178, '审批流程管理', 'update', '/crmExamine/queryAllExamine', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (176, 3, '办公审批流', 'oa', NULL, NULL, 1, 6, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (177, 176, '办公审批流管理', 'examine', '/oaExamineCategory/queryExamineCategoryList', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (178, 3, '业务审批流', 'examineFlow', NULL, NULL, 1, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (179, 178, '业务审批流管理', 'update', '/crmExamine/queryAllExamine', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (180, 3, '客户管理设置', 'crm', NULL, NULL, 1, 7, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (181, 180, '自定义字段设置', 'field', '/crmField/queryFields', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (182, 180, '客户公海规则', 'pool', '/crmCustomerPool/queryPoolSettingList', NULL, 3, 2, 1, NULL);
@@ -298,12 +300,8 @@ INSERT INTO `wk_admin_menu` VALUES (190, 187, '删除', 'delete', '/oaAnnounceme
 INSERT INTO `wk_admin_menu` VALUES (191, 10, '设置成交状态', 'dealStatus', '/crmCustomer/setDealStatus', NULL, 3, 0, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (192, 13, '合同作废', 'discard', '/crmContract/contractDiscard', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (193, 2, '呼叫中心', 'call', NULL, NULL, 1, 0, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (194, 193, '查询通话记录', 'index', NULL, NULL, 1, 2, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (195, 193, '通话记录分析', 'analysis', NULL, NULL, 1, 3, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (196, 1, '小程序管理', 'applet', NULL, NULL, 1, 8, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (197, 196, '小程序列表', 'index', NULL, NULL, 1, 0, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (198, 196, '导出', 'excelexport', NULL, NULL, 1, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (199, 196, '删除', 'delete', NULL, NULL, 1, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (194, 193, '查询通话记录', 'index', NULL, NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (195, 193, '通话记录分析', 'analysis', NULL, NULL, 3, 3, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (200, 1, '市场活动', 'marketing', NULL, NULL, 1, 1, 1, '');
 INSERT INTO `wk_admin_menu` VALUES (201, 200, '新建', 'save', '/crmMarketing/add', NULL, 3, 1, 1, '');
 INSERT INTO `wk_admin_menu` VALUES (202, 200, '查看列表', 'index', '/crmMarketing/queryPageList', NULL, 3, 1, 1, '');
@@ -321,9 +319,7 @@ INSERT INTO `wk_admin_menu` VALUES (215, 213, '查看', 'read', NULL, NULL, 3, 1
 INSERT INTO `wk_admin_menu` VALUES (216, 213, '删除', 'delete', NULL, NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (217, 213, '设置', 'setting', NULL, NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (218, 10, '附近的客户', 'nearbyCustomer', '/crmCustomer/nearbyCustomer', NULL, 3, 1, 1, '');
-INSERT INTO `wk_admin_menu` VALUES (220, 3, '小程序管理设置', 'card', NULL, NULL, 1, 9, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (221, 220, '小程序管理', 'update', NULL, NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (230, 3, '系统日志', 'adminLog', NULL, NULL, 1, 10, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (230, 3, '系统日志', 'adminLog', NULL, NULL, 1, 9, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (231, 230, '系统登录日志', 'loginLog', '/system/log/queryLoginLogList', NULL, 3, 0, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (232, 230, '数据操作日志', 'actionRecord', '/system/log/queryActionRecordList', NULL, 3, 0, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (233, 230, '系统操作日志', 'systemLog', '/system/log/querySystemLogList', NULL, 3, 1, 1, NULL);
@@ -381,6 +377,192 @@ INSERT INTO `wk_admin_menu` VALUES (500, 180, '打印模板设置', 'print', '',
 INSERT INTO `wk_admin_menu` VALUES (501, 12, '打印', 'print', '', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (502, 13, '打印', 'print', '', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (503, 14, '打印', 'print', '', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (601, 6, '供应商', 'supplier', '', NULL, 1, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (602, 601, '新建', 'save', '/jxcSupplier/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (603, 601, '编辑', 'update', '/jxcSupplier/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (604, 601, '查看列表', 'index', '/jxcField/queryPageList/2', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (605, 601, '查看详情', 'read', '/jxcField/information/2,/jxcSupplier/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (606, 601, '删除', 'delete', '/jxcSupplier/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (607, 601, '转移', 'transfer', '/jxcField/transfer/2', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (608, 601, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (610, 6, '采购订单', 'purchase', '', NULL, 1, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (611, 610, '新建', 'save', '/jxcPurchase/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (612, 610, '编辑', 'update', '/jxcPurchase/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (613, 610, '查看列表', 'index', '/jxcField/queryPageList/3', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (614, 610, '查看详情', 'read', '/jxcField/information/3,/jxcPurchase/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (615, 610, '删除', 'delete', '/jxcPurchase/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (616, 610, '转移', 'transfer', '/jxcField/transfer/3', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (617, 610, '作废', 'setState', '/jxcPurchase/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (618, 610, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (620, 6, '采购退货', 'retreat', '', NULL, 1, 3, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (621, 620, '新建', 'save', '/jxcRetreat/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (622, 620, '编辑', 'update', '/jxcRetreat/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (623, 620, '查看列表', 'index', '/jxcField/queryPageList/4', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (624, 620, '查看详情', 'read', '/jxcField/information/4,/jxcRetreat/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (625, 620, '删除', 'delete', '/jxcRetreat/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (626, 620, '转移', 'transfer', '/jxcField/transfer/4', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (627, 620, '作废', 'setState', '/jxcRetreat/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (628, 620, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (630, 6, '产品', 'product', '', NULL, 1, 4, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (631, 630, '新建', 'save', '/jxcProduct/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (632, 630, '编辑', 'update', '/jxcProduct/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (633, 630, '查看列表', 'index', '/jxcField/queryList/1,/jxcField/queryPageList/1,/jxcWarehouseProduct/queryPageList,/jxcWarehouseProduct/queryList', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (634, 630, '查看详情', 'read', '/jxcField/information/1,/jxcProduct/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (636, 630, '上/下架', 'self', '/jxcProduct/addorUpdateShelf', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (637, 630, '删除', 'delete', '/jxcProduct/deleteByIds', NULL, NULL, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (638, 630, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (640, 6, '销售订单', 'sale', '', NULL, 1, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (641, 640, '新建', 'save', '/jxcSale/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (642, 640, '编辑', 'update', '/jxcSale/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (643, 640, '查看列表', 'index', '/jxcField/queryPageList/5', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (644, 640, '查看详情', 'read', '/jxcField/information/5,/jxcSale/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (645, 640, '删除', 'delete', '/jxcSale/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (646, 640, '转移', 'transfer', '/jxcField/transfer/5', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (647, 640, '作废', 'setState', '/jxcSale/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (648, 640, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (650, 6, '销售退货单', 'salereturn', '', NULL, 1, 6, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (651, 650, '新建', 'save', '/jxcSalereturn/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (652, 650, '编辑', 'update', '/jxcSalereturn/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (653, 650, '查看列表', 'index', '/jxcField/queryPageList/6', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (654, 650, '查看详情', 'read', '/jxcField/information/6,/jxcSalereturn/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (655, 650, '删除', 'delete', '/jxcSalereturn/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (656, 650, '转移', 'transfer', '/jxcField/transfer/6', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (657, 650, '作废', 'setState', '/jxcSalereturn/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (658, 650, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (670, 6, '仓库管理', 'warehouse', '', NULL, 1, 7, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (671, 670, '新建', 'save', '/jxcWarehouse/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (672, 670, '编辑', 'update', '/jxcWarehouse/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (673, 670, '查看列表', 'index', '/jxcWarehouse/queryPageList', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (675, 670, '删除', 'delete', '/jxcWarehouse/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (676, 670, '停用/启用', 'spst', '/jxcWarehouse/setTrunByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (677, 670, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (680, 6, '产品库存', 'warehouseProduct', '', NULL, 1, 8, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (681, 680, '查看列表', 'index', '/jxcWarehouseProduct/queryPageList', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (682, 680, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (690, 6, '产品入库', 'receipt', '', NULL, 1, 9, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (691, 690, '新建', 'save', '/jxcReceipt/addOrUpdate', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (693, 690, '查看列表', 'index', '/jxcField/queryPageList/7', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (694, 690, '查看详情', 'read', '/jxcField/information/7,/jxcReceipt/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (695, 690, '作废', 'setState', '/jxcReceipt/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (696, 690, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (700, 6, '产品出库', 'outbound', '', NULL, 1, 10, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (701, 700, '新建', 'save', '/jxcOutbound/addOrUpdate', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (703, 700, '查看列表', 'index', '/jxcField/queryPageList/8', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (704, 700, '查看详情', 'read', '/jxcField/information/8,/jxcOutbound/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (705, 700, '作废', 'setState', '/jxcOutbound/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (706, 700, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (710, 6, '库存调拨', 'allocation', '', NULL, 1, 11, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (711, 710, '新建', 'save', '/jxcAllocation/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (712, 710, '编辑', 'update', '/jxcAllocation/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (713, 710, '查看列表', 'index', '/jxcField/queryPageList/12', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (714, 710, '查看详情', 'read', '/jxcField/information/12,/jxcAllocation/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (715, 710, '删除', 'delete', '/jxcAllocation/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (716, 710, '作废', 'setState', '/jxcAllocation/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (717, 710, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (720, 6, '库存盘点', 'inventory', '', NULL, 1, 12, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (721, 720, '新建', 'save', '/jxcInventory/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (722, 720, '编辑', 'update', '/jxcInventory/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (723, 720, '查看列表', 'index', '/jxcField/queryPageList/11', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (724, 720, '查看详情', 'read', '/jxcField/information/11,/jxcInventory/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (725, 720, '删除', 'delete', '/jxcInventory/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (726, 720, '作废', 'setState', '/jxcInventory/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (727, 720, '盘点入库', 'storage', NULL, NULL, NULL, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (728, 720, '盘点作废', 'invalid', '', NULL, NULL, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (729, 720, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (730, 6, '出入库明细', 'detailed', '', NULL, 1, 13, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (731, 730, '查看列表', 'index', '/jxcField/queryPageList/13', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (732, 730, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (740, 6, '回款', 'collection', '', NULL, 1, 14, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (741, 740, '新建', 'save', '/jxcCollection/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (742, 740, '编辑', 'update', '/jxcCollection/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (743, 740, '查看列表', 'index', '/jxcField/queryPageList/10', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (744, 740, '查看详情', 'read', '/jxcField/information/10,/jxcCollection/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (745, 740, '删除', 'delete', '/jxcCollection/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (746, 740, '转移', 'transfer', '/jxcField/transfer/10', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (747, 740, '作废', 'setState', '/jxcCollection/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (748, 740, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (750, 6, '付款', 'payment', '', NULL, 1, 15, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (751, 750, '新建', 'save', '/jxcPayment/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (752, 750, '编辑', 'update', '/jxcPayment/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (753, 750, '查看列表', 'index', '/jxcField/queryPageList/9', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (754, 750, '查看详情', 'read', '/jxcField/information/9,/jxcPayment/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (755, 750, '删除', 'delete', '/jxcPayment/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (756, 750, '转移', 'transfer', '/jxcField/transfer/9', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (757, 750, '作废', 'setState', '/jxcPayment/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (758, 750, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (760, 2, '全部', 'jxc', '', NULL, 1, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (761, 760, '进销存采购分析', 'purchasingStatistics', '', NULL, 1, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (762, 761, '查看', 'read', '/jxcPurchaseStatistics/purchasingStatistics,/jxcProductPurchaseStatistics/productPurchaseStatistics,/jxcProductPurchaseStatistics/purchaseHeadStatistics,/jxcSupplierPurchaseStatistics/supplierPurchaseStatistics', NULL, 3, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (763, 760, '进销存销售分析', 'saleStatistics', '', NULL, 1, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (764, 763, '查看', 'read', '/jxcSaleStatistics/saleStatistics,/jxcProductSaleStatistics/productSaleStatistics,/jxcProductSaleStatistics/saleHeadStatistics,/jxcCustomerSaleStatistics/customerSaleStatistics,/jxcCustomerSaleStatistics/customerSaleStatistics', NULL, 3, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (765, 760, '进销存产品分析', 'productStatistics', '', NULL, 1, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (766, 765, '查看', 'read', '/jxcProductStatistics/productStatistics,/jxcProductStatistics/productHeadStatistics', NULL, 3, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (800, 5, '员工管理', 'employee', '', NULL, 1, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (801, 800, '新建', 'save', '/hrmEmployee/addEmployee', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (802, 800, '编辑', 'update', '/hrmEmployeePost/updatePostInformation,/hrmEmployee/setEduExperience,/hrmEmployee/addExperience,/hrmEmployee/deleteEduExperience,/hrmEmployee/addWorkExperience,/hrmEmployee/setWorkExperience,/hrmEmployee/deleteWorkExperience,/hrmEmployee/addCertificate,/hrmEmployee/setCertificate,/hrmEmployee/deleteCertificate,/hrmEmployee/addTrainingExperience,/hrmEmployee/setTrainingExperience,/hrmEmployee/deleteTrainingExperience,/hrmEmployee/addContacts,/hrmEmployee/setContacts,/hrmEmployee/deleteContacts,/hrmEmployeeContract/addContract,/hrmEmployeeContract/setContract,/hrmEmployeeContract/deleteContract,/SocialSecurity/setSalaryCard,/SocialSecurity/setSocialSecurity,/hrmEmployeeFile/addFile,/hrmEmployeeFile/deleteFile', NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (803, 800, '查看列表', 'index', '/hrmEmployee/queryPageList', NULL, 3, 3, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (804, 800, '查看详情', 'read', '/hrmEmployee/queryById,/hrmEmployeePost/postInformation,/hrmEmployee/personalInformation,/hrmEmployeeContract/contractInformation,/hrmEmployee/SocialSecurity/salarySocialSecurityInformation,/hrmEmployeeFile/queryFileNum', NULL, 3, 4, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (805, 800, '导入', 'excelimport', '/hrmEmployee/uploadExcel', NULL, 3, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (806, 800, '导出', 'excelexport', '/hrmEmployee/export', NULL, 3, 6, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (807, 800, '删除', 'delete', '/hrmEmployee/deleteByIds', NULL, 3, 7, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (808, 800, '办理转正', 'become', '/hrmEmployee/become', NULL, 3, 8, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (809, 800, '调整部门/岗位', 'changePost', '/hrmEmployee/changePost', NULL, 3, 9, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (810, 800, '晋升/降级', 'promotion', '/hrmEmployee/promotion', NULL, 3, 10, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (811, 800, '办理离职', 'leave', '/hrmEmployeePost/addLeaveInformation', NULL, 3, 11, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (812, 800, '设置参保方案', 'setInsured', '/hrmEmployee/updateInsuranceScheme', NULL, 3, 12, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (813, 800, '再入职', 'againOnboarding', '/hrmEmployee/againOnboarding', NULL, 3, 13, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (814, 800, '确认入职', 'confirmEntry', '/hrmEmployee/confirmEntry', NULL, 3, 13, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (815, 800, '放弃离职', 'cancelLevel', '/hrmEmployeePost/deleteLeaveInformation', NULL, 3, 14, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (830, 5, '组织管理', 'dept', '', NULL, 1, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (831, 830, '新建', 'save', '/hrmDept/addDept', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (832, 830, '编辑', 'update', '/hrmDept/setDept', NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (833, 830, '查看列表', 'index', '', NULL, 3, 3, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (834, 830, '查看详情', 'read', '/hrmDept/queryById', NULL, 3, 4, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (835, 830, '删除', 'delete', '/hrmDept/deleteDeptById', NULL, 3, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (840, 5, '薪资管理', 'salary', '', NULL, 1, 3, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (841, 840, '工资表维护', 'manage', '/hrmSalaryMonthRecord/computeSalaryData,/hrmSalaryMonthRecord/updateSalary,/hrmSalaryMonthRecord/submitExamine,/hrmSalaryMonthRecord/addNextMonthSalary', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (842, 840, '查看薪酬列表', 'index', '/hrmSalaryOption/querySalaryOptionDetail', NULL, 3, 2, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (843, 840, '查看历史工资', 'history', '/hrmSalaryHistoryRecord/queryHistorySalaryList', NULL, 3, 3, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (844, 840, '发放工资条', 'sendSlip', '/hrmSalarySlipRecord/sendSalarySlip', NULL, 3, 4, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (845, 840, '查看发放记录', 'queryRecord', '', NULL, 3, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (846, 840, '查看薪资档案', 'queryArchives', '/hrmSalaryArchives/querySalaryArchivesList', NULL, 3, 6, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (847, 840, '维护薪资档案', 'updateArchives', '/hrmSalaryArchives/setFixSalaryRecord,/hrmSalaryArchives/setChangeSalaryRecord,/deleteChangeSalary/setChangeSalaryRecord,/deleteChangeSalary/batchChangeSalaryRecord,/deleteChangeSalary/exportFixSalaryRecord', NULL, 3, 7, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (850, 5, '社保管理', 'insurance', '', NULL, 1, 4, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (851, 850, '维护社保', 'manage', '/hrmInsuranceMonthRecord/computeInsuranceData,/hrmInsuranceMonthEmpRecord/stop,/hrmInsuranceMonthEmpRecord/updateInsuranceProject', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (852, 850, '查看社保', 'read', '/hrmInsuranceMonthRecord/queryInsuranceRecordList', NULL, 3, 2, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (860, 5, '招聘管理', 'recruit', '', NULL, 1, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (861, 860, '新建候选人', 'save', '/hrmRecruitCandidate/addCandidate', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (862, 860, '查看候选人', 'read', '/hrmRecruitCandidate/queryPageList,/hrmRecruitCandidate/queryById', NULL, 3, 2, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (863, 860, '维护候选人', 'manage', '/hrmRecruitCandidate/setCandidate,/hrmRecruitCandidate/updateCandidateStatus,/hrmRecruitCandidate/updateCandidatePost,/hrmRecruitCandidate/updateCandidateRecruitChannel,/hrmRecruitCandidate/eliminateCandidate', NULL, 3, 3, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (864, 860, '删除候选人', 'delete', '/hrmRecruitCandidate/deleteByIds,/hrmRecruitCandidate/deleteById', NULL, 3, 4, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (865, 860, '新建招聘职位', 'savePost', '/hrmRecruitPost/addRecruitPost', NULL, 3, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (866, 860, '编辑招聘职位', 'updatePost', '/hrmRecruitPost/setRecruitPost', NULL, 3, 6, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (867, 860, '查看招聘职位', 'readPost', '/hrmRecruitPost/queryRecruitPostPageList,/hrmRecruitPost/queryById', NULL, 3, 7, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (868, 860, '停用/启用招聘职位', 'updatePostStatus', '/hrmRecruitPost/updateRecruitPostStatus', NULL, 3, 8, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (880, 5, '绩效管理', 'appraisal', '', NULL, 1, 6, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (881, 880, '新建绩效', 'save', '/hrmRecruitPost/addAppraisal', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (882, 880, '编辑绩效', 'update', '/hrmRecruitPost/setAppraisal', NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (883, 880, '查看绩效', 'read', '', NULL, 3, 3, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (884, 880, '删除绩效', 'delete', '/hrmRecruitPost/delete', NULL, 3, 4, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (885, 880, '终止绩效', 'stop', '/hrmRecruitPoststopAppraisal', NULL, 3, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (886, 880, '查看员工绩效', 'readEmp', '', NULL, 3, 3, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (890, 5, '考勤管理', 'attendance', '', NULL, 1, 6, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (891, 890, '查看打卡记录', 'readClock', '/hrmRecruitPost/addAppraisal', NULL, 3, 1, 1, 'label-92');
+INSERT INTO `wk_admin_menu` VALUES (892, 890, '导出打卡记录', 'excelexport', '/hrmAttendanceClock/excelExport', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (900, 3, '人力资源管理', 'hrm', NULL, NULL, 1, 10, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (901, 900, '自定义字段设置', 'field', '/hrmConfig/queryFields', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (902, 900, '薪资设置', 'salary', '/hrmSalaryGroup/querySalaryGroupPageList', NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (903, 900, '社保设置', 'insurance', '', NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (904, 900, '绩效设置', 'appraisal', '', NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (905, 900, '业务参数设置', 'params', '/hrmConfig/queryRecruitChannelList', NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (906, 900, '员工档案设置', 'archives', '', NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (920, 3, '进销存管理', 'jxc', NULL, NULL, 1, 11, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (921, 920, '自定义字段设置', 'field', '/jxcField/queryFields', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (922, 920, '业务参数设置', 'params', '/jxcProductType/queryJxcProductTyp,/jxcNumberSetting/queryNumberSetting', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (923, 3, '初始化', 'init', NULL, NULL, 1, 12, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (924, 923, '初始化管理', 'initData', '/adminConfig/moduleInitData', NULL, 3, 0, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (926, 180, '市场活动表单设置', 'activityForm', '/crmMarketingForm/page', NULL, 3, 6, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (927, 301, '管理参与人权限', 'manageTaskOwnerUser', '', NULL, 3, 29, 1, NULL);
 
 -- ----------------------------
 -- Table structure for wk_admin_message
@@ -460,7 +642,7 @@ CREATE TABLE `wk_admin_role`  (
   `label` int(2) NULL DEFAULT NULL COMMENT '1 系统项目管理员角色 2 项目管理角色 3 项目编辑角色 4 项目只读角色',
   PRIMARY KEY (`role_id`) USING BTREE,
   INDEX `role_type`(`role_type`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 180175 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 180177 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_role
@@ -478,6 +660,7 @@ INSERT INTO `wk_admin_role` VALUES (180171, '项目管理员', 8, 'project', 1, 
 INSERT INTO `wk_admin_role` VALUES (180172, '管理', 5, '系统默认权限，包含所在项目所有权限', 1, 5, 0, 2);
 INSERT INTO `wk_admin_role` VALUES (180173, '编辑', 5, '成员初始加入时默认享有的权限', 1, 5, 1, 3);
 INSERT INTO `wk_admin_role` VALUES (180174, '只读', 5, '项目只读角色', 1, 1, 1, 4);
+INSERT INTO `wk_admin_role` VALUES (180175, '上级角色', 9, NULL, 1, 2, 1, 91);
 
 -- ----------------------------
 -- Table structure for wk_admin_role_menu
@@ -490,7 +673,7 @@ CREATE TABLE `wk_admin_role_menu`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `role_id`(`role_id`) USING BTREE,
   INDEX `menu_id`(`menu_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色菜单对应关系表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2300834 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色菜单对应关系表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_role_menu
@@ -745,6 +928,18 @@ INSERT INTO `wk_admin_role_menu` VALUES (2300818, 180170, 441);
 INSERT INTO `wk_admin_role_menu` VALUES (2300819, 180170, 442);
 INSERT INTO `wk_admin_role_menu` VALUES (2300820, 180170, 443);
 INSERT INTO `wk_admin_role_menu` VALUES (2300821, 180170, 444);
+INSERT INTO `wk_admin_role_menu` VALUES (2300822, 180176, 803);
+INSERT INTO `wk_admin_role_menu` VALUES (2300823, 180176, 804);
+INSERT INTO `wk_admin_role_menu` VALUES (2300824, 180176, 833);
+INSERT INTO `wk_admin_role_menu` VALUES (2300825, 180176, 834);
+INSERT INTO `wk_admin_role_menu` VALUES (2300826, 180176, 842);
+INSERT INTO `wk_admin_role_menu` VALUES (2300827, 180176, 843);
+INSERT INTO `wk_admin_role_menu` VALUES (2300828, 180176, 846);
+INSERT INTO `wk_admin_role_menu` VALUES (2300829, 180176, 852);
+INSERT INTO `wk_admin_role_menu` VALUES (2300830, 180176, 862);
+INSERT INTO `wk_admin_role_menu` VALUES (2300831, 180176, 867);
+INSERT INTO `wk_admin_role_menu` VALUES (2300832, 180176, 886);
+INSERT INTO `wk_admin_role_menu` VALUES (2300833, 180176, 891);
 
 -- ----------------------------
 -- Table structure for wk_admin_system_log
@@ -811,7 +1006,7 @@ CREATE TABLE `wk_admin_user_config`  (
   `description` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
   PRIMARY KEY (`setting_id`) USING BTREE,
   INDEX `name`(`name`, `user_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '用户配置表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 114574 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '用户配置表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_user_config
@@ -5003,7 +5198,7 @@ CREATE TABLE `wk_crm_business`  (
   `type_id` int(11) NULL DEFAULT NULL COMMENT '商机状态组',
   `status_id` int(11) NULL DEFAULT NULL COMMENT '销售阶段',
   `next_time` datetime(0) NULL DEFAULT NULL COMMENT '下次联系时间',
-  `customer_id` int(11) NOT NULL COMMENT '客户ID',
+  `customer_id` int(11) NULL DEFAULT NULL COMMENT '客户ID',
   `contacts_id` int(11) NULL DEFAULT NULL COMMENT '首要联系人ID',
   `deal_date` datetime(0) NULL DEFAULT NULL COMMENT '预计成交日期',
   `business_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '商机名称',
@@ -5547,6 +5742,26 @@ CREATE TABLE `wk_crm_customer_setting_user`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for wk_crm_customer_stats_2021
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_crm_customer_stats_2021`;
+CREATE TABLE `wk_crm_customer_stats_2021`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `customer_num` bigint(20) NULL DEFAULT NULL COMMENT '客户数量',
+  `deal_status` int(2) NULL DEFAULT NULL COMMENT '成交状态 0 未成交 1 已成交',
+  `owner_user_id` int(11) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_date` varchar(8) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '创建时间 年月日',
+  `deal_date` varchar(8) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '创建时间 年月日',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `id`(`customer_num`, `deal_status`, `owner_user_id`, `create_date`, `deal_date`) USING BTREE,
+  INDEX `create_date`(`create_date`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_crm_customer_stats_2021
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for wk_crm_customer_stats_info
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_stats_info`;
@@ -6040,6 +6255,58 @@ CREATE TABLE `wk_crm_marketing`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for wk_crm_marketing_field
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_crm_marketing_field`;
+CREATE TABLE `wk_crm_marketing_field`  (
+  `field_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `field_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '自定义字段英文标识',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '字段名称',
+  `type` int(2) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
+  `remark` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段说明',
+  `input_tips` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '输入提示',
+  `max_length` int(12) NULL DEFAULT NULL COMMENT '最大长度',
+  `default_value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '默认值',
+  `is_unique` int(1) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
+  `is_null` int(1) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
+  `sorting` int(5) NULL DEFAULT 1 COMMENT '排序 从小到大',
+  `options` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '如果类型是选项，此处不能为空，多个选项以，隔开',
+  `operating` int(1) NULL DEFAULT 0 COMMENT '是否可以删除修改 0 改删 1 改 2 删 3 无',
+  `is_hidden` int(1) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
+  `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '最后修改时间',
+  `form_id` int(11) NULL DEFAULT NULL COMMENT '表单Id',
+  `field_type` int(2) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
+  PRIMARY KEY (`field_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 32 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '市场活动字段表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_crm_marketing_field
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for wk_crm_marketing_form
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_crm_marketing_form`;
+CREATE TABLE `wk_crm_marketing_form`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '名称',
+  `remarks` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
+  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `status` int(1) NULL DEFAULT 1 COMMENT '1启用，0禁用',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
+  `is_deleted` int(1) NULL DEFAULT 0 COMMENT '1已删除',
+  `delete_time` datetime(0) NULL DEFAULT NULL COMMENT '删除时间',
+  `delete_user_id` bigint(20) NULL DEFAULT NULL COMMENT '删除人ID',
+  `update_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '市场活动表单信息' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_crm_marketing_form
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for wk_crm_marketing_info
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_marketing_info`;
@@ -6517,6 +6784,310 @@ CREATE TABLE `wk_email_record`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for wk_examine
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine`;
+CREATE TABLE `wk_examine`  (
+  `examine_id` bigint(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '审批ID',
+  `label` int(2) UNSIGNED NULL DEFAULT NULL COMMENT '0 OA 1 合同 2 回款 3发票 4薪资 5 采购审核 6采购退货审核 7销售审核 8 销售退货审核 9付款单审核10 回款单审核11盘点审核12调拨审核',
+  `examine_icon` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '图标',
+  `examine_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '审批名称',
+  `recheck_type` int(1) NULL DEFAULT NULL COMMENT '撤回之后重新审核操作 1 从第一层开始 2 从拒绝的层级开始',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+  `status` int(1) NULL DEFAULT NULL COMMENT '1 正常 2 停用 3 删除 ',
+  `batch_id` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
+  `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '备注',
+  `update_time` datetime(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '修改时间',
+  `update_user_id` bigint(20) NULL DEFAULT NULL COMMENT '修改人',
+  `user_ids` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '可见范围（员工）',
+  `dept_ids` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '可见范围（部门）',
+  `oa_type` int(1) NULL DEFAULT 0 COMMENT '1 普通审批 2 请假审批 3 出差审批 4 加班审批 5 差旅报销 6 借款申请 0 自定义审批',
+  PRIMARY KEY (`examine_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1164178 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine
+-- ----------------------------
+INSERT INTO `wk_examine` VALUES (25375, 2, NULL, '回款审批流程', 1, NULL, 3, 1, '38e4ecd1525111ebbe7418c04d26d688', '', '2021-01-09 16:03:54', 3, NULL, NULL, 0);
+INSERT INTO `wk_examine` VALUES (25376, 1, NULL, '合同审批流程', 1, NULL, 3, 1, '38e4f6e4525111ebbe7418c04d26d688', '说明', '2021-01-09 16:03:54', 3, NULL, NULL, 0);
+INSERT INTO `wk_examine` VALUES (25377, 3, NULL, '发票审批流程', 1, NULL, 0, 1, '38e4f798525111ebbe7418c04d26d688', '', '2021-01-09 16:03:54', 0, NULL, NULL, 0);
+INSERT INTO `wk_examine` VALUES (1072979, 0, 'wk wk-l-record,#3ABCFB', '普通审批', 1, '2019-04-26 15:06:34', 3, 1, '38efbcd2525111ebbe7418c04d26d688', '普通审批', '2021-01-09 16:03:54', 3, '', '', 1);
+INSERT INTO `wk_examine` VALUES (1072980, 0, 'wk wk-leave,#00CAAB', '请假审批', 1, '2019-04-17 18:52:44', 3, 1, '38efbdd4525111ebbe7418c04d26d688', '请假审批', '2021-01-09 16:03:54', 3, '', '', 2);
+INSERT INTO `wk_examine` VALUES (1072981, 0, 'wk wk-trip,#3ABCFB', '出差审批', 1, '2019-04-17 18:52:50', 3, 1, '38efbe57525111ebbe7418c04d26d688', '出差审批', '2021-01-09 16:03:54', 3, '', '', 3);
+INSERT INTO `wk_examine` VALUES (1072982, 0, 'wk wk-overtime,#FAAD14', '加班审批', 1, '2019-04-17 18:52:59', 3, 1, '38efbe9f525111ebbe7418c04d26d688', '加班审批', '2021-01-09 16:03:54', 3, '', '', 4);
+INSERT INTO `wk_examine` VALUES (1072983, 0, 'wk wk-reimbursement,#3ABCFB', '差旅报销', 1, '2019-04-17 18:53:13', 3, 1, '38efbee2525111ebbe7418c04d26d688', '差旅报销', '2021-01-09 16:03:54', 3, '', '', 5);
+INSERT INTO `wk_examine` VALUES (1072984, 0, 'wk wk-go-out,#FF6033', '借款申请', 1, '2019-04-17 18:54:44', 3, 1, '38efbf24525111ebbe7418c04d26d688', '借款申请', '2021-01-09 16:03:54', 3, '', '', 6);
+
+-- ----------------------------
+-- Table structure for wk_examine_condition
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_condition`;
+CREATE TABLE `wk_examine_condition`  (
+  `condition_id` int(11) NOT NULL AUTO_INCREMENT,
+  `condition_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '条件名称',
+  `flow_id` int(11) NOT NULL COMMENT '审批流程ID',
+  `priority` int(4) NOT NULL COMMENT '优先级 数字越低优先级越高',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `batch_id` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
+  PRIMARY KEY (`condition_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1490 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批条件表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_condition
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for wk_examine_condition_data
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_condition_data`;
+CREATE TABLE `wk_examine_condition_data`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `condition_id` int(11) NOT NULL COMMENT '条件ID',
+  `flow_id` int(11) NOT NULL COMMENT '审批流程ID',
+  `field_id` int(11) NULL DEFAULT NULL COMMENT '字段ID',
+  `field_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '字段名称',
+  `condition_type` int(2) NULL DEFAULT NULL COMMENT '连接条件 1 等于 2 大于 3 小于 4 大于等于 5 小于等于 6 两者之间 7 包含 8 员工 9 部门 10 角色',
+  `value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '值，json数组格式',
+  `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '字段中文名称',
+  `type` int(2) NULL DEFAULT NULL COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1506 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批条件扩展字段表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_condition_data
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for wk_examine_flow
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_flow`;
+CREATE TABLE `wk_examine_flow`  (
+  `flow_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '审核流程ID',
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '名称',
+  `examine_id` bigint(10) UNSIGNED NULL DEFAULT NULL COMMENT '审批ID',
+  `examine_type` int(2) NOT NULL COMMENT '0 条件 1 指定成员 2 主管 3 角色 4 发起人自选 5 连续多级主管',
+  `examine_error_handling` int(1) NOT NULL DEFAULT 1 COMMENT '审批找不到用户或者条件均不满足时怎么处理 1 自动通过 2 管理员审批',
+  `condition_id` int(11) NOT NULL DEFAULT 0 COMMENT '条件ID',
+  `sort` int(11) NOT NULL COMMENT '执行顺序，不可为空',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '用户ID',
+  `batch_id` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
+  PRIMARY KEY (`flow_id`) USING BTREE,
+  INDEX `examine_id`(`examine_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1163342 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_flow
+-- ----------------------------
+INSERT INTO `wk_examine_flow` VALUES (1163333, '业务审批6375', 25375, 4, 2, 0, 1, NULL, 3, '38e4ecd1525111ebbe7418c04d26d688');
+INSERT INTO `wk_examine_flow` VALUES (1163334, '业务审批3841', 25376, 4, 2, 0, 1, NULL, 3, '38e4f6e4525111ebbe7418c04d26d688');
+INSERT INTO `wk_examine_flow` VALUES (1163335, '业务审批3682', 25377, 4, 2, 0, 1, NULL, 0, '38e4f798525111ebbe7418c04d26d688');
+INSERT INTO `wk_examine_flow` VALUES (1163336, '办公审批3621', 1072979, 4, 2, 0, 1, '2019-04-26 15:06:34', 3, '38efbcd2525111ebbe7418c04d26d688');
+INSERT INTO `wk_examine_flow` VALUES (1163337, '办公审批1325', 1072980, 4, 2, 0, 1, '2019-04-17 18:52:44', 3, '38efbdd4525111ebbe7418c04d26d688');
+INSERT INTO `wk_examine_flow` VALUES (1163338, '办公审批6681', 1072981, 4, 2, 0, 1, '2019-04-17 18:52:50', 3, '38efbe57525111ebbe7418c04d26d688');
+INSERT INTO `wk_examine_flow` VALUES (1163339, '办公审批2494', 1072982, 4, 2, 0, 1, '2019-04-17 18:52:59', 3, '38efbe9f525111ebbe7418c04d26d688');
+INSERT INTO `wk_examine_flow` VALUES (1163340, '办公审批8739', 1072983, 4, 2, 0, 1, '2019-04-17 18:53:13', 3, '38efbee2525111ebbe7418c04d26d688');
+INSERT INTO `wk_examine_flow` VALUES (1163341, '办公审批8180', 1072984, 4, 2, 0, 1, '2019-04-17 18:54:44', 3, '38efbf24525111ebbe7418c04d26d688');
+
+-- ----------------------------
+-- Table structure for wk_examine_flow_continuous_superior
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_flow_continuous_superior`;
+CREATE TABLE `wk_examine_flow_continuous_superior`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `flow_id` int(11) NOT NULL COMMENT '审批流程ID',
+  `role_id` int(11) NULL DEFAULT NULL COMMENT '角色ID',
+  `max_level` int(2) NULL DEFAULT NULL COMMENT '角色审批的最高级别或者组织架构的第N级',
+  `type` int(1) NULL DEFAULT NULL COMMENT '1 指定角色 2 组织架构的最上级',
+  `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 143 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程连续多级主管审批记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_flow_continuous_superior
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for wk_examine_flow_member
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_flow_member`;
+CREATE TABLE `wk_examine_flow_member`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `flow_id` int(11) NOT NULL COMMENT '审批流程ID',
+  `user_id` bigint(20) NULL DEFAULT NULL COMMENT '审批人ID',
+  `type` int(1) NULL DEFAULT NULL COMMENT '1 依次审批 2 会签 3 或签',
+  `sort` int(1) NOT NULL DEFAULT 0 COMMENT '排序规则',
+  `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 4448 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程指定成员记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_flow_member
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for wk_examine_flow_optional
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_flow_optional`;
+CREATE TABLE `wk_examine_flow_optional`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `flow_id` int(11) NOT NULL COMMENT '审核流程ID',
+  `user_id` bigint(20) NULL DEFAULT NULL COMMENT '审批人ID',
+  `role_id` int(11) NULL DEFAULT NULL COMMENT '角色ID',
+  `choose_type` int(1) NULL DEFAULT NULL COMMENT '选择类型 1 自选一人 2 自选多人',
+  `type` int(1) NULL DEFAULT NULL COMMENT '1 依次审批 2 会签 3 或签',
+  `sort` int(1) NOT NULL DEFAULT 0 COMMENT '排序规则',
+  `batch_id` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
+  `range_type` int(1) NULL DEFAULT NULL COMMENT '选择范围 1 全公司 2 指定成员 3 指定角色 ',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `flow_id`(`flow_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1313998 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程自选成员记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_flow_optional
+-- ----------------------------
+INSERT INTO `wk_examine_flow_optional` VALUES (1313980, 1163333, NULL, NULL, 2, 1, 0, '38e4ecd1525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313981, 1163334, NULL, NULL, 2, 1, 0, '38e4f6e4525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313982, 1163335, NULL, NULL, 2, 1, 0, '38e4f798525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313983, 1163333, NULL, NULL, 2, 1, 0, '38e4ecd1525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313984, 1163334, NULL, NULL, 2, 1, 0, '38e4f6e4525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313985, 1163335, NULL, NULL, 2, 1, 0, '38e4f798525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313986, 1163336, NULL, NULL, 2, 1, 0, '38efbcd2525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313987, 1163337, NULL, NULL, 2, 1, 0, '38efbdd4525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313988, 1163338, NULL, NULL, 2, 1, 0, '38efbe57525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313989, 1163339, NULL, NULL, 2, 1, 0, '38efbe9f525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313990, 1163340, NULL, NULL, 2, 1, 0, '38efbee2525111ebbe7418c04d26d688', 1);
+INSERT INTO `wk_examine_flow_optional` VALUES (1313991, 1163341, NULL, NULL, 2, 1, 0, '38efbf24525111ebbe7418c04d26d688', 1);
+
+-- ----------------------------
+-- Table structure for wk_examine_flow_role
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_flow_role`;
+CREATE TABLE `wk_examine_flow_role`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `flow_id` int(11) NOT NULL COMMENT '审核流程ID',
+  `role_id` int(11) NULL DEFAULT NULL COMMENT '角色ID',
+  `type` int(1) NULL DEFAULT NULL COMMENT '2 会签 3 或签',
+  `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 311 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程角色审批记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_flow_role
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for wk_examine_flow_superior
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_flow_superior`;
+CREATE TABLE `wk_examine_flow_superior`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `flow_id` int(11) NOT NULL COMMENT '审核流程ID',
+  `parent_level` int(2) NULL DEFAULT NULL COMMENT '直属上级级别 1 代表直属上级 2 代表 直属上级的上级',
+  `type` int(1) NULL DEFAULT NULL COMMENT '找不到上级时，是否由上一级上级代审批 0 否 1 是',
+  `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2478 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程主管审批记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_flow_superior
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for wk_examine_manager_user
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_manager_user`;
+CREATE TABLE `wk_examine_manager_user`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `examine_id` bigint(10) UNSIGNED NOT NULL COMMENT '审批ID',
+  `user_id` bigint(20) NOT NULL COMMENT '管理员ID',
+  `sort` int(5) NOT NULL DEFAULT 0 COMMENT '从小到大',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `examine_id`(`examine_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 527852 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批管理员设置表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_manager_user
+-- ----------------------------
+INSERT INTO `wk_examine_manager_user` VALUES (527837, 25375, 14773, 0);
+INSERT INTO `wk_examine_manager_user` VALUES (527838, 25376, 14773, 0);
+INSERT INTO `wk_examine_manager_user` VALUES (527839, 25377, 14773, 0);
+INSERT INTO `wk_examine_manager_user` VALUES (527840, 1072979, 14773, 0);
+INSERT INTO `wk_examine_manager_user` VALUES (527841, 1072980, 14773, 0);
+INSERT INTO `wk_examine_manager_user` VALUES (527842, 1072981, 14773, 0);
+INSERT INTO `wk_examine_manager_user` VALUES (527843, 1072982, 14773, 0);
+INSERT INTO `wk_examine_manager_user` VALUES (527844, 1072983, 14773, 0);
+INSERT INTO `wk_examine_manager_user` VALUES (527845, 1072984, 14773, 0);
+
+-- ----------------------------
+-- Table structure for wk_examine_record
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_record`;
+CREATE TABLE `wk_examine_record`  (
+  `record_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '审核记录ID',
+  `examine_id` bigint(11) NOT NULL COMMENT '审核ID',
+  `label` int(1) NULL DEFAULT NULL COMMENT '业务类型',
+  `flow_id` int(11) NOT NULL COMMENT '流程ID',
+  `type_id` int(11) NULL DEFAULT NULL COMMENT '关联业务主键ID',
+  `examine_status` int(1) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝 3 审核中 4 已撤回',
+  `create_time` datetime(0) NOT NULL COMMENT '创建时间',
+  `create_user_id` bigint(20) NOT NULL COMMENT '创建人',
+  `update_time` datetime(0) NOT NULL COMMENT '修改时间',
+  `update_user_id` bigint(20) NOT NULL COMMENT '修改人',
+  PRIMARY KEY (`record_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1004974 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审核记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_record
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for wk_examine_record_log
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_record_log`;
+CREATE TABLE `wk_examine_record_log`  (
+  `log_id` int(11) NOT NULL AUTO_INCREMENT,
+  `examine_id` bigint(11) NOT NULL COMMENT '审批ID',
+  `flow_id` int(11) NOT NULL COMMENT '审批流程ID',
+  `record_id` int(11) NOT NULL COMMENT '审批记录ID',
+  `type` int(1) NULL DEFAULT NULL COMMENT '1 依次审批 2 会签 3 或签',
+  `sort` int(6) NULL DEFAULT NULL COMMENT '排序',
+  `examine_status` int(1) NOT NULL COMMENT '审核状态0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交 6 创建 7 已删除 8 作废',
+  `examine_user_id` bigint(20) NULL DEFAULT 0 COMMENT '审核人ID',
+  `examine_role_id` int(11) NULL DEFAULT 0 COMMENT '审核角色ID',
+  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '修改时间',
+  `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '批次ID',
+  `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '审核备注',
+  PRIMARY KEY (`log_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1137829 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审核日志表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_record_log
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for wk_examine_record_optional
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_examine_record_optional`;
+CREATE TABLE `wk_examine_record_optional`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `flow_id` int(11) NOT NULL COMMENT '流程ID',
+  `record_id` int(11) NOT NULL COMMENT '审核记录ID',
+  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
+  `sort` int(2) NOT NULL DEFAULT 1 COMMENT '排序。从小到大',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 326 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审核自选成员选择成员表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_examine_record_optional
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for wk_km_action_record
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_action_record`;
@@ -6917,6 +7488,8 @@ CREATE TABLE `wk_oa_examine`  (
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附件批次id',
+  `examine_record_id` int(11) NULL DEFAULT NULL COMMENT '审核记录ID',
+  `examine_status` int(1) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝 3 审核中 4 已撤回',
   PRIMARY KEY (`examine_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '审批表' ROW_FORMAT = Dynamic;
 
@@ -7005,30 +7578,30 @@ CREATE TABLE `wk_oa_examine_field`  (
 -- ----------------------------
 -- Records of wk_oa_examine_field
 -- ----------------------------
-INSERT INTO `wk_oa_examine_field` VALUES (548, 'content', '审批内容', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, NULL, 72979, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (549, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 1, NULL, 3, 0, NULL, 72979, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (550, 'type_id', '请假类型', 3, NULL, '', NULL, '年假', 0, 1, 0, '年假,事假,病假,产假,调休,婚假,丧假,其他', 3, 0, NULL, 72980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (551, 'content', '审批内容', 1, NULL, '', NULL, '', 0, 1, 1, NULL, 3, 0, NULL, 72980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (552, 'start_time', '开始时间', 13, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, NULL, 72980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (553, 'end_time', '结束时间', 13, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, NULL, 72980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (554, 'duration', '时长（天）', 6, NULL, '', NULL, '', 0, 1, 4, NULL, 3, 0, NULL, 72980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (555, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 5, NULL, 3, 0, NULL, 72980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (556, 'content', '出差事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2019-06-30 18:13:08', 72981, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (557, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 1, NULL, 3, 0, '2019-06-30 18:13:08', 72981, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (558, 'duration', '出差总天数', 6, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2019-06-30 18:13:08', 72981, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (559, 'cause', '行程明细', 22, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2019-06-30 18:13:08', 72981, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (560, 'content', '加班原因', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2019-06-30 18:13:08', 72982, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (561, 'start_time', '开始时间', 13, NULL, '', NULL, '', 0, 1, 1, NULL, 3, 0, '2019-06-30 18:13:08', 72982, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (562, 'end_time', '结束时间', 13, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2019-06-30 18:13:08', 72982, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (563, 'duration', '加班总天数', 6, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, '2019-06-30 18:13:08', 72982, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (564, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 4, NULL, 3, 0, '2019-06-30 18:13:08', 72982, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (565, 'content', '差旅事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2019-06-30 18:13:08', 72983, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (566, 'money', '报销总金额', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2019-06-30 18:13:08', 72983, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (567, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2019-06-30 18:13:08', 72983, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (568, 'cause', '费用明细', 23, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2019-06-30 18:13:08', 72983, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (569, 'content', '借款事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2019-06-30 18:13:08', 72984, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (570, 'money', '借款金额（元）', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2019-06-30 18:13:08', 72984, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (571, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2019-06-30 18:13:08', 72984, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (548, 'content', '审批内容', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072979, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (549, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072979, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (550, 'type_id', '请假类型', 3, NULL, '', NULL, '年假', 0, 1, 0, '年假,事假,病假,产假,调休,婚假,丧假,其他', 3, 0, '2021-01-09 16:03:54', 1072980, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (551, 'content', '审批内容', 1, NULL, '', NULL, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (552, 'start_time', '开始时间', 13, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (553, 'end_time', '结束时间', 13, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (554, 'duration', '时长（天）', 6, NULL, '', NULL, '', 0, 1, 4, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (555, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 5, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (556, 'content', '出差事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (557, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (558, 'duration', '出差总天数', 6, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (559, 'cause', '行程明细', 22, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (560, 'content', '加班原因', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (561, 'start_time', '开始时间', 13, NULL, '', NULL, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (562, 'end_time', '结束时间', 13, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (563, 'duration', '加班总天数', 6, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (564, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 4, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (565, 'content', '差旅事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (566, 'money', '报销总金额', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (567, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (568, 'cause', '费用明细', 23, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (569, 'content', '借款事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (570, 'money', '借款金额（元）', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (571, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1);
 
 -- ----------------------------
 -- Table structure for wk_oa_examine_log

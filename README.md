@@ -106,7 +106,7 @@ wk_crm
       
 
 ```
-- 初始化gateway模块数据库：新建数据库 `nacos` 在`nacos`数据库中运行` DB/config_info_route.sql`
+- 初始化gateway模块数据库：新建数据库 `nacos` 在`nacos`数据库中运行` DB/nacos.sql`
 - 初始化其余模块数据库：新建数据库 `wk_crm_single` 在`wk_crm_single`数据库中运行 `DB/wk_crm_single.sql`
 - 初始化定时任务模块数据库：新建数据库 `xxl_job` 在`xxl_job`数据库中运行 `DB/xxl_job.sql`
 - 初始化seata数据库：新建数据库 `seata` 在`seata`数据库中运行 `DB/seata.sql`
