@@ -218,9 +218,9 @@ crm.upload.local.uploadPath      需要配置两个地址0为登录才可访问�
 - 商业智能依赖crm,oa模块
 
 ```
-#### 2.更新日志<br/>
+#### 3.更新日志<br/>
 <a href="https://www.72crm.com/upgrade_log" target="_blank">点击查看更新日志</a> 
-
+<br/>
 ### 四、悟空CRM功能模块预览
 
 
