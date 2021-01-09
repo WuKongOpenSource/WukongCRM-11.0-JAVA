@@ -68,8 +68,8 @@ INSERT INTO `wk_admin_config` VALUES (262439, 1, 'project', '1', '项目管理')
 INSERT INTO `wk_admin_config` VALUES (262440, 1, 'calendar', '1', '日历');
 INSERT INTO `wk_admin_config` VALUES (262441, 0, 'email', '2', '邮箱');
 INSERT INTO `wk_admin_config` VALUES (262442, 0, 'knowledge', '2', '知识库');
-INSERT INTO `wk_admin_config` VALUES (262443, 0, 'hrm', '3', '人力资源管理');
-INSERT INTO `wk_admin_config` VALUES (262444, 0, 'jxc', '3', '进销存管理');
+INSERT INTO `wk_admin_config` VALUES (262443, 0, 'hrm', '2', '人力资源管理');
+INSERT INTO `wk_admin_config` VALUES (262444, 0, 'jxc', '2', '进销存管理');
 INSERT INTO `wk_admin_config` VALUES (262445, 0, 'call', '3', '呼叫中心');
 INSERT INTO `wk_admin_config` VALUES (262446, 0, 'followRecordOption', '打电话', '跟进记录选项');
 INSERT INTO `wk_admin_config` VALUES (262447, 0, 'followRecordOption', '发邮件', '跟进记录选项');
