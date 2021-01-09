@@ -62,6 +62,8 @@ INSERT INTO `config_info` VALUES (13, 'store.db.branchTable', 'SEATA_GROUP', 'br
 INSERT INTO `config_info` VALUES (14, 'store.db.queryLimit', 'SEATA_GROUP', '100', 'f899139df5e1059396431415e770c6dd', '2020-10-12 09:06:44', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `config_info` VALUES (15, 'store.db.lockTable', 'SEATA_GROUP', 'lock_table', '55e0cae3b6dc6696b768db90098b8f2f', '2020-10-12 09:06:44', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `config_info` VALUES (16, 'store.db.maxWait', 'SEATA_GROUP', '5000', 'a35fe7f7fe8217b4369a0af4244d1fca', '2020-10-12 09:06:44', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `config_info` VALUES (17, 'service.vgroupMapping.oa_tx_group', 'SEATA_GROUP', 'default', 'c21f969b5f03d33d43e04f8f136e7682', '2020-10-12 09:06:43', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `config_info` VALUES (18, 'service.vgroupMapping.examine_tx_group', 'SEATA_GROUP', 'default', 'c21f969b5f03d33d43e04f8f136e7682', '2020-10-12 09:06:43', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for config_info_aggr
@@ -144,6 +146,9 @@ INSERT INTO `config_info_route` VALUES (116, 'bi', 'lb://bi', '[{\"name\":\"Path
 INSERT INTO `config_info_route` VALUES (117, 'file', 'http://127.0.0.1:8012/onlinePreview', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/onlinePreview\"}}]', '[]', 100, '文件预览相关接口', 0, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
 INSERT INTO `config_info_route` VALUES (118, 'queryShareUrl', 'lb://km', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/documentShare/queryShareUrl/*\"}}]', '[]', 100, '知识库分享接口', 0, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
 INSERT INTO `config_info_route` VALUES (119, 'crmCallUpload', 'lb://crmCall/upload', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"crmCall/upload/*\"}}]', '[]', 100, '呼叫中心上传接口', 0, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
+INSERT INTO `config_info_route` VALUES (123, 'permission', 'lb://authorization/permission', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/permission\"}}]', '[]', 100, '用户权限验证接口', 0, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
+INSERT INTO `config_info_route` VALUES (124, 'examine', 'lb://examine', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/examine*/**\"}}]', '[]', 100, '审批相关接口', 1, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
+
 
 -- ----------------------------
 -- Table structure for config_info_tag
