@@ -89,14 +89,14 @@ services:
       wkcrm_network:
     restart: always
   wkcrm:
-    image: registry.cn-hangzhou.aliyuncs.com/72crm/crm:11.1.0
+    image: registry.cn-hangzhou.aliyuncs.com/72crm/crm:11.2.0
     container_name: "wkcrm"
     environment:
       - TZ=Asia/Shanghai
       - LANG=en_US.UTF-8
     volumes:
       - ./wkcrm.sh:/wkcrm.sh
-      - ./log/wkcrm:/opt/package/log/
+      - ./log/wkcrm:/opt/package/logs/
       - ./data/wkcrm/file:/opt/upload/
     ports:
       - "8443:8443"
