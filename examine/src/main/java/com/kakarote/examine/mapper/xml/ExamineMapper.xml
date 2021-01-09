@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.examine.mapper.ExamineMapper">
+
+    <select id="selectPartExaminePage" resultType="com.kakarote.examine.entity.PO.Examine">
+        select t.* from wk_examine t
+            <if test="isPart and label != null and label == 0">
+                left join  wk_oa_examine_sort a
+                on t.examine_id = a.category_id and a.user_id = #{userId}
+            </if>
+        where
+        <choose>
+            <when test="label != null and label == 0">
+                t.label = 0
+            </when>
+            <otherwise>
+                t.label != 0
+            </otherwise>
+        </choose>
+        <choose>
+            <when test="isPart">
+                and t.status = 1
+                <if test="!isAdmin and label != null and label == 0">
+                    AND ( t.user_ids = '' OR t.user_ids LIKE concat( '%,', #{userId}, ',%' ))
+                    AND ( t.dept_ids = '' OR t.dept_ids LIKE concat( '%,', #{deptId}, ',%' ))
+                </if>
+            </when>
+            <otherwise>
+                and t.status != 3
+            </otherwise>
+        </choose>
+        order by
+            <if test="isPart and label != null and label == 0">
+                a.sort is null,a.sort,
+            </if>
+                t.create_time
+    </select>
+</mapper>

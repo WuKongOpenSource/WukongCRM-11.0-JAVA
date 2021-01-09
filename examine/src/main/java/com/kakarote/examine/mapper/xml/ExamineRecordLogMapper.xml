@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.examine.mapper.ExamineRecordLogMapper">
+
+    <select id="selectRecordLogListByUser" resultType="com.kakarote.examine.entity.PO.ExamineRecord">
+        SELECT DISTINCT r.type_id, r.create_time FROM  `wk_examine_record` r WHERE r.record_id IN (
+            SELECT
+                t.record_id
+            FROM
+                `wk_examine_record_log` t
+                JOIN wk_examine_record a ON t.record_id = a.record_id
+            WHERE
+                a.label = #{data.label}
+                AND t.examine_status != 8
+                <if test="data.status == null">
+                    AND t.examine_status != 4
+                </if>
+                <if test="data.status == 1">
+                    AND a.examine_status IN ( 0, 3 )
+                    AND t.examine_status IN ( 0, 3 )
+                </if>
+                <if test="data.status == 2">
+                    AND t.examine_status NOT IN ( 0, 3, 4 )
+                </if>
+                AND (
+                    t.examine_user_id = #{userId} OR t.examine_role_id IN
+                    <for collection="roleIds" item="item">
+                        #{item}
+                    </for>
+                )
+            GROUP BY
+                t.record_id
+        )
+        <if test="data.categoryId != null">
+            AND r.examine_id = #{data.categoryId}
+        </if>
+        <choose>
+            <when test="data.status == 1">
+                ORDER BY r.create_time DESC
+            </when>
+            <when test="data.status == 2">
+                ORDER BY r.update_time DESC
+            </when>
+            <otherwise>
+                ORDER BY r.create_time DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectRecordTypeIdListByUser" resultType="java.lang.Integer">
+        SELECT DISTINCT r.type_id FROM  `wk_examine_record` r WHERE r.record_id IN (
+            SELECT
+                t.record_id
+            FROM
+                `wk_examine_record_log` t
+            JOIN wk_examine_record a ON t.record_id = a.record_id
+            WHERE
+            a.label = #{data.label}
+            AND t.examine_status != 8
+            <if test="data.status == null">
+                AND t.examine_status != 4
+            </if>
+            <if test="data.status == 1">
+                AND a.examine_status IN ( 0, 3 )
+                AND t.examine_status IN ( 0, 3 )
+            </if>
+            <if test="data.status == 2">
+                AND t.examine_status NOT IN ( 0, 3, 4 )
+            </if>
+            AND (
+            t.examine_user_id = #{userId} OR t.examine_role_id IN
+                <for collection="roleIds" item="item">
+                    #{item}
+                </for>
+            )
+            GROUP BY
+                t.record_id
+        )
+        <if test="data.categoryId != null">
+            AND r.examine_id = #{data.categoryId}
+        </if>
+        <choose>
+            <when test="data.status == 1">
+                ORDER BY r.create_time DESC
+            </when>
+            <when test="data.status == 2">
+                ORDER BY r.update_time DESC
+            </when>
+            <otherwise>
+                ORDER BY r.create_time DESC
+            </otherwise>
+        </choose>
+    </select>
+
+</mapper>

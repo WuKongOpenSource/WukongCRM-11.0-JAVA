@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
+<mapper namespace="com.kakarote.crm.mapper.CrmMarketingFieldMapper">
+    <delete id="deleteByChooseId">
+        DELETE FROM wk_crm_marketing_field WHERE field_id not in
+        <foreach collection="ids" separator="," item="id" open="(" close=")" index="index">
+            #{id}
+        </foreach>
+        and (operating = '0' or operating = '2')
+        and form_id = #{formId}
+    </delete>
+</mapper>

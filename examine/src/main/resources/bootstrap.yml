@@ -1,0 +1,44 @@
+server:
+  port: ${SERVER_PORT:0}
+spring:
+  profiles:
+    include: core,dev
+  application:
+    name: examine
+  cloud:
+    nacos:
+      config:
+        enabled: true
+        server-addr: 127.0.0.1:8848
+        file-extension: yaml
+        prefix: examine
+      discovery:
+        enabled: true
+        server-addr: 127.0.0.1:8848
+    sentinel:
+      filter:
+        enabled: false
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD_HOST:127.0.0.1}:${SENTINEL_DASHBOARD_PORT:8079}
+      datasource:
+        flow:
+          server-addr: 127.0.0.1:8848
+          dataId: ${spring.application.name}-flow-rules
+          groupId: SENTINEL_GROUP
+          rule-type: flow
+seata:
+  enabled: true
+  application-id: ${spring.application.name}
+  tx-service-group: ${spring.application.name}_tx_group
+  config:
+    type: nacos
+    nacos:
+      namespace:
+      serverAddr: 127.0.0.1:8848
+      group: SEATA_GROUP
+  registry:
+    type: nacos
+    nacos:
+      application: seata-server
+      server-addr: 127.0.0.1:8848
+      namespace:
