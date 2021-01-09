@@ -45,6 +45,7 @@ wk_crm
 ├── bi            -- 商业智能模块
 ├── core          -- 通用的代码和工具类
 ├── crm           -- 客户管理模块
+├── examine       -- 审批模块
 ├── gateway       -- 网关模块
 ├── job           -- 定时任务模块
 ├── oa            -- OA模块
@@ -60,7 +61,7 @@ wk_crm
 |---------------------|---------------------------|----|
 | spring-cloud-alibaba| 2.2.1.RELEASE(Hoxton.SR3) |  核心框架  |
 | swagger             | 2.9.2                     |  接口文档  |
-| mybatis-plus         | 3.3.0                     |  ORM框架  |
+| mybatis-plus        | 3.3.0                     |  ORM框架  |
 | sentinel            | 2.2.1.RELEASE             |  断路器以及限流  |
 | nacos               | 1.2.1.RELEASE             |  注册中心以及分布式配置管理  |
 | seata               | 1.2.0                     |  分布式事务 |
@@ -105,13 +106,21 @@ wk_crm
 #### 1. 导入初始化sql,目前项目下gateway模块使用的独立数据库，其他模块使用同一数据库
       
 
+- 安装nacos，新建数据库 `nacos` 在`nacos`数据库中运行` DB/nacos.sql`<br/>
+  修改nacos安装目录/conf/application.properties文件，修改数据持久化类型为mysql，添加mysql数据源的url、用户名和密码,配置如下。<br/>
+   
 ```
-- 初始化gateway模块数据库：新建数据库 `nacos` 在`nacos`数据库中运行` DB/nacos.sql`
+   spring.datasource.platform=mysql
+   db.num=1
+   db.url.0=jdbc:mysql://127.0.0.1:3306/nacos?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true
+   db.user=root
+   db.password=password
+```
+
+- 修改gateway模块数据库配置为`nacos`数据库
 - 初始化其余模块数据库：新建数据库 `wk_crm_single` 在`wk_crm_single`数据库中运行 `DB/wk_crm_single.sql`
 - 初始化定时任务模块数据库：新建数据库 `xxl_job` 在`xxl_job`数据库中运行 `DB/xxl_job.sql`
 - 初始化seata数据库：新建数据库 `seata` 在`seata`数据库中运行 `DB/seata.sql`
-
-```
 
 
 #### 2.在项目根目录执行`mvn install`
@@ -205,13 +214,14 @@ crm.upload.local.uploadPath      需要配置两个地址0为登录才可访问�
 
 ```
 - 除网关外，其余项目均依赖于admin模块，用于获取当前登录人的信息
-- oa模块的任务依赖于work模块，其余一些关联业务功能依赖于crm模块
+- oa模块的任务依赖于work模块，其余一些关联业务功能依赖于crm模块，examine模块
 - 商业智能依赖crm,oa模块
 
 ```
+#### 2.更新日志<br/>
+<a href="https://www.72crm.com/upgrade_log" target="_blank">点击查看更新日志</a> 
 
-
-### 三、悟空CRM功能模块预览
+### 四、悟空CRM功能模块预览
 
 
 ![输入图片说明](https://images.gitee.com/uploads/images/2020/0928/172541_efed65bd_345098.png "01.png")
