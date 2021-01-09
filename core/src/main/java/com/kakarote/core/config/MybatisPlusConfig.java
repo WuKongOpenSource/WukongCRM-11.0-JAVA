@@ -1,12 +1,11 @@
 package com.kakarote.core.config;
 
-import cn.hutool.core.lang.Snowflake;
-import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.baomidou.mybatisplus.extension.MybatisMapWrapperFactory;
 import com.baomidou.mybatisplus.extension.plugins.PaginationInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.optimize.JsqlParserCountOptimize;
+import com.kakarote.core.utils.BaseUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,11 +13,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @Slf4j
 public class MybatisPlusConfig {
-    private static final Snowflake SNOWFLAKE = IdUtil.getSnowflake(1, 1);
-
-    public static Long getNextId(){
-        return SNOWFLAKE.nextId();
-    }
 
     @Bean
     public PaginationInterceptor paginationInterceptor() {
@@ -41,7 +35,7 @@ public class MybatisPlusConfig {
     public class CustomIdGenerator implements IdentifierGenerator {
         @Override
         public Long nextId(Object entity) {
-            return getNextId();
+            return BaseUtil.getNextId();
         }
     }
 }

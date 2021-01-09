@@ -129,6 +129,7 @@ public interface IAdminUserService extends BaseService<AdminUser> {
      */
     public List<SimpleUser> queryUserByIds(List<Long> ids);
 
+    public List<Long> queryNormalUserByIds(List<Long> ids);
     /**
      * 根据部门ids查询用户列表
      *
@@ -139,13 +140,14 @@ public interface IAdminUserService extends BaseService<AdminUser> {
 
     void hrmAddUser(HrmAddUserBO hrmAddUserBO);
 
-    DeptUserListVO queryDeptUserList(Integer deptId);
+    DeptUserListVO queryDeptUserList(Integer deptId,boolean isAllUser);
 
     Set<HrmSimpleUserVO> queryDeptUserListByHrm(DeptUserListByHrmBO deptUserListByHrmBO);
 
     List<Long> queryUserIdByRealName(List<String> realNames);
 
     UserInfo queryLoginUserInfo(Long userId);
+
 
     /**
      * 查询当前系统有没有初始化
@@ -158,4 +160,10 @@ public interface IAdminUserService extends BaseService<AdminUser> {
      */
     public void initUser(SystemUserBO systemUserBO);
 
+
+    /**
+     * 查询所有员工
+     * @return
+     */
+    public List<UserInfo> queryAllUserInfoList();
 }

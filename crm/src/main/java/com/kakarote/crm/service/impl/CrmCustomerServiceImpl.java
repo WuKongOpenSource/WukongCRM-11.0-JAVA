@@ -17,6 +17,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.entity.UserInfo;
@@ -186,7 +187,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
      * @return java.util.List<java.util.Map < java.lang.String, java.lang.Object>>
      * @date 2020/10/26 10:16
      **/
-    private List<Map<String, Object>> setPoolDay(List<Map<String, Object>> list) {
+    private void setPoolDay(List<Map<String, Object>> list) {
         Long userId = UserUtil.getUserId();
         Date date = new Date();
         List<CrmCustomerPool> poolList = crmCustomerPoolService.lambdaQuery().eq(CrmCustomerPool::getStatus, 1).eq(CrmCustomerPool::getPutInRule, 1).eq(CrmCustomerPool::getRemindSetting, 1).list();
@@ -255,7 +256,6 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                 }
             }
         });
-        return list;
     }
 
 
@@ -438,13 +438,6 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             throw new CrmException(CrmCodeEnum.CRM_DATA_JOIN_ERROR);
         }
         lambdaUpdate().set(CrmCustomer::getUpdateTime, new Date()).set(CrmCustomer::getStatus, 3).in(CrmCustomer::getCustomerId, ids).update();
-        for (Integer id : ids) {
-            CrmCustomer crmCustomer = lambdaQuery().select(CrmCustomer::getCustomerName).eq(CrmCustomer::getCustomerId, id).one();
-            if (crmCustomer != null) {
-                String name = crmCustomer.getCustomerName();
-                actionRecordUtil.addDeleteActionRecord(CrmEnum.CUSTOMER, name, id);
-            }
-        }
         LambdaQueryWrapper<CrmCustomer> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(CrmCustomer::getCustomerId, ids);
         List<String> batchList = listObjs(wrapper, Object::toString);
@@ -476,11 +469,20 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
      * @param changOwnerUserBO data
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void changeOwnerUser(CrmBusinessChangOwnerUserBO changOwnerUserBO) {
         if (!isMaxOwner(changOwnerUserBO.getOwnerUserId(), changOwnerUserBO.getIds())) {
             throw new CrmException(CrmCodeEnum.THE_NUMBER_OF_CUSTOMERS_HAS_REACHED_THE_LIMIT);
         }
-        String ownerUserName = adminService.queryUserName(changOwnerUserBO.getOwnerUserId()).getData();
+        String ownerUserName = UserCacheUtil.getUserName(changOwnerUserBO.getOwnerUserId());
+        List<Long> userList = new ArrayList<>();
+        if (UserUtil.isAdmin()){
+            userList = adminService.queryUserList().getData();
+        }else {
+            userList.add(UserUtil.getUserId());
+            userList.addAll(adminService.queryChildUserId(UserUtil.getUserId()).getData());
+        }
+        List<Long> finalUserList = userList;
         changOwnerUserBO.getIds().forEach(id -> {
             if (AuthUtil.isRwAuth(id, CrmEnum.CUSTOMER)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
@@ -509,6 +511,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                         List<Integer> ids = crmContactsService.lambdaQuery()
                                 .select(CrmContacts::getContactsId)
                                 .eq(CrmContacts::getCustomerId, id)
+                                .in(CrmContacts::getOwnerUserId, finalUserList)
                                 .list().stream().map(CrmContacts::getContactsId).collect(Collectors.toList());
                         crmContactsService.changeOwnerUser(ids, changOwnerUserBO.getOwnerUserId());
                         break;
@@ -517,6 +520,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                         List<Integer> ids = crmBusinessService.lambdaQuery()
                                 .select(CrmBusiness::getBusinessId)
                                 .eq(CrmBusiness::getCustomerId, id)
+                                .in(CrmBusiness::getOwnerUserId,finalUserList)
                                 .list().stream().map(CrmBusiness::getBusinessId).collect(Collectors.toList());
                         CrmBusinessChangOwnerUserBO changOwnerUser = new CrmBusinessChangOwnerUserBO();
                         changOwnerUser.setPower(changOwnerUserBO.getPower());
@@ -530,6 +534,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                         List<Integer> ids = crmContractService.lambdaQuery()
                                 .select(CrmContract::getContractId)
                                 .eq(CrmContract::getCustomerId, id)
+                                .in(CrmContract::getOwnerUserId,finalUserList)
                                 .list().stream().map(CrmContract::getContractId).collect(Collectors.toList());
                         CrmBusinessChangOwnerUserBO changOwnerUser = new CrmBusinessChangOwnerUserBO();
                         changOwnerUser.setTransferType(changOwnerUserBO.getTransferType());
@@ -829,7 +834,10 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             if (AuthUtil.isCrmOperateAuth(CrmEnum.CUSTOMER, id)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
-            CrmCustomer oldCustomer = getById(id);
+            CrmCustomer oldCustomer = lambdaQuery().eq(CrmCustomer::getCustomerId,id).ne(CrmCustomer::getStatus,3).one();
+            if (oldCustomer == null){
+                continue;
+            }
             Long ownerUserId = oldCustomer.getOwnerUserId();
             for (Long memberId : crmMemberSaveBO.getMemberIds()) {
                 if (ownerUserId.equals(memberId)) {
@@ -1609,7 +1617,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                 crmDataCheckVO.setPoolAuthList(crmCustomerPoolService.getOnePoolAuthByPoolIds(poolIdList));
             }
             if (crmDataCheckVO.getOwnerUserId() != null) {
-                crmDataCheckVO.setOwnerUserName(adminService.queryUserName(crmDataCheckVO.getOwnerUserId()).getData());
+                crmDataCheckVO.setOwnerUserName(UserCacheUtil.getUserName(crmDataCheckVO.getOwnerUserId()));
             }
             if (crmDataCheckVO.getContactsId() != null) {
                 crmDataCheckVO.setContactsName(Optional.ofNullable(crmContactsService.getById(crmDataCheckVO.getContactsId())).map(CrmContacts::getName).orElse(null));

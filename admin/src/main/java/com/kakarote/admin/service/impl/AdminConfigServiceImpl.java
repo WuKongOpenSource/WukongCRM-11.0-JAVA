@@ -87,7 +87,6 @@ public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, A
     /**
      * 设置企业配置
      *
-     * @param adminConfig config
      */
     @Override
     public void setAdminConfig(AdminCompanyBO adminCompanyBO) {

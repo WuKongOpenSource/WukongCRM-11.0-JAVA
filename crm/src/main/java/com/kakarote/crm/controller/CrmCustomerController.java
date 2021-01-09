@@ -4,6 +4,9 @@ package com.kakarote.crm.controller;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.*;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.exception.CrmException;
@@ -14,6 +17,7 @@ import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.common.log.CrmCustomerLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
@@ -51,6 +55,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/crmCustomer")
 @Api(tags = "客户模块接口")
+@SysLog(subModel = SubModelType.CRM_CUSTOMER, logClass = CrmCustomerLog.class)
 public class CrmCustomerController {
 
     @Autowired
@@ -72,32 +77,34 @@ public class CrmCustomerController {
 
     @PostMapping("/add")
     @ApiOperation("保存数据")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE, object = "#crmModel.entity[customerName]", detail = "'新增了客户:' + #crmModel.entity[customerName]")
     public Result<Map<String, Object>> add(@RequestBody CrmBusinessSaveBO crmModel) {
-        Map<String, Object> map = crmCustomerService.addOrUpdate(crmModel,false,null);
+        Map<String, Object> map = crmCustomerService.addOrUpdate(crmModel, false, null);
         return R.ok(map);
     }
 
     @PostMapping("/update")
     @ApiOperation("修改数据")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result<Map<String, Object>> update(@RequestBody CrmBusinessSaveBO crmModel) {
-        Map<String, Object> map = crmCustomerService.addOrUpdate(crmModel,false,null);
+        Map<String, Object> map = crmCustomerService.addOrUpdate(crmModel, false, null);
         return R.ok(map);
     }
 
     @PostMapping("/queryById/{customerId}")
     @ApiOperation("根据ID查询")
-    public Result<CrmModel> queryById(@PathVariable("customerId") @ApiParam(name = "id", value = "id") Integer customerId,Integer poolId) {
-        Integer number = crmCustomerService.lambdaQuery().eq(CrmCustomer::getCustomerId,customerId).ne(CrmCustomer::getStatus,3).count();
-        if (number == 0){
-            throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED,"客户");
+    public Result<CrmModel> queryById(@PathVariable("customerId") @ApiParam(name = "id", value = "id") Integer customerId, Integer poolId) {
+        Integer number = crmCustomerService.lambdaQuery().eq(CrmCustomer::getCustomerId, customerId).ne(CrmCustomer::getStatus, 3).count();
+        if (number == 0) {
+            throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED, "客户");
         }
         boolean auth = AuthUtil.isPoolAuth(customerId);
         if (auth) {
             CrmModel crmModel = new CrmModel();
-            crmModel.put("dataAuth",0);
+            crmModel.put("dataAuth", 0);
             return R.ok(crmModel);
         }
-        CrmModel model = crmCustomerService.queryById(customerId,poolId);
+        CrmModel model = crmCustomerService.queryById(customerId, poolId);
         return R.ok(model);
     }
 
@@ -128,6 +135,7 @@ public class CrmCustomerController {
 
     @PostMapping("/deleteByIds")
     @ApiOperation("根据ID删除数据")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteByIds(@ApiParam(name = "ids", value = "id列表") @RequestBody List<Integer> ids) {
         crmCustomerService.deleteByIds(ids);
         return R.ok();
@@ -145,7 +153,7 @@ public class CrmCustomerController {
     public Result<BasePage<Map<String, Object>>> queryBusiness(@RequestBody CrmContactsPageBO pageEntity) {
         boolean auth = AuthUtil.isPoolAuth(pageEntity.getCustomerId());
         if (auth) {
-           throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
         BasePage<Map<String, Object>> basePage = crmCustomerService.queryBusiness(pageEntity);
         return R.ok(basePage);
@@ -216,6 +224,7 @@ public class CrmCustomerController {
         BasePage<JSONObject> data = crmCustomerService.queryInvoiceInfo(crmRelationPageBO);
         return R.ok(data);
     }
+
     @PostMapping("/queryCallRecord")
     @ApiOperation("根据客户id查询呼叫记录")
     public Result<BasePage<JSONObject>> queryCallRecord(@RequestBody CrmRelationPageBO crmRelationPageBO) {
@@ -229,6 +238,7 @@ public class CrmCustomerController {
 
     @PostMapping("/lock")
     @ApiOperation("锁定或解锁客户")
+    @SysLogHandler
     public Result lock(@RequestParam("status") Integer status, @RequestParam("ids") String id) {
         crmCustomerService.lock(status, StrUtil.splitTrim(id, Const.SEPARATOR));
         return R.ok();
@@ -236,6 +246,7 @@ public class CrmCustomerController {
 
     @PostMapping("/setDealStatus")
     @ApiOperation("修改客户成交状态")
+    @SysLogHandler(behavior = BehaviorEnum.CHANGE_DEAL_STATUS)
     public Result setDealStatus(@RequestParam("dealStatus") Integer dealStatus, @RequestParam("ids") String id) {
         crmCustomerService.setDealStatus(dealStatus, StrUtil.splitTrim(id, Const.SEPARATOR).stream().map(Integer::valueOf).collect(Collectors.toList()));
         return R.ok();
@@ -243,6 +254,7 @@ public class CrmCustomerController {
 
     @PostMapping("/changeOwnerUser")
     @ApiOperation("修改客户负责人")
+    @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
     public Result changeOwnerUser(@RequestBody CrmBusinessChangOwnerUserBO crmChangeOwnerUserBO) {
         crmCustomerService.changeOwnerUser(crmChangeOwnerUserBO);
         return R.ok();
@@ -261,6 +273,7 @@ public class CrmCustomerController {
 
     @PostMapping("/addMembers")
     @ApiOperation("新增团队成员")
+    @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result addMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
         crmCustomerService.addMember(crmMemberSaveBO);
         return R.ok();
@@ -268,6 +281,7 @@ public class CrmCustomerController {
 
     @PostMapping("/updateMembers")
     @ApiOperation("新增团队成员")
+    @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result updateMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
         crmCustomerService.addMember(crmMemberSaveBO);
         return R.ok();
@@ -275,6 +289,7 @@ public class CrmCustomerController {
 
     @PostMapping("/deleteMembers")
     @ApiOperation("删除团队成员")
+    @SysLogHandler
     public Result deleteMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
         crmCustomerService.deleteMember(crmMemberSaveBO);
         return R.ok();
@@ -282,6 +297,7 @@ public class CrmCustomerController {
 
     @PostMapping("/exitTeam/{customerId}")
     @ApiOperation("删除团队成员")
+    @SysLogHandler
     public Result exitTeam(@PathVariable("customerId") @ApiParam("客户ID") Integer customerId) {
         crmCustomerService.exitTeam(customerId);
         return R.ok();
@@ -342,6 +358,7 @@ public class CrmCustomerController {
 
     @PostMapping("/batchExportExcel")
     @ApiOperation("选中导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "选中导出",detail = "导出客户")
     public void batchExportExcel(@RequestBody @ApiParam(name = "ids", value = "id列表") List<Integer> ids, HttpServletResponse response) {
         CrmSearchBO search = new CrmSearchBO();
         search.setPageType(0);
@@ -357,6 +374,7 @@ public class CrmCustomerController {
 
     @PostMapping("/allExportExcel")
     @ApiOperation("全部导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "全部导出",detail = "导出客户")
     public void allExportExcel(@RequestBody CrmSearchBO search, HttpServletResponse response) {
         search.setPageType(0);
         crmCustomerService.exportExcel(response, search);
@@ -364,6 +382,7 @@ public class CrmCustomerController {
 
     @PostMapping("/updateCustomerByIds")
     @ApiOperation("客户放入公海")
+    @SysLogHandler(behavior = BehaviorEnum.PUT_IN_POOL)
     public Result updateCustomerByIds(@RequestBody CrmCustomerPoolBO poolBO) {
         crmCustomerService.updateCustomerByIds(poolBO);
         return R.ok();
@@ -371,15 +390,17 @@ public class CrmCustomerController {
 
     @PostMapping("/distributeByIds")
     @ApiOperation("公海分配客户")
+    @SysLogHandler(behavior = BehaviorEnum.DISTRIBUTE)
     public Result distributeByIds(@RequestBody CrmCustomerPoolBO poolBO) {
-        crmCustomerService.getCustomersByIds(poolBO,1);
+        crmCustomerService.getCustomersByIds(poolBO, 1);
         return R.ok();
     }
 
     @PostMapping("/receiveByIds")
     @ApiOperation("公海领取客户")
+    @SysLogHandler(behavior = BehaviorEnum.RECEIVE)
     public Result receiveByIds(@RequestBody CrmCustomerPoolBO poolBO) {
-        crmCustomerService.getCustomersByIds(poolBO,2);
+        crmCustomerService.getCustomersByIds(poolBO, 2);
         return R.ok();
     }
 
@@ -391,6 +412,7 @@ public class CrmCustomerController {
 
     @PostMapping("/uploadExcel")
     @ApiOperation("导入客户")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_IMPORT,object = "导入客户",detail = "导入客户")
     public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("ownerUserId") Long ownerUserId, @RequestParam("repeatHandling") Integer repeatHandling) {
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
         uploadExcelBO.setOwnerUserId(ownerUserId);
@@ -404,6 +426,7 @@ public class CrmCustomerController {
 
     @PostMapping("/customerSetting")
     @ApiOperation("客户规则设置")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.UPDATE,object = "修改拥有/锁定客户规则设置",detail = "修改拥有/锁定客户规则设置")
     public Result customerSetting(@RequestBody CrmCustomerSetting customerSetting) {
         crmCustomerService.customerSetting(customerSetting);
         return R.ok();
@@ -453,8 +476,8 @@ public class CrmCustomerController {
     @PostMapping("/nearbyCustomer")
     @ApiOperation("附近的客户")
     public Result<List<JSONObject>> nearbyCustomer(@RequestParam("lng") String lng, @RequestParam("lat") String lat,
-                               @RequestParam("type") Integer type, @RequestParam("radius") Integer radius,
-                               @RequestParam(value = "ownerUserId",required = false) Long ownerUserId) {
+                                                   @RequestParam("type") Integer type, @RequestParam("radius") Integer radius,
+                                                   @RequestParam(value = "ownerUserId", required = false) Long ownerUserId) {
         List<JSONObject> jsonObjects = crmCustomerService.nearbyCustomer(lng, lat, type, radius, ownerUserId);
         return R.ok(jsonObjects);
     }
@@ -475,7 +498,7 @@ public class CrmCustomerController {
      */
     @PostMapping("/information/{id}")
     @ApiOperation("查询详情页信息")
-    public Result<List<CrmModelFiledVO>> information(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer customerId,@RequestParam(name = "poolId",required = false) @ApiParam(name = "poolId", value = "poolId") Integer poolId) {
+    public Result<List<CrmModelFiledVO>> information(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer customerId, @RequestParam(name = "poolId", required = false) @ApiParam(name = "poolId", value = "poolId") Integer poolId) {
         List<CrmModelFiledVO> information = crmCustomerService.information(customerId, poolId);
         return R.ok(information);
     }
@@ -503,6 +526,7 @@ public class CrmCustomerController {
 
     @PostMapping("/updateInformation")
     @ApiOperation("基本信息保存修改")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInformation(@RequestBody CrmUpdateInformationBO updateInformationBO) {
         crmCustomerService.updateInformation(updateInformationBO);
         return R.ok();

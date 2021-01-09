@@ -9,7 +9,6 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.servlet.ServletUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.kakarote.core.config.MybatisPlusConfig;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
@@ -19,7 +18,9 @@ import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileServiceFactory;
 import com.kakarote.core.servlet.upload.UploadEntity;
 import com.kakarote.core.servlet.upload.UploadFileEnum;
+import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.BiTimeUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.constant.CrmCodeEnum;
@@ -219,7 +220,7 @@ public class CallRecordServiceImpl extends BaseServiceImpl<CallRecordMapper, Cal
         String batchId = StrUtil.isNotEmpty(record.getBatchId()) ? record.getBatchId() : IdUtil.simpleUUID();
         UploadEntity entity;
         if (file != null) {
-            entity = new UploadEntity(MybatisPlusConfig.getNextId() + "", file.getOriginalFilename(), file.getSize(), batchId,"0");
+            entity = new UploadEntity(BaseUtil.getNextId() + "", file.getOriginalFilename(), file.getSize(), batchId,"0");
             try {
                 entity = FileServiceFactory.build().uploadFile(file.getInputStream(), entity);
             } catch (IOException e) {
@@ -288,7 +289,7 @@ public class CallRecordServiceImpl extends BaseServiceImpl<CallRecordMapper, Cal
             jsonObject.put("model","customer");
             jsonObject.put("customer_id",crmCustomer.getCustomerId());
             jsonObject.put("name",crmCustomer.getCustomerName());
-            jsonObject.put("owner_user_id_info", adminService.queryUserName(crmCustomer.getOwnerUserId()).getData());
+            jsonObject.put("owner_user_id_info", UserCacheUtil.getUserName(crmCustomer.getOwnerUserId()));
             return jsonObject;
         }
 
@@ -298,7 +299,7 @@ public class CallRecordServiceImpl extends BaseServiceImpl<CallRecordMapper, Cal
             jsonObject.put("model","leads");
             jsonObject.put("leads_id",leadsRecord.getLeadsId());
             jsonObject.put("name",leadsRecord.getLeadsName());
-            jsonObject.put("owner_user_id_info", adminService.queryUserName(leadsRecord.getOwnerUserId()).getData());
+            jsonObject.put("owner_user_id_info", UserCacheUtil.getUserName(leadsRecord.getOwnerUserId()));
             return jsonObject;
         }
 
@@ -308,7 +309,7 @@ public class CallRecordServiceImpl extends BaseServiceImpl<CallRecordMapper, Cal
             jsonObject.put("model","contacts");
             jsonObject.put("contacts_id",contactsRecord.getContactsId());
             jsonObject.put("name",contactsRecord.getName());
-            jsonObject.put("owner_user_id_info", adminService.queryUserName(contactsRecord.getOwnerUserId()).getData());
+            jsonObject.put("owner_user_id_info", UserCacheUtil.getUserName(contactsRecord.getOwnerUserId()));
             return jsonObject;
         }
 

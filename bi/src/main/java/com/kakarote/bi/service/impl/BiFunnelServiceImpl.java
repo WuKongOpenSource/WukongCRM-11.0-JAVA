@@ -10,6 +10,7 @@ import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.feign.crm.service.CrmService;
 import com.kakarote.core.utils.BiTimeUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -97,10 +98,10 @@ public class BiFunnelServiceImpl implements BiFunnelService {
         BasePage<JSONObject> page = biFunnelMapper.sellFunnelList(parse, record.getUserIds(), record.getSqlDateFormat(), biParams.getType());
         page.getList().forEach(object -> {
             if (object.getLong("createUserId") != null) {
-                object.put("createUserName", adminService.queryUserName(object.getLong("createUserId")).getData());
+                object.put("createUserName", UserCacheUtil.getUserName(object.getLong("createUserId")));
             }
             if (object.getLong("ownerUserId") != null) {
-                object.put("ownerUserName", adminService.queryUserName(object.getLong("ownerUserId")).getData());
+                object.put("ownerUserName", UserCacheUtil.getUserName(object.getLong("ownerUserId")));
             }
             if (object.getInteger("customerId") != null) {
                 List<SimpleCrmEntity> crmEntities = crmService.queryCustomerInfo(Collections.singleton(object.getInteger("customerId"))).getData();

@@ -3,6 +3,7 @@ package com.kakarote.core.feign.crm.service;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.CrmSearchBO;
+import com.kakarote.core.feign.crm.entity.ExamineField;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.feign.crm.service.impl.CrmServiceImpl;
 import io.swagger.annotations.ApiOperation;
@@ -45,7 +46,7 @@ public interface CrmService {
      * @return entity
      */
     @PostMapping("/crmCustomer/queryNameCustomerInfo")
-    public Result<List<SimpleCrmEntity>> queryNameCustomerInfo(@RequestParam("name")String name);
+    public Result<List<SimpleCrmEntity>> queryNameCustomerInfo(@RequestParam("name") String name);
 
     /**
      * 查询联系人信息
@@ -79,22 +80,26 @@ public interface CrmService {
 
     /**
      * 添加活动记录
+     *
      * @param type
-     * @param activityType 活动类型
-     * @param activityTypeId  类型ID
+     * @param activityType   活动类型
+     * @param activityTypeId 类型ID
      * @return
      */
     @PostMapping("/crmActivity/addActivity")
-    Result addActivity(@RequestParam("type") Integer type,@RequestParam("activityType") Integer activityType,@RequestParam("activityTypeId") Integer activityTypeId);
+    Result addActivity(@RequestParam("type") Integer type, @RequestParam("activityType") Integer activityType, @RequestParam("activityTypeId") Integer activityTypeId);
 
     @PostMapping(value = "/crmField/batchUpdateEsData")
-    Result batchUpdateEsData(@RequestParam("id")String id,@RequestParam("name")String name);
+    Result batchUpdateEsData(@RequestParam("id") String id, @RequestParam("name") String name);
 
     @PostMapping("/crmCustomerJob/putInInternational")
     Result putInInternational();
 
     @PostMapping("/crmCustomerPool/queryPoolNameListByAuth")
     Result<List> queryPoolNameListByAuth() ;
+
+    @PostMapping("/crmField/queryExamineField")
+    public Result<List<ExamineField>> queryExamineField(@RequestParam("label") Integer label);
 
     @PostMapping("/crmCustomer/queryPageList")
     @ApiOperation("查询列表页数据")

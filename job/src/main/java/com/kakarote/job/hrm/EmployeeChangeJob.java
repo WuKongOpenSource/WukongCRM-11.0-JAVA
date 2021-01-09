@@ -1,5 +1,6 @@
 package com.kakarote.job.hrm;
 
+import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.hrm.service.HrmService;
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.handler.annotation.XxlJob;
@@ -11,6 +12,9 @@ public class EmployeeChangeJob {
 
     @Autowired
     private HrmService hrmService;
+
+    @Autowired
+    private AdminService adminService;
 
     @XxlJob("EmployeeChangeJob")
     public ReturnT<String> employeeChangeJobHandler(String param) {

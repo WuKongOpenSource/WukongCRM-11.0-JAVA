@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.admin.common.AdminCodeEnum;
 import com.kakarote.admin.common.AdminConst;
 import com.kakarote.admin.common.AdminModuleEnum;
+import com.kakarote.admin.common.log.AdminConfigLog;
 import com.kakarote.admin.entity.BO.AdminCompanyBO;
 import com.kakarote.admin.entity.BO.AdminInitDataBO;
 import com.kakarote.admin.entity.BO.LogWelcomeSpeechBO;
@@ -19,16 +20,14 @@ import com.kakarote.admin.entity.VO.ModuleSettingVO;
 import com.kakarote.admin.service.IAdminConfigService;
 import com.kakarote.admin.service.IAdminModelSortService;
 import com.kakarote.admin.service.IAdminUserConfigService;
-import com.kakarote.core.common.ApiExplain;
-import com.kakarote.core.common.Const;
-import com.kakarote.core.common.R;
-import com.kakarote.core.common.Result;
-import com.kakarote.core.redis.Redis;
+import com.kakarote.core.common.*;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.utils.UserUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -50,7 +49,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/adminConfig")
 @Api(tags = "系统配置接口")
-@Slf4j
+@SysLog(logClass = AdminConfigLog.class)
 public class AdminConfigController {
 
     @Autowired
@@ -69,6 +68,7 @@ public class AdminConfigController {
      */
     @ApiOperation(value = "设置企业配置")
     @PostMapping("/setAdminConfig")
+    @SysLogHandler(subModel = SubModelType.ADMIN_COMPANY_HOME,behavior = BehaviorEnum.UPDATE,object = "企业首页配置",detail = "'企业首页配置:'+#adminCompanyBO.companyName")
     public Result setAdminConfig(@RequestBody AdminCompanyBO adminCompanyBO) {
         adminConfigService.setAdminConfig(adminCompanyBO);
         return Result.ok();
@@ -114,6 +114,7 @@ public class AdminConfigController {
 
     @ApiOperation(value = "设置活动咨询状态")
     @PostMapping("/setMarketing")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_OTHER_SETTINGS,behavior = BehaviorEnum.UPDATE,object = "活动咨询设置",detail = "活动咨询设置")
     public Result setMarketing(@RequestParam("status") Integer status) {
        adminConfigService.setMarketing(status);
        return R.ok();
@@ -144,6 +145,7 @@ public class AdminConfigController {
      */
     @ApiOperation(value = "设置企业模块")
     @PostMapping("/setModuleSetting")
+    @SysLogHandler(subModel = SubModelType.ADMIN_OTHER_SETTINGS,behavior = BehaviorEnum.UPDATE)
     public Result setModuleSetting(@Valid @RequestBody ModuleSettingBO moduleSetting) {
         AdminConfig adminConfig = adminConfigService.getById(moduleSetting.getSettingId());
         if (AdminModuleEnum.CRM.getValue().equals(adminConfig.getName())) {
@@ -156,6 +158,7 @@ public class AdminConfigController {
 
     @ApiOperation(value = "设置日志欢迎语")
     @PostMapping("/setLogWelcomeSpeech")
+    @SysLogHandler(subModel = SubModelType.ADMIN_OTHER_SETTINGS,behavior = BehaviorEnum.UPDATE,object = "设置日志欢迎语",detail = "设置日志欢迎语")
     public Result setLogWelcomeSpeech(@Valid @RequestBody List<String> stringList) {
         adminConfigService.setLogWelcomeSpeech(stringList);
         return Result.ok();
@@ -252,6 +255,7 @@ public class AdminConfigController {
 
     @ApiOperation(value = "设置跟进记录类型")
     @PostMapping("/setRecordOptions")
+    @SysLogHandler(subModel = SubModelType.ADMIN_OTHER_SETTINGS,behavior = BehaviorEnum.UPDATE,object = "设置跟进记录类型",detail = "设置跟进记录类型")
     public Result setRecordOptions(@RequestBody List<String> stringList) {
         String name = "followRecordOption";
         String description = "跟进记录选项";
@@ -287,15 +291,10 @@ public class AdminConfigController {
         List<AdminConfig> adminConfigs = adminConfigService.queryConfigListByName(name);
         return Result.ok(adminConfigs.stream().map(config -> BeanUtil.copyProperties(config, com.kakarote.core.feign.admin.entity.AdminConfig.class)).collect(Collectors.toList()));
     }
-    @Autowired
-    private Redis redis;
+
     @ApiExplain(value = "查询config配置")
     @RequestMapping("/queryFirstConfigByName")
     public Result<com.kakarote.core.feign.admin.entity.AdminConfig> queryFirstConfigByName(@RequestParam("name") String name, HttpServletRequest request) {
-        String token = request.getHeader("ADMIN-TOKEN");
-        log.info("ADMIN-TOKEN:{}",token);
-        Object data = redis.get(token);
-        log.info("userInfo:{}",JSON.toJSONString(data));
         AdminConfig config = adminConfigService.queryConfigByName(name);
         return Result.ok(BeanUtil.copyProperties(config, com.kakarote.core.feign.admin.entity.AdminConfig.class));
     }
@@ -309,8 +308,7 @@ public class AdminConfigController {
 
     @ApiExplain(value = "查询config配置")
     @RequestMapping("/queryFirstConfigByNameAndValue")
-    public Result<com.kakarote.core.feign.admin.entity.AdminConfig> queryFirstConfigByNameAndValue(@RequestParam("name") String name,
-                                                                                                   @RequestParam("value") String value) {
+    public Result<com.kakarote.core.feign.admin.entity.AdminConfig> queryFirstConfigByNameAndValue(@RequestParam("name") String name, @RequestParam("value") String value) {
         AdminConfig config = adminConfigService.queryFirstConfigByNameAndValue(name, value);
         return Result.ok(BeanUtil.copyProperties(config, com.kakarote.core.feign.admin.entity.AdminConfig.class));
     }

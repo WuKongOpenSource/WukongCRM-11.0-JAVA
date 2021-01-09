@@ -1,6 +1,7 @@
 package com.kakarote.oa.mapper;
 
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.servlet.BaseMapper;
 import com.kakarote.oa.entity.BO.ExamineExportBO;
@@ -36,9 +37,19 @@ public interface OaExamineMapper extends BaseMapper<OaExamine> {
 
     List<JSONObject> myOaExamineExcel(@Param("data") ExamineExportBO examineExportBO, @Param("userId") Long userId, @Param("isAdmin") boolean isAdmin);
 
+    @SqlParser(filter = true)
     List<JSONObject> queryTravelExamineList(@Param("examineIdList") List<Integer> examineIdList);
 
-    List<JSONObject> queryCustomExamineList(@Param("examineIdList") List<Integer> examineIdList, @Param("batchIds") List<String> batchIdList, @Param("fieldMap") List<OaExamineField> fields);
+    @SqlParser(filter = true)
+    List<JSONObject> queryCustomExamineList(@Param("examineIdList") List<Integer> examineIdList,@Param("batchIds") List<String> batchIdList, @Param("fieldMap") List<OaExamineField> fields);
 
+    @SqlParser(filter = true)
     List<JSONObject> queryExamineList(@Param("examineIdList") List<Integer> examineIdList);
+
+
+    BasePage<ExamineVO> myInitiateOaExamine(BasePage<Object> parse, @Param("data") ExaminePageBO examinePageBO, @Param("userId") Long userId, @Param("isAdmin") boolean isAdmin);
+
+    List<JSONObject> myInitiateOaExcel(@Param("data") ExamineExportBO examineExportBO, @Param("userId") Long userId, @Param("isAdmin") boolean isAdmin);
+
+
 }

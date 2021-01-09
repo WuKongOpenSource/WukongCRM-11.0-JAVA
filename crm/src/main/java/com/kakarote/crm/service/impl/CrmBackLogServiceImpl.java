@@ -1,6 +1,7 @@
 package com.kakarote.crm.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
@@ -13,6 +14,7 @@ import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.examine.service.ExamineService;
 import com.kakarote.core.redis.Redis;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.UserUtil;
@@ -72,6 +74,18 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
 
     @Autowired
     private ICrmBusinessService crmBusinessService;
+
+    @Autowired
+    private ExamineService examineService;
+
+    @Autowired
+    private ICrmContractService crmContractService;
+
+    @Autowired
+    private ICrmReceivablesService crmReceivablesService;
+
+    @Autowired
+    private ICrmInvoiceService crmInvoiceService;
 
     /**
      * 查询待办事项数量
@@ -152,7 +166,14 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
                 Integer endContract = mapper.endContractNum(paras);
                 kv.put("endContract", endContract);
             }
-            Integer checkContract = mapper.checkContractNum(paras);
+//            Integer checkContract = mapper.checkContractNum(paras);
+            List<Integer> ids = examineService.queryCrmExamineIdList(1, 1).getData();
+            Integer checkContract;
+            if (CollUtil.isNotEmpty(ids)){
+                checkContract = crmContractService.lambdaQuery().in(CrmContract::getContractId, ids).in(CrmContract::getCheckStatus, 0, 3).count();
+            }else {
+                checkContract = 0;
+            }
             kv.put("checkContract", checkContract);
 
             AdminConfig returnVisitRemindConfig = adminService.queryFirstConfigByName("returnVisitRemindConfig").getData();
@@ -164,14 +185,28 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
         }
 
         if (authList.contains("crm:receivables:index")) {
-            Integer checkReceivables = mapper.checkReceivablesNum(paras);
+//            Integer checkReceivables = mapper.checkReceivablesNum(paras);
             Integer remindReceivablesPlan = mapper.remindReceivablesPlanNum(paras);
+            List<Integer> ids = examineService.queryCrmExamineIdList(2, 1).getData();
+            Integer checkReceivables;
+            if (CollUtil.isNotEmpty(ids)) {
+                checkReceivables = crmReceivablesService.lambdaQuery().in(CrmReceivables::getReceivablesId, ids).in(CrmReceivables::getCheckStatus, 0, 3).count();
+            }else {
+                checkReceivables = 0;
+            }
             kv.put("checkReceivables", checkReceivables);
             kv.put("remindReceivablesPlan", remindReceivablesPlan);
         }
 
         if (authList.contains("crm:invoice:index")) {
-            Integer checkInvoice = mapper.checkInvoiceNum(paras);
+//            Integer checkInvoice = mapper.checkInvoiceNum(paras);
+            List<Integer> ids = examineService.queryCrmExamineIdList(3, 1).getData();
+            Integer checkInvoice;
+            if (CollUtil.isNotEmpty(ids)) {
+                checkInvoice = crmInvoiceService.lambdaQuery().in(CrmInvoice::getInvoiceId, ids).in(CrmInvoice::getCheckStatus, 0, 3).count();
+            }else {
+                checkInvoice = 0;
+            }
             kv.put("checkInvoice", checkInvoice);
         }
         redis.setex(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + userId.toString(), 60, kv);
@@ -397,10 +432,15 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
     public BasePage<Map<String, Object>> checkContract(CrmBackLogBO crmBackLogBO) {
         CrmEnum crmEnum = CrmEnum.CONTRACT;
         Integer type = crmBackLogBO.getType();
-        List<String> ids = mapper.queryExamineTypeId(crmBackLogBO.getType(), crmEnum.getType(), UserUtil.getUserId());
-        if (type == 1) {
-            List<String> dealIdList = backLogDealService.queryTypeId(5, crmEnum.getType(), UserUtil.getUserId());
-            ids.removeIf(dealIdList::contains);
+        List<String> ids = new ArrayList<>();
+//        List<String> ids = mapper.queryExamineTypeId(crmBackLogBO.getType(), crmEnum.getType(), UserUtil.getUserId());
+//        if (type == 1) {
+//            List<String> dealIdList = backLogDealService.queryTypeId(5, crmEnum.getType(), UserUtil.getUserId());
+//            ids.removeIf(dealIdList::contains);
+//        }
+        List<Integer> idList = examineService.queryCrmExamineIdList(1, type).getData();
+        if (CollUtil.isNotEmpty(idList)) {
+            ids = idList.stream().map(String::valueOf).collect(Collectors.toList());
         }
         if (ids.size() == 0) {
             return new BasePage<>();
@@ -421,10 +461,15 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
     public BasePage<Map<String, Object>> checkReceivables(CrmBackLogBO crmBackLogBO) {
         CrmEnum crmEnum = CrmEnum.RECEIVABLES;
         Integer type = crmBackLogBO.getType();
-        List<String> ids = mapper.queryExamineTypeId(crmBackLogBO.getType(), crmEnum.getType(), UserUtil.getUserId());
-        if (type == 1) {
-            List<String> dealIdList = backLogDealService.queryTypeId(6, crmEnum.getType(), UserUtil.getUserId());
-            ids.removeIf(dealIdList::contains);
+        List<String> ids = new ArrayList<>();
+//        List<String> ids = mapper.queryExamineTypeId(crmBackLogBO.getType(), crmEnum.getType(), UserUtil.getUserId());
+//        if (type == 1) {
+//            List<String> dealIdList = backLogDealService.queryTypeId(6, crmEnum.getType(), UserUtil.getUserId());
+//            ids.removeIf(dealIdList::contains);
+//        }
+        List<Integer> idList = examineService.queryCrmExamineIdList(2, type).getData();
+        if (CollUtil.isNotEmpty(idList)) {
+            ids = idList.stream().map(String::valueOf).collect(Collectors.toList());
         }
         if (ids.size() == 0) {
             return new BasePage<>();
@@ -445,10 +490,15 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
     public BasePage<Map<String, Object>> checkInvoice(CrmBackLogBO crmBackLogBO) {
         CrmEnum crmEnum = CrmEnum.INVOICE;
         Integer type = crmBackLogBO.getType();
-        List<String> ids = mapper.queryExamineTypeId(crmBackLogBO.getType(), crmEnum.getType(), UserUtil.getUserId());
-        if (type == 1) {
-            List<String> dealIdList = backLogDealService.queryTypeId(10, crmEnum.getType(), UserUtil.getUserId());
-            ids.removeIf(dealIdList::contains);
+        List<String> ids = new ArrayList<>();
+//        List<String> ids = mapper.queryExamineTypeId(crmBackLogBO.getType(), crmEnum.getType(), UserUtil.getUserId());
+//        if (type == 1) {
+//            List<String> dealIdList = backLogDealService.queryTypeId(10, crmEnum.getType(), UserUtil.getUserId());
+//            ids.removeIf(dealIdList::contains);
+//        }
+        List<Integer> idList = examineService.queryCrmExamineIdList(3, type).getData();
+        if (CollUtil.isNotEmpty(idList)) {
+            ids = idList.stream().map(String::valueOf).collect(Collectors.toList());
         }
         if (ids.size() == 0) {
             return new BasePage<>();

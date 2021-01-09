@@ -3,6 +3,11 @@ package com.kakarote.work.controller;
 
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
+import com.kakarote.work.common.log.WorkTaskLabelLog;
 import com.kakarote.work.entity.PO.WorkTaskLabel;
 import com.kakarote.work.service.IWorkTaskLabelService;
 import io.swagger.annotations.Api;
@@ -23,12 +28,14 @@ import java.util.List;
 @RestController
 @RequestMapping("/workTaskLabel")
 @Api(tags = "任务标签")
+@SysLog(subModel = SubModelType.WORK_TASK,logClass = WorkTaskLabelLog.class)
 public class WorkTaskLabelController {
     @Autowired
     private IWorkTaskLabelService workTaskLabelService;
 
     @PostMapping("/saveLabel")
     @ApiOperation("新建任务标签")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#workTaskLabel.name",detail = "'新建了标签:'+#workTaskLabel.name")
     public Result saveLabel(@RequestBody WorkTaskLabel workTaskLabel){
         workTaskLabelService.saveLabel(workTaskLabel);
         return R.ok();
@@ -36,6 +43,7 @@ public class WorkTaskLabelController {
 
     @PostMapping("/setLabel")
     @ApiOperation("编辑任务标签")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE,object = "#workTaskLabel.name",detail = "'修改了标签:'+#workTaskLabel.name")
     public Result setLabel(@RequestBody WorkTaskLabel workTaskLabel){
         workTaskLabelService.setLabel(workTaskLabel);
         return R.ok();
@@ -43,6 +51,7 @@ public class WorkTaskLabelController {
 
     @PostMapping("/deleteLabel")
     @ApiOperation("删除任务标签")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteLabel(@RequestParam("labelId") Integer labelId){
         workTaskLabelService.deleteLabel(labelId);
         return R.ok();

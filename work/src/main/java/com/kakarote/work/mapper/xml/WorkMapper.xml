@@ -263,4 +263,26 @@
     and (a.owner_user_id like concat('%,',#{userId},',%') or a.main_user_id = #{userId})
     and a.pid = 0
     </select>
+    <select id="workTaskExport" resultType="java.util.HashMap">
+         select a.task_id,a.name,a.description,a.start_time,a.stop_time,a.create_time,
+         a.create_user_id,
+         a.main_user_id,
+        (CASE WHEN a.priority = 0 THEN '无'
+              WHEN a.priority = 1 THEN '低'
+              WHEN a.priority = 2 THEN '中'
+              WHEN a.priority = 3 THEN '高' END ) as priority,
+         e.name as class_name,
+         a.owner_user_id,
+         a.label_id,
+         d.customer_ids,
+         d.contacts_ids,
+         d.business_ids,
+         d.contract_ids
+        from wk_work_task as a
+        left join wk_work_task_relation as d on a.task_id = d.task_id
+        left join wk_work_task_class as e on a.class_id = e.class_id
+        where a.work_id = #{workId} and a.pid = 0 and a.ishidden = 0 and
+        a.status in (1,2,5) and a.is_archive = 0
+        order by e.order_num,a.order_num
+    </select>
 </mapper>

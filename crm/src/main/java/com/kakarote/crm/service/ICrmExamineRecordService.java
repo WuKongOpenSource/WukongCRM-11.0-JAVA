@@ -1,11 +1,15 @@
 package com.kakarote.crm.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.feign.crm.entity.SimpleCrmInfo;
+import com.kakarote.core.feign.examine.entity.ExamineConditionDataBO;
+import com.kakarote.core.feign.examine.entity.ExamineMessageBO;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.crm.entity.BO.CrmExamineData;
 import com.kakarote.crm.entity.PO.CrmExamineRecord;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -73,4 +77,22 @@ public interface ICrmExamineRecordService extends BaseService<CrmExamineRecord> 
      * @param examineType  1 待审核 2 通过 3 拒绝
      */
     public void addMessage(Integer categoryType, Integer examineType, Object examineObj, Long ownerUserId);
+
+
+
+    /**
+     * 自定义审批添加消息
+     * @param categoryType categoryType
+     * @param examineType  1 待审核 2 通过 3 拒绝
+     */
+    public void addMessageForNewExamine(Integer categoryType, Integer examineType, Object examineObj, Long ownerUserId);
+
+    public void addMessageForNewExamine(ExamineMessageBO examineMessageBO);
+
+    public Map<String, Object> getDataMapForNewExamine(ExamineConditionDataBO examineConditionDataBO);
+
+    public Boolean updateCheckStatusByNewExamine(ExamineConditionDataBO examineConditionDataBO);
+
+
+    SimpleCrmInfo getCrmSimpleInfo(ExamineConditionDataBO examineConditionDataBO);
 }

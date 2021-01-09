@@ -11,11 +11,11 @@ import com.kakarote.admin.entity.BO.RenameFileBO;
 import com.kakarote.admin.entity.PO.AdminFile;
 import com.kakarote.admin.mapper.AdminFileMapper;
 import com.kakarote.admin.service.IAdminFileService;
-import com.kakarote.core.config.MybatisPlusConfig;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.servlet.upload.FileServiceFactory;
 import com.kakarote.core.servlet.upload.UploadEntity;
+import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -53,7 +53,7 @@ public class AdminFileServiceImpl extends BaseServiceImpl<AdminFileMapper, Admin
         if (StrUtil.isEmpty(batchId)) {
             batchId = IdUtil.simpleUUID();
         }
-        UploadEntity entity = new UploadEntity(MybatisPlusConfig.getNextId() + "", file.getOriginalFilename(), file.getSize(), batchId,isPublic);
+        UploadEntity entity = new UploadEntity(BaseUtil.getNextId() + "", file.getOriginalFilename(), file.getSize(), batchId, isPublic);
         entity = FileServiceFactory.build().uploadFile(file.getInputStream(), entity);
         AdminFile adminFile = new AdminFile();
         adminFile.setFileId(Long.valueOf(entity.getFileId()));
@@ -256,7 +256,7 @@ public class AdminFileServiceImpl extends BaseServiceImpl<AdminFileMapper, Admin
         List<AdminFile> fileList = lambdaQuery().eq(AdminFile::getBatchId, batchId).list();
         String newBatchId = IdUtil.simpleUUID();
         for (AdminFile adminFile : fileList) {
-            adminFile.setFileId(MybatisPlusConfig.getNextId());
+            adminFile.setFileId(BaseUtil.getNextId());
             adminFile.setBatchId(newBatchId);
         }
         saveBatch(fileList);
@@ -267,7 +267,7 @@ public class AdminFileServiceImpl extends BaseServiceImpl<AdminFileMapper, Admin
     public void saveBatchFileEntity(List<String> adminFileIdList, String batchId) {
         List<AdminFile> fileList = lambdaQuery().in(AdminFile::getFileId, adminFileIdList).list();
         for (AdminFile adminFile : fileList) {
-            adminFile.setFileId(MybatisPlusConfig.getNextId());
+            adminFile.setFileId(BaseUtil.getNextId());
             adminFile.setBatchId(batchId);
         }
         saveBatch(fileList);

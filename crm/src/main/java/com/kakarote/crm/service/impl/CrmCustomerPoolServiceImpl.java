@@ -35,6 +35,7 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.index.query.IdsQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -42,6 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -154,7 +156,6 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @SuppressWarnings("unchecked")
     public void transfer(Integer prePoolId, Integer postPoolId) {
         CrmCustomerPool pool = getById(postPoolId);
         if (pool == null) {
@@ -179,11 +180,53 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
         if (oldLists.size() == 0) {
             return;
         }
+        List<String> ids = new ArrayList<>();
+        for (Integer id : oldLists) {
+            ids.add(id.toString());
+            if(ids.size() >= 1000){
+                transferPoolByEs(ids,prePoolId,postPoolId);
+                ids = new ArrayList<>();
+            }
+        }
+        /*
+          转移最后剩余的数据以及刷新es索引
+         */
+        transferPoolByEs(ids,prePoolId,postPoolId);
+        getRestTemplate().refresh(CrmEnum.CUSTOMER.getIndex());
+
+        oldLists.removeAll(newLists);
+        List<CrmCustomerPoolRelation> poolRelationList = new ArrayList<>(oldLists.size());
+        oldLists.forEach(id -> {
+            CrmCustomerPoolRelation poolRelation = new CrmCustomerPoolRelation();
+            poolRelation.setCustomerId(id);
+            poolRelation.setPoolId(postPoolId);
+            poolRelationList.add(poolRelation);
+        });
+        customerPoolRelationService.removeByMap(new JSONObject().fluentPut("pool_id", prePoolId));
+        customerPoolRelationService.saveBatch(poolRelationList);
+        backLogDealService.removeByMap(new JSONObject().fluentPut("pool_id", prePoolId));
+
+    }
+
+    /**
+     * 公海客户转移的es处理
+     * @param ids 客户id
+     * @param prePoolId 前公海ID
+     * @param postPoolId 放入的公海ID
+     */
+    @SuppressWarnings("unchecked")
+    private void transferPoolByEs(List<String> ids,Integer prePoolId, Integer postPoolId){
+        if(ids.size() == 0){
+            return;
+        }
+        BulkRequest bulkRequest = new BulkRequest();
         SearchRequest searchRequest = new SearchRequest(getIndex());
         searchRequest.types(getDocType());
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-        searchRequest.source(sourceBuilder.fetchSource(new String[]{"poolId"}, null).query(QueryBuilders.idsQuery().addIds(oldLists.stream().map(Object::toString).toArray(String[]::new))));
-        BulkRequest bulkRequest = new BulkRequest();
+        IdsQueryBuilder idsQuery = QueryBuilders.idsQuery();
+        idsQuery.ids().addAll(ids);
+        searchRequest.source(sourceBuilder.fetchSource(new String[]{"poolId"}, null).query(idsQuery));
+        sourceBuilder.size(1000);
         try {
             SearchResponse searchResponse = getRestTemplate().getClient().search(searchRequest, RequestOptions.DEFAULT);
             for (SearchHit hit : searchResponse.getHits()) {
@@ -198,31 +241,13 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
                     request.doc(sourceAsMap);
                     bulkRequest.add(request);
                 }
-                if (bulkRequest.requests() != null && bulkRequest.requests().size() >= 1000) {
-                    getRestTemplate().getClient().bulk(bulkRequest, RequestOptions.DEFAULT);
-                    bulkRequest = new BulkRequest();
-                }
             }
-            //统一提交处理
-            if (bulkRequest.requests() != null && bulkRequest.requests().size() > 0) {
+            if(bulkRequest.requests().size() > 0){
                 getRestTemplate().getClient().bulk(bulkRequest, RequestOptions.DEFAULT);
             }
-        } catch (Exception e) {
+        } catch (IOException e){
             throw new CrmException(SystemCodeEnum.SYSTEM_ERROR);
         }
-
-        oldLists.removeAll(newLists);
-        List<CrmCustomerPoolRelation> poolRelationList = new ArrayList<>(oldLists.size());
-        oldLists.forEach(id -> {
-            CrmCustomerPoolRelation poolRelation = new CrmCustomerPoolRelation();
-            poolRelation.setCustomerId(id);
-            poolRelation.setPoolId(postPoolId);
-            poolRelationList.add(poolRelation);
-        });
-        customerPoolRelationService.removeByMap(new JSONObject().fluentPut("pool_id", prePoolId));
-        customerPoolRelationService.saveBatch(poolRelationList);
-        backLogDealService.removeByMap(new JSONObject().fluentPut("pool_id", prePoolId));
-
     }
 
     /**
@@ -514,6 +539,7 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
      */
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
+        search.setLabel(CrmEnum.CUSTOMER_POOL.getType());
         BasePage<Map<String, Object>> basePage = queryList(search);
         basePage.getList().forEach(map -> {
             map.put("poolId", search.getPoolId());
@@ -630,8 +656,8 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
             if (CollUtil.isEmpty(poolIds)){
                 return record;
             }
-            poolIdList.removeIf(poolIds::contains);
-            if (CollUtil.isEmpty(poolIdList)){
+            boolean b = poolIdList.stream().anyMatch(poolIds::contains);
+            if (!b){
                 return record;
             }
         }

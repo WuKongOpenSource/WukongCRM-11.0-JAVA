@@ -86,7 +86,7 @@ public interface CrmBackLogMapper {
     @Select("select leads_id from wk_crm_leads where to_days(next_time) = to_days(now()) and last_time < next_time and owner_user_id = #{userId}")
     List<Integer> queryTodayLeadsId(Long userId);
 
-    @Select("select leads_id from wk_crm_leads where to_days(next_time) = to_days(now()) and last_time < next_time and owner_user_id = #{userId} and status != 3")
+    @Select("select business_id from wk_crm_business where to_days(next_time) = to_days(now()) and last_time < next_time and owner_user_id = #{userId} and status != 3")
     List<Integer> queryTodayBusinessId(Long userId);
 
 

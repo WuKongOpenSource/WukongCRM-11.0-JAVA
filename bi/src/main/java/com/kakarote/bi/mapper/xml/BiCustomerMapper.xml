@@ -2,22 +2,20 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
 <mapper namespace="com.kakarote.bi.mapper.BiCustomerMapper">
     <select id="totalCustomerStats" resultType="com.alibaba.fastjson.JSONObject">
-        <foreach collection="tableNameList" item="x" separator="union all">
-            SELECT
-                DATE_FORMAT( s.create_date, #{sqlDateFormat} ) AS type,
-                SUM( s.customer_num ) AS customerNum,
-                SUM( IF ( s.deal_status = '1', s.customer_num, 0 )) AS dealCustomerNum
-            FROM
-                ${x} s
-            WHERE
-                DATE_FORMAT(s.create_date,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
-                AND s.owner_user_id IN
-                <for collection="userIds" item="item">
-                    #{item}
-                </for>
-            GROUP BY
-                type
-        </foreach>
+        select t.type,count(t.customer_id) as customerNum,count(t.dealCustomer) as dealCustomerNum
+        from (
+            select DATE_FORMAT(a.create_time, #{sqlDateFormat}) as type,
+            if(a.deal_status ='1',1,null) as dealCustomer,
+            a.customer_id
+            from wk_crm_customer as a
+            where DATE_FORMAT(a.create_time, #{sqlDateFormat}) between #{beginTime} and #{finalTime}
+            and a.owner_user_id in
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+            and a.status != 3
+        ) as t
+        group by t.type
     </select>
 
 
@@ -155,7 +153,7 @@
         select a.category,IFNULL(count(a.activity_id),0) as recordNum,
         TRUNCATE(IFNULL(count(a.activity_id)*100/(select count(*) from wk_crm_activity a
         left join wk_crm_customer c on a.activity_type_id = c.customer_id
-        where if(a.activity_type = 2,c.status != 3,1=1) and a.type = 1
+        where c.status != 3 and a.type = 1
         and DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
         and a.create_user_id in
         <for collection="userIds" item="item">
@@ -254,24 +252,22 @@
         and t.type = 3 limit 1
     </select>
     <select id="employeeCycle" resultType="com.alibaba.fastjson.JSONObject">
-        <foreach collection="tableNameList" item="x" separator="union all">
-            SELECT
-                DATE_FORMAT( t.create_date, #{sqlDateFormat} ) AS type,
-                AVG( TIMESTAMPDIFF( DAY, t.create_date, t.deal_date )) AS cycle,
-                SUM( t.customer_num ) AS customerNum
-            FROM
-                ${x} t
+        SELECT t.type,
+        AVG(TIMESTAMPDIFF(DAY, t.create_time, t.deal_time)) as cycle,
+        count(t.customer_id) AS customerNum
+        FROM (
+            SELECT DATE_FORMAT( create_time, #{sqlDateFormat} ) AS type, create_time, deal_time,customer_id
+            FROM wk_crm_customer
             WHERE
-                DATE_FORMAT(t.create_date,#{sqlDateFormat}) BETWEEN #{beginTime} AND #{finalTime}
-                AND t.deal_status = 1
-                AND t.owner_user_id IN
-                <for collection="userIds" item="item">
-                    #{item}
-                </for>
-            GROUP BY
-                type
-        </foreach>
-
+            STATUS != 3
+            AND (DATE_FORMAT(create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+            AND deal_status = 1
+            AND owner_user_id IN
+            <for collection="userIds" item="item">
+                #{item}
+            </for>
+        ) t
+        GROUP BY t.type
     </select>
 
     <select id="employeeCycleInfo" resultType="com.alibaba.fastjson.JSONObject">
@@ -280,7 +276,7 @@
             (TRUNCATE(IF(AVG(TIMESTAMPDIFF(DAY,b.create_time,b.deal_time)) &gt;= 0,AVG(TIMESTAMPDIFF(DAY,b.create_time,b.deal_time)),0),1)) as cycle,
             count(distinct b.customer_id) as customerNum
             from wk_admin_user as a left join wk_crm_customer as b on a.user_id = b.owner_user_id
-            where b.status != 3 and  DATE_FORMAT(b.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
+            where b.status != 3 and DATE_FORMAT(b.create_time,'${sqlDateFormat}') between #{beginTime} and #{finalTime}
             and b.deal_status = 1 and a.user_id = ${x}
         </foreach>
     </select>

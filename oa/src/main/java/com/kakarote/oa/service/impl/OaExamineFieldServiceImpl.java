@@ -1,5 +1,6 @@
 package com.kakarote.oa.service.impl;
 
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -10,13 +11,14 @@ import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.examine.entity.ExamineInfoVo;
+import com.kakarote.core.feign.examine.service.ExamineService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.oa.common.OaCodeEnum;
 import com.kakarote.oa.constart.FieldEnum;
 import com.kakarote.oa.entity.BO.ExamineFieldBO;
-import com.kakarote.oa.entity.PO.OaExamineCategory;
 import com.kakarote.oa.entity.PO.OaExamineData;
 import com.kakarote.oa.entity.PO.OaExamineField;
 import com.kakarote.oa.mapper.OaExamineFieldMapper;
@@ -27,9 +29,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -79,6 +81,19 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
                     break;
             }
         }
+    }
+
+    @Override
+    public Boolean updateFieldCategoryId(Long newCategoryId,Long oldCategoryId) {
+        if (newCategoryId != null && oldCategoryId != null) {
+            List<OaExamineField> oaExamineFields = this.lambdaQuery().eq(OaExamineField::getExamineCategoryId, oldCategoryId).list();
+            for (OaExamineField oaExamineField : oaExamineFields) {
+                oaExamineField.setFieldId(null);
+                oaExamineField.setExamineCategoryId(newCategoryId.intValue());
+            }
+            return this.saveBatch(oaExamineFields,Const.BATCH_SAVE_SIZE);
+        }
+        return false;
     }
 
     @Override
@@ -138,6 +153,9 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
     @Autowired
     private IOaExamineDataService examineDataService;
 
+    @Autowired
+    private ExamineService examineService;
+
     @Override
     public void saveField(ExamineFieldBO examineFieldBO) {
         List<OaExamineField> data = examineFieldBO.getData();
@@ -148,8 +166,8 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
             }
         }
         Integer categoryId = examineFieldBO.getCategoryId();
-        OaExamineCategory category = categoryService.getById(categoryId);
-        if (category != null && Objects.equals(category.getIsSys(),1)) {
+        ExamineInfoVo category = examineService.queryExamineById(Long.valueOf(categoryId)).getData();
+        if (category != null && ListUtil.toList(1,2,3,4,5,6).contains(category.getOaType())) {
             throw new CrmException(OaCodeEnum.SYSTEM_EXAMINE_CAN_NOT_MODIFY);
         }
         List<Integer> arr = data.stream().filter(oaExamineField -> oaExamineField.getFieldId() != null).map(OaExamineField::getFieldId).collect(Collectors.toList());
@@ -175,5 +193,26 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
                 save(entity);
             }
         }
+    }
+
+
+    @Override
+    public void saveDefaultField(Long categoryId){
+        OaExamineField content = new OaExamineField();
+        content.setName("审批事由");
+        content.setFieldName("content");
+        content.setMaxLength(0);
+        content.setType(2);
+        content.setIsNull(1);
+        content.setUpdateTime(new Date());
+        content.setOperating(1);
+        content.setFieldType(1);
+        content.setExamineCategoryId(categoryId.intValue());
+        this.save(content);
+        content.setFieldId(null);
+        content.setFieldName("remark");
+        content.setIsNull(0);
+        content.setName("备注");
+        this.save(content);
     }
 }

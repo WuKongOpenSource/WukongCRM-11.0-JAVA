@@ -11,11 +11,15 @@ import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.examine.entity.ExamineRecordReturnVO;
+import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
+import com.kakarote.core.feign.examine.service.ExamineService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
@@ -23,9 +27,11 @@ import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.CrmModel;
-import com.kakarote.crm.constant.*;
+import com.kakarote.crm.constant.CrmActivityEnum;
+import com.kakarote.crm.constant.CrmCodeEnum;
+import com.kakarote.crm.constant.CrmEnum;
+import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmContractSaveBO;
-import com.kakarote.crm.entity.BO.CrmExamineData;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
 import com.kakarote.crm.entity.PO.*;
@@ -113,6 +119,9 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
 
     @Autowired
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
+
+    @Autowired
+    private ExamineService examineService;
 
 
     /**
@@ -237,8 +246,8 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
         String batchId = StrUtil.isNotEmpty(crmReceivables.getBatchId()) ? crmReceivables.getBatchId() : IdUtil.simpleUUID();
         actionRecordUtil.updateRecord(crmModel.getField(), Dict.create().set("batchId", batchId).set("dataTableName", "wk_crm_business_data"));
         crmReceivablesDataService.saveData(crmModel.getField(), batchId);
-        Integer examineCount = crmExamineService.queryCount(getLabel());
-        CrmExamineData examineData = new CrmExamineData();
+        ExamineRecordSaveBO examineRecordSaveBO = crmModel.getExamineFlowData();
+        ExamineRecordReturnVO examineData = null;
         if (crmReceivables.getReceivablesId() == null) {
             List<AdminConfig> configList = adminService.queryConfigByName("numberSetting").getData();
             AdminConfig adminConfig = configList.stream().filter(config -> Objects.equals(getLabel().getType().toString(), config.getValue())).collect(Collectors.toList()).get(0);
@@ -254,26 +263,21 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
             crmReceivables.setUpdateTime(DateUtil.date());
             crmReceivables.setBatchId(batchId);
             crmReceivables.setOwnerUserId(UserUtil.getUserId());
-
-            if (examineCount > 0) {
-                examineData = examineRecordService.saveExamineRecord(2, crmModel.getCheckUserId(), crmReceivables.getOwnerUserId(), null, crmReceivables.getCheckStatus());
-                if (examineData.getStatus() == 0) {
-                    throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_STEP_ERROR);
-                } else if (examineData.getStatus() == 2) {
-                    throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_USER_ERROR);
-                } else {
+            save(crmReceivables);
+            if (crmReceivables.getCheckStatus() == null || crmReceivables.getCheckStatus() != 5) {
+                if (examineRecordSaveBO != null) {
+                    this.supplementFieldInfo(2, crmReceivables.getReceivablesId(), null, examineRecordSaveBO);
+                    examineRecordSaveBO.setTitle(crmReceivables.getNumber());
+                    examineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
                     crmReceivables.setExamineRecordId(examineData.getRecordId());
-                }
-                if (crmReceivables.getCheckStatus() == null || crmReceivables.getCheckStatus() != 5) {
-                    crmReceivables.setCheckStatus(0);
-                }
-            } else {
-                if (crmReceivables.getCheckStatus() == null || crmReceivables.getCheckStatus() != 5) {
+                    crmReceivables.setCheckStatus(examineData.getExamineStatus());
+
+                } else {
                     crmReceivables.setCheckStatus(1);
                 }
             }
-            save(crmReceivables);
-            if (examineCount == 0 && crmReceivables.getCheckStatus() == 1) {
+            updateById(crmReceivables);
+            if (crmReceivables.getCheckStatus() == 1) {
                 examineRecordService.updateContractMoney(crmReceivables.getReceivablesId());
             }
             CrmReceivablesPlan crmReceivablesPlan = crmReceivablesPlanService.getById(crmReceivables.getPlanId());
@@ -286,7 +290,7 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
             actionRecordUtil.addRecord(crmReceivables.getReceivablesId(), CrmEnum.RECEIVABLES, crmReceivables.getNumber());
         } else {
             CrmReceivables receivables = getById(crmReceivables.getReceivablesId());
-            if (!receivables.getCreateUserId().equals(UserUtil.getUserId()) && examineCount > 0) {
+            if (!receivables.getCreateUserId().equals(UserUtil.getUserId()) && examineRecordSaveBO != null) {
                 throw new CrmException(CrmCodeEnum.CRM_RECEIVABLES_EDIT_ERROR);
             }
             if (receivables.getCheckStatus() == 1){
@@ -295,30 +299,18 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
             if (receivables.getCheckStatus() != 4 && receivables.getCheckStatus() != 2 && receivables.getCheckStatus() != 5) {
                 throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EDIT_ERROR);
             }
-            if (examineCount > 0) {
-                examineData = examineRecordService.saveExamineRecord(2, crmModel.getCheckUserId(), receivables.getOwnerUserId(), receivables.getExamineRecordId(), crmReceivables.getCheckStatus());
-                if (examineData.getStatus() == 0) {
-                    throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_STEP_ERROR);
-                } else if (examineData.getStatus() == 2) {
-                    throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_USER_ERROR);
-                } else {
+            if (crmReceivables.getCheckStatus() == null || crmReceivables.getCheckStatus() != 5) {
+                if (examineRecordSaveBO != null) {
+                    this.supplementFieldInfo(2, receivables.getReceivablesId(), receivables.getExamineRecordId(), examineRecordSaveBO);
+                    examineRecordSaveBO.setTitle(crmReceivables.getNumber());
+                    examineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
                     crmReceivables.setExamineRecordId(examineData.getRecordId());
-                }
-                if (crmReceivables.getCheckStatus() == null || crmReceivables.getCheckStatus() != 5) {
-                    crmReceivables.setCheckStatus(0);
-                }
-            } else {
-                if (crmReceivables.getCheckStatus() == null || crmReceivables.getCheckStatus() != 5) {
+                    crmReceivables.setCheckStatus(examineData.getExamineStatus());
+                } else {
                     crmReceivables.setCheckStatus(1);
                     if (receivables.getCheckStatus() != 1) {
                         examineRecordService.updateContractMoney(crmReceivables.getReceivablesId());
                     }
-                }
-                if (receivables.getExamineRecordId() != null) {
-                    LambdaUpdateWrapper<CrmExamineLog> examineLogLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-                    examineLogLambdaUpdateWrapper.set(CrmExamineLog::getIsRecheck, 1);
-                    examineLogLambdaUpdateWrapper.eq(CrmExamineLog::getRecordId, receivables.getExamineRecordId());
-                    examineLogService.update(examineLogLambdaUpdateWrapper);
                 }
             }
             crmReceivables.setUpdateTime(DateUtil.date());
@@ -334,14 +326,6 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
             crmReceivables = getById(crmReceivables.getReceivablesId());
         }
         crmModel.setEntity(BeanUtil.beanToMap(crmReceivables));
-        //判断当前是否提交审核，提交审核需要生成一条系统通知
-        if (Objects.equals(crmReceivables.getCheckStatus(), 0)) {
-            List<Long> examineLogIdList = examineData.getExamineLogIdList();
-            examineLogIdList.forEach(examineLogId ->{
-                CrmExamineLog examineLog = examineLogService.getById(examineLogId);
-                examineRecordService.addMessage(2,1,examineLog, UserUtil.getUserId());
-            });
-        }
         savePage(crmModel, crmReceivables.getReceivablesId(),false);
     }
 
@@ -402,7 +386,7 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
             //删除文件
             adminFileService.delete(Collections.singletonList(receivables.getBatchId()));
             if (ObjectUtil.isNotEmpty(receivables.getExamineRecordId())) {
-                examineRecordService.deleteExamine(receivables.getExamineRecordId());
+                examineService.deleteExamineRecord(receivables.getExamineRecordId());
             }
             receivables.setCheckStatus(7);
             updateById(receivables);

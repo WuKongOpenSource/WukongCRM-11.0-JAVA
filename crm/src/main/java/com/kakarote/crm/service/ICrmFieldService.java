@@ -1,6 +1,7 @@
 package com.kakarote.crm.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.feign.crm.entity.ExamineField;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.constant.FieldEnum;
@@ -116,7 +117,7 @@ public interface ICrmFieldService extends BaseService<CrmField> {
      * @param value
      * @return
      */
-    Integer queryCustomerFieldDuplicateByNoFixed(String name, Object value);
+    public long queryCustomerFieldDuplicateByNoFixed(String name, Object value);
 
     /**
      * 查询客户固定字段是否重复
@@ -129,5 +130,7 @@ public interface ICrmFieldService extends BaseService<CrmField> {
     void setPoolFieldStyle(CrmFieldStyleBO fieldStyle);
 
     void changeEsIndex(List<Integer> labels);
+
+    public List<ExamineField> queryExamineField(Integer label);
 
 }

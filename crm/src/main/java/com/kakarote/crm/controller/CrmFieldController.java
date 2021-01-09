@@ -5,7 +5,13 @@ import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
+import com.kakarote.core.feign.crm.entity.ExamineField;
 import com.kakarote.crm.common.ElasticUtil;
+import com.kakarote.crm.common.log.CrmFieldLog;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmField;
 import com.kakarote.crm.entity.PO.CrmRoleField;
@@ -34,6 +40,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/crmField")
 @Api(tags = "系统配置接口")
+@SysLog(logClass = CrmFieldLog.class)
 public class CrmFieldController {
 
     @Autowired
@@ -54,6 +61,7 @@ public class CrmFieldController {
 
     @ApiOperation("保存自定义字段")
     @RequestMapping(value = "/saveField", method = RequestMethod.POST)
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.SAVE)
     public Result saveField(@RequestBody CrmFieldBO crmFieldBO) {
         crmFieldService.saveField(crmFieldBO);
         return Result.ok();
@@ -125,16 +133,23 @@ public class CrmFieldController {
 
     @PostMapping(value = "/batchUpdateEsData")
     @ApiExplain("根据类型跟新es冗余数据")
-    public Result batchUpdateEsData(@RequestParam("id")String id,@RequestParam("name")String name) {
-        ElasticUtil.batchUpdateEsData(restTemplate.getClient(),"user",id,name);
+    public Result batchUpdateEsData(@RequestParam("id") String id, @RequestParam("name") String name) {
+        ElasticUtil.batchUpdateEsData(restTemplate.getClient(), "user", id, name);
         return R.ok();
     }
 
     @PostMapping(value = "/changeEsIndex")
     @ApiExplain("更新es索引")
-    public Result changeEsIndex(@RequestParam("labels") List<Integer> labels){
+    public Result changeEsIndex(@RequestParam("labels") List<Integer> labels) {
         crmFieldService.changeEsIndex(labels);
         return Result.ok();
+    }
+
+    @PostMapping("/queryExamineField")
+    @ApiExplain("查询审批模块可设置字段")
+    public Result<List<ExamineField>> queryExamineField(@RequestParam("label") Integer label) {
+        List<ExamineField> fieldList = crmFieldService.queryExamineField(label);
+        return R.ok(fieldList);
     }
 
 }

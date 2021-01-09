@@ -3,10 +3,15 @@ package com.kakarote.crm.controller;
 
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.common.log.CrmReceivablesLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
@@ -40,6 +45,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/crmReceivables")
 @Api(tags = "回款模块接口")
+@SysLog(subModel = SubModelType.CRM_RECEIVABLES,logClass = CrmReceivablesLog.class)
 public class CrmReceivablesController {
 
     @Autowired
@@ -55,6 +61,7 @@ public class CrmReceivablesController {
 
     @PostMapping("/add")
     @ApiOperation("保存数据")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity.[number]",detail = "'新增了回款:' + #crmModel.entity[number]")
     public Result add(@RequestBody CrmContractSaveBO crmModel) {
         crmReceivablesService.addOrUpdate(crmModel);
         return R.ok();
@@ -62,6 +69,7 @@ public class CrmReceivablesController {
 
     @PostMapping("/update")
     @ApiOperation("修改数据")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result update(@RequestBody CrmContractSaveBO crmModel) {
         crmReceivablesService.addOrUpdate(crmModel);
         return R.ok();
@@ -94,6 +102,7 @@ public class CrmReceivablesController {
 
     @PostMapping("/deleteByIds")
     @ApiOperation("根据ID删除数据")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteByIds(@ApiParam(name = "ids", value = "id列表") @RequestBody List<Integer> ids) {
         crmReceivablesService.deleteByIds(ids);
         return R.ok();
@@ -101,6 +110,7 @@ public class CrmReceivablesController {
 
     @PostMapping("/changeOwnerUser")
     @ApiOperation("修改回款负责人")
+    @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
     public Result changeOwnerUser(@RequestBody CrmChangeOwnerUserBO crmChangeOwnerUserBO){
         crmReceivablesService.changeOwnerUser(crmChangeOwnerUserBO.getIds(),crmChangeOwnerUserBO.getOwnerUserId());
         return R.ok();
@@ -129,6 +139,7 @@ public class CrmReceivablesController {
 
     @PostMapping("/batchExportExcel")
     @ApiOperation("选中导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "回款导出",detail = "选中导出")
     public void batchExportExcel(@RequestBody @ApiParam(name = "ids", value = "id列表") List<Integer> ids, HttpServletResponse response) {
         CrmSearchBO search = new CrmSearchBO();
         search.setPageType(0);
@@ -144,6 +155,7 @@ public class CrmReceivablesController {
 
     @PostMapping("/allExportExcel")
     @ApiOperation("全部导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "回款导出",detail = "全部导出")
     public void allExportExcel(@RequestBody CrmSearchBO search, HttpServletResponse response) {
         search.setPageType(0);
         crmReceivablesService.exportExcel(response, search);
@@ -151,6 +163,7 @@ public class CrmReceivablesController {
 
     @PostMapping("/updateInformation")
     @ApiOperation("基本信息保存修改")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInformation(@RequestBody CrmUpdateInformationBO updateInformationBO) {
         crmReceivablesService.updateInformation(updateInformationBO);
         return R.ok();

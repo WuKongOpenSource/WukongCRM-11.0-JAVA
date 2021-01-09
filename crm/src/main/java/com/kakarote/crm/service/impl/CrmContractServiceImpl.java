@@ -10,9 +10,9 @@ import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
@@ -21,12 +21,17 @@ import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.feign.crm.entity.QueryEventCrmPageBO;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
+import com.kakarote.core.feign.examine.entity.ExamineRecordReturnVO;
+import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
+import com.kakarote.core.feign.examine.service.ExamineService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.BiTimeUtil;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
@@ -129,6 +134,9 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
 
     @Autowired
     private ICrmReceivablesService crmReceivablesService;
+
+    @Autowired
+    private ExamineService examineService;
 
     /**
      * 大的搜索框的搜索字段
@@ -306,8 +314,9 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         }
         crmContract.setUnreceivedMoney(crmContract.getMoney());
         crmContract.setReceivedMoney(new BigDecimal("0"));
-        Integer examineCount = crmExamineService.queryCount(getLabel());
-        CrmExamineData examineData = null;
+//        Integer examineCount = crmExamineService.queryCount(getLabel());
+        ExamineRecordSaveBO examineRecordSaveBO = crmModel.getExamineFlowData();
+        ExamineRecordReturnVO examineData = null;
         if (crmContract.getContractId() == null) {
             List<AdminConfig> configList = adminService.queryConfigByName("numberSetting").getData();
             AdminConfig adminConfig = configList.stream().filter(config -> Objects.equals(getLabel().getType().toString(), config.getValue())).collect(Collectors.toList()).get(0);
@@ -326,26 +335,32 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             crmContract.setRoUserId(",");
             crmContract.setRwUserId(",");
             crmContract.setOwnerUserId(UserUtil.getUserId());
-            if (examineCount > 0) {
-                examineData = examineRecordService.saveExamineRecord(1, crmModel.getCheckUserId(), crmContract.getOwnerUserId(), null, crmContract.getCheckStatus());
-                if (examineData.getStatus() == 0) {
-                    throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_STEP_ERROR);
-                } else if (examineData.getStatus() == 2) {
-                    throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_USER_ERROR);
-                } else {
+            save(crmContract);
+            if (crmContract.getCheckStatus() != null && crmContract.getCheckStatus() == 5) {
+                crmContract.setCheckStatus(5);
+            }else {
+                if (examineRecordSaveBO != null) {
+                    this.supplementFieldInfo(1, crmContract.getContractId(), null, examineRecordSaveBO);
+                    examineRecordSaveBO.setTitle(crmContract.getName());
+                    examineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
                     crmContract.setExamineRecordId(examineData.getRecordId());
-                }
-                if (crmContract.getCheckStatus() != null && crmContract.getCheckStatus() == 5) {
-                    crmContract.setCheckStatus(5);
+                    crmContract.setCheckStatus(examineData.getExamineStatus());
                 } else {
-                    crmContract.setCheckStatus(0);
-                }
-            } else {
-                if (crmContract.getCheckStatus() == null) {
                     crmContract.setCheckStatus(1);
                 }
             }
-            save(crmContract);
+            if (crmContract.getCheckStatus() == 1) {
+                CrmCustomer customer = ApplicationContextHolder.getBean(ICrmCustomerService.class).getById(crmContract.getCustomerId());
+                customer.setDealStatus(1);
+                Date dealTime = crmContract.getOrderDate() != null ? crmContract.getOrderDate() : new Date();
+                customer.setDealTime(dealTime);
+                ApplicationContextHolder.getBean(ICrmCustomerService.class).updateById(customer);
+                Map<String, Object> map = new HashMap<>();
+                map.put("dealTime", DateUtil.formatDateTime(dealTime));
+                map.put("dealStatus", 1);
+                ElasticUtil.updateField(elasticsearchRestTemplate, map, customer.getCustomerId(), CrmEnum.CUSTOMER.getIndex());
+            }
+            updateById(crmContract);
             crmActivityService.addActivity(2, CrmActivityEnum.CONTRACT, crmContract.getContractId());
             actionRecordUtil.addRecord(crmContract.getContractId(), CrmEnum.CONTRACT, crmContract.getName());
         } else {
@@ -362,29 +377,17 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             if (contract.getCheckStatus() != 4 && contract.getCheckStatus() != 2 && contract.getCheckStatus() != 5) {
                 throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EDIT_ERROR);
             }
-            if (examineCount > 0) {
-                examineData = examineRecordService.saveExamineRecord(1, crmModel.getCheckUserId(), contract.getOwnerUserId(), contract.getExamineRecordId(), crmContract.getCheckStatus());
-                if (examineData.getStatus() == 0) {
-                    throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_STEP_ERROR);
-                } else if (examineData.getStatus() == 2) {
-                    throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_USER_ERROR);
-                } else {
+            if (crmContract.getCheckStatus() != null && crmContract.getCheckStatus() == 5) {
+                crmContract.setCheckStatus(5);
+            }else {
+                if (examineRecordSaveBO != null) {
+                    this.supplementFieldInfo(1, crmContract.getContractId(), contract.getExamineRecordId(), examineRecordSaveBO);
+                    examineRecordSaveBO.setTitle(crmContract.getName());
+                    examineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
                     crmContract.setExamineRecordId(examineData.getRecordId());
-                }
-                if (crmContract.getCheckStatus() != null) {
-                    crmContract.setCheckStatus(5);
+                    crmContract.setCheckStatus(examineData.getExamineStatus());
                 } else {
-                    crmContract.setCheckStatus(0);
-                }
-            } else {
-                if (crmContract.getCheckStatus() == null) {
                     crmContract.setCheckStatus(1);
-                }
-                if (contract.getExamineRecordId() != null) {
-                    LambdaUpdateWrapper<CrmExamineLog> examineLogLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-                    examineLogLambdaUpdateWrapper.set(CrmExamineLog::getIsRecheck, 1);
-                    examineLogLambdaUpdateWrapper.eq(CrmExamineLog::getRecordId, contract.getExamineRecordId());
-                    examineLogService.update(examineLogLambdaUpdateWrapper);
                 }
             }
             crmBackLogDealService.deleteByType(crmContract.getOwnerUserId(), CrmEnum.CONTRACT, CrmBackLogEnum.END_CONTRACT, crmContract.getContractId());
@@ -400,11 +403,6 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         if (0 == crmContract.getCheckStatus()) {
             if (examineData != null) {
                 actionRecordUtil.addCrmExamineActionRecord(CrmEnum.CONTRACT, examineData.getRecordId(), BehaviorEnum.SUBMIT_EXAMINE, crmContract.getNum());
-                List<Long> examineLogIdList = examineData.getExamineLogIdList();
-                examineLogIdList.forEach(examineLogId -> {
-                    CrmExamineLog examineLog = examineLogService.getById(examineLogId);
-                    examineRecordService.addMessage(1, 1, examineLog, UserUtil.getUserId());
-                });
             }
         }
         List<CrmContractProduct> contractProductList = crmModel.getProduct();
@@ -501,7 +499,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             //删除文件
             adminFileService.delete(Collections.singletonList(contract.getBatchId()));
             if (ObjectUtil.isNotEmpty(contract.getExamineRecordId())) {
-                examineRecordService.deleteExamine(contract.getExamineRecordId());
+                examineService.deleteExamineRecord(contract.getExamineRecordId());
             }
             contract.setCheckStatus(7);
             updateById(contract);
@@ -520,7 +518,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         if (changOwnerUserBO.getIds().size() == 0) {
             return;
         }
-        String ownerUserName = adminService.queryUserName(changOwnerUserBO.getOwnerUserId()).getData();
+        String ownerUserName = UserCacheUtil.getUserName(changOwnerUserBO.getOwnerUserId());
         changOwnerUserBO.getIds().forEach(id -> {
             if (AuthUtil.isRwAuth(id, CrmEnum.CONTRACT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
@@ -696,7 +694,10 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             if (AuthUtil.isCrmOperateAuth(CrmEnum.CONTRACT, id)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
-            CrmContract oldContract = getById(id);
+            CrmContract oldContract = lambdaQuery().eq(CrmContract::getContractId,id).ne(CrmContract::getCheckStatus,7).one();
+            if(oldContract == null){
+                continue;
+            }
             Long ownerUserId = oldContract.getOwnerUserId();
             for (Long memberId : crmMemberSaveBO.getMemberIds()) {
                 if (ownerUserId.equals(memberId)) {
@@ -1094,5 +1095,37 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         } else {
             return queryPageList(crmSearchBO);
         }
+    }
+
+    /**
+     * 根据产品ID查询合同
+     *
+     * @param biParams 参数
+     * @return data
+     */
+    @Override
+    public BasePage<Map<String, Object>> queryListByProductId(BiParams biParams) {
+        List<CrmContractProduct> products = crmContractProductService
+                .lambdaQuery()
+                 .select(CrmContractProduct::getContractId)
+                .eq(CrmContractProduct::getProductId, biParams.getTypeId()).list();
+        Integer menuId = 118;
+        biParams.setMenuId(menuId);
+        BiTimeUtil.BiTimeEntity timeEntity = BiTimeUtil.analyzeType(biParams);
+
+        CrmSearchBO searchBo = new CrmSearchBO();
+        searchBo.setPage(biParams.getPage());
+        searchBo.setLimit(biParams.getLimit());
+        searchBo.setLabel(getLabel().getType());
+        searchBo.setSearch(biParams.getSearch());
+        searchBo.setOrder(biParams.getOrder());
+        searchBo.setSortField(biParams.getSortField());
+        List<String> stringList = products.stream().map(crmContractProduct -> crmContractProduct.getContractId().toString()).collect(Collectors.toList());
+        List<CrmSearchBO.Search> searchList = searchBo.getSearchList();
+        searchList.add(new CrmSearchBO.Search("contractId",null,CrmSearchBO.FieldSearchEnum.ID,stringList));
+        List<String> userIds = timeEntity.getUserIds().stream().map(Object::toString).collect(Collectors.toList());
+        searchList.add(new CrmSearchBO.Search("ownerUserId","single_user",CrmSearchBO.FieldSearchEnum.IS,userIds));
+        searchList.add(new CrmSearchBO.Search("orderDate", "date", CrmSearchBO.FieldSearchEnum.DATE, Arrays.asList(DateUtil.formatDate(timeEntity.getBeginDate()), DateUtil.formatDate(DateUtil.offsetDay(timeEntity.getEndDate(),1)))));
+        return queryPageList(searchBo);
     }
 }

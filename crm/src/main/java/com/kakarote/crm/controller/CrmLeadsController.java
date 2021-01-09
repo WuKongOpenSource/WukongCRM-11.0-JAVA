@@ -3,11 +3,16 @@ package com.kakarote.crm.controller;
 
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.common.log.CrmLeadsLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
@@ -41,6 +46,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/crmLeads")
 @Api(tags = "线索模块接口")
+@SysLog(subModel = SubModelType.CRM_LEADS,logClass = CrmLeadsLog.class)
 public class CrmLeadsController {
 
     @Autowired
@@ -62,6 +68,7 @@ public class CrmLeadsController {
 
     @PostMapping("/deleteByIds")
     @ApiOperation("根据ID删除数据")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteByIds(@ApiParam(name = "ids", value = "id列表") @RequestBody List<Integer> ids) {
         crmLeadsService.deleteByIds(ids);
         return R.ok();
@@ -69,6 +76,7 @@ public class CrmLeadsController {
 
     @PostMapping("/transfer")
     @ApiOperation("线索转客户功能")
+    @SysLogHandler(behavior = BehaviorEnum.TRANSFER)
     public Result transfer(@ApiParam(name = "ids", value = "id列表") @RequestBody List<Integer> ids) {
         crmLeadsService.transfer(ids);
         return R.ok();
@@ -82,6 +90,7 @@ public class CrmLeadsController {
 
     @PostMapping("/allExportExcel")
     @ApiOperation("全部导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "线索导出",detail = "全部导出")
     public void allExportExcel(@RequestBody CrmSearchBO search, HttpServletResponse response) {
         search.setPageType(0);
         crmLeadsService.exportExcel(response, search);
@@ -89,6 +98,7 @@ public class CrmLeadsController {
 
     @PostMapping("/batchExportExcel")
     @ApiOperation("选中导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "线索导出",detail = "选中导出")
     public void batchExportExcel(@RequestBody @ApiParam(name = "ids", value = "id列表") List<Integer> ids, HttpServletResponse response) {
         CrmSearchBO search = new CrmSearchBO();
         search.setPageType(0);
@@ -112,6 +122,7 @@ public class CrmLeadsController {
 
     @PostMapping("/changeOwnerUser")
     @ApiOperation("修改线索负责人")
+    @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
     public Result changeOwnerUser(@RequestBody CrmChangeOwnerUserBO crmChangeOwnerUserBO) {
         crmLeadsService.changeOwnerUser(crmChangeOwnerUserBO.getIds(), crmChangeOwnerUserBO.getOwnerUserId());
         return R.ok();
@@ -133,6 +144,7 @@ public class CrmLeadsController {
 
     @PostMapping("/add")
     @ApiOperation("保存数据")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity[leadsName]",detail = "'新增了线索:' + #crmModel.entity[leadsName]")
     public Result add(@RequestBody CrmModelSaveBO crmModel) {
         crmLeadsService.addOrUpdate(crmModel,false);
         return R.ok();
@@ -140,6 +152,7 @@ public class CrmLeadsController {
 
     @PostMapping("/update")
     @ApiOperation("修改数据")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result update(@RequestBody CrmModelSaveBO crmModel) {
         crmLeadsService.addOrUpdate(crmModel,false);
         return R.ok();
@@ -175,6 +188,7 @@ public class CrmLeadsController {
 
     @PostMapping("/uploadExcel")
     @ApiOperation("导入线索")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_IMPORT,object = "导入线索",detail = "导入线索")
     public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("ownerUserId") Long ownerUserId, @RequestParam("repeatHandling") Integer repeatHandling) {
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
         uploadExcelBO.setOwnerUserId(ownerUserId);
@@ -188,6 +202,7 @@ public class CrmLeadsController {
 
     @PostMapping("/updateInformation")
     @ApiOperation("基本信息保存修改")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInformation(@RequestBody CrmUpdateInformationBO updateInformationBO) {
         crmLeadsService.updateInformation(updateInformationBO);
         return R.ok();

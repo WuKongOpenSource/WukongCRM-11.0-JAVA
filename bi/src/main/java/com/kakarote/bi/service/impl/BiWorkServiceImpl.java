@@ -1,5 +1,6 @@
 package com.kakarote.bi.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.bi.entity.VO.BiPageVO;
 import com.kakarote.bi.entity.VO.BiParamVO;
@@ -9,6 +10,8 @@ import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.BiParams;
+import com.kakarote.core.feign.examine.entity.ExamineInfoVo;
+import com.kakarote.core.feign.examine.service.ExamineService;
 import com.kakarote.core.feign.oa.OaService;
 import com.kakarote.core.feign.oa.entity.ExamineVO;
 import com.kakarote.core.utils.BiTimeUtil;
@@ -30,6 +33,9 @@ public class BiWorkServiceImpl implements BiWorkService {
 
     @Autowired
     private BiWorkMapper biWorkMapper;
+
+    @Autowired
+    private ExamineService examineService;
 
     /**
      * 查询日志统计信息
@@ -72,13 +78,22 @@ public class BiWorkServiceImpl implements BiWorkService {
     public JSONObject examineStatistics(BiParams biParams) {
         JSONObject object = new JSONObject();
         BiTimeUtil.BiTimeEntity record = BiTimeUtil.analyzeTypeOa(biParams);
-        List<JSONObject> categoryList = biWorkMapper.queryExamineCategory();
-        object.put("categoryList", categoryList);
+//        List<JSONObject> categoryList = biWorkMapper.queryExamineCategory();
+        List<ExamineInfoVo> categoryList = examineService.queryNormalExamine(0).getData();
         List<Long> users = record.getUserIds();
-        if (users.size() == 0) {
+        if (users.size() == 0 || CollUtil.isEmpty(categoryList)) {
             object.put("userList", users);
             object.put("categoryList", new ArrayList<>());
         } else {
+            List<JSONObject> categories = new ArrayList<>();
+            categoryList.forEach(examineInfo ->{
+                JSONObject category = new JSONObject();
+                category.put("title",examineInfo.getExamineName());
+                category.put("categoryId",examineInfo.getExamineId());
+                category.put("type",examineInfo.getOaType());
+                categories.add(category);
+            });
+            object.put("categoryList", categories);
             Map<String, Object> map = record.toMap();
             map.put("categorys",categoryList);
             List<JSONObject> userList = biWorkMapper.examineStatistics(map);

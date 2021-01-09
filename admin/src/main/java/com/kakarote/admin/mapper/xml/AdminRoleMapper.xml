@@ -70,4 +70,29 @@
     <select id="queryRoleList" resultType="com.kakarote.admin.entity.PO.AdminRole">
          select role_id,role_name,remark from wk_admin_role where role_type in (5,6) and status = 1
     </select>
+    <select id="queryRoleByRoleTypeAndUserId" resultType="com.kakarote.admin.entity.PO.AdminRole">
+        select a.* from wk_admin_role a
+                             join wk_admin_user_role b on a.role_id = b.role_id
+        where a.role_type = #{type} and b.user_id = #{userId}
+    </select>
+    <select id="queryHrmDataAuthType" resultType="java.lang.Integer">
+        SELECT ifnull(max(k.data_type),0) as data_type
+        FROM (
+                 SELECT t.*,
+                        arm.menu_id
+                 FROM (
+                          SELECT DISTINCT b.data_type,
+                                          b.role_id
+                          FROM wk_admin_user_role AS a
+                                   JOIN wk_admin_role AS b ON a.role_id = b.role_id
+                              and user_id = #{userId} and role_type = 9 and label = 92
+                      ) t
+                          LEFT JOIN wk_admin_role_menu arm ON t.role_id = arm.role_id
+             ) k
+                 INNER JOIN (SELECT x.*, y.realm as parent_realm
+                             from wk_admin_menu as x
+                                      LEFT JOIN wk_admin_menu as y on x.parent_id = y.menu_id) am ON k.menu_id = am.menu_id
+        WHERE 1 = 1 and am.parent_id = #{menuId}
+        group by am.parent_id
+    </select>
 </mapper>

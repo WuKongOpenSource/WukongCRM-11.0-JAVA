@@ -75,4 +75,7 @@ public interface IWorkTaskService extends BaseService<WorkTask> {
 
     List<Map<String, Object>> workBenchTaskExport();
 
+
+    public String getPriorityDesc(Integer priority);
+
 }

@@ -185,5 +185,11 @@ public class AdminMessageController {
         messageService.deleteById(messageId);
         return Result.ok();
     }
+
+    @PostMapping("/deleteByLabel")
+    public Result deleteByLabel(@RequestParam("label") Integer label){
+        messageService.deleteByLabel(label);
+        return Result.ok();
+    }
 }
 

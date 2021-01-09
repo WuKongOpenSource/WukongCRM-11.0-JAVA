@@ -2,16 +2,17 @@ package com.kakarote.crm.controller;
 
 
 import com.alibaba.fastjson.JSONObject;
-import com.kakarote.core.common.ApiExplain;
-import com.kakarote.core.common.R;
-import com.kakarote.core.common.Result;
-import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.*;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.common.log.CrmBusinessLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
@@ -47,6 +48,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/crmBusiness")
 @Api(tags = "商机模块接口")
+@SysLog(subModel = SubModelType.CRM_BUSINESS,logClass = CrmBusinessLog.class)
 public class CrmBusinessController {
 
     @Autowired
@@ -65,6 +67,7 @@ public class CrmBusinessController {
 
     @PostMapping("/add")
     @ApiOperation("保存数据")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity[businessName]",detail = "'新增了线索:' + #crmModel.entity[businessName]")
     public Result add(@RequestBody CrmBusinessSaveBO crmModel) {
         crmBusinessService.addOrUpdate(crmModel);
         return R.ok();
@@ -79,6 +82,7 @@ public class CrmBusinessController {
 
     @PostMapping("/update")
     @ApiOperation("修改数据")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result update(@RequestBody CrmBusinessSaveBO crmModel) {
         if (AuthUtil.isRwAuth((Integer) crmModel.getEntity().get("businessId"), CrmEnum.BUSINESS)) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
@@ -142,6 +146,7 @@ public class CrmBusinessController {
 
     @PostMapping("/deleteByIds")
     @ApiOperation("根据ID删除数据")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteByIds(@ApiParam(name = "ids", value = "id列表") @RequestBody List<Integer> ids) {
         crmBusinessService.deleteByIds(ids);
         return R.ok();
@@ -149,6 +154,7 @@ public class CrmBusinessController {
 
     @PostMapping("/changeOwnerUser")
     @ApiOperation("修改商机负责人")
+    @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
     public Result changeOwnerUser(@RequestBody CrmBusinessChangOwnerUserBO crmChangeOwnerUserBO) {
         crmBusinessService.changeOwnerUser(crmChangeOwnerUserBO);
         return R.ok();
@@ -181,6 +187,7 @@ public class CrmBusinessController {
 
     @PostMapping("/addMembers")
     @ApiOperation("新增团队成员")
+    @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result addMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
         crmBusinessService.addMember(crmMemberSaveBO);
         return R.ok();
@@ -188,6 +195,7 @@ public class CrmBusinessController {
 
     @PostMapping("/updateMembers")
     @ApiOperation("新增团队成员")
+    @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result updateMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
         crmBusinessService.addMember(crmMemberSaveBO);
         return R.ok();
@@ -195,6 +203,7 @@ public class CrmBusinessController {
 
     @PostMapping("/deleteMembers")
     @ApiOperation("删除团队成员")
+    @SysLogHandler
     public Result deleteMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
         crmBusinessService.deleteMember(crmMemberSaveBO);
         return R.ok();
@@ -202,6 +211,7 @@ public class CrmBusinessController {
 
     @PostMapping("/exitTeam/{businessId}")
     @ApiOperation("删除团队成员")
+    @SysLogHandler
     public Result exitTeam(@PathVariable("businessId") @ApiParam("商机ID") Integer businessId) {
         crmBusinessService.exitTeam(businessId);
         return R.ok();
@@ -245,6 +255,7 @@ public class CrmBusinessController {
 
     @PostMapping("/batchExportExcel")
     @ApiOperation("选中导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "选中导出",detail = "导出商机")
     public void batchExportExcel(@RequestBody @ApiParam(name = "ids", value = "id列表") List<Integer> ids, HttpServletResponse response) {
         CrmSearchBO search = new CrmSearchBO();
         search.setPageType(0);
@@ -260,6 +271,7 @@ public class CrmBusinessController {
 
     @PostMapping("/allExportExcel")
     @ApiOperation("全部导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "全部导出",detail = "导出商机")
     public void allExportExcel(@RequestBody CrmSearchBO search, HttpServletResponse response) {
         search.setPageType(0);
         crmBusinessService.exportExcel(response, search);
@@ -295,6 +307,7 @@ public class CrmBusinessController {
 
     @PostMapping("/updateInformation")
     @ApiOperation("基本信息保存修改")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInformation(@RequestBody CrmUpdateInformationBO updateInformationBO) {
         boolean auth = AuthUtil.isRwAuth(updateInformationBO.getId(),CrmEnum.BUSINESS);
         if (auth) {

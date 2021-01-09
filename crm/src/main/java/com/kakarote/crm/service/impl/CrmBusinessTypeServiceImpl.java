@@ -12,6 +12,7 @@ import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.constant.CrmActivityEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
@@ -178,7 +179,7 @@ public class CrmBusinessTypeServiceImpl extends BaseServiceImpl<CrmBusinessTypeM
     public BasePage<CrmBusinessType> queryBusinessTypeList(PageEntity entity) {
         BasePage<CrmBusinessType> page = lambdaQuery().ne(CrmBusinessType::getStatus, 2).page(entity.parse());
         page.getList().forEach(crmBusinessType -> {
-            crmBusinessType.setCreateName(adminService.queryUserName(crmBusinessType.getCreateUserId()).getData());
+            crmBusinessType.setCreateName(UserCacheUtil.getUserName(crmBusinessType.getCreateUserId()));
             List<String> ids = StrUtil.splitTrim(crmBusinessType.getDeptIds(), Const.SEPARATOR);
             if (ids.size() > 0) {
                 crmBusinessType.setDeptList(adminService.queryDeptByIds(ids.stream().map(Integer::valueOf).collect(Collectors.toList())).getData());

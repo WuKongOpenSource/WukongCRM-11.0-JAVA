@@ -12,7 +12,7 @@ public class Const implements Serializable {
     /**
      * 项目版本
      */
-    public static final String PROJECT_VERSION = "11.1.0";
+    public static final String PROJECT_VERSION = "11.2.0";
 
     /**
      * 默认分隔符

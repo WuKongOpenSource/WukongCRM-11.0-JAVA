@@ -89,6 +89,16 @@ public class TencentFileServiceImpl implements FileService {
         }
     }
 
+    @Override
+    public void deleteFileByUrl(String url) {
+        String key = url.replace(config.getPublicUrl(), "");
+        try {
+            clint.deleteObject(config.getBucketName().get("1"), key);
+        } finally {
+            clint.shutdown();
+        }
+    }
+
     /**
      * 重命名文件
      *
@@ -118,6 +128,17 @@ public class TencentFileServiceImpl implements FileService {
             COSObject cosObject = clint.getObject(getObjectRequest);
             cosObjectInput = cosObject.getObjectContent();
             return cosObjectInput;
+        } finally {
+            clint.shutdown();
+        }
+    }
+
+    @Override
+    public void downFileByUrl(String url,File file) {
+        String key = url.replace(config.getPublicUrl(), "");
+        try {
+            GetObjectRequest getObjectRequest = new GetObjectRequest(config.getBucketName().get("1"), key);
+            clint.getObject(getObjectRequest, file);
         } finally {
             clint.shutdown();
         }

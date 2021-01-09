@@ -2,6 +2,11 @@ package com.kakarote.oa.controller;
 
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
+import com.kakarote.oa.common.log.OaEventLog;
 import com.kakarote.oa.entity.BO.*;
 import com.kakarote.oa.entity.VO.QueryEventByIdVO;
 import com.kakarote.oa.service.IOaEventService;
@@ -27,6 +32,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/oaEvent")
 @Api(tags = "日历-日程")
+@SysLog(subModel = SubModelType.OA_CALENDAR,logClass = OaEventLog.class)
 public class OaEventController {
 
     @Autowired
@@ -34,6 +40,7 @@ public class OaEventController {
 
     @PostMapping("/save")
     @ApiOperation("保存日程")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#setEventBO.event.title",detail = "'新建了日程:'+#setEventBO.event.title")
     public Result save(@RequestBody SetEventBO setEventBO){
         oaEventService.saveEvent(setEventBO);
         return Result.ok();
@@ -41,6 +48,7 @@ public class OaEventController {
 
     @PostMapping("/update")
     @ApiOperation("修改日程")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE,object = "#setEventBO.event.title",detail = "'修改了日程:'+#setEventBO.event.title")
     public Result update(@RequestBody SetEventBO setEventBO){
         oaEventService.updateEvent(setEventBO);
         return Result.ok();
@@ -48,6 +56,7 @@ public class OaEventController {
 
     @PostMapping("/delete")
     @ApiOperation("删除日程")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE,object = "",detail = "删除了日程")
     public Result delete(@RequestBody DeleteEventBO deleteEventBO){
         oaEventService.delete(deleteEventBO);
         return Result.ok();

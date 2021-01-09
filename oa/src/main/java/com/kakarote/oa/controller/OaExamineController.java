@@ -1,11 +1,18 @@
 package com.kakarote.oa.controller;
 
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.BasePage;
+import com.kakarote.core.feign.crm.entity.ExamineField;
+import com.kakarote.core.feign.examine.entity.ExamineConditionDataBO;
+import com.kakarote.core.feign.examine.entity.ExamineInfoVo;
+import com.kakarote.core.feign.examine.service.ExamineService;
 import com.kakarote.oa.entity.BO.AuditExamineBO;
 import com.kakarote.oa.entity.BO.ExamineExportBO;
 import com.kakarote.oa.entity.BO.ExaminePageBO;
@@ -27,6 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * <p>
@@ -50,6 +58,9 @@ public class OaExamineController {
     @Autowired
     private IOaExamineFieldService examineFieldService;
 
+    @Autowired
+    private ExamineService examineService;
+
     @ApiOperation("我发起的审批")
     @PostMapping("/myInitiate")
     public Result<BasePage<ExamineVO>> myInitiate(@RequestBody ExaminePageBO examinePageBO) {
@@ -64,6 +75,14 @@ public class OaExamineController {
         BasePage<ExamineVO> page = oaExamineService.myOaExamine(examinePageBO);
         return Result.ok(page);
     }
+
+    @ApiExplain("获取指定的审批信息")
+    @PostMapping("/getOaExamineById")
+    public Result<ExamineVO> getOaExamineById(@RequestParam("oaExamineId") Integer oaExamineId) {
+        ExamineVO examineVO = oaExamineService.getOaExamineById(oaExamineId);
+        return Result.ok(examineVO);
+    }
+
 
     @ApiOperation("查询详情或比编辑字段")
     @PostMapping("/getField")
@@ -141,13 +160,13 @@ public class OaExamineController {
     @ApiOperation("查询审批步骤")
     public void export(@RequestBody ExamineExportBO examineExportBO,HttpServletResponse response) {
         Integer categoryId = examineExportBO.getCategoryId();
-        OaExamineCategory category = examineCategoryService.getById(categoryId);
-        Integer type = category.getType();
+        ExamineInfoVo examineInfoVo = examineService.queryExamineById(Long.valueOf(categoryId)).getData();
+        Integer type = examineInfoVo.getOaType();
         List<OaExamineField> fieldList = new ArrayList<>();
         if (type == 0) {
             fieldList = examineFieldService.lambdaQuery().eq(OaExamineField::getExamineCategoryId,categoryId).list();
         }
-        List<Map<String, Object>> list = oaExamineService.export(examineExportBO,category,fieldList);
+        List<Map<String, Object>> list = oaExamineService.export(examineExportBO,examineInfoVo,fieldList);
 //        Aop.get(ActionRecordUtil.class).addExportActionRecord(CrmEnum.OA_EXAMINE, list.size());
         ExcelWriter writer = ExcelUtil.getWriter();
         try {
@@ -157,12 +176,12 @@ public class OaExamineController {
             writer.addHeaderAlias("createUserName", "创建人");
             writer.addHeaderAlias("examineStatus", "状态");
             writer.addHeaderAlias("examineUserName", "当前审批人");
-            writer.addHeaderAlias("previousExamineUserName", "上一审批人");
+//            writer.addHeaderAlias("previousExamineUserName", "上一审批人");
             switch (type) {
                 case 1:
                     writer.addHeaderAlias("content", "审批内容");
                     writer.addHeaderAlias("remark", "备注");
-                    columnNum = 9;
+                    columnNum = 8;
                     break;
                 case 2:
                     writer.addHeaderAlias("content", "审批内容");
@@ -170,7 +189,7 @@ public class OaExamineController {
                     writer.addHeaderAlias("endTime", "结束时间");
                     writer.addHeaderAlias("duration", "时长");
                     writer.addHeaderAlias("remark", "备注");
-                    columnNum = 12;
+                    columnNum = 11;
                     break;
                 case 3:
                     writer.addHeaderAlias("content", "出差事由");
@@ -184,7 +203,7 @@ public class OaExamineController {
                     writer.addHeaderAlias("endTime", "结束时间");
                     writer.addHeaderAlias("travelDuration", "时长");
                     writer.addHeaderAlias("description", "出差备注");
-                    columnNum = 18;
+                    columnNum = 17;
                     break;
                 case 4:
                     writer.addHeaderAlias("content", "加班原因");
@@ -192,7 +211,7 @@ public class OaExamineController {
                     writer.addHeaderAlias("endTime", "结束时间");
                     writer.addHeaderAlias("duration", "加班总天数");
                     writer.addHeaderAlias("remark", "备注");
-                    columnNum = 12;
+                    columnNum = 11;
                     break;
                 case 5:
                     writer.addHeaderAlias("content", "差旅内容");
@@ -208,17 +227,17 @@ public class OaExamineController {
                     writer.addHeaderAlias("other", "其他费用");
                     writer.addHeaderAlias("travelMoney", "合计");
                     writer.addHeaderAlias("description", "费用明细描述");
-                    columnNum = 19;
+                    columnNum = 18;
                     break;
                 case 6:
                     writer.addHeaderAlias("content", "审批内容");
                     writer.addHeaderAlias("money", "借款金额");
                     writer.addHeaderAlias("remark", "备注");
-                    columnNum = 10;
+                    columnNum = 9;
                     break;
                 case 0:
                     fieldList.forEach(field -> writer.addHeaderAlias(field.getFieldName(), field.getName()));
-                    columnNum = fieldList.size() + 7;
+                    columnNum = fieldList.size() + 6;
                     break;
                 default:
                     break;
@@ -264,5 +283,31 @@ public class OaExamineController {
         return Result.ok(transfer);
     }
 
+
+
+    @ApiOperation("查询字段")
+    @PostMapping("/queryExamineField")
+    public Result<List<ExamineField>> queryExamineField(@RequestParam("categoryId") Integer categoryId){
+        List<OaExamineField> oaExamineFields = examineFieldService.queryField(categoryId);
+        List<ExamineField> examineFields = new ArrayList<>();
+        oaExamineFields.forEach(oaExamineField -> {
+            boolean isNeed = Objects.equals(oaExamineField.getIsNull(),1) && ListUtil.toList(3,5,6,9).contains(oaExamineField.getType());
+            if (isNeed){
+                examineFields.add(BeanUtil.copyProperties(oaExamineField, ExamineField.class));
+            }
+        });
+        return Result.ok(examineFields);
+    }
+
+    @ApiOperation("查询条件字段")
+    @PostMapping("/queryConditionData")
+    public Result<Map<String, Object>> getDataMapForNewExamine(@RequestBody ExamineConditionDataBO examineConditionDataBO){
+        return Result.ok(oaExamineService.getDataMapForNewExamine(examineConditionDataBO));
+    }
+
+    @PostMapping("/updateCheckStatusByNewExamine")
+    public Result<Boolean> updateCheckStatusByNewExamine(@RequestBody ExamineConditionDataBO examineConditionDataBO){
+        return Result.ok(oaExamineService.updateCheckStatusByNewExamine(examineConditionDataBO));
+    }
 }
 

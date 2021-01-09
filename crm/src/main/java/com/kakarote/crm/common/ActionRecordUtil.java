@@ -8,6 +8,7 @@ import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
@@ -19,7 +20,6 @@ import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
-import com.kakarote.crm.constant.BehaviorEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.PO.CrmActionRecord;
@@ -477,7 +477,7 @@ public class ActionRecordUtil {
             crmActionRecord.setDetail("领取了客户：" + name);
             crmActionRecord.setBehavior(BehaviorEnum.RECEIVE.getType());
         } else {
-            String userName = adminService.queryUserName(userId).getData();
+            String userName = UserCacheUtil.getUserName(userId);
             //管理员分配
             strings.add("将客户分配给：" + userName);
             crmActionRecord.setDetail("将客户：" + name + "分配给：" + userName);
@@ -512,7 +512,7 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setBehavior(BehaviorEnum.ADD_MEMBER.getType());
         actionRecord.setActionId(actionId);
-        String userName = adminService.queryUserName(userId).getData();
+        String userName = UserCacheUtil.getUserName(userId);
         actionRecord.setDetail("给" + crmEnum.getRemarks() + "：" + name + "添加了团队成员：" + userName);
         actionRecord.setObject(name);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
@@ -532,7 +532,7 @@ public class ActionRecordUtil {
             actionRecord.setDetail("退出了" + crmEnum.getRemarks() + "：" + name + "的团队成员");
         } else {
             actionRecord.setBehavior(BehaviorEnum.REMOVE_MEMBER.getType());
-            String userName = adminService.queryUserName(userId).getData();
+            String userName = UserCacheUtil.getUserName(userId);
             actionRecord.setDetail("移除了" + crmEnum.getRemarks() + "：" + name + "的团队成员：" + userName);
         }
         actionRecord.setObject(name);

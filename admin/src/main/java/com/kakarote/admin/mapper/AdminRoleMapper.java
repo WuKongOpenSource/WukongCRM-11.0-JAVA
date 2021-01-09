@@ -54,4 +54,9 @@ public interface AdminRoleMapper extends BaseMapper<AdminRole> {
     void deleteWorkRole(@Param("roleId") Integer roleId, @Param("editRoleId") Integer editRoleId);
 
     List<AdminRole> queryRoleList();
+
+    List<AdminRole> queryRoleByRoleTypeAndUserId(@Param("type") Integer type,@Param("userId") Long userId);
+
+    Integer queryHrmDataAuthType(@Param("menuId") Integer menuId,@Param("userId") Long userId);
+
 }

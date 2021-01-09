@@ -1,6 +1,7 @@
 package com.kakarote.core.servlet.upload;
 
 
+import java.io.File;
 import java.io.InputStream;
 
 /**
@@ -24,6 +25,12 @@ public interface FileService {
     public void deleteFile(UploadEntity entity);
 
     /**
+     * 通过url删除文件(邮件需要)
+     * @param url url
+     */
+    void deleteFileByUrl(String url);
+
+    /**
      * 重命名文件
      * @param entity 参数对象
      * @param fileName 文件名称
@@ -36,4 +43,7 @@ public interface FileService {
      * @return 文件流，可能为空
      */
     public InputStream downFile(UploadEntity entity);
+
+    void downFileByUrl(String url,File file);
+
 }

@@ -4,10 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.UserInfo;
-import com.kakarote.core.feign.admin.entity.AdminConfig;
-import com.kakarote.core.feign.admin.entity.AdminMessage;
-import com.kakarote.core.feign.admin.entity.SimpleDept;
-import com.kakarote.core.feign.admin.entity.SimpleUser;
+import com.kakarote.core.feign.admin.entity.*;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
@@ -104,6 +101,15 @@ public interface AdminService {
     @PostMapping(value = "/adminUser/queryUserByIds")
     public Result<List<SimpleUser>> queryUserByIds(@RequestBody Collection<Long> ids);
 
+
+    /**
+     * 根据ids查询正常的用户Id
+     *
+     * @param ids id列表
+     * @return data
+     */
+    @PostMapping(value = "/adminUser/queryNormalUserByIds")
+    public Result<List<Long>> queryNormalUserByIds(@RequestBody Collection<Long> ids);
     /**
      * 根据ids查询用户信息
      *
@@ -172,6 +178,14 @@ public interface AdminService {
     public Result<List<Integer>> queryRoleByRoleType(@RequestParam("type") Integer type);
 
     /**
+     * 查询当前用户在某个模块下的角色
+     * @param type 角色类型
+     * @return
+     */
+    @PostMapping("/adminRole/queryRoleByRoleTypeAndUserId")
+    public Result<List<AdminRole>> queryRoleByRoleTypeAndUserId(@RequestParam("type") Integer type);
+
+    /**
      * 修改系統配置
      *
      * @param adminConfig 配置实体
@@ -210,5 +224,13 @@ public interface AdminService {
     @PostMapping("/adminUser/queryUserIdByUserName")
     @ApiExplain("查询用户id通过用户名")
     Result<Long> queryUserIdByUserName(@RequestParam("userName")String userName);
+
+    @PostMapping(value = "/adminRole/queryHrmDataAuthType")
+    @ApiExplain("查询人力资源数据权限")
+    Result<Integer> queryHrmDataAuthType(@RequestParam("menuId")Integer menuId);
+
+    @PostMapping("/adminUser/queryAllUserInfoList")
+    @ApiExplain("查询所有员工")
+    public Result<List<UserInfo>> queryUserInfoList();
 
 }

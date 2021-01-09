@@ -10,6 +10,7 @@ import com.kakarote.work.entity.VO.*;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -26,7 +27,7 @@ public interface WorkMapper extends BaseMapper<Work> {
 
     List<String> queryTaskOwnerUser(@Param("userId") Long userId);
 
-    List<WorkInfoVo> queryWorkNameList(@Param("userId") Long userId,@Param("data") WorkTaskQueryBO workTaskQueryBO);
+    List<WorkInfoVo> queryWorkNameList(@Param("userId") Long userId, @Param("data") WorkTaskQueryBO workTaskQueryBO);
 
     List<WorkTaskTemplateClassVO> queryWorkTaskTemplateClass(@Param("taskId") Integer taskId);
 
@@ -51,4 +52,6 @@ public interface WorkMapper extends BaseMapper<Work> {
     public List<String> queryMenuByRoleId(@Param("roleId") Integer roleId);
 
     public List<WorkOwnerRoleBO> queryOwnerRoleList(@Param("workId") Integer workId);
+
+    public List<Map<String, Object>> workTaskExport(@Param("workId") Integer workId);
 }

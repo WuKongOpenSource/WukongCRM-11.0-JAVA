@@ -1,6 +1,8 @@
 package com.kakarote.oa.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
@@ -23,6 +25,11 @@ import com.kakarote.core.feign.admin.service.AdminMessageService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.feign.crm.service.CrmService;
+import com.kakarote.core.feign.examine.entity.ExamineConditionDataBO;
+import com.kakarote.core.feign.examine.entity.ExamineInfoVo;
+import com.kakarote.core.feign.examine.entity.ExamineRecordReturnVO;
+import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
+import com.kakarote.core.feign.examine.service.ExamineService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
@@ -45,7 +52,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -99,9 +105,16 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
     @Autowired
     private IOaExamineLogService examineLogService;
 
+    @Autowired
+    private IOaExamineService oaExamineService;
+
+    @Autowired
+    private ExamineService examineService;
+
     @Override
     public BasePage<ExamineVO> myInitiate(ExaminePageBO examinePageBO) {
-        BasePage<ExamineVO> page = examineMapper.myInitiate(examinePageBO.parse().setOptimizeCountSql(false), examinePageBO, UserUtil.getUserId(), UserUtil.isAdmin(), null);
+//        BasePage<ExamineVO> page = examineMapper.myInitiate(examinePageBO.parse().setOptimizeCountSql(false), examinePageBO, UserUtil.getUserId(), UserUtil.isAdmin(), null);
+        BasePage<ExamineVO> page = examineMapper.myInitiateOaExamine(examinePageBO.parse().setOptimizeCountSql(false), examinePageBO, UserUtil.getUserId(), UserUtil.isAdmin());
         transfer(page.getList());
         return page;
     }
@@ -121,11 +134,40 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             Result<SimpleUser> listResult = adminService.queryUserById(record.getCreateUserId());
             record.setCreateUser(listResult.getData());
             String batchId = record.getBatchId();
-            Integer examineStatus = record.getExamineStatus();
-            List<Long> userIds = examineMapper.queryExamineUserByExamineLog(record);
-            Result<List<SimpleUser>> userList = adminService.queryUserByIds(userIds);
-            String examineName = userList.getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
+            ExamineRecordReturnVO recordReturnVO;
+            if (record.getExamineRecordId() != null) {
+                recordReturnVO = examineService.queryExamineRecordInfo(record.getExamineRecordId()).getData();
+            }else {
+                recordReturnVO = new ExamineRecordReturnVO();
+                recordReturnVO.setExamineStatus(1);
+                recordReturnVO.setExamineUserIds(new ArrayList<>());
+            }
+
+            Integer examineStatus = recordReturnVO.getExamineStatus();
+            if (examineStatus == null){
+                examineStatus = -1;
+            }
+            record.setExamineStatus(examineStatus);
+            List<Long> userIds = recordReturnVO.getExamineUserIds();
+//            Integer examineStatus = record.getExamineStatus();
+//            List<Long> userIds = examineMapper.queryExamineUserByExamineLog(record);
+            String examineName = "";
+            if (CollUtil.isNotEmpty(userIds) && examineStatus != 4) {
+                Result<List<SimpleUser>> userList = adminService.queryUserByIds(userIds);
+                examineName = userList.getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
+            }
+            if (examineStatus == 4){
+                examineName = record.getCreateUser().getRealname();
+            }
+
             record.setExamineName(examineName);
+            ExamineInfoVo examineInfoVo = examineService.queryExamineById(Long.valueOf(record.getCategoryId())).getData();
+            String title = "";
+            if(examineInfoVo != null){
+                title = examineInfoVo.getExamineName();
+                record.setExamineIcon(examineInfoVo.getExamineIcon());
+            }
+            record.setCategoryTitle(title);
             Result<List<FileEntity>> fileList = adminFileService.queryFileList(batchId);
             Map<String, List<FileEntity>> collect = fileList.getData().stream().collect(Collectors.groupingBy(FileEntity::getFileType));
             if (collect.containsKey("img")) {
@@ -157,25 +199,24 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             } else {
                 permission.put("isDelete", 0);
             }
-            //超级管理员、创建人可以撤回 0未审核 4审核中 的审批
-            boolean isRecheck = (userId.equals(UserUtil.getSuperUser()) || createUserId.equals(userId) || roles.contains(UserUtil.getSuperRole())) && (examineStatus == 0 || examineStatus == 3);
+            //创建人可以撤回 0未审核 4审核中 的审批
+            boolean isRecheck = createUserId.equals(userId) && (examineStatus == 0 || examineStatus == 3);
             if (isRecheck) {
                 permission.put("isRecheck", 1);
             } else {
                 permission.put("isRecheck", 0);
             }
-            if (record.getExamineStatus() == 2){
+            if (record.getExamineStatus() == 2) {
                 //如果审批删除,直接审核0
                 permission.put("isCheck", 0);
-            }else {
-                OaExamineLog oaExamineLog = examineLogMapper.queryExamineLog(record.getExamineRecordId(), userId, record.getExamineStepId());
-                if (oaExamineLog != null) {
+            } else {
+//                OaExamineLog oaExamineLog = examineLogMapper.queryExamineLog(record.getExamineRecordId(), userId, record.getExamineStepId());
+                if (examineStatus == 3 && CollUtil.isNotEmpty(userIds) && userIds.contains(userId)) {
                     permission.put("isCheck", 1);
                 } else {
                     permission.put("isCheck", 0);
                 }
             }
-
             record.setPermission(permission);
         });
         return recordList;
@@ -244,7 +285,8 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
     public List<OaExamineField> getField(GetExamineFieldBO getExamineFieldBO) {
         OaExamine oaExamineInfo = getById(getExamineFieldBO.getExamineId());
         Integer categoryId = oaExamineInfo.getCategoryId();
-        OaExamineCategory oaExamineCategory = examineCategoryService.getById(categoryId);
+        ExamineInfoVo examineInfoVo = examineService.queryExamineById(Long.valueOf(categoryId)).getData();
+//        OaExamineCategory oaExamineCategory = examineCategoryService.getById(categoryId);
         List<OaExamineTravel> examineTravelList = examineTravelService.lambdaQuery().eq(OaExamineTravel::getExamineId, oaExamineInfo.getExamineId()).list();
         examineTravelList.forEach(record -> {
             if (StrUtil.isNotEmpty(record.getBatchId())) {
@@ -265,7 +307,8 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         List<OaExamineField> recordList = new ArrayList<>();
         FieldUtil fieldUtil = new FieldUtil(recordList);
         List<String> arr = new ArrayList<>();
-        switch (oaExamineCategory.getType()) {
+        Integer oaType = Optional.ofNullable(examineInfoVo.getOaType()).orElse(0);
+        switch (oaType) {
             case 1:
                 fieldUtil.oaFieldAdd("content", "审批内容", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1)
                         .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1);
@@ -304,12 +347,12 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
                 break;
             default:
                 List<OaExamineField> examineFields = examineFieldService.queryField(categoryId);
-                examineFields.forEach(field->{
-                    if ("content".equals(field.getFieldName())){
+                examineFields.forEach(field -> {
+                    if ("content".equals(field.getFieldName())) {
                         field.setValue(oaExamineInfo.getContent());
-                    }else if ("remark".equals(field.getFieldName())){
+                    } else if ("remark".equals(field.getFieldName())) {
                         field.setValue(oaExamineInfo.getRemark());
-                    }else {
+                    } else {
                         String value = examineFieldService.queryFieldValueByBatchId(field.getFieldId(), oaExamineInfo.getBatchId());
                         field.setValue(value);
                     }
@@ -355,87 +398,29 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         oaExamine.setBatchId(batchId);
         String checkUserIds = jsonObject.getString("checkUserId");
         Integer categoryId = oaExamine.getCategoryId();
-        OaExamineCategory oaExamineCategory = examineCategoryService.getById(categoryId);
-        if (oaExamineCategory.getStatus().equals(0) || oaExamineCategory.getIsDeleted().equals(1)) {
-            throw new CrmException(OaCodeEnum.THE_APPROVAL_FLOW_HAS_BEEN_DISABLED_OR_DELETED);
-        }
-        OaExamineStep oaExamineStep = new OaExamineStep();
-        Integer examineType = oaExamineCategory.getExamineType();
-        if (oaExamineCategory.getExamineType() == 1) {
-            oaExamineStep = examineStepService.lambdaQuery().eq(OaExamineStep::getCategoryId, categoryId).orderByAsc(OaExamineStep::getStepNum).last("limit 1").one();
-        }
-        Integer recordId = null;
-        //创建审批记录
-        if (oaExamine.getDuration() != null && oaExamine.getDuration().compareTo(new BigDecimal(1000)) >= 0) {
-            throw new CrmException(OaCodeEnum.DURATION_MUST_BE_THREE_DIGITS);
-        }
+
+        ExamineRecordSaveBO examineRecordSaveBO = jsonObject.getObject("examineFlowData", ExamineRecordSaveBO.class);
         if (oaExamine.getExamineId() == null) {
             save(oaExamine);
+            this.supplementFieldInfo(0, oaExamine.getExamineId(), null, examineRecordSaveBO);
+            examineRecordSaveBO.setCategoryId(oaExamine.getCategoryId());
+            ExamineRecordReturnVO examineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
+            oaExamine.setExamineStatus(examineData.getExamineStatus());
+            oaExamine.setExamineRecordId(examineData.getRecordId());
+            updateById(oaExamine);
         } else {
+            OaExamine oldOaExamine = this.getById(oaExamine.getExamineId());
+            this.supplementFieldInfo(0,oaExamine.getExamineId(),oldOaExamine.getExamineRecordId(),examineRecordSaveBO);
+            examineRecordSaveBO.setCategoryId(oaExamine.getCategoryId());
+            ExamineRecordReturnVO examineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
+            oaExamine.setExamineStatus(examineData.getExamineStatus());
+            oaExamine.setExamineRecordId(examineData.getRecordId());
             oaExamine.setUpdateTime(new Date());
             updateById(oaExamine);
             examineTravelService.lambdaUpdate().eq(OaExamineTravel::getExamineId, oaExamine.getExamineId()).remove();
             examineRelationService.lambdaUpdate().eq(OaExamineRelation::getExamineId, oaExamine.getExamineId()).remove();
-            recordId = examineRecordService.lambdaQuery().eq(OaExamineRecord::getExamineId, oaExamine.getExamineId()).last("limit 1").one().getRecordId();
-        }
-        oaExamine = getById(oaExamine.getExamineId());
-        OaExamineRecord oaExamineRecord = new OaExamineRecord();
-        oaExamineRecord.setExamineId(oaExamine.getExamineId());
-        oaExamineRecord.setExamineStepId(oaExamineStep.getStepId());
-        oaExamineRecord.setExamineStatus(3);
-        //生成审批记录
-        if (recordId == null) {
-            oaExamineRecord.setCreateUser(user.getUserId());
-            oaExamineRecord.setCreateTime(new Date());
-            examineRecordService.save(oaExamineRecord);
-        } else {
-            oaExamineRecord.setRecordId(recordId);
-            examineRecordService.updateById(oaExamineRecord);
-            examineLogService.lambdaUpdate().set(OaExamineLog::getIsRecheck, 1).eq(OaExamineLog::getRecordId, recordId).update();
         }
 
-        //生成审批日志
-        if (examineType == 1) {
-            Integer stepType = oaExamineStep.getStepType();
-            if (stepType == 1) {
-                Result<UserInfo> userInfo = adminService.getUserInfo(UserUtil.getUserId());
-                Long userId = userInfo.getData().getParentId();
-                checkUserIds = Objects.isNull(userId) ? null : userId.toString();
-            } else if (stepType == 4) {
-                Result<UserInfo> userInfo = adminService.getUserInfo(UserUtil.getUserId());
-                Long userId = adminService.getUserInfo(adminService.getUserInfo(UserUtil.getUserId()).getData().getParentId()).getData().getUserId();
-                checkUserIds = Objects.isNull(userId) ? null : userId.toString();
-            } else {
-                checkUserIds = oaExamineStep.getCheckUserId();
-            }
-        }
-        //找不到人就让超级管理员审核
-        if ("0".equals(checkUserIds) || StrUtil.isEmpty(checkUserIds)) {
-            checkUserIds = UserUtil.getSuperUser() + "";
-        }
-        if (StrUtil.isEmpty(checkUserIds)) {
-            //没有审核人，审批结束
-            oaExamineRecord.setExamineStatus(1);
-            examineRecordService.updateById(oaExamineRecord);
-        } else {
-            //如果是重新提交，将之前的审核日志全部变为撤回状态,此处无需判断，因为第一次提交的话还没有审核日志，不会影响
-            examineLogService.lambdaUpdate().set(OaExamineLog::getIsRecheck, 1).eq(OaExamineLog::getRecordId, oaExamineRecord.getRecordId()).update();
-            //添加审核日志
-            for (Long userId : TagUtil.toLongSet(checkUserIds)) {
-                OaExamineLog oaExamineLog = new OaExamineLog();
-                oaExamineLog.setRecordId(oaExamineRecord.getRecordId());
-                oaExamineLog.setOrderId(1);
-                if (oaExamineStep.getStepId() != null) {
-                    oaExamineLog.setExamineStepId(oaExamineStep.getStepId());
-                }
-                oaExamineLog.setExamineStatus(0);
-                oaExamineLog.setCreateUser(user.getUserId());
-                oaExamineLog.setCreateTime(new Date());
-                oaExamineLog.setExamineUser(userId);
-                examineLogService.save(oaExamineLog);
-                addMessage(1, oaExamineLog, UserUtil.getUserId());
-            }
-        }
         if (jsonObject.get("oaExamineRelation") != null) {
             OaExamineRelation oaExamineRelation = jsonObject.getObject("oaExamineRelation", OaExamineRelation.class);
             oaExamineRelation.setRId(null);
@@ -458,6 +443,30 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         }
     }
 
+
+    /**
+     * 补充审批字段信息
+     *
+     * @param label
+     * @param typeId
+     * @param recordId
+     * @param examineRecordSaveBO
+     * @return void
+     * @date 2020/12/18 13:44
+     **/
+    public void supplementFieldInfo(Integer label, Integer typeId, Integer recordId, ExamineRecordSaveBO examineRecordSaveBO) {
+        examineRecordSaveBO.setLabel(label);
+        examineRecordSaveBO.setTypeId(typeId);
+        examineRecordSaveBO.setRecordId(recordId);
+        if (examineRecordSaveBO.getDataMap() != null) {
+            examineRecordSaveBO.getDataMap().put("createUserId", UserUtil.getUserId());
+        } else {
+            Map<String, Object> entityMap = new HashMap<>(1);
+            entityMap.put("createUserId", UserUtil.getUserId());
+            examineRecordSaveBO.setDataMap(entityMap);
+        }
+    }
+
     /**
      * @param examineType 1 待审核 2 通过 3 拒绝
      */
@@ -468,7 +477,7 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             if (examineObj instanceof OaExamineLog) {
                 OaExamineLog examineLog = (OaExamineLog) examineObj;
                 OaExamineRecord examineRecord = examineRecordService.getById(examineLog.getRecordId());
-                if(examineRecord == null){
+                if (examineRecord == null) {
                     return;
                 }
                 OaExamine examine = getById(examineRecord.getExamineId());
@@ -731,17 +740,23 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
 
     @Override
     public ExamineVO queryOaExamineInfo(String id) {
-        ExamineVO examineVO = examineMapper.queryExamineById(id);
-        if (examineVO == null){
+        OaExamine oaExamine = examineMapper.selectById(id);
+        if (oaExamine == null) {
             throw new CrmException(OaCodeEnum.EXAMINE_ALREADY_DELETE);
         }
+        ExamineVO examineVO = new ExamineVO();
+        BeanUtil.copyProperties(oaExamine,examineVO);
         SimpleUser simpleUser = adminService.queryUserByIds(Collections.singletonList(examineVO.getCreateUserId())).getData().get(0);
         examineVO.setCreateUser(simpleUser);
-        String batchId = examineVO.getBatchId();
+        String batchId = oaExamine.getBatchId();
         setRelation(examineVO);
-        OaExamineRecord record = examineRecordService.lambdaQuery().eq(OaExamineRecord::getExamineId, id).last("limit 1").one();
-        examineVO.setRecord(record);
-        examineVO.setExamineRecordId(record.getRecordId());
+        ExamineInfoVo examineInfoVo = examineService.queryExamineById(Long.valueOf(oaExamine.getCategoryId())).getData();
+        String title = "";
+        if(examineInfoVo != null){
+            title = examineInfoVo.getExamineName();
+            examineVO.setExamineIcon(examineInfoVo.getExamineIcon());
+        }
+        examineVO.setCategoryTitle(title);
         Result<List<FileEntity>> fileEntityResult = adminFileService.queryFileList(batchId);
         Map<String, List<FileEntity>> collect = fileEntityResult.getData().stream().collect(Collectors.groupingBy(FileEntity::getFileType));
         if (collect.containsKey("img")) {
@@ -995,19 +1010,20 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
 
     @Override
     public void deleteOaExamine(Integer examineId) {
-        OaExamineRecord examineRecord = examineRecordService.lambdaQuery().eq(OaExamineRecord::getExamineId, examineId).last("limit 1").one();
-        Integer recordId = examineRecord.getRecordId();
-        boolean bol = examineRecord.getExamineStatus() != 4 && (!UserUtil.isAdmin());
+        OaExamine examine = getById(examineId);
+        Integer recordId = examine.getExamineRecordId();
+        boolean bol = examine.getExamineStatus() != 4 && (!UserUtil.isAdmin());
         if (bol) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
-        OaExamine examine = getById(examineId);
+
         examineDataService.lambdaUpdate().eq(OaExamineData::getBatchId, examine.getBatchId()).remove();
         removeById(examineId);
         examineRelationService.lambdaUpdate().eq(OaExamineRelation::getExamineId, examineId).remove();
         examineTravelService.lambdaUpdate().eq(OaExamineTravel::getExamineId, examineId).remove();
-        examineRecordService.lambdaUpdate().eq(OaExamineRecord::getRecordId, recordId).remove();
-        examineLogService.lambdaUpdate().eq(OaExamineLog::getRecordId, recordId).remove();
+        if (recordId != null) {
+            examineService.deleteExamineRecord(recordId);
+        }
     }
 
     @Override
@@ -1026,18 +1042,24 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
     }
 
     @Override
-    public List<Map<String, Object>> export(ExamineExportBO examineExportBO, OaExamineCategory category, List<OaExamineField> fieldList) {
-        Integer categoryId = examineExportBO.getCategoryId();
-        Integer type = category.getType();
+    public List<Map<String, Object>> export(ExamineExportBO examineExportBO, ExamineInfoVo examineInfoVo , List<OaExamineField> fieldList) {
+        Integer type = examineInfoVo.getOaType();
         Integer queryType = examineExportBO.getQueryType();
         List<JSONObject> examineList = new ArrayList<>();
         Long userId = UserUtil.getUserId();
         //我发出的
         if (queryType == 1) {
-            examineList = examineMapper.myInitiateExcel(examineExportBO, userId, UserUtil.isAdmin());
+            examineList = examineMapper.myInitiateOaExcel(examineExportBO, userId, UserUtil.isAdmin());
             //待我审批的
         } else if (queryType == 2) {
-            examineList = examineMapper.myOaExamineExcel(examineExportBO, userId, UserUtil.isAdmin());
+//            examineList = examineMapper.myOaExamineExcel(examineExportBO, userId, UserUtil.isAdmin());
+            List<Integer> ids = examineService.queryOaExamineIdList(examineExportBO.getCheckStatus(), examineExportBO.getCategoryId()).getData();
+            if (CollUtil.isNotEmpty(ids)){
+                List<OaExamine> oaExamineList = oaExamineService.lambdaQuery().select(OaExamine::getExamineId, OaExamine::getBatchId).in(OaExamine::getExamineId, ids).list();
+                for (OaExamine oaExamine : oaExamineList) {
+                    examineList.add((JSONObject) JSONObject.toJSON(oaExamine));
+                }
+            }
         }
         List<Integer> examineIdList = examineList.stream().map(record -> record.getInteger("examineId")).collect(Collectors.toList());
         List<String> batchIdList = examineList.stream().map(record -> record.getString("batchId")).collect(Collectors.toList());
@@ -1119,7 +1141,7 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
                 break;
             case 0:
                 recordList.forEach(record -> {
-                    record.put("category", category.getTitle());
+                    record.put("category", examineInfoVo.getExamineName());
                     putRelateCrmWork(record);
                     list.add(record.getInnerMap());
                 });
@@ -1127,7 +1149,33 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             default:
                 break;
         }
+        list.forEach(this::supplementExamineInfoForExport);
         return list;
+    }
+
+
+    private void supplementExamineInfoForExport(Map<String, Object> map){
+        Object examineRecordId = map.get("examineRecordId");
+        if (examineRecordId == null){
+            map.put("examineUserName", "");
+            return;
+        }
+        Object examineStatus = map.get("examineStatusBack");
+        if (examineStatus == null) {
+            examineStatus = -1;
+        }
+        ExamineRecordReturnVO recordReturnVO = examineService.queryExamineRecordInfo((Integer) examineRecordId).getData();
+        List<Long> userIds = recordReturnVO.getExamineUserIds();
+        String examineName = "";
+        if (CollUtil.isNotEmpty(userIds) && (Integer) examineStatus != 4) {
+            Result<List<SimpleUser>> userList = adminService.queryUserByIds(userIds);
+            examineName = userList.getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
+        }
+        if ((Integer)examineStatus == 4){
+            Object createUserName = map.get("createUserName");
+            examineName = createUserName != null ? createUserName.toString() : "";
+        }
+        map.put("examineUserName", examineName);
     }
 
     private void putRelateCrmWork(JSONObject record) {
@@ -1145,5 +1193,64 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             relateCrmWork = relateCrmWork + "合同 【" + record.getString("contractName") + "】\n";
         }
         record.put("relateCrmWork", relateCrmWork.trim());
+    }
+
+
+    @Override
+    public Map<String, Object> getDataMapForNewExamine(ExamineConditionDataBO examineConditionDataBO) {
+        Map<String, Object> dataMap = new HashMap<>(8);
+        Integer id = examineConditionDataBO.getTypeId();
+        Integer categoryId = examineConditionDataBO.getCategoryId();
+        List<String> fieldList = examineConditionDataBO.getFieldList();
+        OaExamine oaExamine = this.getById(id);
+        if (oaExamine == null) {
+            throw new CrmException(OaCodeEnum.EXAMINE_ALREADY_DELETE);
+        }
+        List<OaExamineField> examineFields = examineFieldService.queryField(categoryId);
+        examineFields.forEach(field -> {
+            if ("content".equals(field.getFieldName())) {
+                field.setValue(oaExamine.getContent());
+            } else if ("remark".equals(field.getFieldName())) {
+                field.setValue(oaExamine.getRemark());
+            } else {
+                String value = examineFieldService.queryFieldValueByBatchId(field.getFieldId(), oaExamine.getBatchId());
+                field.setValue(value);
+            }
+        });
+        examineFieldService.transferFieldList(examineFields, 2);
+        for (String field : fieldList) {
+            for (OaExamineField examineField : examineFields) {
+                if (field.equals(examineField.getFieldName())) {
+                    dataMap.put(field, examineField.getValue());
+                    break;
+                }
+            }
+        }
+        dataMap.put("createUserId", oaExamine.getCreateUserId());
+        return dataMap;
+    }
+
+    @Override
+    public Boolean updateCheckStatusByNewExamine(ExamineConditionDataBO examineConditionDataBO) {
+        Integer typeId = examineConditionDataBO.getTypeId();
+        OaExamine oaExamine = oaExamineService.getById(typeId);
+        if(oaExamine != null){
+            oaExamine.setExamineStatus(examineConditionDataBO.getCheckStatus());
+            return oaExamineService.updateById(oaExamine);
+        }
+        return false;
+    }
+
+
+    @Override
+    public ExamineVO getOaExamineById(Integer oaExamineId) {
+        OaExamine oaExamine = examineMapper.selectById(oaExamineId);
+        ExamineVO examineVO = new ExamineVO();
+        if (oaExamine == null){
+            return examineVO;
+        }
+        BeanUtil.copyProperties(oaExamine,examineVO);
+        List<ExamineVO> examineVoList = transfer(ListUtil.toList(examineVO));
+        return examineVoList.get(0);
     }
 }

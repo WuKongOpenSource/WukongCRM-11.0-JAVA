@@ -78,4 +78,15 @@ public class AdminUserConfigServiceImpl extends BaseServiceImpl<AdminUserConfigM
         adminUserConfigList.add(new AdminUserConfig(null, userId, 1, "ActivityPhrase", "客户意向度较强，成交几率较大", "跟进记录常用语"));
         saveBatch(adminUserConfigList, Const.BATCH_SAVE_SIZE);
     }
+
+    /**
+     * 根据名称和内容查询配置用户
+     */
+    @Override
+    public List<AdminUserConfig> queryUserConfigByNameAndValue(String name, String value) {
+        QueryWrapper<AdminUserConfig> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("name", name).eq("value", value);
+        return query().getBaseMapper().selectList(queryWrapper);
+    }
+
 }

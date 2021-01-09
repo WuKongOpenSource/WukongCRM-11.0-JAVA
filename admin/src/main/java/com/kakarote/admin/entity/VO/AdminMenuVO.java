@@ -33,6 +33,9 @@ public class AdminMenuVO {
     @ApiModelProperty(value = "菜单类型  1目录 2 菜单 3 按钮 4特殊")
     private Integer menuType;
 
+    @ApiModelProperty(value = "备注")
+    private String remarks;
+
     @ApiModelProperty(value = "子菜单")
     private List<AdminMenuVO> childMenu;
 

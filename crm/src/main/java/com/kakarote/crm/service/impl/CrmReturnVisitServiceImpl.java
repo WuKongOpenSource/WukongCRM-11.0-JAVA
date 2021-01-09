@@ -8,6 +8,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
@@ -21,7 +22,6 @@ import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.CrmModel;
-import com.kakarote.crm.constant.BehaviorEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
@@ -118,6 +118,9 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
             }
             crmReturnVisit.setBatchId(batchId);
             crmReturnVisit.setUpdateTime(new Date());
+            if(crmReturnVisit.getOwnerUserId() == null){
+                crmReturnVisit.setOwnerUserId(UserUtil.getUserId());
+            }
             save(crmReturnVisit);
             actionRecordUtil.addRecord(crmReturnVisit.getVisitId(), CrmEnum.RETURN_VISIT, crmReturnVisit.getVisitNumber());
         }
@@ -138,9 +141,9 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
         }
         CrmContract contract = crmContractService.getById((Serializable) map.get("contractId"));
         map.put("contractNum", contract != null ? contract.getNum() : "");
-        String ownerUserName = adminService.queryUserName((Long) map.get("ownerUserId")).getData();
+        String ownerUserName = UserCacheUtil.getUserName((Long) map.get("ownerUserId"));
         map.put("ownerUserName", ownerUserName);
-        String createUserName = adminService.queryUserName((Long) map.get("createUserId")).getData();
+        String createUserName = UserCacheUtil.getUserName((Long) map.get("createUserId"));
         map.put("createUserName", createUserName);
     }
 
@@ -333,8 +336,8 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
         String batchId = updateInformationBO.getBatchId();
         Integer visitId = updateInformationBO.getId();
         updateInformationBO.getList().forEach(record -> {
-            CrmReturnVisit oldReceivables = getById(updateInformationBO.getId());
-            Map<String, Object> oldReturnVisitMap = BeanUtil.beanToMap(oldReceivables);
+            CrmReturnVisit oldReturnVisit = getById(updateInformationBO.getId());
+            Map<String, Object> oldReturnVisitMap = BeanUtil.beanToMap(oldReturnVisit);
             if (record.getInteger("fieldType") == 1) {
                 Map<String, Object> crmRetuenVisitMap = new HashMap<>(oldReturnVisitMap);
                 crmRetuenVisitMap.put(record.getString("fieldName"), record.get("value"));
@@ -346,7 +349,7 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
                         .eq(CrmReturnVisitData::getBatchId, batchId).one();
                 String value = returnVisitData != null ? returnVisitData.getValue() : null;
                 String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
-                actionRecordUtil.publicContentRecord(CrmEnum.RETURN_VISIT, BehaviorEnum.UPDATE, visitId, oldReceivables.getVisitNumber(), detail);
+                actionRecordUtil.publicContentRecord(CrmEnum.RETURN_VISIT, BehaviorEnum.UPDATE, visitId, oldReturnVisit.getVisitNumber(), detail);
                 boolean bol = crmReturnVisitDataService.lambdaUpdate()
                         .set(CrmReturnVisitData::getName, record.getString("fieldName"))
                         .set(CrmReturnVisitData::getValue, record.getString("value"))

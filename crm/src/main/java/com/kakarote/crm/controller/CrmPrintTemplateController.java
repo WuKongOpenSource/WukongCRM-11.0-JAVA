@@ -8,10 +8,15 @@ import cn.hutool.extra.servlet.ServletUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
 import com.kakarote.core.common.cache.CrmCacheKey;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.servlet.LoginFromCookie;
 import com.kakarote.core.utils.BaseUtil;
+import com.kakarote.crm.common.log.CrmPrintTemplateLog;
 import com.kakarote.crm.entity.BO.CrmPrintTemplateBO;
 import com.kakarote.crm.entity.PO.CrmPrintRecord;
 import com.kakarote.crm.entity.PO.CrmPrintTemplate;
@@ -42,6 +47,7 @@ import java.util.List;
 @RequestMapping("/crmPrint")
 @Api(tags = "打印模板")
 @Slf4j
+@SysLog(logClass = CrmPrintTemplateLog.class)
 public class CrmPrintTemplateController {
 
     @Autowired
@@ -63,6 +69,7 @@ public class CrmPrintTemplateController {
 
     @ApiOperation("新增模板")
     @PostMapping("/addPrintTemplate")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.SAVE,object = "#adminPrintTemplate.templateName",detail = "'新增了打印模板:'+#adminPrintTemplate.templateName")
     public Result addPrintTemplate(@RequestBody CrmPrintTemplate adminPrintTemplate) {
         adminPrintTemplate.setUpdateTime(new Date());
         printTemplateService.save(adminPrintTemplate);
@@ -71,6 +78,7 @@ public class CrmPrintTemplateController {
 
     @ApiOperation("修改模板")
     @PostMapping("/updatePrintTemplate")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.UPDATE,object = "#adminPrintTemplate.templateName",detail = "'修改了打印模板:'+#adminPrintTemplate.templateName")
     public Result updatePrintTemplate(@RequestBody CrmPrintTemplate adminPrintTemplate) {
         printTemplateService.updateById(adminPrintTemplate);
         return Result.ok();
@@ -78,6 +86,7 @@ public class CrmPrintTemplateController {
 
     @ApiOperation("删除模板")
     @PostMapping("/deletePrintTemplate")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.DELETE)
     public Result deletePrintTemplate(@RequestParam("templateId") Integer templateId) {
         printTemplateService.deletePrintTemplate(templateId);
         return Result.ok();
@@ -155,6 +164,7 @@ public class CrmPrintTemplateController {
 
     @ApiOperation("复制模板")
     @PostMapping("/copyTemplate")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.COPY)
     public Result copyTemplate(@RequestParam("templateId") Integer templateId) {
         printTemplateService.copyTemplate(templateId);
         return Result.ok();

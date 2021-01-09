@@ -8,10 +8,15 @@ import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.utils.UserUtil;
+import com.kakarote.crm.common.log.CrmCustomerPoolLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
@@ -52,6 +57,7 @@ import java.util.Objects;
 @RequestMapping("/crmCustomerPool")
 @Api(tags = "公海控制器")
 @Slf4j
+@SysLog(logClass = CrmCustomerPoolLog.class)
 public class CrmCustomerPoolController {
 
     @Autowired
@@ -83,6 +89,7 @@ public class CrmCustomerPoolController {
 
     @ApiOperation("修改公海状态")
     @PostMapping("/changeStatus")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.UPDATE)
     public Result changeStatus(@RequestParam("poolId") Integer poolId, @RequestParam("status") Integer status) {
         crmCustomerPoolService.changeStatus(poolId, status);
         return Result.ok();
@@ -90,7 +97,7 @@ public class CrmCustomerPoolController {
 
     @ApiOperation("根据ID查询公海信息")
     @PostMapping("/queryPoolById")
-    public Result<CrmCustomerPoolVO> changeStatus(@RequestParam("poolId") Integer poolId) {
+    public Result<CrmCustomerPoolVO> queryPoolById(@RequestParam("poolId") Integer poolId) {
         CrmCustomerPoolVO customerPoolVO = crmCustomerPoolService.queryPoolById(poolId);
         return Result.ok(customerPoolVO);
     }
@@ -195,6 +202,7 @@ public class CrmCustomerPoolController {
 
     @ApiOperation("设置公海规则")
     @PostMapping("/setCustomerPool")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.SAVE,object = "#jsonObject[poolName]",detail = "'添加或修改了公海规则:'+#jsonObject[poolName]")
     public Result setCustomerPool(@RequestBody JSONObject jsonObject) {
         crmCustomerPoolService.setCustomerPool(jsonObject);
         return Result.ok();
@@ -216,6 +224,7 @@ public class CrmCustomerPoolController {
 
     @ApiOperation("删除公海规则")
     @PostMapping("/deleteCustomerPool")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.DELETE)
     public Result deleteCustomerPool(@RequestParam("poolId") Integer poolId) {
         crmCustomerPoolService.deleteCustomerPool(poolId);
         return Result.ok();
@@ -244,6 +253,7 @@ public class CrmCustomerPoolController {
 
     @PostMapping("/transfer")
     @ApiOperation("公海客户的转移")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.UPDATE)
     public Result transfer(@RequestParam("prePoolId") Integer prePoolId, @RequestParam("postPoolId") Integer postPoolId) {
         crmCustomerPoolService.transfer(prePoolId, postPoolId);
         return R.ok();

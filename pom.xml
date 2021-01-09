@@ -12,15 +12,16 @@
     <description>悟空软件</description>
 
     <modules>
+        <module>core</module>
         <module>gateway</module>
-        <module>admin</module>
+		<module>admin</module>
         <module>oa</module>
         <module>work</module>
-        <module>crm</module>
+		<module>crm</module>
         <module>authorization</module>
         <module>bi</module>
         <module>job</module>
-        <module>core</module>
+        <module>examine</module>
     </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -33,7 +34,7 @@
         <swagger.version>2.9.2</swagger.version>
         <hutool.version>5.3.1</hutool.version>
         <lombok.version>1.18.10</lombok.version>
-        <core.version>0.7.0</core.version>
+        <core.version>1.0.6</core.version>
     </properties>
 
     <dependencyManagement>
@@ -54,7 +55,7 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>com.alibaba.cloud</groupId>
+                    <groupId>com.alibaba.cloud</groupId>
                 <artifactId>spring-cloud-alibaba-dependencies</artifactId>
                 <version>${spring.cloud.alibaba.version}</version>
                 <type>pom</type>

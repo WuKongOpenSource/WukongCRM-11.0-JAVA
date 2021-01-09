@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
+import com.kakarote.core.feign.admin.service.AdminMessageService;
+import com.kakarote.core.feign.examine.service.ExamineService;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserUtil;
@@ -77,6 +79,12 @@ public class OaCommonServiceImpl implements IOaCommonService {
     @Autowired
     private AdminFileService adminFileService;
 
+    @Autowired
+    private AdminMessageService adminMessageService;
+
+    @Autowired
+    private ExamineService examineService;
+
 
 
 
@@ -124,6 +132,8 @@ public class OaCommonServiceImpl implements IOaCommonService {
         oaEventNoticeService.lambdaUpdate().remove();
         oaEventRelationService.lambdaUpdate().remove();
         oaEventUpdateRecordService.lambdaUpdate().remove();
+
+        adminMessageService.deleteByLabel(5);
         log.info("日历模块数据初始化完成！");
         return true;
     }
@@ -146,6 +156,11 @@ public class OaCommonServiceImpl implements IOaCommonService {
         oaExamineSortMapper.delete(lambdaQueryWrapper);
         oaExamineStepService.lambdaUpdate().remove();
         oaExamineTravelService.lambdaUpdate().remove();
+
+        adminMessageService.deleteByLabel(1);
+        adminMessageService.deleteByLabel(3);
+
+        examineService.deleteExamineRecordAndLog(0);
         log.info("任务审批模块数据初始化完成！");
         return true;
     }
@@ -157,10 +172,11 @@ public class OaCommonServiceImpl implements IOaCommonService {
      * @date 2020/11/20 15:41
      * @param baseService
      * @param resultColumn
+     * @param queryColumn
      * @param mapper
      * @return void
      **/
-    private <T> void deleteFile(BaseService<T> baseService, SFunction<T,String> resultColumn,Function<T,String> mapper){
+    private <T> void deleteFile(BaseService<T> baseService, SFunction<T,String> resultColumn, Function<T,String> mapper){
         LambdaQueryWrapper<T> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         lambdaQueryWrapper.select(resultColumn);
         List<T> list = baseService.list(lambdaQueryWrapper);

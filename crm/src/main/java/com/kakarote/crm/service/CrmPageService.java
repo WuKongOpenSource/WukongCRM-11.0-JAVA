@@ -18,6 +18,7 @@ import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
 import com.kakarote.core.redis.Redis;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
@@ -268,7 +269,7 @@ public interface CrmPageService {
                         crmSearchBO.getSearchList().addAll(mapper.readValue(crmScene.getData(), new TypeReference<List<CrmSearchBO.Search>>() {
                         }));
                     } catch (Exception e) {
-                        log.error("json序列化错误", crmScene.getData());
+                        log.error("json序列化错误{}", crmScene.getData());
                         getBean(ICrmSceneService.class).removeById(crmScene.getSceneId());
                     }
                 }
@@ -282,6 +283,13 @@ public interface CrmPageService {
         }
         //开始搜索相关
         crmSearchBO.getSearchList().forEach(search -> {
+            if (crmSearchBO.getLabel() != null && crmSearchBO.getLabel().equals(CrmEnum.CUSTOMER_POOL.getType())){
+                if ("createUserName".equals(search.getName())){
+                    search.setName("createUserId");
+                }else if ("preOwnerUserName".equals(search.getName())){
+                    search.setName("preOwnerUserId");
+                }
+            }
             Dict searchTransferMap = getSearchTransferMap();
             if (searchTransferMap.containsKey(search.getName())) {
                 search.setName(searchTransferMap.getStr(search.getName()));
@@ -312,7 +320,7 @@ public interface CrmPageService {
                     } else {
                         status = Integer.valueOf(values.get(1));
                     }
-                    must = QueryBuilders.boolQuery().must(QueryBuilders.termQuery(search.getName(), status));
+                    queryBuilder.filter(QueryBuilders.termQuery(search.getName(), status));
                 }
                 queryBuilder.filter(must);
             } else {
@@ -337,9 +345,10 @@ public interface CrmPageService {
         switch (search.getSearchEnum()) {
             case IS:
                 if (Arrays.asList(3, 8, 9, 10, 11, 12).contains(fieldEnum.getType())) {
+                    String key = fieldEnum.getType().equals(9) ? (search.getName()+".keyword") : search.getName();
                     //处理数字字段筛选
-                    queryBuilder.filter(QueryBuilders.termsQuery(search.getName(), search.getValues()));
-                    Script painless = new Script(ScriptType.INLINE, "painless", "doc['" + search.getName() + "'].size() ==" + search.getValues().size(), new HashMap<>());
+                    queryBuilder.filter(QueryBuilders.termsQuery(key, search.getValues()));
+                    Script painless = new Script(ScriptType.INLINE, "painless", "doc['" + key + "'].size() ==" + search.getValues().size(), new HashMap<>());
                     queryBuilder.filter(QueryBuilders.scriptQuery(painless));
                 } else if (search.getValues().size() > 1) {
                     queryBuilder.filter(QueryBuilders.termsQuery(search.getName(), search.getValues()));
@@ -470,8 +479,8 @@ public interface CrmPageService {
             } else {
                 authBoolQuery.should(QueryBuilders.termsQuery("ownerUserId", dataAuthUserIds));
                 if (crmEnum.equals(CrmEnum.CUSTOMER) || crmEnum.equals(CrmEnum.BUSINESS) || crmEnum.equals(CrmEnum.CONTRACT)) {
-                    authBoolQuery.should(QueryBuilders.wildcardQuery("roUserId", "*" + userId + "*"))
-                            .should(QueryBuilders.wildcardQuery("rwUserId", "*" + userId + "*"));
+                    authBoolQuery.should(QueryBuilders.wildcardQuery("roUserId", "*," + userId + ",*"))
+                            .should(QueryBuilders.wildcardQuery("rwUserId", "*," + userId + ",*"));
                 }
             }
         }
@@ -490,6 +499,7 @@ public interface CrmPageService {
         crmFieldSortList.add(new CrmFieldSortVO().setFieldName("preOwnerUserName").setName("前负责人").setType(FieldEnum.TEXT.getType()));
         crmFieldSortList.add(new CrmFieldSortVO().setFieldName("createTime").setName("创建时间").setType(FieldEnum.DATETIME.getType()));
         crmFieldSortList.add(new CrmFieldSortVO().setFieldName("lastTime").setName("最后联系时间").setType(FieldEnum.DATETIME.getType()));
+        crmFieldSortList.add(new CrmFieldSortVO().setFieldName("poolTime").setName("进入公海时间").setType(FieldEnum.DATETIME.getType()));
         if (crmSearchBO.getPage() <= 100) {
             if (crmSearchBO.getPageType().equals(1)) {
                 // 设置起止和结束
@@ -942,5 +952,28 @@ public interface CrmPageService {
             filedVOS.add(new CrmModelFiledVO("last_time", FieldEnum.DATETIME, "最后跟进时间", 1).setValue(crmModel.get("lastTime")));
         }
         return filedVOS;
+    }
+
+
+    /**
+     * 补充审批字段信息
+     * @date 2020/12/18 13:44
+     * @param label
+     * @param typeId
+     * @param recordId
+     * @param examineRecordSaveBO
+     * @return void
+     **/
+    default void supplementFieldInfo(Integer label,Integer typeId ,Integer recordId ,ExamineRecordSaveBO examineRecordSaveBO){
+        examineRecordSaveBO.setLabel(label);
+        examineRecordSaveBO.setTypeId(typeId);
+        examineRecordSaveBO.setRecordId(recordId);
+        if(examineRecordSaveBO.getDataMap() != null){
+            examineRecordSaveBO.getDataMap().put("createUserId" ,UserUtil.getUserId());
+        }else {
+            Map<String, Object> entityMap = new HashMap<>(1);
+            entityMap.put("createUserId" ,UserUtil.getUserId());
+            examineRecordSaveBO.setDataMap(entityMap);
+        }
     }
 }

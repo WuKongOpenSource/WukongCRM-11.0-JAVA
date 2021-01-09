@@ -8,6 +8,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.extra.servlet.ServletUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.admin.common.AdminCodeEnum;
+import com.kakarote.admin.common.log.AdminUserLog;
 import com.kakarote.admin.entity.BO.*;
 import com.kakarote.admin.entity.PO.AdminConfig;
 import com.kakarote.admin.entity.PO.AdminUser;
@@ -16,10 +17,10 @@ import com.kakarote.admin.entity.VO.AdminSuperUserVo;
 import com.kakarote.admin.entity.VO.AdminUserVO;
 import com.kakarote.admin.entity.VO.HrmSimpleUserVO;
 import com.kakarote.admin.service.*;
-import com.kakarote.core.common.ApiExplain;
-import com.kakarote.core.common.ParamAspect;
-import com.kakarote.core.common.R;
-import com.kakarote.core.common.Result;
+import com.kakarote.core.common.*;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.NoLoginException;
@@ -61,6 +62,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/adminUser")
 @Api(tags = "员工管理相关接口")
 @Slf4j
+@SysLog(subModel = SubModelType.ADMIN_STAFF_MANAGEMENT,logClass = AdminUserLog.class)
 public class AdminUserController {
 
     @Autowired
@@ -92,6 +94,13 @@ public class AdminUserController {
         return R.ok(adminUserBOList.stream().map(AdminUserVO::getUserId).collect(Collectors.toList()));
     }
 
+    @ApiExplain("通过条件分页查询员工列表")
+    @PostMapping("/queryAllUserInfoList")
+    public Result<List<UserInfo>> queryAllUserInfoList() {
+        List<UserInfo> userInfoList = adminUserService.queryAllUserInfoList();
+        return R.ok(userInfoList);
+    }
+
     @PostMapping("/setUser")
     @ApiOperation("修改用户")
     public Result setUser(@RequestBody AdminUserVO adminUserVO) {
@@ -101,6 +110,7 @@ public class AdminUserController {
 
     @PostMapping("/addUser")
     @ApiOperation("新增用户")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#adminUserVO.realname",detail = "'新增了员工:'+#adminUserVO.realname")
     public Result addUser(@RequestBody AdminUserVO adminUserVO) {
         adminUserService.addUser(adminUserVO);
         return R.ok();
@@ -108,6 +118,7 @@ public class AdminUserController {
 
     @PostMapping("/usernameEdit")
     @ApiOperation("重置登录账号")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result<Integer> usernameEdit(@RequestParam("id") Integer id, @RequestParam("username") String username, @RequestParam("password") String password) {
         Integer integer = adminUserService.usernameEdit(id, username, password);
         return R.ok(integer);
@@ -115,6 +126,7 @@ public class AdminUserController {
 
     @PostMapping("/excelImport")
     @ApiOperation("excel导入员工")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_IMPORT,object = "excel导入员工",detail = "excel导入员工")
     public Result<JSONObject> excelImport(@RequestParam("file") MultipartFile file) {
         JSONObject object = adminUserService.excelImport(file);
         return R.ok(object);
@@ -148,6 +160,7 @@ public class AdminUserController {
 
     @PostMapping("/setUserStatus")
     @ApiOperation("禁用启用")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result setUserStatus(@RequestBody AdminUserStatusBO adminUserStatusBO) {
         adminUserService.setUserStatus(adminUserStatusBO);
         return R.ok();
@@ -155,6 +168,7 @@ public class AdminUserController {
 
     @PostMapping("/resetPassword")
     @ApiOperation("重置密码")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result resetPassword(@RequestBody AdminUserStatusBO adminUserStatusBO) {
         adminUserService.resetPassword(adminUserStatusBO);
         return R.ok();
@@ -162,6 +176,7 @@ public class AdminUserController {
 
     @PostMapping("/updateImg")
     @ApiOperation("修改头像")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE,object = "修改头像",detail = "修改头像")
     public Result updateImg(@RequestParam("file") MultipartFile file) throws IOException {
         UploadEntity img = adminFileService.upload(file, null, "img", "0");
         AdminUser byId = adminUserService.getById(UserUtil.getUserId());
@@ -172,6 +187,7 @@ public class AdminUserController {
 
     @PostMapping("/updatePassword")
     @ApiOperation("修改登录密码")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE,object = "修改登录密码",detail = "修改登录密码")
     public Result updatePassword(@RequestParam("oldPwd") String oldPass, @RequestParam("newPwd") String newPass) {
         AdminUser adminUser = adminUserService.getById(UserUtil.getUserId());
         if (!UserUtil.verify(adminUser.getUsername() + oldPass, adminUser.getSalt(), adminUser.getPassword())) {
@@ -265,8 +281,9 @@ public class AdminUserController {
         UserInfo userInfo = null;
         if (byId != null && byId.getDeptId() != null) {
             userInfo = BeanUtil.copyProperties(byId, UserInfo.class);
-            String nameByDeptId = ApplicationContextHolder.getBean(IAdminDeptService.class).getNameByDeptId(byId.getDeptId());
+            String nameByDeptId = UserCacheUtil.getDeptName(byId.getDeptId());
             userInfo.setDeptName(nameByDeptId);
+            userInfo.setRoles(adminUserService.queryUserRoleIds(userInfo.getUserId()));
         }
         return R.ok(userInfo);
     }
@@ -277,6 +294,13 @@ public class AdminUserController {
         List<SimpleUser> simpleUsers = adminUserService.queryUserByIds(ids);
         return R.ok(simpleUsers);
     }
+
+    @PostMapping("/queryNormalUserByIds")
+    @ApiExplain("根据用户ID获取正常用户")
+    public Result<List<Long>> queryNormalUserByIds(@RequestBody List<Long> ids) {
+        return R.ok(adminUserService.queryNormalUserByIds(ids));
+    }
+
 
     @PostMapping("/queryUserById")
     @ApiExplain("根据用户ID获取用户")
@@ -329,7 +353,14 @@ public class AdminUserController {
     @PostMapping("/queryDeptUserList/{deptId}")
     @ApiOperation("查询部门用户列表(表单使用)")
     public Result<DeptUserListVO> queryDeptUserList(@PathVariable Integer deptId) {
-        DeptUserListVO deptUserListVO = adminUserService.queryDeptUserList(deptId);
+        DeptUserListVO deptUserListVO = adminUserService.queryDeptUserList(deptId,true);
+        return Result.ok(deptUserListVO);
+    }
+
+    @PostMapping("/queryDeptUserByExamine/{deptId}")
+    @ApiOperation("查询部门用户列表(审批使用)")
+    public Result<DeptUserListVO> queryDeptUserByExamine(@PathVariable Integer deptId) {
+        DeptUserListVO deptUserListVO = adminUserService.queryDeptUserList(deptId,false);
         return Result.ok(deptUserListVO);
     }
 

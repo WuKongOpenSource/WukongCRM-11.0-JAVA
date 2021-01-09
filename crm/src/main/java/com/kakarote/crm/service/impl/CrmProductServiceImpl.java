@@ -12,6 +12,7 @@ import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
@@ -23,7 +24,6 @@ import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.*;
 import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.CrmModel;
-import com.kakarote.crm.constant.BehaviorEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
@@ -299,7 +299,7 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
             actionRecordUtil.addConversionRecord(id,CrmEnum.PRODUCT,newOwnerUserId,getById(id).getName());
         }
         //修改es
-        String ownerUserName = adminService.queryUserName(newOwnerUserId).getData();
+        String ownerUserName = UserCacheUtil.getUserName(newOwnerUserId);
         Map<String, Object> map = new HashMap<>();
         map.put("ownerUserId", newOwnerUserId);
         map.put("ownerUserName", ownerUserName);
@@ -464,8 +464,15 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
         List<String> keyList = Arrays.asList("name", "num", "price", "description");
         List<String> systemFieldList = Arrays.asList("创建人", "创建时间", "更新时间");
         List<CrmModelFiledVO> crmModelFiledVOS = queryInformation(crmModel, keyList);
+        int authLevel = 3;
+        Long userId = UserUtil.getUserId();
+        String key = userId.toString();
+        List<String> noAuthMenuUrls = BaseUtil.getRedis().get(key);
+        if (noAuthMenuUrls != null && noAuthMenuUrls.contains(PRODUCT_STATUS_URL)) {
+            authLevel = 2;
+        }
         String status = Objects.equals(1, crmModel.get("status")) ? "上架" : "下架";
-        crmModelFiledVOS.add(new CrmModelFiledVO("status", FieldEnum.SELECT, "是否上下架", 1).setValue(status).setAuthLevel(3));
+        crmModelFiledVOS.add(new CrmModelFiledVO("status", FieldEnum.SELECT, "是否上下架", 1).setValue(status).setAuthLevel(authLevel));
         List<CrmProductCategory> categoryList = crmProductCategoryService.list();
         List<Integer> list = RecursionUtil.getChildList(categoryList, "pid", (Integer) crmModel.get("categoryId"), "categoryId", "categoryId");
         List<CrmModelFiledVO> filedVOS = crmModelFiledVOS.stream().sorted(Comparator.comparingInt(r -> -r.getFieldType())).peek(r -> {

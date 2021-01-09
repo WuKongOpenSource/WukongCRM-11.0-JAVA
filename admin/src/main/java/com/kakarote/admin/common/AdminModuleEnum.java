@@ -51,10 +51,6 @@ public enum AdminModuleEnum {
      * 呼叫中心
      */
     CALL("call"),
-    /**
-     * 名片小程序
-     */
-    CARD("applet"),
 
     HRM("hrm"),
 

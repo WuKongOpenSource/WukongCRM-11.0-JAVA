@@ -71,7 +71,9 @@ public class GatewayFilter implements GlobalFilter, Ordered {
          */
         if(url.startsWith("/adminFile/down/")){
             token = request.getQueryParams().getFirst("c");
-            request = exchange.getRequest().mutate().header(Const.TOKEN_NAME, token).build();
+            if(StrUtil.isNotEmpty(token)){
+                request = exchange.getRequest().mutate().header(Const.TOKEN_NAME, token).build();
+            }
         }
         //验证token
         String authentication = permissionService.invalidAccessToken(token,url,request.getCookies());

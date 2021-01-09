@@ -41,6 +41,9 @@ public class OaExamine implements Serializable {
     @ApiModelProperty(value = "备注")
     private String remark;
 
+    @ApiModelProperty("审批状态")
+    private Integer examineStatus;
+
     @ApiModelProperty(value = "请假类型")
     private String typeId;
 
@@ -75,5 +78,7 @@ public class OaExamine implements Serializable {
     @ApiModelProperty(value = "附件批次id")
     private String batchId;
 
+    @ApiModelProperty("审批记录id")
+    private Integer examineRecordId;
 
 }

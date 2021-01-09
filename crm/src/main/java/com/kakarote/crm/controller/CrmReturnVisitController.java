@@ -3,10 +3,15 @@ package com.kakarote.crm.controller;
 
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.common.log.CrmReturnVisitLog;
 import com.kakarote.crm.entity.BO.CrmBusinessSaveBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
@@ -32,6 +37,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/crmReturnVisit")
 @Api(tags = "回访模块")
+@SysLog(subModel = SubModelType.CRM_RETURN_VISIT,logClass = CrmReturnVisitLog.class)
 public class CrmReturnVisitController {
 
     @Autowired
@@ -47,6 +53,7 @@ public class CrmReturnVisitController {
 
     @PostMapping("/add")
     @ApiOperation("添加")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity[visitNumber]")
     public Result add(@RequestBody CrmBusinessSaveBO crmModel) {
         crmReturnVisitService.addOrUpdate(crmModel);
         return R.ok();
@@ -54,6 +61,7 @@ public class CrmReturnVisitController {
 
     @PostMapping("/update")
     @ApiOperation("修改")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result update(@RequestBody CrmBusinessSaveBO crmModel) {
         crmReturnVisitService.addOrUpdate(crmModel);
         return R.ok();
@@ -103,6 +111,7 @@ public class CrmReturnVisitController {
 
     @PostMapping("/deleteByIds")
     @ApiOperation("删除回访数据")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteByIds(@ApiParam(name = "ids", value = "id列表") @RequestBody List<Integer> ids) {
         crmReturnVisitService.deleteByIds(ids);
         return R.ok();
@@ -117,6 +126,7 @@ public class CrmReturnVisitController {
 
     @PostMapping("/updateReturnVisitRemindConfig")
     @ApiOperation("修改客户回访提醒设置")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.UPDATE,object = "修改客户回访提醒设置",detail = "修改客户回访提醒设置")
     public Result updateReturnVisitRemindConfig(Integer value, @RequestParam("status") Integer status) {
         crmReturnVisitService.updateReturnVisitRemindConfig(status,value);
         return R.ok();
@@ -124,6 +134,7 @@ public class CrmReturnVisitController {
 
     @PostMapping("/updateInformation")
     @ApiOperation("基本信息保存修改")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInformation(@RequestBody CrmUpdateInformationBO updateInformationBO) {
         crmReturnVisitService.updateInformation(updateInformationBO);
         return R.ok();

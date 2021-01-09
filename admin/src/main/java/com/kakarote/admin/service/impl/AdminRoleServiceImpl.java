@@ -14,13 +14,14 @@ import com.kakarote.admin.common.AdminModuleEnum;
 import com.kakarote.admin.common.AdminRoleTypeEnum;
 import com.kakarote.admin.entity.PO.*;
 import com.kakarote.admin.entity.VO.AdminRoleVO;
-import com.kakarote.admin.mapper.AdminMenuMapper;
 import com.kakarote.admin.mapper.AdminRoleMapper;
 import com.kakarote.admin.service.*;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.cache.AdminCacheKey;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.crm.service.CrmService;
+import com.kakarote.core.feign.hrm.service.HrmService;
 import com.kakarote.core.redis.Redis;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
@@ -63,13 +64,13 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
     private IAdminRoleService adminRoleService;
 
     @Autowired
-    private AdminMenuMapper adminMenuMapper;
-
-    @Autowired
     private CrmService crmService;
 
     @Autowired
     private Redis redis;
+
+    @Autowired
+    private HrmService hrmService;
 
     /**
      * 查询用户所属权限
@@ -78,6 +79,10 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
      */
     @Override
     public JSONObject auth(Long userId) {
+        String cacheKey = AdminCacheKey.USER_AUTH_CACHE_KET+UserUtil.getUserId();
+        if (redis.exists(cacheKey)){
+            return redis.get(cacheKey);
+        }
         List<AdminMenu> adminMenus = adminMenuService.queryMenuList(userId);
         List<AdminMenu> menus = adminMenuService.list();
         for (int i = 0; i < menus.size(); i++) {
@@ -91,12 +96,6 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
             }
         }
         JSONObject jsonObject = createMenu(new HashSet<>(adminMenus), 0);
-        /*
-           是否有后台权限
-         */
-        if (ObjectUtil.isEmpty(jsonObject.get("manage"))) {
-            jsonObject.remove("manage");
-        }
         List<AdminConfig> adminConfigList = adminConfigService.queryConfigListByName((Object[]) AdminModuleEnum.getValues());
 
         //为crm模块根据用户权限添加公海权限
@@ -111,41 +110,32 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
                 }
             }
             jsonObject.getJSONObject(AdminModuleEnum.CRM.getValue()).put("pool", authObject);
-        }
-        jsonObject.remove("work");
-        if (jsonObject.containsKey("jxc")) {
-            JSONObject jxc = jsonObject.getJSONObject("jxc");
-            if (jxc.isEmpty()) {
-                jsonObject.remove("jxc");
-            } else {
-                if (jxc.containsKey("bi") && !jxc.getJSONObject("bi").isEmpty()) {
-                    JSONObject jxcBi = jxc.getJSONObject("bi");
-                    jxc.remove("bi");
-                    if (jsonObject.containsKey("bi")) {
-                        JSONObject bi = jsonObject.getJSONObject("bi");
-                        bi.putAll(jxcBi);
-                        jsonObject.put("bi", bi);
-                    } else {
-                        jsonObject.put("bi", jxcBi);
-                    }
+            List data = crmService.queryPoolNameListByAuth().getData();
+            if (CollUtil.isEmpty(data)) {
+                JSONObject crm = jsonObject.getJSONObject("crm");
+                if (crm != null) {
+                    crm.remove("pool");
+                    jsonObject.put("crm", crm);
                 }
             }
         }
-        if (jsonObject.containsKey("hrm") && jsonObject.getJSONObject("hrm").isEmpty()) {
-            jsonObject.remove("hrm");
+
+        if (jsonObject.containsKey("jxc")) {
+            JSONObject jxc = jsonObject.getJSONObject("jxc");
+            if (jxc.containsKey("bi") && !jxc.getJSONObject("bi").isEmpty()) {
+                JSONObject jxcBi = jxc.getJSONObject("bi");
+                jxc.remove("bi");
+                if (jsonObject.containsKey("bi")) {
+                    JSONObject bi = jsonObject.getJSONObject("bi");
+                    bi.putAll(jxcBi);
+                    jsonObject.put("bi", bi);
+                } else {
+                    jsonObject.put("bi", jxcBi);
+                }
+            }
         }
-        //TODO 暂时先去掉名片小程序
-        if (jsonObject.containsKey("manage") && jsonObject.getJSONObject("manage").containsKey("card")) {
-            JSONObject manage = jsonObject.getJSONObject("manage");
-            manage.remove("card");
-        }
-        List data = crmService.queryPoolNameListByAuth().getData();
-        if (CollUtil.isEmpty(data)) {
-            JSONObject crm = jsonObject.getJSONObject("crm");
-            crm.remove("pool");
-            jsonObject.put("crm", crm);
-        }
-            /*
+
+        /*
           循环模块配置，把禁用的模块菜单隐藏掉
          */
         adminConfigList.forEach(adminConfig -> {
@@ -156,14 +146,6 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
                 JSONObject object = jsonObject.getJSONObject(AdminModuleEnum.BI.getValue());
                 if (object != null && status != 1) {
                     object.remove(AdminModuleEnum.CALL.getValue());
-                }
-                return;
-            }
-            //需要特殊处理的模块
-            if (AdminModuleEnum.CARD.getValue().equals(adminConfig.getName())) {
-                JSONObject object = jsonObject.getJSONObject(AdminModuleEnum.CRM.getValue());
-                if (object != null && status != 1) {
-                    object.remove("card");
                 }
                 return;
             }
@@ -191,6 +173,15 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
                 }
             }
         });
+        if (jsonObject.containsKey("hrm") && jsonObject.getJSONObject("hrm").isEmpty() && !UserUtil.isAdmin()){
+            List<AdminRole> roles = adminRoleService.queryRoleByRoleTypeAndUserId(9);
+            Boolean isInHrm = hrmService.queryIsInHrm().getData();
+            //不在人资员工并且人资没有角色不展示人资导航
+            if (!isInHrm && CollUtil.isEmpty(roles)){
+                jsonObject.remove("hrm");
+            }
+        }
+        redis.setex(cacheKey,300,jsonObject);
         return jsonObject;
     }
 
@@ -493,6 +484,8 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
     public void relatedUser(List<Long> userIds, List<Integer> roleIds) {
         if (CollUtil.isNotEmpty(roleIds)) {
             roleIds = roleIds.stream().distinct().collect(Collectors.toList());
+        } else {
+            throw new CrmException(AdminCodeEnum.ADMIN_ROLE_NOT_EXIST_ERROR);
         }
         List<AdminUserRole> adminUserRoleList = new ArrayList<>();
         for (Long userId : userIds) {
@@ -523,6 +516,8 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
         }
         if (CollUtil.isNotEmpty(roleIds)) {
             roleIds = roleIds.stream().distinct().collect(Collectors.toList());
+        } else {
+            throw new CrmException(AdminCodeEnum.ADMIN_ROLE_NOT_EXIST_ERROR);
         }
         List<AdminUserRole> adminUserRoleList = new ArrayList<>();
         for (Long userId : userIdList) {
@@ -719,8 +714,8 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
             return noAuthMenuUrls;
         }
 
-        List<AdminMenu> adminMenus = adminMenuMapper.queryMenuList(userId);
-        if (adminMenus.isEmpty()){
+        List<AdminMenu> adminMenus = adminMenuService.queryMenuList(userId);
+        if (adminMenus.isEmpty()) {
             noAuthMenuUrls.add("/*/**");
             //缓存
             redis.setex(key, 60 * 30, noAuthMenuUrls);
@@ -744,5 +739,13 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
         return noAuthMenuUrls;
     }
 
+    @Override
+    public List<AdminRole> queryRoleByRoleTypeAndUserId(Integer type) {
+        return getBaseMapper().queryRoleByRoleTypeAndUserId(type,UserUtil.getUserId());
+    }
 
+    @Override
+    public Integer queryHrmDataAuthType(Integer menuId) {
+        return getBaseMapper().queryHrmDataAuthType(menuId,UserUtil.getUserId());
+    }
 }

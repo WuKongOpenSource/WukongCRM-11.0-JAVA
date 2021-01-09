@@ -12,6 +12,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
@@ -26,7 +27,10 @@ import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.ElasticUtil;
-import com.kakarote.crm.constant.*;
+import com.kakarote.crm.constant.CrmActivityEnum;
+import com.kakarote.crm.constant.CrmCodeEnum;
+import com.kakarote.crm.constant.CrmEnum;
+import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.entity.VO.CrmFieldSortVO;
@@ -280,7 +284,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
         wrapper.set(CrmContacts::getOwnerUserId, newOwnerUserId);
         update(wrapper);
         //修改es
-        String ownerUserName = adminService.queryUserName(newOwnerUserId).getData();
+        String ownerUserName = UserCacheUtil.getUserName(newOwnerUserId);
         Map<String, Object> map = new HashMap<>();
         map.put("ownerUserId", newOwnerUserId);
         map.put("ownerUserName", ownerUserName);

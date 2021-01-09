@@ -3,6 +3,11 @@ package com.kakarote.crm.controller;
 
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
+import com.kakarote.crm.common.log.CrmProductCategoryLog;
 import com.kakarote.crm.entity.BO.CrmProductCategoryBO;
 import com.kakarote.crm.entity.PO.CrmProductCategory;
 import com.kakarote.crm.service.ICrmProductCategoryService;
@@ -25,6 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/crmProductCategory")
 @Api(tags = "产品类型模块接口")
+@SysLog(logClass = CrmProductCategoryLog.class)
 public class CrmProductCategoryController {
 
     @Autowired
@@ -46,6 +52,7 @@ public class CrmProductCategoryController {
 
     @PostMapping("/save")
     @ApiOperation("保存")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.SAVE,object = "#productCategory.name",detail = "'添加了产品类别:'+#productCategory.name")
     public Result save(@RequestBody CrmProductCategory productCategory) {
         crmProductCategoryService.saveAndUpdate(productCategory);
         return R.ok();
@@ -53,6 +60,7 @@ public class CrmProductCategoryController {
 
     @PostMapping("/update")
     @ApiOperation("保存")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.UPDATE,object = "#productCategory.name",detail = "'修改了产品类别:'+#productCategory.name")
     public Result update(@RequestBody CrmProductCategory productCategory) {
         crmProductCategoryService.saveAndUpdate(productCategory);
         return R.ok();
@@ -60,7 +68,8 @@ public class CrmProductCategoryController {
 
     @PostMapping("/deleteById/{id}")
     @ApiOperation("删除")
-    public Result update(@PathVariable("id") Integer id) {
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.DELETE)
+    public Result deleteById(@PathVariable("id") Integer id) {
         crmProductCategoryService.deleteById(id);
         return R.ok();
     }

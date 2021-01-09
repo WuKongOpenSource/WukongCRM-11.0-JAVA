@@ -14,10 +14,6 @@ import java.util.Map;
 @Setter
 public class ExamineVO extends OaExamine {
 
-    @ApiModelProperty("审批状态")
-    private Integer examineStatus;
-    @ApiModelProperty("审批记录id")
-    private Integer examineRecordId;
     @ApiModelProperty("审批步骤id")
     private Integer examineStepId;
     @ApiModelProperty("审批类型标题")

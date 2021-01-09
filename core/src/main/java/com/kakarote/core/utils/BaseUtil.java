@@ -2,7 +2,9 @@ package com.kakarote.core.utils;
 
 
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.lang.Snowflake;
 import cn.hutool.core.lang.Validator;
+import cn.hutool.core.util.IdUtil;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.redis.Redis;
 
@@ -17,6 +19,8 @@ import java.util.regex.Matcher;
  * 一些通用方法
  */
 public class BaseUtil {
+
+    private static final Snowflake SNOWFLAKE = IdUtil.getSnowflake(1, 1);
 
     /**
      * 获取redis
@@ -45,6 +49,15 @@ public class BaseUtil {
     public static HttpServletRequest getRequest() {
         return Optional.ofNullable(UserUtil.getUser()).map(UserInfo::getRequest).orElse(null);
     }
+
+    /**
+     * 获取long类型的id，雪花算法
+     * @return id
+     */
+    public static Long getNextId(){
+        return SNOWFLAKE.nextId();
+    }
+
 
     /**
      * 获取response对象

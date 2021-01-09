@@ -1,5 +1,6 @@
 package com.kakarote.crm.entity.BO;
 
+import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
 import com.kakarote.crm.entity.PO.CrmContractProduct;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -25,4 +26,7 @@ public class CrmContractSaveBO extends CrmModelSaveBO {
 
     @ApiModelProperty("审核人ID")
     private Long checkUserId;
+
+    @ApiModelProperty("审批数据")
+    private ExamineRecordSaveBO examineFlowData;
 }

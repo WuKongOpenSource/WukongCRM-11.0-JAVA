@@ -304,6 +304,9 @@ public class AuthUtil {
                 Integer productMenuId = 68;
                 Integer productDataType = adminService.queryDataType(userId, productMenuId).getData();
                 map.put("product", productDataType);
+                Integer recordMenuId = 441;
+                Integer recordDataType = adminService.queryDataType(userId, recordMenuId).getData();
+                map.put("record", recordDataType);
             } else {
                 map.put("leads", 5);
                 map.put("customer", 5);
@@ -312,6 +315,7 @@ public class AuthUtil {
                 map.put("contract", 5);
                 map.put("receivables", 5);
                 map.put("product", 5);
+                map.put("record", 5);
             }
             BaseUtil.getRedis().setex("role:dataType:" + userId.toString(), 60 * 30, map);
         }

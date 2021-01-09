@@ -100,8 +100,7 @@
         select a.customer_id as id,a.customer_name as name, a.create_time, null as owner_user_id,
         9 as type,a.last_time,
         (select GROUP_CONCAT(y.pool_name) from wk_crm_customer_pool_relation as x join wk_crm_customer_pool as y on x.pool_id = y.pool_id where x.customer_id = a.customer_id) as poolName,
-        (select GROUP_CONCAT(y.pool_id) from wk_crm_customer_pool_relation as x join wk_crm_customer_pool as y on x.pool_id = y.pool_id
-        where x.customer_id = a.customer_id ) as poolIds,
+        (select GROUP_CONCAT(y.pool_id) from wk_crm_customer_pool_relation as x join wk_crm_customer_pool as y on x.pool_id = y.pool_id where x.customer_id = a.customer_id ) as poolIds,
         a.contacts_id
         from `wk_crm_customer` a
         where a.owner_user_id is null and a.status != 3
@@ -238,11 +237,14 @@
                 <foreach collection="userIds" item="userId" index="index" separator="," close=")" open="(">
                     #{userId}
                 </foreach>
-                or customer_id in (select customer_id from wk_crm_customer_pool_relation where pool_id in
-                <foreach collection="poolIdList" item="poolId" index="index" separator="," close=")" open="(">
-                    #{poolId}
-                </foreach>
-                ))
+                <if test="poolIdList != null and poolIdList.size >0">
+                    or customer_id in (select customer_id from wk_crm_customer_pool_relation where pool_id in
+                    <foreach collection="poolIdList" item="poolId" index="index" separator="," close=")" open="(">
+                        #{poolId}
+                    </foreach>
+                    )
+                </if>
+                )
             </otherwise>
         </choose>
     </select>

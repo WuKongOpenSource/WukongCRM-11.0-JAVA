@@ -44,4 +44,13 @@ public interface IAdminUserConfigService extends BaseService<AdminUserConfig> {
      * @param userId 新增的用户ID
      */
     public void initUserConfig(Long userId);
+
+    /**
+     * 根据名称和内容查询配置用户
+     * @param name 名称
+     * @param value 内容
+     * @return data
+     */
+    public List<AdminUserConfig> queryUserConfigByNameAndValue(String name, String value);
+
 }

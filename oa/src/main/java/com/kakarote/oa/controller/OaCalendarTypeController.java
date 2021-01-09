@@ -2,6 +2,9 @@ package com.kakarote.oa.controller;
 
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.QueryEventCrmPageBO;
 import com.kakarote.core.utils.UserUtil;
@@ -37,6 +40,7 @@ public class OaCalendarTypeController {
 
     @PostMapping("/addOrUpdate")
     @ApiOperation("添加/更新日历类型")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_OTHER_SETTINGS,behavior = BehaviorEnum.UPDATE,object = "日历类型设置",detail = "日历类型设置")
     public Result addOrUpdate(@RequestBody OaCalendarType oaCalendarType) {
         calendarTypeService.addOrUpdateType(oaCalendarType);
         return Result.ok();

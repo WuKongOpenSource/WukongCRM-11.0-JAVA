@@ -3,8 +3,10 @@ package com.kakarote.bi.controller;
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.bi.entity.VO.ProductStatisticsVO;
 import com.kakarote.bi.service.BiService;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.utils.UserUtil;
 import io.swagger.annotations.Api;
@@ -31,8 +33,8 @@ public class BiController {
 
     @PostMapping("/productStatistics")
     @ApiOperation("产品销售情况统计")
-    public Result<List<JSONObject>> productStatistics(@RequestBody BiParams biParams) {
-        List<JSONObject> objectList = biService.queryProductSell(biParams);
+    public Result<BasePage<ProductStatisticsVO>> productStatistics(@RequestBody BiParams biParams) {
+        BasePage<ProductStatisticsVO> objectList = biService.queryProductSell(biParams);
         return Result.ok(objectList);
     }
 
@@ -43,19 +45,16 @@ public class BiController {
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             writer.addHeaderAlias("categoryName", "产品分类");
             writer.addHeaderAlias("productName", "产品名称");
-            writer.addHeaderAlias("contracNum", "合同编号");
-            writer.addHeaderAlias("ownerUserName", "负责人");
-            writer.addHeaderAlias("customerName", "客户名称");
-            writer.addHeaderAlias("productPrice", "销售单价");
-            writer.addHeaderAlias("productNum", "数量");
-            writer.addHeaderAlias("productSubtotal", "订单产品小计");
-            writer.merge(7, "产品销售情况统计");
+            writer.addHeaderAlias("contractNum", "合同数");
+            writer.addHeaderAlias("num", "数量合计");
+            writer.addHeaderAlias("total", "订单产品小计");
+            writer.merge(4, "产品销售情况统计");
             writer.setOnlyAlias(true);
             writer.write(list, true);
             writer.setRowHeight(0, 20);
             writer.setRowHeight(1, 20);
             HttpServletResponse response = UserUtil.getUser().getResponse();
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 5; i++) {
                 writer.setColumnWidth(i, 20);
             }
             Cell cell = writer.getCell(0, 0);

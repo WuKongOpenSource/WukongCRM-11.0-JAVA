@@ -61,6 +61,18 @@
 			<resource>
 				<directory>src/main/resources</directory>
 				<filtering>true</filtering>
+				<excludes>
+					<exclude>fonts/*</exclude>
+				</excludes>
+			</resource>
+
+			<!--自定义字体文件，打印预览使用-->
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>false</filtering>
+				<includes>
+					<include>fonts/*</include>
+				</includes>
 			</resource>
 		</resources>
 		<plugins>

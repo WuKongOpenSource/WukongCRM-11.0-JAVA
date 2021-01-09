@@ -17,8 +17,6 @@ import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
-import com.kakarote.crm.common.ActionRecordUtil;
-import com.kakarote.crm.constant.BehaviorEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
@@ -26,9 +24,7 @@ import com.kakarote.crm.entity.BO.CrmCensusBO;
 import com.kakarote.crm.entity.BO.CrmMarketingPageBO;
 import com.kakarote.crm.entity.BO.CrmModelSaveBO;
 import com.kakarote.crm.entity.BO.CrmSyncDataBO;
-import com.kakarote.crm.entity.PO.CrmField;
-import com.kakarote.crm.entity.PO.CrmMarketing;
-import com.kakarote.crm.entity.PO.CrmMarketingInfo;
+import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmFieldMapper;
 import com.kakarote.crm.mapper.CrmMarketingMapper;
@@ -51,8 +47,6 @@ import java.util.stream.Collectors;
 @Service
 public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper, CrmMarketing> implements ICrmMarketingService {
 
-    @Autowired
-    private ActionRecordUtil actionRecordUtil;
 
     @Autowired
     private AdminService adminService;
@@ -63,6 +57,11 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
     @Autowired
     private ICrmMarketingInfoService crmMarketingInfoService;
 
+    @Autowired
+    private ICrmMarketingFieldService crmMarketingFieldService;
+
+    @Autowired
+    private ICrmMarketingFormService crmMarketingFormService;
 
 
     @Override
@@ -75,10 +74,8 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
             crmMarketing.setCreateTime(new Date());
             crmMarketing.setUpdateTime(new Date());
             save(crmMarketing);
-            actionRecordUtil.addObjectActionRecord(CrmEnum.MARKETING, crmMarketing.getMarketingId(), BehaviorEnum.SAVE,crmMarketing.getMarketingName());
         }else {
             crmMarketing.setUpdateTime(new Date());
-            actionRecordUtil.updateRecord(BeanUtil.beanToMap(getById(crmMarketing.getMarketingId())), BeanUtil.beanToMap(crmMarketing), CrmEnum.MARKETING,crmMarketing.getMarketingName(),crmMarketing.getMarketingId());
             updateById(crmMarketing);
         }
     }
@@ -92,6 +89,19 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
                 status);
         for (CrmMarketing crmMarketing : page.getList()) {
             crmMarketing.setCreateUserName(UserCacheUtil.getUserName(crmMarketing.getCreateUserId()));
+            Integer crmType = crmMarketing.getCrmType();
+            if (Arrays.asList(FIXED_CRM_TYPE).contains(crmType)){
+                if (crmType == 1) {
+                    crmMarketing.setCrmTypeName("线索");
+                } else {
+                    crmMarketing.setCrmTypeName("客户");
+                }
+            }else {
+                CrmMarketingForm marketingForm = crmMarketingFormService.getById(crmType);
+                if (marketingForm != null) {
+                    crmMarketing.setCrmTypeName(marketingForm.getTitle());
+                }
+            }
             if (crmMarketing.getMainFileIds() != null) {
                 List<FileEntity> recordList = adminFileService.queryByIds(TagUtil.toLongSet(crmMarketing.getMainFileIds())).getData();
                 crmMarketing.setMainFileList(recordList);
@@ -107,6 +117,19 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
         CrmMarketing marketing = getById(marketingId);
         Integer subCount = crmMarketingInfoService.lambdaQuery().eq(CrmMarketingInfo::getMarketingId, marketingId).count();
         JSONObject crmMarketing = BeanUtil.copyProperties(marketing, JSONObject.class);
+        Integer crmType = marketing.getCrmType();
+        if (Arrays.asList(FIXED_CRM_TYPE).contains(crmType)){
+            if (crmType == 1) {
+                crmMarketing.put("crmTypeName","线索");
+            } else {
+                crmMarketing.put("crmTypeName","客户");
+            }
+        }else {
+            CrmMarketingForm marketingForm = crmMarketingFormService.getById(crmType);
+            if (marketingForm != null) {
+                crmMarketing.put("crmTypeName",marketingForm.getTitle());
+            }
+        }
         crmMarketing.put("subCount",subCount);
         crmMarketing.put("enMarketingId",aes.encryptHex(marketing.getMarketingId().toString()));
         crmMarketing.put("currentUserId",aes.encryptHex(UserUtil.getUserId().toString()));
@@ -157,13 +180,24 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
     @Override
     public List<CrmModelFiledVO> queryField(Integer marketingId) {
         CrmMarketing marketing = getById(marketingId);
-        List<CrmField> list = crmFieldService.lambdaQuery().in(CrmField::getFieldId, TagUtil.toSet(marketing.getFieldDataId())).list();
-        return list.stream().map(field->{
-            CrmModelFiledVO crmModelFiled = BeanUtil.copyProperties(field, CrmModelFiledVO.class);
-            FieldEnum typeEnum = FieldEnum.parse(crmModelFiled.getType());
-            crmFieldService.recordToFormType(crmModelFiled,typeEnum);
-            return crmModelFiled;
-        }).collect(Collectors.toList());
+        Integer crmType = marketing.getCrmType();
+        if(Arrays.asList(FIXED_CRM_TYPE).contains(crmType)) {
+            List<CrmField> list = crmFieldService.lambdaQuery().in(CrmField::getFieldId, TagUtil.toSet(marketing.getFieldDataId())).list();
+            return list.stream().map(field->{
+                CrmModelFiledVO crmModelFiled = BeanUtil.copyProperties(field, CrmModelFiledVO.class);
+                FieldEnum typeEnum = FieldEnum.parse(crmModelFiled.getType());
+                crmFieldService.recordToFormType(crmModelFiled,typeEnum);
+                return crmModelFiled;
+            }).collect(Collectors.toList());
+        }else {
+            List<CrmMarketingField> crmMarketingFields = crmMarketingFieldService.lambdaQuery().in(CrmMarketingField::getFieldId, TagUtil.toSet(marketing.getFieldDataId())).list();
+            return crmMarketingFields.stream().map(field->{
+                CrmModelFiledVO crmModelFiled = BeanUtil.copyProperties(field, CrmModelFiledVO.class);
+                FieldEnum typeEnum = FieldEnum.parse(crmModelFiled.getType());
+                crmFieldService.recordToFormType(crmModelFiled,typeEnum);
+                return crmModelFiled;
+            }).collect(Collectors.toList());
+        }
     }
 
     @Override
@@ -175,7 +209,6 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
             marketing.setStatus(status);
             crmMarketingList.add(marketing);
         });
-        actionRecordUtil.addMarketingUpdateStatusRecord(marketingIds.split(","), CrmEnum.MARKETING, status);
         updateBatchById(crmMarketingList,100);
     }
 
@@ -231,13 +264,24 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
             throw new CrmException(CrmCodeEnum.CRM_MARKETING_QR_CODE_EXPIRED);
         }
         lambdaUpdate().set(CrmMarketing::getBrowse,crmMarketing.getBrowse()+1).eq(CrmMarketing::getMarketingId,marketingIdInt).update();
-        List<CrmField> list = crmFieldService.lambdaQuery().in(CrmField::getFieldId, TagUtil.toSet(crmMarketing.getFieldDataId())).list();
-        List<CrmModelFiledVO> recordList = list.stream().map(field -> {
-            CrmModelFiledVO crmModelFiled = BeanUtil.copyProperties(field, CrmModelFiledVO.class);
-            FieldEnum typeEnum = FieldEnum.parse(crmModelFiled.getType());
-            crmFieldService.recordToFormType(crmModelFiled, typeEnum);
-            return crmModelFiled;
-        }).collect(Collectors.toList());
+        List<CrmModelFiledVO> recordList;
+        if (Arrays.asList(FIXED_CRM_TYPE).contains(crmMarketing.getCrmType())) {
+            List<CrmField> list = crmFieldService.lambdaQuery().in(CrmField::getFieldId, TagUtil.toSet(crmMarketing.getFieldDataId())).list();
+            recordList = list.stream().map(field -> {
+                CrmModelFiledVO crmModelFiled = BeanUtil.copyProperties(field, CrmModelFiledVO.class);
+                FieldEnum typeEnum = FieldEnum.parse(crmModelFiled.getType());
+                crmFieldService.recordToFormType(crmModelFiled, typeEnum);
+                return crmModelFiled;
+            }).collect(Collectors.toList());
+        }else {
+            List<CrmMarketingField> list = crmMarketingFieldService.lambdaQuery().in(CrmMarketingField::getFieldId, TagUtil.toSet(crmMarketing.getFieldDataId())).list();
+            recordList = list.stream().map(field -> {
+                CrmModelFiledVO crmModelFiled = BeanUtil.copyProperties(field, CrmModelFiledVO.class);
+                FieldEnum typeEnum = FieldEnum.parse(crmModelFiled.getType());
+                crmFieldService.recordToFormType(crmModelFiled, typeEnum);
+                return crmModelFiled;
+            }).collect(Collectors.toList());
+        }
         JSONObject kv = new JSONObject().fluentPut("marketingName", crmMarketing.getMarketingName()).fluentPut("list", recordList);
         if (crmMarketing.getMainFileIds() != null) {
             List<FileEntity> fileEntities = adminFileService.queryByIds(TagUtil.toLongSet(crmMarketing.getMainFileIds())).getData();
@@ -272,7 +316,7 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
     }
 
     @Autowired
-    private ICrmLeadsService leadsService;
+    private ICrmLeadsService crmLeadsService;
 
     @Autowired
     private ICrmCustomerService customerService;
@@ -304,7 +348,7 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
             CrmModelSaveBO crmModelSaveBO = JSON.parseObject(marketingInfo.getFieldInfo(), CrmModelSaveBO.class);
             try {
                 if (crmType.equals(CrmEnum.LEADS.getType())){
-                    List<CrmModelFiledVO> filedList = leadsService.queryField(null);
+                    List<CrmModelFiledVO> filedList = crmLeadsService.queryField(null);
                     List<CrmModelFiledVO> uniqueList = filedList.stream().filter(field -> field.getIsUnique()!=null && field.getIsUnique().equals(1)).collect(Collectors.toList());
                     CrmEnum crmEnum = CrmEnum.LEADS;
                     Map<String,String> map = new HashMap<>();
@@ -333,7 +377,7 @@ public class CrmMarketingServiceImpl extends BaseServiceImpl<CrmMarketingMapper,
                             }
                         }
                     }
-                    leadsService.addOrUpdate(crmModelSaveBO,false);
+                    crmLeadsService.addOrUpdate(crmModelSaveBO,false);
                     crmMarketingInfoService.lambdaUpdate().set(CrmMarketingInfo::getStatus,1).eq(CrmMarketingInfo::getRId,marketingInfo.getRId()).update();
                 }else if (crmType.equals(CrmEnum.CUSTOMER.getType())){
                     List<CrmModelFiledVO> filedList = customerService.queryField(null);

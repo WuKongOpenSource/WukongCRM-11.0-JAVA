@@ -208,6 +208,9 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
             task.setOwnerUserId("," + user.getUserId() + ",");
         }
         task.setCreateUserId(user.getUserId());
+        if(StrUtil.isEmpty(task.getBatchId())){
+            task.setBatchId(IdUtil.simpleUUID());
+        }
         //标签
         String labelId = task.getLabelId();
         if (StrUtil.isNotEmpty(labelId)) {
@@ -442,7 +445,8 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
      * @param priority
      * @return java.lang.String
      **/
-    private String getPriorityDesc(Integer priority){
+    @Override
+    public String getPriorityDesc(Integer priority){
         String priorityDesc = "";
         switch (priority) {
             case 0:
@@ -661,6 +665,8 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
     @Transactional(rollbackFor = Exception.class)
     public WorkTask addWorkChildTask(WorkTask workTask) {
         WorkTask task = new WorkTask().setName(workTask.getName()).setStopTime(workTask.getStopTime());
+        WorkTask parentTask = getById(workTask.getPid());
+        task.setIshidden(parentTask.getIshidden());
         UserInfo user = UserUtil.getUser();
         if (workTask.getMainUserId() == null) {
             task.setMainUserId(user.getUserId());
@@ -778,8 +784,10 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
         if (CollectionUtil.isNotEmpty(childTaskIdList)) {
             childTaskIdList.forEach(childTaskId -> {
                 TaskDetailVO childTask = transfer(childTaskId);
-                List<FileEntity> file = adminFileService.queryFileList(taskDetailVO.getBatchId()).getData();
-                childTask.setFile(file);
+                if(StrUtil.isNotEmpty(taskDetailVO.getBatchId())){
+                    List<FileEntity> file = adminFileService.queryFileList(taskDetailVO.getBatchId()).getData();
+                    childTask.setFile(file);
+                }
                 childTaskList.add(childTask);
             });
         }

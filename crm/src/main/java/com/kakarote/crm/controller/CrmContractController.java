@@ -2,19 +2,21 @@ package com.kakarote.crm.controller;
 
 
 import com.alibaba.fastjson.JSONObject;
-import com.kakarote.core.common.ApiExplain;
-import com.kakarote.core.common.R;
-import com.kakarote.core.common.Result;
-import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.*;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.common.log.CrmContractLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
@@ -48,6 +50,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/crmContract")
 @Api(tags = "合同模块接口")
+@SysLog(subModel = SubModelType.CRM_CONTRACT, logClass = CrmContractLog.class)
 public class CrmContractController {
 
     @Autowired
@@ -68,9 +71,9 @@ public class CrmContractController {
     @PostMapping("/queryById/{contractId}")
     @ApiOperation("根据ID查询")
     public Result<CrmModel> queryById(@PathVariable("contractId") @ApiParam(name = "id", value = "id") Integer contractId) {
-        Integer number = crmContractService.lambdaQuery().eq(CrmContract::getContractId,contractId).ne(CrmContract::getCheckStatus,7).count();
-        if (number == 0){
-            throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED,"合同");
+        Integer number = crmContractService.lambdaQuery().eq(CrmContract::getContractId, contractId).ne(CrmContract::getCheckStatus, 7).count();
+        if (number == 0) {
+            throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED, "合同");
         }
         CrmModel model = crmContractService.queryById(contractId);
         return R.ok(model);
@@ -79,6 +82,7 @@ public class CrmContractController {
 
     @PostMapping("/deleteByIds")
     @ApiOperation("根据ID删除数据")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteByIds(@ApiParam(name = "ids", value = "id列表") @RequestBody List<Integer> ids) {
         crmContractService.deleteByIds(ids);
         return R.ok();
@@ -100,6 +104,7 @@ public class CrmContractController {
 
     @PostMapping("/changeOwnerUser")
     @ApiOperation("修改合同负责人")
+    @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
     public Result changeOwnerUser(@RequestBody CrmBusinessChangOwnerUserBO crmChangeOwnerUserBO) {
         crmContractService.changeOwnerUser(crmChangeOwnerUserBO);
         return R.ok();
@@ -107,6 +112,7 @@ public class CrmContractController {
 
     @PostMapping("/add")
     @ApiOperation("保存数据")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE, object = "#crmModel.entity[name]", detail = "'新增了合同:' + #crmModel.entity[name]")
     public Result add(@RequestBody CrmContractSaveBO crmModel) {
         crmContractService.addOrUpdate(crmModel);
         return R.ok();
@@ -114,6 +120,7 @@ public class CrmContractController {
 
     @PostMapping("/update")
     @ApiOperation("修改数据")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result update(@RequestBody CrmContractSaveBO crmModel) {
         crmContractService.addOrUpdate(crmModel);
         return R.ok();
@@ -124,13 +131,16 @@ public class CrmContractController {
     @ApiOperation("获取团队成员")
     public Result<List<CrmMembersSelectVO>> getMembers(@PathVariable("contractId") @ApiParam("合同ID") Integer contractId) {
         boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, contractId);
-        if(auth){throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH); }
+        if (auth) {
+            throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+        }
         List<CrmMembersSelectVO> members = crmContractService.getMembers(contractId);
         return R.ok(members);
     }
 
     @PostMapping("/addMembers")
     @ApiOperation("新增团队成员")
+    @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result addMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
         crmContractService.addMember(crmMemberSaveBO);
         return R.ok();
@@ -138,6 +148,7 @@ public class CrmContractController {
 
     @PostMapping("/updateMembers")
     @ApiOperation("新增团队成员")
+    @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result updateMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
         crmContractService.addMember(crmMemberSaveBO);
         return R.ok();
@@ -145,6 +156,7 @@ public class CrmContractController {
 
     @PostMapping("/deleteMembers")
     @ApiOperation("删除团队成员")
+    @SysLogHandler
     public Result deleteMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
         crmContractService.deleteMember(crmMemberSaveBO);
         return R.ok();
@@ -152,6 +164,7 @@ public class CrmContractController {
 
     @PostMapping("/exitTeam/{contractId}")
     @ApiOperation("删除团队成员")
+    @SysLogHandler
     public Result exitTeam(@PathVariable("contractId") @ApiParam("合同ID") Integer contractId) {
         crmContractService.exitTeam(contractId);
         return R.ok();
@@ -204,8 +217,8 @@ public class CrmContractController {
 
     @PostMapping("/queryReceivablesPlansByContractId")
     @ApiOperation("查询合同下回款计划")
-    public Result<List<CrmReceivablesPlan>> queryReceivablesPlansByContractId(@RequestParam("contractId") Integer contractId,@RequestParam(value = "receivablesId",required = false) Integer receivablesId) {
-        List<CrmReceivablesPlan> receivablesPlanList = crmContractService.queryReceivablesPlansByContractId(contractId,receivablesId);
+    public Result<List<CrmReceivablesPlan>> queryReceivablesPlansByContractId(@RequestParam("contractId") Integer contractId, @RequestParam(value = "receivablesId", required = false) Integer receivablesId) {
+        List<CrmReceivablesPlan> receivablesPlanList = crmContractService.queryReceivablesPlansByContractId(contractId, receivablesId);
         return R.ok(receivablesPlanList);
     }
 
@@ -225,7 +238,8 @@ public class CrmContractController {
 
     @ApiOperation(value = "设置合同到期提醒设置")
     @PostMapping("/setContractConfig")
-    public Result setContractConfig(@RequestParam("status") Integer status, @RequestParam("contractDay") Integer contractDay) {
+    @SysLogHandler(applicationName = "admin", subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT, behavior = BehaviorEnum.UPDATE, object = "设置合同到期提醒设置", detail = "设置合同到期提醒设置")
+    public Result setContractConfig(@RequestParam("status") Integer status, @RequestParam(value = "contractDay", required = false, defaultValue = "0") Integer contractDay) {
         if (status == 1 && contractDay == null) {
             return R.error(CrmCodeEnum.CRM_CONTRACT_CONFIG_ERROR);
         }
@@ -238,13 +252,15 @@ public class CrmContractController {
         adminConfig.setValue(contractDay.toString());
         adminConfig.setDescription("合同到期提醒");
         adminService.updateAdminConfig(adminConfig);
-        ApplicationContextHolder.getBean(ICrmBackLogDealService.class).removeByMap(new JSONObject().fluentPut("model",8));
+        ApplicationContextHolder.getBean(ICrmBackLogDealService.class).removeByMap(new JSONObject().fluentPut("model", 8));
         return R.ok();
     }
+
     @PostMapping("/contractDiscard")
     @ApiOperation("合同作废")
+    @SysLogHandler
     public Result contractDiscard(@RequestParam("contractId") Integer contractId) {
-        boolean auth = AuthUtil.isRwAuth( contractId,CrmEnum.CONTRACT);
+        boolean auth = AuthUtil.isRwAuth(contractId, CrmEnum.CONTRACT);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -269,6 +285,7 @@ public class CrmContractController {
 
     @PostMapping("/batchExportExcel")
     @ApiOperation("选中导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT, object = "合同导出", detail = "选中导出")
     public void batchExportExcel(@RequestBody @ApiParam(name = "ids", value = "id列表") List<Integer> ids, HttpServletResponse response) {
         CrmSearchBO search = new CrmSearchBO();
         search.setPageType(0);
@@ -284,6 +301,7 @@ public class CrmContractController {
 
     @PostMapping("/allExportExcel")
     @ApiOperation("全部导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT, object = "合同导出", detail = "全部导出")
     public void allExportExcel(@RequestBody CrmSearchBO search, HttpServletResponse response) {
         search.setPageType(0);
         crmContractService.exportExcel(response, search);
@@ -305,9 +323,17 @@ public class CrmContractController {
 
     @PostMapping("/updateInformation")
     @ApiOperation("基本信息保存修改")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInformation(@RequestBody CrmUpdateInformationBO updateInformationBO) {
         crmContractService.updateInformation(updateInformationBO);
         return R.ok();
+    }
+
+    @PostMapping("/queryListByProductId")
+    @ApiOperation("查询列表页数据")
+    public Result<BasePage<Map<String, Object>>> queryListByProductId(@RequestBody BiParams biParams) {
+        BasePage<Map<String, Object>> mapBasePage = crmContractService.queryListByProductId(biParams);
+        return R.ok(mapBasePage);
     }
 }
 

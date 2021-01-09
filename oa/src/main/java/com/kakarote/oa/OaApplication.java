@@ -3,6 +3,7 @@ package com.kakarote.oa;
 import com.alicp.jetcache.anno.config.EnableCreateCacheAnnotation;
 import com.alicp.jetcache.anno.config.EnableMethodCache;
 import com.kakarote.core.CoreApplication;
+import io.seata.spring.annotation.datasource.EnableAutoDataSourceProxy;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -14,6 +15,7 @@ import org.springframework.context.annotation.ComponentScan;
  * @author zhangzhiwei
  */
 @SpringBootApplication
+@EnableAutoDataSourceProxy
 @EnableDiscoveryClient
 @EnableFeignClients(basePackageClasses = {CoreApplication.class,OaApplication.class})
 @ComponentScan(basePackageClasses = {CoreApplication.class, OaApplication.class})

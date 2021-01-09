@@ -14,7 +14,7 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableFeignClients
+@EnableFeignClients(basePackageClasses = {CoreApplication.class, AuthorizationApplication.class})
 @ComponentScan(basePackageClasses = {CoreApplication.class, AuthorizationApplication.class})
 @EnableMethodCache(basePackages = "com.kakarote.authorization",order = -9999)
 @EnableCreateCacheAnnotation

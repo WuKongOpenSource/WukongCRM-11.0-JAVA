@@ -23,6 +23,8 @@ public interface ICrmMarketingService extends BaseService<CrmMarketing> {
 
     byte[] BYTES = "2dc587a2016c4bad9f30c1dab32a121a".getBytes();
 
+    Integer[] FIXED_CRM_TYPE = {1,2};
+
     void addOrUpdate(CrmMarketing crmMarketing);
 
     BasePage<CrmMarketing> queryPageList(CrmMarketingPageBO crmMarketingPageBO, Integer status);

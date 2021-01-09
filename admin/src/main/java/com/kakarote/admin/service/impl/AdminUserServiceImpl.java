@@ -74,16 +74,12 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
 
     @Autowired
     private IAdminRoleService adminRoleService;
-
     @Autowired
     private IAdminDeptService adminDeptService;
-
     @Autowired
     private IAdminUserConfigService adminUserConfigService;
-
     @Autowired
     private IAdminUserRoleService adminUserRoleService;
-
     @Autowired
     private IAdminAttentionService adminAttentionService;
 
@@ -95,7 +91,12 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
 
     @Override
     public List<Map<String, Object>> findByUsername(String username) {
-        return getBaseMapper().findByUsername(username);
+        List<Map<String, Object>> userInfoList = getBaseMapper().findByUsername(username);
+        userInfoList.forEach(userInfo -> {
+            userInfo.put("superUserId", UserUtil.getSuperUser());
+            userInfo.put("superRoleId", UserUtil.getSuperRole());
+        });
+        return userInfoList;
     }
 
     /**
@@ -440,6 +441,23 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         return adminUserRoleService.listObjs(queryWrapper, obj -> Integer.valueOf(obj.toString()));
     }
 
+    /**
+     * 递归查询该用户下级的用户
+     */
+    private List<Long> queryChildUserId(List<AdminUser> userList, Long parentId, int depth) {
+        depth--;
+        List<Long> arrList = new ArrayList<>();
+        if (depth < 0) {
+            return arrList;
+        }
+        for (AdminUser adminUser : userList) {
+            if (Objects.equals(parentId, adminUser.getParentId())) {
+                arrList.add(adminUser.getUserId());
+                arrList.addAll(queryChildUserId(userList, adminUser.getUserId(), depth));
+            }
+        }
+        return arrList;
+    }
 
     /**
      * 通讯录查询
@@ -506,9 +524,30 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
             return new ArrayList<>();
         }
         LambdaQueryWrapper<AdminUser> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.select(AdminUser::getUserId, AdminUser::getImg, AdminUser::getRealname).in(AdminUser::getUserId, ids);
+        String idStr = ids.stream().map(String::valueOf).collect(Collectors.joining(Const.SEPARATOR));
+        queryWrapper.select(AdminUser::getUserId, AdminUser::getImg, AdminUser::getRealname).in(AdminUser::getUserId, ids)
+                .last(" ORDER BY instr('," + idStr + ",',CONCAT(',',user_id,','))");
         List<AdminUser> list = list(queryWrapper);
         return list.stream().map(obj -> BeanUtil.copyProperties(obj, SimpleUser.class)).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Long> queryNormalUserByIds(List<Long> ids) {
+        List<Long> userIdList = new ArrayList<>();
+        if (ids.size() == 0) {
+            return userIdList;
+        }
+        LambdaQueryWrapper<AdminUser> queryWrapper = new LambdaQueryWrapper<>();
+        String idStr = ids.stream().map(String::valueOf).collect(Collectors.joining(Const.SEPARATOR));
+        queryWrapper.select(AdminUser::getUserId, AdminUser::getImg, AdminUser::getRealname)
+                .in(AdminUser::getUserId, ids)
+                .eq(AdminUser::getStatus,1)
+                .last(" ORDER BY instr('," + idStr + ",',CONCAT(',',user_id,','))");
+        List<AdminUser> list = list(queryWrapper);
+        if (CollUtil.isNotEmpty(list)){
+            userIdList = list.stream().map(AdminUser::getUserId).collect(Collectors.toList());
+        }
+        return userIdList;
     }
 
     /**
@@ -552,11 +591,16 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
     }
 
     @Override
-    public DeptUserListVO queryDeptUserList(Integer deptId) {
+    public DeptUserListVO queryDeptUserList(Integer deptId,boolean isAllUser) {
         DeptUserListVO deptUserListVO = new DeptUserListVO();
         List<DeptVO> deptList = adminDeptService.queryDeptUserList();
         createTree(deptId, deptList);
-        List<HrmSimpleUserVO> userList = getBaseMapper().querySimpleUserByDeptId(deptId);
+        List<HrmSimpleUserVO> userList;
+        if (isAllUser){
+            userList = getBaseMapper().querySimpleUserByDeptId(deptId);
+        }else {
+            userList = getBaseMapper().querySimpleUserByDeptIdAndExamine(deptId);
+        }
         List<DeptVO> collect = deptList.stream().filter(dept -> dept.getPid().equals(deptId)).collect(Collectors.toList());
         deptUserListVO.setDeptList(collect);
         deptUserListVO.setUserList(userList);
@@ -623,13 +667,10 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                 .list().stream().map(AdminUser::getUserId).collect(Collectors.toList());
     }
 
-
-
     @Override
     public UserInfo queryLoginUserInfo(Long userId) {
         UserInfo userInfo = getBaseMapper().queryLoginUserInfo(userId);
-        AdminUser adminUser = getById(userInfo.getUserId());
-        userInfo.setSuperUserId(adminUser.getUserId());
+        userInfo.setSuperUserId(UserUtil.getSuperUser());
         AdminRole role = adminRoleService.lambdaQuery().eq(AdminRole::getRemark, "admin").last(" limit 1").one();
         userInfo.setSuperRoleId(role.getRoleId());
         userInfo.setRoles(queryUserRoleIds(userInfo.getUserId()));
@@ -691,6 +732,10 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         Map<String, String> nacosMap = new HashMap<>();
         nacosMap.put("service.vgroupMapping.crm_tx_group", "default");
         nacosMap.put("service.vgroupMapping.admin_tx_group", "default");
+        nacosMap.put("service.vgroupMapping.examine_tx_group", "default");
+        nacosMap.put("service.vgroupMapping.oa_tx_group", "default");
+        nacosMap.put("service.vgroupMapping.hrm_tx_group", "default");
+        nacosMap.put("service.vgroupMapping.jxc_tx_group", "default");
         nacosMap.put("store.mode", "db");
         nacosMap.put("store.db.datasource", "druid");
         nacosMap.put("store.db.dbType", "mysql");
@@ -721,4 +766,24 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
 
     }
 
+    /**
+     * 查询所有员工
+     *
+     * @return
+     */
+    @Override
+    public List<UserInfo> queryAllUserInfoList() {
+        List<AdminUser> adminUserList = lambdaQuery().list();
+        List<AdminUserRole> userRoles = adminUserRoleService.query().list();
+        Map<Long, List<AdminUserRole>> longListMap = userRoles.stream().collect(Collectors.groupingBy(AdminUserRole::getUserId));
+        List<UserInfo> userInfoList = adminUserList.stream().map(user -> BeanUtil.copyProperties(user, UserInfo.class)).collect(Collectors.toList());
+        for (UserInfo userInfo : userInfoList) {
+            List<AdminUserRole> roleList = longListMap.get(userInfo.getUserId());
+            if (roleList == null) {
+                roleList = new ArrayList<>();
+            }
+            userInfo.setRoles(roleList.stream().map(AdminUserRole::getRoleId).collect(Collectors.toList()));
+        }
+        return userInfoList;
+    }
 }

@@ -3,7 +3,7 @@
 <mapper namespace="com.kakarote.bi.mapper.BiWorkMapper">
     <select id="logStatistics" resultType="com.alibaba.fastjson.JSONObject">
         SELECT b.realname,b.username,b.img,b.user_id,
-        (SELECT COUNT(1) FROM wk_work_task_comment WHERE type='2' and type_id=a.log_id ) as sum,a.send_user_ids,a.read_user_ids
+        (SELECT COUNT(1) FROM wk_work_task_comment WHERE type='2' and type_id=a.log_id) as sum,a.send_user_ids,a.read_user_ids
         FROM wk_oa_log as a
         LEFT JOIN wk_admin_user as b on a.create_user_id=b.user_id
         WHERE DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime}
@@ -18,41 +18,40 @@
         SELECT
         a.user_id,a.username,a.realname,a.img
         <foreach collection="categorys" item="item">
-            ,COUNT(case when b.category_id=#{item.categoryId} then 1 end) as count_${item.categoryId}
+            ,COUNT(case when b.category_id=#{item.examineId} then 1 end) as count_${item.examineId}
         </foreach>
         FROM
         wk_admin_user AS a
         LEFT JOIN wk_oa_examine AS b ON a.user_id = b.create_user_id
         and (DATE_FORMAT(b.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
-        left join wk_oa_examine_record as c on b.examine_id = c.examine_id
-        left join wk_oa_examine_category as d on b.category_id = d.category_id
         where a.user_id in
         <for collection="userIds" item="item">
             #{item}
         </for>
-        and c.examine_status != 4  and d.is_deleted = 0
+        and b.category_id in
+        <for collection="categorys" item="item">
+            #{item.examineId}
+        </for>
+        and b.examine_status = 1
         GROUP BY a.user_id
     </select>
 
     <select id="myInitiate" resultType="com.alibaba.fastjson.JSONObject">
-        select a.*,b.examine_status,b.record_id as examine_record_id,
-        b.examine_step_id ,c.title as categoryTitle,c.examine_type,c.icon
+        select a.*
         from wk_oa_examine a
-        left join wk_oa_examine_record b on a.examine_id = b.examine_id
-        left join wk_oa_examine_category c on a.category_id = c.category_id
-        where b.examine_status != 4
+        where a.examine_status != 4
         and a.create_user_id = #{userId}
         and a.category_id = #{categoryId}
         and (DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
-        group by a.examine_id,b.record_id
         order by  a.create_time desc
     </select>
 
 
     <select id="queryExamineCount" resultType="com.alibaba.fastjson.JSONObject">
         SELECT IFNULL(SUM(money), 0) as money,IFNULL(SUM(duration), 0) as duration
-        FROM wk_oa_examine as a LEFT JOIN wk_oa_examine_record as b on a.examine_id=b.examine_id and b.examine_status='1'
+        FROM wk_oa_examine as a
         WHERE a.category_id = #{categoryId}
+        and a.examine_status = 1
         and (DATE_FORMAT(a.create_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
         and a.create_user_id = #{userId}
         limit 1

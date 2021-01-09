@@ -3,8 +3,13 @@ package com.kakarote.crm.controller;
 
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.crm.common.log.CrmInvoiceLog;
 import com.kakarote.crm.entity.BO.CrmChangeOwnerUserBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.PO.CrmInvoice;
@@ -30,6 +35,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/crmInvoice")
 @Api(tags = "发票模块")
+@SysLog(subModel = SubModelType.CRM_INVOICE,logClass = CrmInvoiceLog.class)
 public class CrmInvoiceController {
 
     @Autowired
@@ -45,6 +51,7 @@ public class CrmInvoiceController {
 
     @PostMapping("/save")
     @ApiOperation("添加")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmInvoice.invoiceApplyNumber",detail = "'新建了发票:'+#crmInvoice.invoiceApplyNumber")
     public Result saveInvoice(@RequestBody CrmInvoice crmInvoice) {
         crmInvoiceService.saveInvoice(crmInvoice,crmInvoice.getCheckUserId());
         return R.ok();
@@ -52,6 +59,7 @@ public class CrmInvoiceController {
 
     @PostMapping("/update")
     @ApiOperation("修改")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInvoice(@RequestBody CrmInvoice crmInvoice) {
         crmInvoiceService.updateInvoice(crmInvoice,crmInvoice.getCheckUserId());
         return R.ok();
@@ -64,6 +72,7 @@ public class CrmInvoiceController {
 
     @PostMapping("/updateInvoiceStatus")
     @ApiOperation("修改开票状态")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInvoiceStatus(@RequestBody CrmInvoice crmInvoice) {
         crmInvoiceService.updateInvoiceStatus(crmInvoice);
         return R.ok();
@@ -71,6 +80,7 @@ public class CrmInvoiceController {
 
     @PostMapping("/resetInvoiceStatus")
     @ApiOperation("重置开票状态")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result resetInvoiceStatus(@RequestBody CrmInvoice crmInvoice) {
         crmInvoiceService.updateInvoiceStatus(crmInvoice);
         return R.ok();
@@ -78,6 +88,7 @@ public class CrmInvoiceController {
 
     @PostMapping("/deleteByIds")
     @ApiOperation("删除发票数据")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteByIds(@ApiParam(name = "ids", value = "id列表") @RequestBody List<Integer> ids) {
         crmInvoiceService.deleteByIds(ids);
         return R.ok();
@@ -86,6 +97,7 @@ public class CrmInvoiceController {
 
     @PostMapping("/changeOwnerUser")
     @ApiOperation("变更负责人")
+    @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
     public Result changeOwnerUser(@RequestBody CrmChangeOwnerUserBO crmChangeOwnerUserBO) {
         crmInvoiceService.changeOwnerUser(crmChangeOwnerUserBO.getIds(), crmChangeOwnerUserBO.getOwnerUserId());
         return R.ok();

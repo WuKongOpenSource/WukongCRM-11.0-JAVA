@@ -3,10 +3,12 @@ package com.kakarote.core.servlet.upload;
 import cn.hutool.core.io.IoUtil;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
+import com.aliyun.oss.model.GetObjectRequest;
 import com.aliyun.oss.model.OSSObject;
 import com.kakarote.core.utils.BaseUtil;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.InputStream;
 
 /**
@@ -66,6 +68,16 @@ public class OssFileServiceImpl implements FileService {
         }
     }
 
+    @Override
+    public void deleteFileByUrl(String url) {
+        String key = url.replace(config.getPublicUrl(), "");
+        try {
+            clint.deleteObject(config.getBucketName().get("1"), key);
+        } finally {
+            clint.shutdown();
+        }
+    }
+
     /**
      * 重命名文件
      *
@@ -93,6 +105,16 @@ public class OssFileServiceImpl implements FileService {
             object = clint.getObject(config.getBucketName().get(entity.getIsPublic()), entity.getPath());
             byte[] bytes = IoUtil.readBytes(object.getObjectContent());
             return new ByteArrayInputStream(bytes);
+        } finally {
+            clint.shutdown();
+        }
+    }
+
+    @Override
+    public void downFileByUrl(String url,File file) {
+        String key = url.replace(config.getPublicUrl(), "");
+        try {
+            clint.getObject(new GetObjectRequest(config.getBucketName().get("1"),key),file);
         } finally {
             clint.shutdown();
         }

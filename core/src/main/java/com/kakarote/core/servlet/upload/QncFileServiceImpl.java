@@ -1,5 +1,6 @@
 package com.kakarote.core.servlet.upload;
 
+import cn.hutool.core.io.FileUtil;
 import com.kakarote.core.utils.BaseUtil;
 import com.qiniu.common.QiniuException;
 import com.qiniu.storage.BucketManager;
@@ -12,6 +13,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.ResponseBody;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -84,6 +86,19 @@ public class QncFileServiceImpl implements FileService {
         }
     }
 
+    @Override
+    public void deleteFileByUrl(String url) {
+        String key = url.replace(config.getPublicUrl(), "");
+        try {
+            Configuration cfg = new Configuration(Region.autoRegion());
+            BucketManager bucketManager = new BucketManager(clint, cfg);
+            bucketManager.delete(config.getBucketName().get("1"), key);
+        } catch (QiniuException e) {
+            log.error("七牛云文件【{}】删除失败！",key);
+            log.error("失败的原因可能是：{}",e.response.toString());
+        }
+    }
+
     /**
      * 重命名文件
      *
@@ -137,5 +152,26 @@ public class QncFileServiceImpl implements FileService {
             log.error("七牛云文件【{}】下载失败！",entity.getPath());
         }
         return null;
+    }
+
+    @Override
+    public void downFileByUrl(String url,File file) {
+        InputStream inputStream = null;
+        try {
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder().url(url).build();
+            okhttp3.Response resp = client.newCall(request).execute();
+            if (resp.isSuccessful()) {
+                ResponseBody body = resp.body();
+                if (body != null){
+                    inputStream = body.byteStream();
+                }
+            }
+            FileUtil.writeFromStream(inputStream,file);
+        } catch (UnsupportedEncodingException e) {
+            log.error("文件【{}】进行URLEncoder编码失败！",e.getMessage());
+        } catch (IOException e) {
+            log.error("七牛云文件【{}】下载失败！",e.getMessage());
+        }
     }
 }

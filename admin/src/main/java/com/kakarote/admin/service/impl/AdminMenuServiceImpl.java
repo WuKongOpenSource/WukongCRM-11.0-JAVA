@@ -70,7 +70,7 @@ public class AdminMenuServiceImpl extends BaseServiceImpl<AdminMenuMapper, Admin
             case CUSTOMER_MANAGER: {
                 realm = "crm";
                 AdminMenuVO bi = queryMenuListByRealm("bi");
-                List<AdminMenuVO> biList = getMenuList(bi.getMenuId(), "oa");
+                List<AdminMenuVO> biList = getMenuList(bi.getMenuId(), "oa","jxc");
                 bi.setChildMenu(biList);
                 object.put("bi", bi);
                 break;
@@ -81,7 +81,7 @@ public class AdminMenuServiceImpl extends BaseServiceImpl<AdminMenuMapper, Admin
             case OA: {
                 realm = "oa";
                 AdminMenuVO bi = queryMenuListByRealm("bi");
-                String[] realmArr = new String[]{"achievement", "business", "customer", "contract", "product", "portrait", "ranking", "call"};
+                String[] realmArr = new String[]{"achievement", "business", "customer", "contract", "product", "portrait", "ranking", "call","jxc"};
                 List<AdminMenuVO> biList = getMenuList(bi.getMenuId(),realmArr);
                 bi.setChildMenu(biList);
                 object.put("bi", bi);
@@ -94,6 +94,11 @@ public class AdminMenuServiceImpl extends BaseServiceImpl<AdminMenuMapper, Admin
                 realm = "hrm";
                 break;
             case JXC:
+                AdminMenuVO bi = queryMenuListByRealm("bi");
+                String[] realmArr = new String[]{"achievement", "business", "customer", "contract", "product", "portrait", "ranking", "call","oa"};
+                List<AdminMenuVO> biList = getMenuList(bi.getMenuId(),realmArr);
+                bi.setChildMenu(biList);
+                object.put("bi", bi);
                 realm = "jxc";
                 break;
             default:
@@ -102,11 +107,6 @@ public class AdminMenuServiceImpl extends BaseServiceImpl<AdminMenuMapper, Admin
         }
         AdminMenuVO data = queryMenuListByRealm(realm);
         List<AdminMenuVO> menuList = getMenuList(data.getMenuId());
-        if (typeEnum.equals(AdminRoleTypeEnum.JXC)){
-            AdminMenuVO bi = menuList.stream().filter(menu -> "bi".equals(menu.getRealm())).findFirst().get();
-            menuList.removeIf(menu -> "bi".equals(menu.getRealm()));
-            object.put("bi", bi);
-        }
         data.setChildMenu(menuList);
         object.put("data",data);
         return object;
@@ -128,6 +128,7 @@ public class AdminMenuServiceImpl extends BaseServiceImpl<AdminMenuMapper, Admin
         if (notRealm.length > 0) {
             chainWrapper.notIn(AdminMenu::getRealm, Arrays.asList(notRealm));
         }
+        chainWrapper.orderByAsc(AdminMenu::getSort);
         List<AdminMenu> list = chainWrapper.list();
         return RecursionUtil.getChildListTree(list, "parentId", parentId, "menuId", "childMenu", AdminMenuVO.class);
     }

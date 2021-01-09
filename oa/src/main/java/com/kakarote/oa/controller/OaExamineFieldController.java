@@ -1,6 +1,7 @@
 package com.kakarote.oa.controller;
 
 
+import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.Result;
 import com.kakarote.oa.entity.BO.ExamineFieldBO;
 import com.kakarote.oa.entity.PO.OaExamineField;
@@ -43,6 +44,20 @@ public class OaExamineFieldController {
         examineFieldService.saveField(examineFieldBO);
         return Result.ok();
     }
+
+    @ApiExplain("保存默认字段")
+    @PostMapping("/saveDefaultField")
+    public Result saveDefaultField(@RequestParam("categoryId") Long categoryId){
+        examineFieldService.saveDefaultField(categoryId);
+        return Result.ok();
+    }
+
+    @ApiOperation("修改自定义字段")
+    @PostMapping("/updateFieldCategoryId")
+    public Result<Boolean> updateFieldCategoryId(@RequestParam("newCategoryId") Long newCategoryId,@RequestParam("oldCategoryId") Long oldCategoryId){
+        return Result.ok(examineFieldService.updateFieldCategoryId(newCategoryId,oldCategoryId));
+    }
+
 
 }
 

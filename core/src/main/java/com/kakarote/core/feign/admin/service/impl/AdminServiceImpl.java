@@ -5,10 +5,7 @@ import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.entity.UserInfo;
-import com.kakarote.core.feign.admin.entity.AdminConfig;
-import com.kakarote.core.feign.admin.entity.AdminMessage;
-import com.kakarote.core.feign.admin.entity.SimpleDept;
-import com.kakarote.core.feign.admin.entity.SimpleUser;
+import com.kakarote.core.feign.admin.entity.*;
 import com.kakarote.core.feign.admin.service.AdminService;
 import org.springframework.stereotype.Component;
 
@@ -120,6 +117,11 @@ public class AdminServiceImpl implements AdminService {
         return R.ok(new ArrayList<>());
     }
 
+    @Override
+    public Result<List<Long>> queryNormalUserByIds(Collection<Long> ids) {
+        return R.ok(new ArrayList<>());
+    }
+
     /**
      * 根据ids查询用户信息
      *
@@ -191,6 +193,11 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public Result<List<AdminRole>> queryRoleByRoleTypeAndUserId(Integer type) {
+        return R.ok(new ArrayList<>());
+    }
+
+    @Override
     public Result updateAdminConfig(AdminConfig adminConfig) {
         return R.ok();
     }
@@ -234,4 +241,14 @@ public class AdminServiceImpl implements AdminService {
     public Result<Long> queryUserIdByUserName(String userName) {
         return Result.ok(0L);
     }
+
+    @Override
+    public Result<Integer> queryHrmDataAuthType(Integer menuId) {
+        return Result.ok(0);
+    }
+    @Override
+    public Result<List<UserInfo>> queryUserInfoList() {
+        return Result.ok(new ArrayList<>());
+    }
+
 }

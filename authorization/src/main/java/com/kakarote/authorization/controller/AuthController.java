@@ -1,6 +1,7 @@
 package com.kakarote.authorization.controller;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.servlet.ServletUtil;
 import com.kakarote.authorization.common.AuthorizationCodeEnum;
 import com.kakarote.authorization.entity.AuthorizationUser;
 import com.kakarote.authorization.service.LoginService;
@@ -12,9 +13,11 @@ import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
+import java.util.Arrays;
 
 /**
  * @author zhangzhiwei
@@ -32,7 +35,8 @@ public class AuthController {
     @ParamAspect
     public Result permission(@RequestParam("url") String url, @RequestParam("method") String method, HttpServletRequest request) {
         String token = request.getHeader(Const.TOKEN_NAME);
-        return loginService.permission(token, url, method);
+        String proxyHost = request.getHeader("proxyHost");
+        return loginService.permission(token, url, proxyHost);
     }
 
     /**
@@ -40,7 +44,7 @@ public class AuthController {
      */
     @PostMapping(value = "/login")
     @ApiOperation(tags = "用户登录", httpMethod = "POST", value = "/doLogin")
-    public Result doLogin(@Valid @RequestBody AuthorizationUser user,HttpServletResponse response) {
+    public Result doLogin(@Valid @RequestBody AuthorizationUser user,HttpServletResponse response,HttpServletRequest request) {
 
         if (StrUtil.trimToNull(user.getUsername()) == null) {
             return Result.error(AuthorizationCodeEnum.AUTHORIZATION_USERNAME_REQUIRED);
@@ -48,8 +52,7 @@ public class AuthController {
         if (StrUtil.trimToNull(user.getPassword()) == null && StrUtil.trimToNull(user.getSmscode()) == null) {
             return Result.error(AuthorizationCodeEnum.AUTHORIZATION_PASSWORD_REQUIRED);
         }
-
-        return loginService.doLogin(user,response);
+        return loginService.doLogin(user,response,request);
     }
 
     @RequestMapping(value = "/logout")
@@ -60,6 +63,19 @@ public class AuthController {
         if (StrUtil.isNotEmpty(token)) {
             loginService.logout(token);
         }
+        String serverName = StrUtil.isNotEmpty(request.getHeader("proxyHost")) ? request.getHeader("proxyHost") : request.getServerName();
+        int index = serverName.indexOf(".");
+        for (String user : Arrays.asList(Const.TOKEN_NAME, "User")) {
+            Cookie cookie = ServletUtil.getCookie(request, user);
+            if (cookie != null) {
+                cookie.setMaxAge(0);
+                cookie.setValue(null);
+                cookie.setPath("/");
+                cookie.setDomain(index != -1 ? serverName.substring(index) : serverName);
+                response.addCookie(cookie);
+            }
+        }
+
         return Result.ok();
     }
 }

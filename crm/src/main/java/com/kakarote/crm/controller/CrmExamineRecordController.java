@@ -2,8 +2,12 @@ package com.kakarote.crm.controller;
 
 
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.feign.crm.entity.CrmSaveExamineRecordBO;
+import com.kakarote.core.feign.crm.entity.SimpleCrmInfo;
+import com.kakarote.core.feign.examine.entity.ExamineConditionDataBO;
+import com.kakarote.core.feign.examine.entity.ExamineMessageBO;
 import com.kakarote.crm.entity.BO.CrmAuditExamineBO;
 import com.kakarote.crm.entity.BO.CrmExamineData;
 import com.kakarote.crm.service.ICrmExamineLogService;
@@ -16,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -71,6 +76,34 @@ public class CrmExamineRecordController {
     public Result auditExamine(@RequestBody CrmAuditExamineBO auditExamine) {
         examineRecordService.auditExamine(auditExamine.getRecordId(), auditExamine.getStatus(), auditExamine.getRemarks(), auditExamine.getId(), auditExamine.getNextUserId());
         return Result.ok();
+    }
+
+
+    @PostMapping("/queryConditionData")
+    @ApiExplain("获取条件数据")
+    public Result<Map<String, Object>> getDataMapForNewExamine(@RequestBody ExamineConditionDataBO examineConditionDataBO) {
+        return Result.ok(examineRecordService.getDataMapForNewExamine(examineConditionDataBO));
+    }
+
+
+    @PostMapping("/updateCheckStatusByNewExamine")
+    @ApiExplain("修改状态")
+    public Result<Boolean> updateCheckStatusByNewExamine(@RequestBody ExamineConditionDataBO examineConditionDataBO){
+        return Result.ok(examineRecordService.updateCheckStatusByNewExamine(examineConditionDataBO));
+    }
+
+    @PostMapping("/addMessageForNewExamine")
+    @ApiExplain("发送消息")
+    public Result addMessageForNewExamine(@RequestBody ExamineMessageBO examineMessageBO){
+        examineRecordService.addMessageForNewExamine(examineMessageBO);
+        return Result.ok();
+    }
+
+
+    @PostMapping("/getCrmSimpleInfo")
+    @ApiExplain("发送消息")
+    public Result<SimpleCrmInfo> getCrmSimpleInfo(@RequestBody ExamineConditionDataBO examineConditionDataBO){
+        return Result.ok(examineRecordService.getCrmSimpleInfo(examineConditionDataBO));
     }
 }
 

@@ -152,6 +152,7 @@ public class AdminMessageServiceImpl extends BaseServiceImpl<AdminMessageMapper,
             case JXC_COLLECTION_EXAMINE:
             case JXC_INVENTORY_EXAMINE:
             case JXC_ALLOCATION_EXAMINE:
+            case HRM_EMPLOYEE_SALARY_EXAMINE:
                 addJXCExamineNotice(messageEnum, adminMessageBO.getTitle(), adminMessageBO.getTypeId(), adminMessageBO.getUserId(), adminMessageBO.getIds());
                 break;
             case JXC_PURCHASE_PASS:
@@ -169,6 +170,8 @@ public class AdminMessageServiceImpl extends BaseServiceImpl<AdminMessageMapper,
             case JXC_INVENTORY_PASS:
             case JXC_ALLOCATION_REJECT:
             case JXC_ALLOCATION_PASS:
+            case HRM_EMPLOYEE_SALARY_PASS:
+            case HRM_EMPLOYEE_SALARY_REJECT:
                 addJXCExamineMessage(messageEnum, adminMessageBO.getContent(), adminMessageBO.getTitle(), adminMessageBO.getTypeId(), adminMessageBO.getUserId(), adminMessageBO.getIds());
                 break;
             default:
@@ -399,5 +402,10 @@ public class AdminMessageServiceImpl extends BaseServiceImpl<AdminMessageMapper,
     @Override
     public void deleteById(Integer messageId) {
         removeById(messageId);
+    }
+
+    @Override
+    public void deleteByLabel(Integer label) {
+        lambdaUpdate().eq(AdminMessage::getLabel,label).remove();
     }
 }

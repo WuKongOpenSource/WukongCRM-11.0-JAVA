@@ -49,5 +49,7 @@ public interface AdminUserMapper extends BaseMapper<AdminUser> {
 
     List<HrmSimpleUserVO> querySimpleUserByDeptId(Integer deptId);
 
+    List<HrmSimpleUserVO> querySimpleUserByDeptIdAndExamine(Integer deptId);
+
     UserInfo queryLoginUserInfo(@Param("userId") Long userId);
 }

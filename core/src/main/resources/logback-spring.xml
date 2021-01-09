@@ -33,9 +33,8 @@
         <appender-ref ref="file" />
     </root>
     <!--自定义配置-->
-    <logger name="com.kakarote" level="INFO" additivity="false">
+    <logger name="com.kakarote" level="DEBUG" additivity="false">
         <appender-ref ref="console"/>
         <appender-ref ref="file"/>
     </logger>
 </configuration>
-

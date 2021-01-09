@@ -2,6 +2,7 @@ package com.kakarote.crm.service;
 
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.entity.BasePage;
+import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.feign.crm.entity.QueryEventCrmPageBO;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
@@ -140,7 +141,7 @@ public interface ICrmContractService extends BaseService<CrmContract> {
 
     /**
      * 查询回款计划通过合同ID
-     * @param contractId 合同ID
+     * @param crmRelationPageBO 合同ID
      * @return data
      */
     public BasePage<CrmReceivablesPlan> queryReceivablesPlanListByContractId(CrmRelationPageBO crmRelationPageBO);
@@ -164,4 +165,11 @@ public interface ICrmContractService extends BaseService<CrmContract> {
     List<String> receiveContract(CrmEventBO crmEventBO);
 
     BasePage<Map<String,Object>> eventContractPageList(QueryEventCrmPageBO eventCrmPageBO);
+
+    /**
+     * 根据产品ID查询合同
+     * @param biParams 参数
+     * @return data
+     */
+    public BasePage<Map<String,Object>> queryListByProductId(BiParams biParams);
 }

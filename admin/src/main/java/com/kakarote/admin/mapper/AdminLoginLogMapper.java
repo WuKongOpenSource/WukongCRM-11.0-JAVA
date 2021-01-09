@@ -1,6 +1,6 @@
 package com.kakarote.admin.mapper;
 
-import com.kakarote.admin.entity.PO.AdminLoginLog;
+import com.kakarote.admin.entity.PO.LoginLog;
 import com.kakarote.core.servlet.BaseMapper;
 
 /**
@@ -11,6 +11,6 @@ import com.kakarote.core.servlet.BaseMapper;
  * @author zhangzhiwei
  * @since 2020-04-27
  */
-public interface AdminLoginLogMapper extends BaseMapper<AdminLoginLog> {
+public interface AdminLoginLogMapper extends BaseMapper<LoginLog> {
 
 }

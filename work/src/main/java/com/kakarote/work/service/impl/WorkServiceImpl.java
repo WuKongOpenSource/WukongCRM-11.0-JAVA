@@ -11,6 +11,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.poi.excel.BigExcelWriter;
 import cn.hutool.poi.excel.ExcelUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.kakarote.core.common.Const;
@@ -21,12 +22,11 @@ import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
+import com.kakarote.core.feign.crm.service.CrmService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
-import com.kakarote.core.utils.BaseUtil;
-import com.kakarote.core.utils.SeparatorUtil;
-import com.kakarote.core.utils.TagUtil;
-import com.kakarote.core.utils.UserUtil;
+import com.kakarote.core.utils.*;
 import com.kakarote.work.common.WorkAuthUtil;
 import com.kakarote.work.common.WorkCodeEnum;
 import com.kakarote.work.common.WorkUtil;
@@ -86,6 +86,9 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
 
     @Autowired
     private AdminFileService adminFileService;
+
+    @Autowired
+    private CrmService crmService;
 
     @Override
     public Work addWork(Work work) {
@@ -161,7 +164,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         Long userId = user.getUserId();
         Integer roleId = workUserService.getRoleId(userId, workId);
         List<Integer> adminMenus = Collections.singletonList(301);
-        String[] menuArr = new String[]{"setWork", "excelExport", "saveTaskClass", "updateTaskClass", "updateClassOrder", "deleteTaskClass", "saveTask", "setTaskStatus", "setTaskTitle", "setTaskDescription", "setTaskMainUser", "setTaskTime", "setTaskLabel", "setTaskOwnerUser", "setTaskPriority", "setTaskOrder", "archiveTask", "deleteTask", "cleanTask", "uploadTaskFile", "deleteTaskFile", "excelImport", "addChildTask", "updateChildTask", "deleteChildTask", "restoreTask", "saveTaskRelation", "setChildTaskStatus"};
+        String[] menuArr = new String[]{"setWork", "excelExport", "saveTaskClass", "updateTaskClass", "updateClassOrder", "deleteTaskClass", "saveTask", "setTaskStatus", "setTaskTitle", "setTaskDescription", "setTaskMainUser", "setTaskTime", "setTaskLabel", "setTaskOwnerUser", "setTaskPriority", "setTaskOrder", "archiveTask", "deleteTask", "cleanTask", "uploadTaskFile", "deleteTaskFile", "excelImport", "addChildTask", "updateChildTask", "deleteChildTask", "restoreTask", "saveTaskRelation", "setChildTaskStatus","manageTaskOwnerUser"};
         JSONObject object = new JSONObject();
         List<String> menuRecords = getBaseMapper().queryMenuByRoleId(roleId);
         adminMenus.forEach(menu -> {
@@ -205,7 +208,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         Long userId = UserUtil.getUserId();
         Integer workId = work.getWorkId();
         Work oldWork = getById(workId);
-        if (work.getOwnerUserId() != null){
+        if (work.getOwnerUserId() != null) {
             if (!"".equals(work.getOwnerUserId())) {
                 work.setOwnerUserId(SeparatorUtil.fromString(work.getOwnerUserId()));
                 Set<Long> oldOwnerUserIds = SeparatorUtil.toLongSet(oldWork.getOwnerUserId());
@@ -303,20 +306,20 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         List<WorkOrder> workOrder;
         if (workAuthUtil.isWorkAdmin()) {
             workOrder = workOrderService.list(new QueryWrapper<WorkOrder>().eq("user_id", userId));
-            workInfoList = getBaseMapper().queryWorkNameList(null,workTaskQueryBO);
+            workInfoList = getBaseMapper().queryWorkNameList(null, workTaskQueryBO);
         } else {
             workOrder = workOrderService.list(new QueryWrapper<WorkOrder>().eq("user_id", userId));
-            workInfoList = getBaseMapper().queryWorkNameList(UserUtil.getUserId(),workTaskQueryBO);
+            workInfoList = getBaseMapper().queryWorkNameList(UserUtil.getUserId(), workTaskQueryBO);
         }
-        if (CollUtil.isNotEmpty(workTaskQueryBO.getUserIdList())){
-            if (CollUtil.isNotEmpty(workInfoList)){
-                workInfoList = workInfoList.stream().filter(t -> WorkUtil.verifyIntersection(t.getOwnerUserId(),workTaskQueryBO.getUserIdList())).collect(Collectors.toList());
+        if (CollUtil.isNotEmpty(workTaskQueryBO.getUserIdList())) {
+            if (CollUtil.isNotEmpty(workInfoList)) {
+                workInfoList = workInfoList.stream().filter(t -> WorkUtil.verifyIntersection(t.getOwnerUserId(), workTaskQueryBO.getUserIdList())).collect(Collectors.toList());
             }
         }
         List<Integer> adminMenus = new ArrayList<>();
         adminMenus.add(301);
         workInfoList.forEach(workInfo -> {
-            if (Objects.equals(0,workInfo.getIsSystemCover())){
+            if (Objects.equals(0, workInfo.getIsSystemCover())) {
                 FileEntity fileEntity = adminFileService.queryOne(workInfo.getBatchId()).getData();
                 workInfo.setCoverUrl(fileEntity.getUrl());
             }
@@ -378,7 +381,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         List<Integer> workIdList;
         if (CollUtil.isNotEmpty(workTaskQueryBO.getWorkIdList())) {
             workIdList = workTaskQueryBO.getWorkIdList();
-        }else {
+        } else {
             List<WorkInfoVo> workInfoList;
             if (workAuthUtil.isWorkAdmin()) {
                 workInfoList = getBaseMapper().queryWorkNameList(null, new WorkTaskQueryBO());
@@ -391,7 +394,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
             workIdList = workInfoList.stream().map(WorkInfoVo::getWorkId).collect(Collectors.toList());
         }
         Integer taskSort = workTaskQueryBO.getSort();
-        if (taskSort != null){
+        if (taskSort != null) {
             workTaskQueryBO.setSort(taskSort + 1);
         }
         List<TaskInfoVO> taskList = getBaseMapper().queryWorkTaskByCondition(workTaskQueryBO, workIdList);
@@ -433,11 +436,11 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
             } else {
                 workTaskService.taskListTransfer(taskList);
                 //先保证已完成的在最后，再按照order_num排序
-                if (Objects.equals(workTaskTemplateBO.getSort(),1)) {
+                if (Objects.equals(workTaskTemplateBO.getSort(), 1)) {
                     taskList.sort(Comparator.comparingInt(TaskInfoVO::getOrderNum));
                 }
                 boolean completedTask = Optional.ofNullable(workTaskTemplateBO.getCompletedTask()).orElse(false);
-                if (completedTask){
+                if (completedTask) {
                     List<TaskInfoVO> taskInfoVoS = taskList.stream().filter(t -> t.getStatus() == 5).collect(Collectors.toList());
                     taskList.removeIf(t -> t.getStatus() == 5);
                     taskList.addAll(taskInfoVoS);
@@ -475,7 +478,11 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
                     } else if (r2.getStatus() == 5) {
                         return -1;
                     } else {
-                        return -r1.getUpdateTime().compareTo(r2.getUpdateTime());
+                        if (r1.getUpdateTime() != null && r2.getUpdateTime() != null){
+                            return -r1.getUpdateTime().compareTo(r2.getUpdateTime());
+                        }else {
+                            return 1;
+                        }
                     }
                 });
                 user.setList(userTaskList).setCount(userTaskList.size());
@@ -624,7 +631,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
                     ownerUserId.append(workInfoVo.getOwnerUserId());
                 }
             }
-        }else {
+        } else {
             List<String> ownerUserList = getBaseMapper().queryTaskOwnerUser(UserUtil.getUserId());
             for (String ownerUser : ownerUserList) {
                 if (StrUtil.isNotEmpty(ownerUser)) {
@@ -667,7 +674,12 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
     public List<WorkOwnerRoleBO> setOwnerRole(SetWorkOwnerRoleBO setWorkOwnerRoleBO) {
         Integer workId = setWorkOwnerRoleBO.getWorkId();
         List<WorkUser> workUserList = setWorkOwnerRoleBO.getList();
-        workUserList.forEach(workUser -> workUser.setWorkId(workId));
+        StringBuilder ownerUserId = new StringBuilder(",");
+        for (WorkUser workUser : workUserList) {
+            ownerUserId.append(workUser.getUserId()).append(",");
+            workUser.setWorkId(workId);
+        }
+        lambdaUpdate().set(Work::getOwnerUserId, ownerUserId.toString()).eq(Work::getWorkId, workId).update();
         workUserService.remove(new QueryWrapper<WorkUser>().eq("work_id", workId));
         workUserService.saveBatch(workUserList, Const.BATCH_SAVE_SIZE);
         return queryOwnerRoleList(workId);
@@ -761,7 +773,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         Map<String, Integer> classMap = new HashMap<>();
         Work work = getById(workId);
         List<SimpleUser> workUserList = adminService.queryUserByIds(TagUtil.toLongSet(work.getOwnerUserId())).getData();
-        Map<String, Long> workUserMap = workUserList.stream().collect(Collectors.toMap(SimpleUser::getRealname,SimpleUser::getUserId));
+        Map<String, Long> workUserMap = workUserList.stream().collect(Collectors.toMap(SimpleUser::getRealname, SimpleUser::getUserId));
         if (file.isEmpty()) {
             return Dict.create();
         }
@@ -787,9 +799,9 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
                 if (!StrUtil.isEmptyIfStr(rowList.get(2))) {
                     Object object = rowList.get(2);
                     String time;
-                    if(object instanceof Long){
+                    if (object instanceof Long) {
                         time = cn.hutool.core.date.DateUtil.formatDate(org.apache.poi.ss.usermodel.DateUtil.getJavaDate((Long) object));
-                    }else {
+                    } else {
                         time = object.toString();
                     }
                     if (!BaseUtil.isTime(time)) {
@@ -801,9 +813,9 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
                 if (!StrUtil.isEmptyIfStr(rowList.get(3))) {
                     Object object = rowList.get(3);
                     String time;
-                    if(object instanceof Long){
+                    if (object instanceof Long) {
                         time = cn.hutool.core.date.DateUtil.formatDate(org.apache.poi.ss.usermodel.DateUtil.getJavaDate((Long) object));
-                    }else {
+                    } else {
                         time = object.toString();
                     }
                     if (!BaseUtil.isTime(time)) {
@@ -863,11 +875,11 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
                         .eq(WorkTaskClass::getName, className).eq(WorkTaskClass::getWorkId, workId).last("limit 1").oneOpt()
                         .map(WorkTaskClass::getClassId).orElse(null);
                 List<String> classNameList = new ArrayList<>(classMap.keySet());
-                if (!classNameList.contains(className) && classId==null) {
+                if (!classNameList.contains(className) && classId == null) {
                     WorkTaskClass taskClass = new WorkTaskClass();
                     taskClass.setWorkId(workId);
                     taskClass.setName(className);
-                    Integer orderNum = (Integer) workTaskClassService.listMaps(new QueryWrapper<WorkTaskClass>().select("max(order_num) as maxNum").eq("work_id",workId))
+                    Integer orderNum = (Integer) workTaskClassService.listMaps(new QueryWrapper<WorkTaskClass>().select("max(order_num) as maxNum").eq("work_id", workId))
                             .get(0).get("maxNum");
                     taskClass.setOrderNum(orderNum + classNameList.size() + 1);
                     taskClass.setCreateUserId(UserUtil.getUserId());
@@ -934,6 +946,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
     public BasePage<FileEntity> queryTaskFileByWorkId(QueryTaskFileByWorkIdBO queryTaskFileByWorkIdBO) {
         List<String> batchIdList = workTaskService.lambdaQuery().select(WorkTask::getBatchId)
                 .eq(WorkTask::getWorkId, queryTaskFileByWorkIdBO.getWorkId())
+                .isNotNull(WorkTask::getBatchId)
                 .list()
                 .stream().map(WorkTask::getBatchId).collect(Collectors.toList());
         List<FileEntity> data = adminFileService.queryFileList(batchIdList).getData();
@@ -945,4 +958,99 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         return page;
     }
 
+    /**
+     * 查询可导出任务
+     *
+     * @param workId 项目ID
+     * @return data
+     */
+    @Override
+    public List<Map<String, Object>> workTaskExport(Integer workId) {
+        List<Map<String, Object>> recordList = getBaseMapper().workTaskExport(workId);
+        List<WorkTaskLabel> taskLabels = workTaskLabelService.lambdaQuery().select(WorkTaskLabel::getLabelId, WorkTaskLabel::getName).list();
+        /*
+          缓存标签对象
+         */
+        Map<String, String> labelNames = new HashMap<>(taskLabels.size(), 1.0f);
+        for (WorkTaskLabel taskLabel : taskLabels) {
+            labelNames.put(taskLabel.getLabelId().toString(), taskLabel.getName());
+        }
+        recordList.forEach(record -> {
+            //拼接关联业务内容
+            StringBuilder relateCrmWork = new StringBuilder("");
+            if (record.get("labelId") != null) {
+                List<String> labelIds = StrUtil.splitTrim(record.get("labelId").toString(), Const.SEPARATOR);
+                String labelName = labelIds.stream().map(labelNames::get).collect(Collectors.joining(Const.SEPARATOR));
+                record.put("labelName", labelName);
+            } else {
+                record.put("labelName", "");
+            }
+            if (record.get("ownerUserId") != null) {
+                List<String> ownerUserIds = StrUtil.splitTrim(record.get("ownerUserId").toString(), Const.SEPARATOR);
+                String ownerUserName = ownerUserIds.stream().map(userId -> UserCacheUtil.getUserName(Long.valueOf(userId))).collect(Collectors.joining(Const.SEPARATOR));
+                record.put("ownerUserName", ownerUserName);
+            } else {
+                record.put("ownerUserName", "");
+            }
+            if (record.containsKey("mainUserId")) {
+                Long mainUserId = TypeUtils.castToLong(record.get("mainUserId"));
+                record.put("mainUserName", UserCacheUtil.getUserName(mainUserId));
+            } else {
+                record.put("mainUserName", "");
+            }
+            if (record.containsKey("createUserId")) {
+                Long createUserId = TypeUtils.castToLong(record.get("createUserId"));
+                record.put("createUserName", UserCacheUtil.getUserName(createUserId));
+            } else {
+                record.put("createUserName", "");
+            }
+
+            if (record.get("customerIds") != null) {
+                List<String> ids = StrUtil.splitTrim(record.get("customerIds").toString(), Const.SEPARATOR);
+                if (ids.size() > 0) {
+                    relateCrmWork.append("客户 ");
+                    List<SimpleCrmEntity> simpleCrmEntityList = crmService.queryCustomerInfo(ids.stream().map(Integer::valueOf).collect(Collectors.toList())).getData();
+                    for (SimpleCrmEntity crmEntity : simpleCrmEntityList) {
+                        relateCrmWork.append("【").append(crmEntity.getName()).append("】");
+                    }
+                    relateCrmWork.append("\n");
+                }
+            }
+            if (record.get("contactsIds") != null) {
+                List<String> ids = StrUtil.splitTrim(record.get("contactsIds").toString(), Const.SEPARATOR);
+                if (ids.size() > 0) {
+                    relateCrmWork.append("联系人 ");
+                    List<SimpleCrmEntity> simpleCrmEntityList = crmService.queryContactsInfo(ids.stream().map(Integer::valueOf).collect(Collectors.toList())).getData();
+                    for (SimpleCrmEntity crmEntity : simpleCrmEntityList) {
+                        relateCrmWork.append("【").append(crmEntity.getName()).append("】");
+                    }
+                    relateCrmWork.append("\n");
+                }
+            }
+            if (record.get("businessIds") != null) {
+                List<String> ids = StrUtil.splitTrim(record.get("businessIds").toString(), Const.SEPARATOR);
+                if (ids.size() > 0) {
+                    relateCrmWork.append("商机 ");
+                    List<SimpleCrmEntity> simpleCrmEntityList = crmService.queryBusinessInfo(ids.stream().map(Integer::valueOf).collect(Collectors.toList())).getData();
+                    for (SimpleCrmEntity crmEntity : simpleCrmEntityList) {
+                        relateCrmWork.append("【").append(crmEntity.getName()).append("】");
+                    }
+                    relateCrmWork.append("\n");
+                }
+            }
+            if (record.get("contractIds") != null) {
+                List<String> ids = StrUtil.splitTrim(record.get("contractIds").toString(), Const.SEPARATOR);
+                if (ids.size() > 0) {
+                    relateCrmWork.append("合同 ");
+                    List<SimpleCrmEntity> simpleCrmEntityList = crmService.queryContractInfo(ids.stream().map(Integer::valueOf).collect(Collectors.toList())).getData();
+                    for (SimpleCrmEntity crmEntity : simpleCrmEntityList) {
+                        relateCrmWork.append("【").append(crmEntity.getName()).append("】");
+                    }
+                    relateCrmWork.append("\n");
+                }
+            }
+            record.put("relateCrmWork", relateCrmWork.toString());
+        });
+        return recordList;
+    }
 }

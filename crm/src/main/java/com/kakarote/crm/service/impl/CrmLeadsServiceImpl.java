@@ -11,6 +11,7 @@ import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
@@ -294,7 +295,7 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
             actionRecordUtil.addConversionRecord(leadsId,CrmEnum.LEADS,newOwnerUserId,getById(leadsId).getLeadsName());
         }
         //修改es
-        String ownerUserName = adminService.queryUserName(newOwnerUserId).getData();
+        String ownerUserName = UserCacheUtil.getUserName(newOwnerUserId);
         Map<String, Object> map = new HashMap<>();
         map.put("ownerUserId", newOwnerUserId);
         map.put("ownerUserName", ownerUserName);
@@ -308,6 +309,8 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void transfer(List<Integer> leadsIds) {
+        List<Integer> customerIds = new ArrayList<>();
+        Map<Integer, CrmModelSaveBO> crmModelSaveBoMap = new HashMap<>(8);
         for (Integer leadsId : leadsIds) {
             CrmModel leadsMap = queryById(leadsId);
             CrmLeads crmLeads = BeanUtil.copyProperties(leadsMap,CrmLeads.class);
@@ -397,27 +400,20 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
                 throw new CrmException(CrmCodeEnum.THE_NUMBER_OF_CUSTOMERS_HAS_REACHED_THE_LIMIT);
             }
             crmCustomerService.save(crmCustomer);
+            Integer customerId = crmCustomer.getCustomerId();
+            customerIds.add(customerId);
             //保存自定义字段
             saveCustomerField(customerDataList, customerBatchId);
             CrmModelSaveBO crmModelSaveBO = new CrmModelSaveBO();
             crmModelSaveBO.setEntity(BeanUtil.beanToMap(crmCustomer));
             List<CrmModelFiledVO> collect = customerDataList.stream().map(field -> BeanUtil.copyProperties(field, CrmModelFiledVO.class)).collect(Collectors.toList());
             crmModelSaveBO.setField(collect);
-            customerService.savePage(crmModelSaveBO, crmCustomer.getCustomerId(),false);
+            crmModelSaveBoMap.put(customerId,crmModelSaveBO);
+
             actionRecordUtil.addConversionCustomerRecord(crmCustomer.getCustomerId(), CrmEnum.CUSTOMER, crmCustomer.getCustomerName());
             lambdaUpdate().set(CrmLeads::getIsTransform, 1).set(CrmLeads::getUpdateTime, new Date()).set(CrmLeads::getCustomerId, crmCustomer.getCustomerId())
                     .eq(CrmLeads::getLeadsId, leadsId).update();
-            UpdateRequest updateRequest = new UpdateRequest(CrmEnum.LEADS.getIndex(),"_doc",leadsId.toString());
-            Map<String,Object> map = new HashMap<>();
-            map.put("isTransform",1);
-            map.put("updateTime",DateUtil.formatDateTime(new Date()));
-            map.put("customerId",crmCustomer.getCustomerId());
-            updateRequest.doc(map);
-            try {
-                elasticsearchRestTemplate.getClient().update(updateRequest, RequestOptions.DEFAULT);
-            }catch (IOException e){
-                log.error("es 更新异常!");
-            }
+
             //转移操作记录
             List<CrmActionRecord> crmActionRecordList = crmActionRecordService.lambdaQuery().eq(CrmActionRecord::getActionId, leadsId).eq(CrmActionRecord::getTypes, 1).list();
             crmActionRecordList.forEach(crmActionRecord -> {
@@ -451,6 +447,23 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
             }
             adminFileService.saveBatchFileEntity(adminFileIdList, customerBatchId);
         }
+        for (int i = 0; i < leadsIds.size(); i++) {
+            Integer leadsId = leadsIds.get(i);
+            Integer customerId = customerIds.get(i);
+            UpdateRequest updateRequest = new UpdateRequest(CrmEnum.LEADS.getIndex(),"_doc",leadsId.toString());
+            Map<String,Object> map = new HashMap<>();
+            map.put("isTransform",1);
+            map.put("updateTime",DateUtil.formatDateTime(new Date()));
+            map.put("customerId",customerId);
+            updateRequest.doc(map);
+            try {
+                elasticsearchRestTemplate.getClient().update(updateRequest, RequestOptions.DEFAULT);
+            }catch (IOException e){
+                log.error("es 更新异常!");
+            }
+            customerService.savePage(crmModelSaveBoMap.get(customerId), customerId,false);
+        }
+
         elasticsearchRestTemplate.refresh(getIndex());
     }
 

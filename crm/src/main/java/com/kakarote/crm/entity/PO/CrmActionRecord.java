@@ -48,7 +48,7 @@ public class CrmActionRecord implements Serializable {
     private Integer actionId;
 
     @ApiModelProperty(value = "对象")
-    private Object object;
+    private String object;
 
     @ApiModelProperty(value = "行为")
     private Integer behavior;

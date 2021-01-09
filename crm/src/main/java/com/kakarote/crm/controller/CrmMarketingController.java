@@ -10,19 +10,26 @@ import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.ParamAspect;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
+import com.kakarote.crm.common.log.CrmMarketingLog;
 import com.kakarote.crm.entity.BO.CrmCensusBO;
 import com.kakarote.crm.entity.BO.CrmMarketingPageBO;
 import com.kakarote.crm.entity.BO.CrmModelSaveBO;
 import com.kakarote.crm.entity.BO.CrmSyncDataBO;
 import com.kakarote.crm.entity.PO.CrmMarketing;
+import com.kakarote.crm.entity.PO.CrmMarketingForm;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmMarketingMapper;
+import com.kakarote.crm.service.ICrmMarketingFormService;
 import com.kakarote.crm.service.ICrmMarketingService;
 import io.swagger.annotations.ApiOperation;
 import org.apache.poi.ss.usermodel.*;
@@ -32,6 +39,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -48,13 +56,18 @@ import static com.kakarote.core.utils.BaseUtil.getResponse;
  */
 @RestController
 @RequestMapping("/crmMarketing")
+@SysLog(subModel = SubModelType.CRM_MARKETING,logClass = CrmMarketingLog.class)
 public class CrmMarketingController {
 
     @Autowired
     private ICrmMarketingService crmMarketingService;
 
+    @Autowired
+    private ICrmMarketingFormService crmMarketingFormService;
+
     @PostMapping("/add")
     @ApiOperation(value = "添加推广")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmMarketing.marketingName",detail = "'创建了市场活动:'+#crmMarketing.marketingName")
     public Result add(@Validated @RequestBody CrmMarketing crmMarketing) {
         crmMarketingService.addOrUpdate(crmMarketing);
         return Result.ok();
@@ -139,6 +152,7 @@ public class CrmMarketingController {
      */
     @PostMapping("/updateStatus")
     @ApiOperation(value = "修改状态")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateStatus(@RequestParam("marketingIds") String marketingIds, @RequestParam("status") Integer status) {
         crmMarketingService.updateStatus(marketingIds, status);
         return Result.ok();
@@ -226,7 +240,20 @@ public class CrmMarketingController {
         try {
             nameList.forEach(record -> writer.addHeaderAlias(record.getFieldName(), record.getName()));
             writer.addHeaderAlias("ownerUserName", "负责人");
-            writer.merge(nameList.size() - 1, "客户信息");
+            String title;
+            CrmMarketing marketing = crmMarketingService.getById(marketingId);
+            Integer crmType = marketing.getCrmType();
+            if (Arrays.asList(ICrmMarketingService.FIXED_CRM_TYPE).contains(crmType)){
+                title = "客户信息";
+            }else {
+                CrmMarketingForm marketingForm = crmMarketingFormService.getById(crmType);
+                title = marketingForm.getTitle();
+            }
+            if (nameList.size() > 1) {
+                writer.merge(nameList.size() - 1, title);
+            }else {
+                writer.merge(1, title);
+            }
             List<Map<String, Object>> list = fieldList.stream().map(record -> {
                 CrmModelSaveBO jsonObject = JSON.parseObject(record.getString("fieldInfo"), CrmModelSaveBO.class);
                 Map<String, Object> entity = jsonObject.getEntity();

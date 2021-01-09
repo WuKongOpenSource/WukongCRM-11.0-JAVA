@@ -4,15 +4,22 @@ package com.kakarote.work.controller;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.extra.servlet.ServletUtil;
+import cn.hutool.poi.excel.ExcelUtil;
+import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserUtil;
+import com.kakarote.work.common.log.WorkLog;
 import com.kakarote.work.entity.BO.*;
 import com.kakarote.work.entity.PO.Work;
 import com.kakarote.work.entity.VO.TaskInfoVO;
@@ -29,6 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
 import java.io.File;
@@ -37,6 +45,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -51,6 +60,7 @@ import java.util.Objects;
 @RequestMapping("/work")
 @Api(tags = "项目")
 @Slf4j
+@SysLog(subModel = SubModelType.WORK_PROJECT,logClass = WorkLog.class)
 public class WorkController {
     @Autowired
     private IWorkService workService;
@@ -67,6 +77,7 @@ public class WorkController {
 
     @PostMapping("/addWork")
     @ApiOperation("新建项目")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#work.name",detail = "'添加了项目:'+#work.name")
     public Result<Work> addWork(@RequestBody Work work) {
         Work work1 = workService.addWork(work);
         return R.ok(work1);
@@ -74,6 +85,7 @@ public class WorkController {
 
     @PostMapping("/updateWork")
     @ApiOperation("编辑项目")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE,object = "#work.name",detail = "'编辑了项目:'+#work.name")
     public Result<Work> updateWork(@RequestBody Work work) {
         Work work1 = workService.updateWork(work);
         return R.ok(work1);
@@ -88,6 +100,7 @@ public class WorkController {
 
     @PostMapping("/deleteWork/{workId}")
     @ApiOperation("删除项目")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteWork(@PathVariable @NotNull Integer workId) {
         workService.deleteWork(workId);
         return R.ok();
@@ -119,7 +132,7 @@ public class WorkController {
 
     @PostMapping("/queryTaskFileByWorkId")
     @ApiOperation("根据项目id查询项目附件")
-    public Result<BasePage<FileEntity>> queryTaskFileByWorkId(@RequestBody  QueryTaskFileByWorkIdBO QueryTaskFileByWorkIdBO) {
+    public Result<BasePage<FileEntity>> queryTaskFileByWorkId(@RequestBody QueryTaskFileByWorkIdBO QueryTaskFileByWorkIdBO) {
         BasePage<FileEntity> page = workService.queryTaskFileByWorkId(QueryTaskFileByWorkIdBO);
         return R.ok(page);
     }
@@ -157,6 +170,7 @@ public class WorkController {
 
     @PostMapping("/leave/{workId}")
     @ApiOperation("退出项目")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result leave(@PathVariable @NotNull Integer workId) {
         workService.leave(workId, UserUtil.getUserId());
         return R.ok();
@@ -164,6 +178,7 @@ public class WorkController {
 
     @PostMapping("/removeWorkOwnerUser")
     @ApiOperation("移除项目成员")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result removeWorkOwnerUser(@RequestBody RemoveWorkOwnerUserBO workOwnerUserBO) {
         workService.leave(workOwnerUserBO.getWorkId(), workOwnerUserBO.getOwnerUserId());
         return R.ok();
@@ -184,6 +199,7 @@ public class WorkController {
 
     @PostMapping("/deleteTaskList")
     @ApiOperation("删除任务列表")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteTaskList(@RequestBody DeleteTaskClassBO deleteTaskClassBO) {
         workService.deleteTaskList(deleteTaskClassBO);
         return R.ok();
@@ -191,6 +207,7 @@ public class WorkController {
 
     @PostMapping("/archiveTask/{classId}")
     @ApiOperation("归档已完成任务")
+    @SysLogHandler(behavior = BehaviorEnum.ARCHIVE,object = "归档已完成任务",detail = "归档已完成任务")
     public Result archiveTask(@PathVariable Integer classId) {
         workService.archiveTask(classId);
         return R.ok();
@@ -198,6 +215,7 @@ public class WorkController {
 
     @PostMapping("/archiveTaskByOwner")
     @ApiOperation("归档已完成任务")
+    @SysLogHandler(behavior = BehaviorEnum.ARCHIVE,object = "归档已完成任务",detail = "归档已完成任务")
     public Result archiveTaskByOwner(@RequestBody ArchiveTaskByOwnerBO archiveTaskByOwnerBO) {
         workService.archiveTask(archiveTaskByOwnerBO);
         return R.ok();
@@ -219,6 +237,7 @@ public class WorkController {
 
     @PostMapping("/activation/{taskId}")
     @ApiOperation("激活已归档任务")
+    @SysLogHandler(subModel = SubModelType.WORK_TASK,behavior = BehaviorEnum.ACTIVE)
     public Result activation(@PathVariable Integer taskId) {
         workService.activation(taskId);
         return R.ok();
@@ -307,6 +326,7 @@ public class WorkController {
      */
     @PostMapping("/excelImport")
     @ApiOperation("导入模板")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_IMPORT,object = "导入任务",detail = "导入任务")
     public Result<Dict> excelImport(@RequestParam("file") MultipartFile file, @RequestParam("workId") Integer workId) throws IOException {
         Dict dict = workService.excelImport(file, workId);
         return Result.ok(dict);
@@ -323,6 +343,52 @@ public class WorkController {
         }
     }
 
+    @PostMapping("/workTaskExport")
+    @ApiOperation("导出任务数据")
+    public void workTaskExport(@RequestParam("workId") Integer workId, HttpServletResponse response) {
+        List<Map<String, Object>> list = workService.workTaskExport(workId);
+        try (ExcelWriter writer = ExcelUtil.getWriter()) {
+            writer.addHeaderAlias("name", "任务名称");
+            writer.addHeaderAlias("description", "任务描述");
+            writer.addHeaderAlias("mainUserName", "负责人");
+            writer.addHeaderAlias("startTime", "开始时间");
+            writer.addHeaderAlias("stopTime", "结束时间");
+            writer.addHeaderAlias("labelName", "标签");
+            writer.addHeaderAlias("ownerUserName", "参与人");
+            writer.addHeaderAlias("priority", "优先级");
+            writer.addHeaderAlias("createUserName", "创建人");
+            writer.addHeaderAlias("createTime", "创建时间");
+            writer.addHeaderAlias("className", "所在任务列表");
+            writer.addHeaderAlias("relateCrmWork", "关联业务");
+            writer.merge(11, "项目任务信息");
+            writer.setOnlyAlias(true);
+            writer.write(list, true);
+            writer.setRowHeight(0, 20);
+            writer.setRowHeight(1, 20);
+            for (int i = 0; i < 12; i++) {
+                writer.setColumnWidth(i, 20);
+            }
+            Cell cell = writer.getCell(0, 0);
+            CellStyle cellStyle = cell.getCellStyle();
+            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
+            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            Font font = writer.createFont();
+            font.setBold(true);
+            font.setFontHeightInPoints((short) 16);
+            cellStyle.setFont(font);
+            cell.setCellStyle(cellStyle);
+            //自定义标题别名
+            //response为HttpServletResponse对象
+            response.setContentType("application/vnd.ms-excel;charset=utf-8");
+            response.setCharacterEncoding("UTF-8");
+            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
+            response.setHeader("Content-Disposition", "attachment;filename=workTask.xls");
+            ServletOutputStream out = response.getOutputStream();
+            writer.flush(out);
+        } catch (Exception e) {
+            log.error("导出项目任务信息错误：", e);
+        }
+    }
 
 }
 

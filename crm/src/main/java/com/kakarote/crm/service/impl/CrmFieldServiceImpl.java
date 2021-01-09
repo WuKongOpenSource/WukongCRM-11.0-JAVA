@@ -15,6 +15,7 @@ import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.crm.entity.ExamineField;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
@@ -38,15 +39,21 @@ import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.GetAliasesResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.TermQueryBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -529,7 +536,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
     }
 
     @Autowired
-    private ICrmLeadsService leadsService;
+    private ICrmLeadsService crmLeadsService;
 
     @Autowired
     private ICrmCustomerService customerService;
@@ -553,12 +560,12 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                 //添加特殊验证
                 if (crmEnum.equals(CrmEnum.LEADS)) {
                     if ("leads_name".equals(field.getFieldName())) {
-                        CrmLeads leads = leadsService.lambdaQuery().select(CrmLeads::getLeadsId, CrmLeads::getOwnerUserId)
+                        CrmLeads leads = crmLeadsService.lambdaQuery().select(CrmLeads::getLeadsId, CrmLeads::getOwnerUserId)
                                 .eq(CrmLeads::getLeadsName, verifyBO.getValue().trim())
                                 .ne(StrUtil.isNotEmpty(verifyBO.getBatchId()), CrmLeads::getBatchId, verifyBO.getBatchId()).last("limit 1").one();
                         verifyBO.setOwnerUserName(UserCacheUtil.getUserInfo(leads.getOwnerUserId()).getRealname());
                     } else if ("mobile".equals(field.getFieldName())) {
-                        CrmLeads leads = leadsService.lambdaQuery().select(CrmLeads::getLeadsId, CrmLeads::getOwnerUserId)
+                        CrmLeads leads = crmLeadsService.lambdaQuery().select(CrmLeads::getLeadsId, CrmLeads::getOwnerUserId)
                                 .eq(CrmLeads::getMobile, verifyBO.getValue().trim())
                                 .ne(StrUtil.isNotEmpty(verifyBO.getBatchId()), CrmLeads::getBatchId, verifyBO.getBatchId()).last("limit 1").one();
                         verifyBO.setOwnerUserName(UserCacheUtil.getUserInfo(leads.getOwnerUserId()).getRealname());
@@ -593,7 +600,17 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                 }
             }
         } else {
-            Integer count = getBaseMapper().verifyField(crmEnum.getTable(), verifyBO.getFieldId(), verifyBO.getValue().trim(), verifyBO.getBatchId());
+            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+            queryBuilder.filter(QueryBuilders.termQuery(StrUtil.toCamelCase(field.getFieldName()), verifyBO.getValue().trim()));
+            if(StrUtil.isNotEmpty(verifyBO.getBatchId())){
+                queryBuilder.mustNot(QueryBuilders.termQuery("batchId",verifyBO.getBatchId()));
+            }
+            NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
+                    .withQuery(queryBuilder)
+                    .withSearchType(SearchType.DEFAULT)
+                    .withIndices(crmEnum.getIndex())
+                    .withTypes("_doc").build();
+            long count = restTemplate.count(searchQuery);
             if (count < 1) {
                 verifyBO.setStatus(1);
             }
@@ -627,7 +644,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             this.index = crmEnum.getIndex();
         }
 
-        public SaveEs(CrmEnum crmEnum, List<CrmModelFiledVO> crmModelFiledList, List<Map<String, Object>> mapList,String index) {
+        public SaveEs(CrmEnum crmEnum, List<CrmModelFiledVO> crmModelFiledList, List<Map<String, Object>> mapList, String index) {
             this.crmEnum = crmEnum;
             this.crmModelFiledList = crmModelFiledList;
             this.mapList = mapList;
@@ -707,7 +724,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                     }
                 });
             });
-            ElasticUtil.initData(restTemplate.getClient(), mapList, crmEnum,index);
+            ElasticUtil.initData(restTemplate.getClient(), mapList, crmEnum, index);
             mapList.clear();
         }
     }
@@ -985,8 +1002,14 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
     }
 
     @Override
-    public Integer queryCustomerFieldDuplicateByNoFixed(String name, Object value) {
-        return getBaseMapper().queryFieldDuplicateByNoFixed(name, value);
+    public long queryCustomerFieldDuplicateByNoFixed(String name, Object value) {
+        TermQueryBuilder termQuery = QueryBuilders.termQuery(name, value);
+        NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
+                .withQuery(termQuery)
+                .withSearchType(SearchType.DEFAULT)
+                .withIndices(CrmEnum.CUSTOMER.getIndex())
+                .withTypes("_doc").build();
+        return restTemplate.count(searchQuery);
     }
 
     @Override
@@ -1025,14 +1048,14 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             mapping.put("properties", properties);
             CrmEnum crmEnum = CrmEnum.parse(label);
             String indexAlias = crmEnum.getIndex();
-            String createIndex = indexAlias+":"+DateUtil.formatDate(DateUtil.date());
+            String createIndex = indexAlias + ":" + DateUtil.formatDate(DateUtil.date());
             CreateIndexRequest createIndexRequest = new CreateIndexRequest(createIndex);
             createIndexRequest.mapping(mapping);
             try {
                 restTemplate.deleteIndex(createIndex);
                 CreateIndexResponse createIndexResponse = restTemplate.getClient().indices().create(createIndexRequest, RequestOptions.DEFAULT);
                 boolean acknowledged = createIndexResponse.isAcknowledged();
-                if (acknowledged){
+                if (acknowledged) {
                     //初始化数据
                     Integer lastId = 0;
                     Map<String, Object> dataMap = new HashMap<>();
@@ -1052,33 +1075,40 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                         lastId = TypeUtils.castToInt(o);
                         dataMap.put("lastId", lastId);
                         log.warn("最后数据id:{},线程id{}", lastId, Thread.currentThread().getName());
-                        executorService.execute(new SaveEs(crmEnum, crmModelFiledList, mapList,createIndex));
+                        executorService.execute(new SaveEs(crmEnum, crmModelFiledList, mapList, createIndex));
                     }
                     //修改索引别名
                     IndicesAliasesRequest aliasRequest = new IndicesAliasesRequest();
-                    GetAliasesResponse alias = restTemplate.getClient().indices().getAlias(new GetAliasesRequest(indexAlias,indexAlias+"_backup"), RequestOptions.DEFAULT);
+                    GetAliasesResponse alias = restTemplate.getClient().indices().getAlias(new GetAliasesRequest(indexAlias, indexAlias + "_backup"), RequestOptions.DEFAULT);
                     Map<String, Set<AliasMetaData>> oldAliases = alias.getAliases();
-                    if (CollUtil.isNotEmpty(oldAliases)){
+                    if (CollUtil.isNotEmpty(oldAliases)) {
                         TreeSet<String> oldIndexSet = new TreeSet<>(oldAliases.keySet());
                         String lastIndex = oldIndexSet.last();
                         aliasRequest.addAliasAction(IndicesAliasesRequest.AliasActions.remove().index(lastIndex).alias(indexAlias));
-                        aliasRequest.addAliasAction(IndicesAliasesRequest.AliasActions.add().index(lastIndex).alias(indexAlias+"_backup"));
+                        aliasRequest.addAliasAction(IndicesAliasesRequest.AliasActions.add().index(lastIndex).alias(indexAlias + "_backup"));
                         Set<String> deleteIndexs = oldIndexSet.stream().filter(index -> !index.equals(lastIndex)).collect(Collectors.toSet());
-                        if (CollUtil.isNotEmpty(deleteIndexs)){
-                            restTemplate.getClient().indices().delete(new DeleteIndexRequest(deleteIndexs.toArray(new String[0])),RequestOptions.DEFAULT);
+                        if (CollUtil.isNotEmpty(deleteIndexs)) {
+                            restTemplate.getClient().indices().delete(new DeleteIndexRequest(deleteIndexs.toArray(new String[0])), RequestOptions.DEFAULT);
                         }
                     }
                     aliasRequest.addAliasAction(IndicesAliasesRequest.AliasActions.add().index(createIndex).alias(indexAlias));
-                    restTemplate.getClient().indices().updateAliases(aliasRequest,RequestOptions.DEFAULT);
-                }else {
+                    restTemplate.getClient().indices().updateAliases(aliasRequest, RequestOptions.DEFAULT);
+                } else {
                     throw new CrmException(CrmCodeEnum.INDEX_CREATE_FAILED);
                 }
             } catch (IOException e) {
-                log.error("数据初始化异常:{}",e.getMessage());
+                log.error("数据初始化异常:{}", e.getMessage());
                 throw new CrmException(CrmCodeEnum.INDEX_CREATE_FAILED);
             }
         }
     }
 
-
+    @Override
+    public List<ExamineField> queryExamineField(Integer label) {
+        List<CrmField> crmFields = lambdaQuery().eq(CrmField::getIsNull,1).in(CrmField::getType, 3, 5, 6, 9).eq(CrmField::getLabel, (Objects.equals(1, label) ? 6 : 7)).list();
+        crmFields.forEach(field -> {
+            recordToFormType2(field, FieldEnum.parse(field.getType()));
+        });
+        return crmFields.stream().map(field -> BeanUtil.copyProperties(field, ExamineField.class)).collect(Collectors.toList());
+    }
 }

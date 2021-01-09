@@ -73,7 +73,7 @@ public class CrmProductCategoryServiceImpl extends BaseServiceImpl<CrmProductCat
      */
     @Override
     public void deleteById(Integer id) {
-        Integer num = crmProductService.lambdaQuery().eq(CrmProduct::getCategoryId, id).count();
+        Integer num = crmProductService.lambdaQuery().eq(CrmProduct::getCategoryId, id).ne(CrmProduct::getStatus,3).count();
         if (num > 0) {
             throw new CrmException(CrmCodeEnum.CRM_PRODUCT_CATEGORY_ERROR);
         }

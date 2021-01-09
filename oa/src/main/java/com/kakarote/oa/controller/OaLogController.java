@@ -7,8 +7,13 @@ import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
+import com.kakarote.oa.common.log.OaLogLog;
 import com.kakarote.oa.entity.BO.LogBO;
 import com.kakarote.oa.entity.PO.OaLogRule;
 import com.kakarote.oa.service.IOaCommonService;
@@ -38,6 +43,7 @@ import java.util.Map;
 @RequestMapping("/oaLog")
 @Api(tags = "日志模块")
 @Slf4j
+@SysLog(subModel = SubModelType.OA_LOG,logClass = OaLogLog.class)
 public class OaLogController {
 
     @Autowired
@@ -114,13 +120,15 @@ public class OaLogController {
 
     @PostMapping("/addOrUpdate")
     @ApiOperation("修改或新增")
+    @SysLogHandler
     public Result addOrUpdate(@RequestBody JSONObject jsonObject) {
         oaLogService.saveAndUpdate(jsonObject);
         return R.ok();
     }
 
     @PostMapping("/deleteById")
-    @ApiOperation("修改或新增")
+    @ApiOperation("修改")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE,object = "",detail = "删除了日志")
     public Result deleteById(@RequestParam("logId") Integer logId) {
         oaLogService.deleteById(logId);
         return R.ok();
@@ -149,6 +157,7 @@ public class OaLogController {
 
     @PostMapping("/export")
     @ApiOperation("导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "导出日志",detail = "导出日志")
     public void export(@RequestBody LogBO logBO,HttpServletResponse response){
         List<Map<String, Object>> list = oaLogService.export(logBO);
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
@@ -206,6 +215,7 @@ public class OaLogController {
      */
     @PostMapping("/setOaLogRule")
     @ApiOperation("设置日志提交设置")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_OTHER_SETTINGS,behavior = BehaviorEnum.UPDATE,object = "设置日志提交设置",detail = "设置日志提交设置")
     public Result setOaLogRule(@RequestBody List<OaLogRule> ruleList) {
         oaLogRuleService.setOaLogRule(ruleList);
         return R.ok();

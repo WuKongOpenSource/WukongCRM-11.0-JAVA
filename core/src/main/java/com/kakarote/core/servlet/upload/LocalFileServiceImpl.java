@@ -50,6 +50,12 @@ public class LocalFileServiceImpl implements FileService {
         FileUtil.del(entity.getPath());
     }
 
+    @Override
+    public void deleteFileByUrl(String url) {
+        String path = config.getUploadPath().get("1")+"/"+url.replace(config.getPublicUrl(), "");
+        FileUtil.del(path);
+    }
+
     /**
      * 重命名文件
      *
@@ -70,5 +76,10 @@ public class LocalFileServiceImpl implements FileService {
     @Override
     public InputStream downFile(UploadEntity entity) {
         return null;
+    }
+
+    @Override
+    public void downFileByUrl(String url, File file) {
+
     }
 }

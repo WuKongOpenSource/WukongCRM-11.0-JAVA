@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
+import com.kakarote.core.feign.admin.service.AdminMessageService;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserUtil;
@@ -55,6 +56,8 @@ public class WorkCommonServiceImpl implements IWorkCommonService {
     @Autowired
     private AdminFileService adminFileService;
 
+    @Autowired
+    private AdminMessageService adminMessageService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -78,6 +81,8 @@ public class WorkCommonServiceImpl implements IWorkCommonService {
         workTaskLogService.lambdaUpdate().remove();
         workTaskRelationService.lambdaUpdate().remove();
         workUserService.lambdaUpdate().remove();
+
+        adminMessageService.deleteByLabel(1);
         log.info("项目管理模块数据初始化完成！");
         return true;
     }
@@ -89,10 +94,11 @@ public class WorkCommonServiceImpl implements IWorkCommonService {
      * @date 2020/11/20 15:41
      * @param baseService
      * @param resultColumn
+     * @param queryColumn
      * @param mapper
      * @return void
      **/
-    private <T> void deleteFile(BaseService<T> baseService, SFunction<T,String> resultColumn,Function<T,String> mapper){
+    private <T> void deleteFile(BaseService<T> baseService, SFunction<T,String> resultColumn, Function<T,String> mapper){
         LambdaQueryWrapper<T> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         lambdaQueryWrapper.select(resultColumn);
         List<T> list = baseService.list(lambdaQueryWrapper);

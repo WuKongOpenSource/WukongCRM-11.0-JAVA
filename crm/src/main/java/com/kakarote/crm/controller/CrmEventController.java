@@ -32,7 +32,7 @@ public class CrmEventController {
     private ICrmCustomerService crmCustomerService;
 
     @Autowired
-    private ICrmLeadsService crmLeadsService;
+    private ICrmLeadsService leadsService;
 
     @Autowired
     private ICrmBusinessService crmBusinessService;
@@ -54,7 +54,7 @@ public class CrmEventController {
     @PostMapping("/eventLeads")
     @ApiExplain("需要联系的线索日期")
     public Result<List<String>> eventLeads(@RequestBody CrmEventBO crmEventBO){
-        List<String> list = crmLeadsService.eventLeads(crmEventBO);
+        List<String> list = leadsService.eventLeads(crmEventBO);
         return Result.ok(list);
     }
 
@@ -89,7 +89,7 @@ public class CrmEventController {
     @PostMapping("/eventLeadsPageList")
     @ApiExplain("日程线索列表")
     public Result<BasePage<Map<String, Object>>> eventLeadsPageList(@RequestBody QueryEventCrmPageBO eventCrmPageBO){
-        BasePage<Map<String, Object>> page = crmLeadsService.eventLeadsPageList(eventCrmPageBO);
+        BasePage<Map<String, Object>> page = leadsService.eventLeadsPageList(eventCrmPageBO);
         return Result.ok(page);
     }
 

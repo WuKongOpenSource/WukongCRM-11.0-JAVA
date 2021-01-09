@@ -27,7 +27,7 @@ import java.util.List;
 @Accessors(chain = true)
 @TableName("wk_crm_marketing")
 @ApiModel(value="CrmMarketing对象", description="营销表")
-@RangeValidated(minFieldName = "startTime", maxFieldName = "endTime",message = "创建时间应早于结束时间")
+@RangeValidated(minFieldName = "startTime", maxFieldName = "endTime",message = "开始时间必须大于结束时间")
 public class CrmMarketing implements Serializable {
 
     private static final long serialVersionUID=1L;
@@ -101,6 +101,9 @@ public class CrmMarketing implements Serializable {
 
     @TableField(exist = false)
     private String createUserName;
+
+    @TableField(exist = false)
+    private String crmTypeName;
 
     @TableField(exist = false)
     private List<FileEntity> mainFileList;

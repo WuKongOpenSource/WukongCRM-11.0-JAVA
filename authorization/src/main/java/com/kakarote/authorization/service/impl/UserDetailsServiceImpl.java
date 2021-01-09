@@ -3,6 +3,7 @@ package com.kakarote.authorization.service.impl;
 import cn.hutool.core.util.IdUtil;
 import com.kakarote.authorization.common.AuthException;
 import com.kakarote.authorization.common.AuthorizationCodeEnum;
+import com.kakarote.authorization.common.LoginLogUtil;
 import com.kakarote.authorization.entity.AdminUserStatusBO;
 import com.kakarote.authorization.entity.AuthorizationUser;
 import com.kakarote.authorization.entity.AuthorizationUserInfo;
@@ -14,7 +15,10 @@ import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.cache.AdminCacheKey;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.feign.admin.entity.LoginLogEntity;
+import com.kakarote.core.feign.admin.service.LogService;
 import com.kakarote.core.redis.Redis;
+import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.UserUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -27,6 +31,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,6 +54,10 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
     private Redis redis;
 
 
+    @Autowired
+    private LoginLogUtil loginLogUtil;
+
+
     @Override
     @SuppressWarnings("unchecked")
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -63,13 +72,20 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
      * 登录方法的处理
      *
      * @param user 用户对象
+     * @param request
      * @return Result
      */
     @Override
-    public Result login(AuthorizationUser user, HttpServletResponse response) {
+    public Result login(AuthorizationUser user, HttpServletResponse response, HttpServletRequest request) {
+        LoginLogEntity logEntity = loginLogUtil.getLogEntity(request);
         String token = IdUtil.simpleUUID();
         UserInfo userInfo = user.toUserInfo();
+        logEntity.setUserId(userInfo.getUserId());
+        logEntity.setRealname(userInfo.getRealname());
         if (userInfo.getStatus() == 0) {
+            logEntity.setAuthResult(2);
+            logEntity.setFailResult(AuthorizationCodeEnum.AUTHORIZATION_USER_DISABLE_ERROR.getMsg());
+            ApplicationContextHolder.getBean(LogService.class).saveLoginLog(logEntity);
             throw new CrmException(AuthorizationCodeEnum.AUTHORIZATION_USER_DISABLE_ERROR);
         }
         userInfo.setRoles(adminUserService.queryUserRoleIds(userInfo.getUserId()).getData());
@@ -77,6 +93,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
         if (userInfo.getStatus() == 2) {
             adminUserService.setUserStatus(AdminUserStatusBO.builder().status(1).ids(Collections.singletonList(userInfo.getUserId())).build());
         }
+        ApplicationContextHolder.getBean(LogService.class).saveLoginLog(logEntity);
         return Result.ok(new LoginVO().setAdminToken(token));
     }
 
@@ -87,7 +104,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
      * @return Result
      */
     @Override
-    public Result doLogin(AuthorizationUser user, HttpServletResponse response) {
+    public Result doLogin(AuthorizationUser user, HttpServletResponse response,HttpServletRequest request) {
         String key = AdminCacheKey.PASSWORD_ERROR_CACHE_KEY + user.getUsername().trim();
         Integer errorNum = redis.get(key);
         if (errorNum != null && errorNum > 2) {
@@ -104,7 +121,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
             if (userInfo.getAuthorizationUserList().size() == 0) {
                 return this.handleLoginPassWordToManyError(key,user.getUsername().trim());
             }
-            return login(userInfo.getAuthorizationUserList().get(0).setType(user.getType()), response);
+            return login(userInfo.getAuthorizationUserList().get(0).setType(user.getType()), response, request);
         } catch (AuthException e) {
             return Result.error(e.getResultCode());
         } catch (BadCredentialsException e) {
@@ -173,6 +190,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
             UserInfo userInfo = (UserInfo) data;
             redis.del(authentication);
             redis.del(userInfo.getUserId());
+            redis.del(AdminCacheKey.USER_AUTH_CACHE_KET+userInfo.getUserId());
         }
         return Result.ok();
     }

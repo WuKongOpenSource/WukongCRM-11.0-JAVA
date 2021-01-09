@@ -26,3 +26,19 @@ spring:
           dataId: ${spring.application.name}-flow-rules
           groupId: SENTINEL_GROUP
           rule-type: flow
+seata:
+  enabled: true
+  application-id: ${spring.application.name}
+  tx-service-group: ${spring.application.name}_tx_group
+  config:
+    type: nacos
+    nacos:
+      namespace:
+      serverAddr: 127.0.0.1:8848
+      group: SEATA_GROUP
+  registry:
+    type: nacos
+    nacos:
+      application: seata-server
+      server-addr: 127.0.0.1:8848
+      namespace:

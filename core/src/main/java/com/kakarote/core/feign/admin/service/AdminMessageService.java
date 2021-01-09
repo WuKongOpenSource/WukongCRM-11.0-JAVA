@@ -26,4 +26,7 @@ public interface AdminMessageService {
 
     @PostMapping("/adminMessage/deleteEventMessage")
     public Result deleteEventMessage(@RequestParam("eventId")Integer eventId);
+
+    @PostMapping("/adminMessage/deleteByLabel")
+    public Result deleteByLabel(@RequestParam("label") Integer label);
 }

@@ -71,5 +71,10 @@ public class OaExamine implements Serializable {
     private String batchId;
 
 
+    @ApiModelProperty(value = "审核记录ID")
+    private Integer examineRecordId;
+
+    @ApiModelProperty("审批状态")
+    private Integer examineStatus;
 
 }

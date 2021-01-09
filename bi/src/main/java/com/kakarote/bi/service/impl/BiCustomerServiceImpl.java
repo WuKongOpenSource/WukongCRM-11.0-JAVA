@@ -5,18 +5,18 @@ import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
-import com.kakarote.bi.common.BiCodeEnum;
 import com.kakarote.bi.common.BiPatch;
 import com.kakarote.bi.mapper.BiCustomerMapper;
 import com.kakarote.bi.service.BiCustomerService;
+import com.kakarote.bi.service.BiEsStatisticsService;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.entity.BasePage;
-import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.feign.crm.service.CrmService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.BiTimeUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.util.*;
 
 @Service
+@Slf4j
 public class BiCustomerServiceImpl implements BiCustomerService {
 
     @Autowired
@@ -31,6 +32,9 @@ public class BiCustomerServiceImpl implements BiCustomerService {
 
     @Autowired
     private CrmService crmService;
+
+    @Autowired
+    private BiEsStatisticsService biEsStatisticsService;
 
     /**
      * 查询客户总量分析图
@@ -50,16 +54,11 @@ public class BiCustomerServiceImpl implements BiCustomerService {
             timeList.add(beginTime);
             beginTime = BiTimeUtil.estimateTime(beginTime);
         }
-        Integer finalTime = timeEntity.getFinalTime();
-        List<String> tableNameList = BiPatch.getYearsOrTableNameList( timeEntity.getBeginTime(),finalTime,true);
-        if (tableNameList.isEmpty()){
-            throw new CrmException(BiCodeEnum.BI_DATE_PARSE_ERROR);
-        }
-        this.handleTableName(tableNameList);
-        Map<String, Object> map = timeEntity.toMap();
-        map.put("tableNameList",tableNameList);
-        List<JSONObject> jsonObjectList = biCustomerMapper.totalCustomerStats(map);
+        List<JSONObject> customerNumObjectList = biEsStatisticsService.getStatisticsCustomerInfo(timeEntity,false);
+        List<JSONObject> dealNumList = biEsStatisticsService.getStatisticsCustomerInfo(timeEntity,true);
+        List<JSONObject> jsonObjectList = biEsStatisticsService.mergeJsonObjectList(customerNumObjectList,dealNumList);
         BiPatch.supplementJsonList(jsonObjectList,"type",timeList, "customerNum","dealCustomerNum");
+        jsonObjectList.sort(Comparator.comparing(jsonObject -> jsonObject.getString("type")));
         return jsonObjectList;
     }
 
@@ -287,14 +286,7 @@ public class BiCustomerServiceImpl implements BiCustomerService {
             timeList.add(beginTime);
             beginTime = BiTimeUtil.estimateTime(beginTime);
         }
-        Integer finalTime = record.getFinalTime();
-        List<String> tableNameList = BiPatch.getYearsOrTableNameList(record.getBeginTime(),finalTime,true);
-        if (tableNameList.isEmpty()){
-            throw new CrmException(BiCodeEnum.BI_DATE_PARSE_ERROR);
-        }
-        this.handleTableName(tableNameList);
         Map<String, Object> map = record.toMap();
-        map.put("tableNameList",tableNameList);
         List<JSONObject> jsonObjectList = biCustomerMapper.employeeCycle(map);
         if (jsonObjectList != null) {
             jsonObjectList.forEach(jsonObject -> {
@@ -372,7 +364,7 @@ public class BiCustomerServiceImpl implements BiCustomerService {
         BiTimeUtil.BiTimeEntity record = BiTimeUtil.analyzeType(biParams);
         List<Long> userIds = record.getUserIds();
         List<SimpleCrmEntity> productList = ApplicationContextHolder.getBean(CrmService.class).queryProductInfo().getData();
-        if (userIds.size() == 0) {
+        if (userIds.size() == 0 || productList.size() == 0) {
             return new JSONObject().fluentPut("list", new ArrayList<>()).fluentPut("total", new JSONObject());
         }
         List<JSONObject> recordList = biCustomerMapper.productCycle(record, productList);
@@ -399,6 +391,7 @@ public class BiCustomerServiceImpl implements BiCustomerService {
         if (userIds.size() == 0) {
             return new ArrayList<>();
         }
+
         JSONObject object = biCustomerMapper.querySatisfactionOptionList();
         if (object == null){
             return new ArrayList<>();

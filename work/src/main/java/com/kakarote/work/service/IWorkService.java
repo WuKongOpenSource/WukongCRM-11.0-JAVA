@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -73,4 +74,11 @@ public interface IWorkService extends BaseService<Work> {
     Dict excelImport(MultipartFile file, Integer workId) throws IOException;
 
     BasePage<FileEntity> queryTaskFileByWorkId(QueryTaskFileByWorkIdBO queryTaskFileByWorkIdBO);
+
+    /**
+     * 查询可导出任务
+     * @param workId 项目ID
+     * @return data
+     */
+    public List<Map<String, Object>> workTaskExport(Integer workId);
 }

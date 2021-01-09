@@ -2,6 +2,9 @@ package com.kakarote.crm.controller;
 
 
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.crm.entity.VO.CrmNumberSettingVO;
 import com.kakarote.crm.service.ICrmNumberSettingService;
@@ -54,6 +57,7 @@ public class CrmNumberSettingController {
 
     @ApiOperation(value = "设置发票自动编号设置")
     @PostMapping("/setNumberSetting")
+    @SysLogHandler(applicationName = "admin",subModel = SubModelType.ADMIN_CUSTOMER_MANAGEMENT,behavior = BehaviorEnum.UPDATE,object = "修改编号规则设置",detail = "修改编号规则设置")
     public Result setNumberSetting(@RequestBody @Valid List<CrmNumberSettingVO> numberSettingList) {
         crmNumberSettingService.setNumberSetting(numberSettingList);
         return Result.ok();

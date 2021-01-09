@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.util.Date;
 
 /**
  * @author z
@@ -13,10 +12,13 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 public class UserExtraInfo implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     /**
      * 是否
      */
     public Integer extra = -1;
 
-    public Date extraTime;
+    public String extraTime;
 }

@@ -10,9 +10,13 @@ import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
+import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Document;
+import com.itextpdf.text.Font;
 import com.itextpdf.text.PageSize;
+import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfWriter;
+import com.itextpdf.tool.xml.XMLWorkerFontProvider;
 import com.itextpdf.tool.xml.XMLWorkerHelper;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.SystemCodeEnum;
@@ -28,6 +32,7 @@ import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.constant.CrmCodeEnum;
@@ -91,7 +96,7 @@ public class CrmPrintTemplateServiceImpl extends BaseServiceImpl<CrmPrintTemplat
         }
         BasePage<CrmPrintTemplate> page = wrapper.page(templateBO.parse());
         page.getList().forEach(template -> {
-            template.setCreateUserName(adminService.queryUserName(template.getCreateUserId()).getData());
+            template.setCreateUserName(UserCacheUtil.getUserName(template.getCreateUserId()));
         });
         return page;
     }
@@ -325,6 +330,9 @@ public class CrmPrintTemplateServiceImpl extends BaseServiceImpl<CrmPrintTemplat
         if (!Arrays.asList("pdf", "word").contains(type)) {
             throw new CrmException(CrmCodeEnum.CRM_PRINT_PRE_VIEW_ERROR);
         }
+        if(StrUtil.isEmpty(content)){
+            content = "<br/>";
+        }
         String slash = BaseUtil.isWindows() ? "\\" : "/";
         String date = DateUtil.format(new Date(), "yyyyMMdd");
         String folderPath = FileUtil.getTmpDirPath() + slash + "print" + slash + date;
@@ -410,7 +418,7 @@ public class CrmPrintTemplateServiceImpl extends BaseServiceImpl<CrmPrintTemplat
                 PdfWriter pdfWriter = PdfWriter.getInstance(document, new FileOutputStream(file));
                 document.open();
                 ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(html.getBytes());
-                XMLWorkerHelper.getInstance().parseXHtml(pdfWriter, document, byteArrayInputStream, StandardCharsets.UTF_8);
+                XMLWorkerHelper.getInstance().parseXHtml(pdfWriter, document, byteArrayInputStream, StandardCharsets.UTF_8,new FontProvider());
                 document.close();
                 pdfWriter.close();
             } catch (Exception e) {
@@ -473,6 +481,29 @@ public class CrmPrintTemplateServiceImpl extends BaseServiceImpl<CrmPrintTemplat
         object.put("pdf", path);
         redis.setex(CrmCacheKey.CRM_PRINT_TEMPLATE_CACHE_KEY + uuid, 3600 * 24, object.toJSONString());
         return uuid;
+    }
+
+    public class FontProvider extends XMLWorkerFontProvider {
+        @Override
+        public Font getFont(String fontname, String encoding, boolean embedded, float size, int style, BaseColor color) {
+            try {
+                BaseFont baseFont = BaseFont.createFont("/fonts/simsun.ttf", BaseFont.IDENTITY_H, BaseFont.NOT_EMBEDDED);
+                return new Font(baseFont,size,style,color);
+            } catch (Exception e) {
+                log.error("本地字体引用出错",e);
+            }
+            return super.getFont(fontname, encoding,embedded,size,style,color);
+        }
+        @Override
+        public Font getFont(String fontname, String encoding, float size, int style) {
+            try {
+                BaseFont baseFont = BaseFont.createFont("/fonts/simsun.ttf", BaseFont.IDENTITY_H, BaseFont.NOT_EMBEDDED);
+                return new Font(baseFont,size,style);
+            } catch (Exception e) {
+                log.error("本地字体引用出错",e);
+            }
+            return super.getFont(fontname, encoding,size,style);
+        }
     }
 
     private String replaceContent(Integer id, String content, Integer type) {
@@ -654,7 +685,7 @@ public class CrmPrintTemplateServiceImpl extends BaseServiceImpl<CrmPrintTemplat
         Object value = record.get(fieldName);
         if (formType.equals(FieldEnum.USER.getType())) {
             if (value instanceof Long) {
-                record.put(fieldName, adminService.queryUserName((Long) value).getData());
+                record.put(fieldName, UserCacheUtil.getUserName((Long) value));
             } else if (value instanceof String) {
                 List<SimpleUser> data = adminService.queryUserByIds(StrUtil.splitTrim((CharSequence) value, Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList())).getData();
                 record.put(fieldName, data.stream().map(SimpleUser::getRealname).collect(Collectors.joining(Const.SEPARATOR)));
@@ -771,7 +802,7 @@ public class CrmPrintTemplateServiceImpl extends BaseServiceImpl<CrmPrintTemplat
     public List<CrmPrintRecord> queryPrintRecord(Integer crmType, Integer typeId) {
         List<CrmPrintRecord> crmPrintRecords = getBaseMapper().queryPrintRecord(crmType, typeId);
         crmPrintRecords.forEach(record->{
-            record.setCreateUserName(adminService.queryUserName(record.getCreateUserId()).getData());
+            record.setCreateUserName(UserCacheUtil.getUserName(record.getCreateUserId()));
         });
         return crmPrintRecords;
     }

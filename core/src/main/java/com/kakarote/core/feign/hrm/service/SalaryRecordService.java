@@ -17,5 +17,4 @@ public interface SalaryRecordService {
     @PostMapping("/hrmSalaryMonthRecord/updateCheckStatus")
     @ApiOperation("通过id查询薪资记录")
     Result updateCheckStatus(@RequestParam("sRecordId") Integer sRecordId, @RequestParam("checkStatus") Integer checkStatus);
-
 }

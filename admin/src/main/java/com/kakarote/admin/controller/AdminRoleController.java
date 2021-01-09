@@ -3,15 +3,17 @@ package com.kakarote.admin.controller;
 
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.admin.common.AdminRoleTypeEnum;
+import com.kakarote.admin.common.log.AdminRoleLog;
 import com.kakarote.admin.entity.BO.AdminRoleBO;
 import com.kakarote.admin.entity.PO.AdminModelSort;
 import com.kakarote.admin.entity.PO.AdminRole;
 import com.kakarote.admin.entity.VO.AdminRoleVO;
 import com.kakarote.admin.service.IAdminModelSortService;
 import com.kakarote.admin.service.IAdminRoleService;
-import com.kakarote.core.common.ApiExplain;
-import com.kakarote.core.common.R;
-import com.kakarote.core.common.Result;
+import com.kakarote.core.common.*;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.utils.UserUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -22,6 +24,7 @@ import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +38,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/adminRole")
 @Api(tags = "角色模块")
+@SysLog(subModel = SubModelType.ADMIN_ROLE_PERMISSIONS,logClass = AdminRoleLog.class)
 public class AdminRoleController {
     @Autowired
     private IAdminRoleService adminRoleService;
@@ -89,6 +93,13 @@ public class AdminRoleController {
         return R.ok(recordList.stream().map(AdminRole::getRoleId).collect(Collectors.toList()));
     }
 
+    @PostMapping("/queryRoleByRoleTypeAndUserId")
+    @ApiExplain("查询当前用户在某个模块下的角色")
+    public Result<List<AdminRole>> queryRoleByRoleTypeAndUserId(@RequestParam("type") Integer type) {
+        List<AdminRole> recordList = adminRoleService.queryRoleByRoleTypeAndUserId(type);
+        return R.ok(recordList);
+    }
+
 
     @PostMapping("/queryRoleListByUserId")
     @ApiExplain("通过用户id查询角色")
@@ -119,6 +130,7 @@ public class AdminRoleController {
 
     @PostMapping("/add")
     @ApiOperation("添加角色")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#adminRole.roleName",detail = "'添加了角色:'+#adminRole.roleName")
     public Result add(@RequestBody AdminRole adminRole) {
         adminRoleService.add(adminRole);
         return R.ok();
@@ -126,6 +138,7 @@ public class AdminRoleController {
 
     @PostMapping("/update")
     @ApiOperation("修改角色")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#adminRole.roleName",detail = "'修改了了角色:'+#adminRole.roleName")
     public Result update(@RequestBody AdminRole adminRole) {
         adminRoleService.add(adminRole);
         return R.ok();
@@ -133,6 +146,7 @@ public class AdminRoleController {
 
     @PostMapping("/delete")
     @ApiOperation("删除角色")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result delete(@RequestParam("roleId") Integer roleId) {
         adminRoleService.delete(roleId);
         return R.ok();
@@ -140,6 +154,7 @@ public class AdminRoleController {
 
     @PostMapping("/copy")
     @ApiOperation("复制角色")
+    @SysLogHandler(behavior = BehaviorEnum.COPY)
     public Result copy(@RequestParam("roleId") Integer roleId) {
         adminRoleService.copy(roleId);
         return R.ok();
@@ -182,6 +197,7 @@ public class AdminRoleController {
 
     @PostMapping(value = "/setWorkRole")
     @ApiExplain("设置项目管理角色")
+    @SysLogHandler(subModel = SubModelType.WORK_PROJECT,behavior = BehaviorEnum.SAVE,object = "#object[roleName]",detail = "'设置项目角色:'+#object[roleName]")
     public Result setWorkRole(@RequestBody JSONObject object) {
         adminRoleService.setWorkRole(object);
         return R.ok();
@@ -189,6 +205,7 @@ public class AdminRoleController {
 
     @PostMapping(value = "/deleteWorkRole")
     @ApiExplain("删除项目管理角色")
+    @SysLogHandler(subModel = SubModelType.WORK_PROJECT,behavior = BehaviorEnum.DELETE)
     public Result deleteWorkRole(@RequestParam("roleId") Integer roleId) {
         adminRoleService.deleteWorkRole(roleId);
         return R.ok();
@@ -206,6 +223,16 @@ public class AdminRoleController {
     public Result<List<AdminRole>> queryWorkRoleList() {
         List<AdminRole> adminRoles = adminRoleService.queryRoleList();
         return R.ok(adminRoles);
+    }
+
+    @PostMapping(value = "/queryHrmDataAuthType")
+    @ApiExplain("查询人力资源数据权限")
+    public Result<Integer> queryHrmDataAuthType(@RequestParam("menuId")Integer menuId){
+        if (UserUtil.isAdmin()){
+            return R.ok(DataAuthEnum.ALL.getValue());
+        }
+        Integer dataAuthType =adminRoleService.queryHrmDataAuthType(menuId);
+        return R.ok(Optional.ofNullable(dataAuthType).orElse(0));
     }
 }
 

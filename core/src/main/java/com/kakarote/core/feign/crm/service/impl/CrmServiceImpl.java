@@ -3,6 +3,7 @@ package com.kakarote.core.feign.crm.service.impl;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.CrmSearchBO;
+import com.kakarote.core.feign.crm.entity.ExamineField;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.feign.crm.service.CrmService;
 import org.springframework.stereotype.Component;
@@ -35,6 +36,7 @@ public class CrmServiceImpl implements CrmService {
     public Result<List<SimpleCrmEntity>> queryByNameCustomerInfo(String name) {
         return Result.ok(new ArrayList<>());
     }
+
     /**
      * 查询客户信息(eq)
      *
@@ -42,7 +44,9 @@ public class CrmServiceImpl implements CrmService {
      * @return entity
      */
     @Override
-    public Result<List<SimpleCrmEntity>> queryNameCustomerInfo(String name) { return Result.ok(new ArrayList<>()); }
+    public Result<List<SimpleCrmEntity>> queryNameCustomerInfo(String name) {
+        return Result.ok(new ArrayList<>());
+    }
 
     /**
      * 查询联系人信息
@@ -100,6 +104,11 @@ public class CrmServiceImpl implements CrmService {
     @Override
     public Result<List> queryPoolNameListByAuth() {
         return Result.ok(new ArrayList());
+    }
+
+    @Override
+    public Result<List<ExamineField>> queryExamineField(Integer label) {
+        return Result.ok(new ArrayList<>());
     }
 
     @Override

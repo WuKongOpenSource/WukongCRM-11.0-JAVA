@@ -5,6 +5,11 @@ import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
+import com.kakarote.work.common.log.WorkTaskLog;
 import com.kakarote.work.entity.BO.*;
 import com.kakarote.work.entity.PO.WorkTask;
 import com.kakarote.work.service.IWorkTaskService;
@@ -32,6 +37,7 @@ import java.util.Map;
 @RequestMapping("/workTask")
 @Api(tags = "任务")
 @Slf4j
+@SysLog(subModel = SubModelType.WORK_TASK,logClass = WorkTaskLog.class)
 public class WorkTaskController {
     @Autowired
     private IWorkTaskService workTaskService;
@@ -51,6 +57,7 @@ public class WorkTaskController {
 
     @PostMapping("/saveWorkTask")
     @ApiOperation("新建项目任务")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#workTask.name",detail = "'新建了任务:'+#workTask.name")
     public Result saveWorkTask(@RequestBody WorkTask workTask){
         workTaskService.saveWorkTask(workTask);
         return R.ok();
@@ -65,6 +72,7 @@ public class WorkTaskController {
 
     @PostMapping("/setWorkTaskStatus")
     @ApiOperation("设置项目任务状态")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result setWorkTaskStatus(@RequestBody WorkTaskStatusBO workTaskStatusBO){
         workTaskService.setWorkTaskStatus(workTaskStatusBO);
         return R.ok();
@@ -72,6 +80,7 @@ public class WorkTaskController {
 
     @PostMapping("/setWorkTaskTitle")
     @ApiOperation("设置项目任务标题")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result setWorkTaskTitle(@RequestBody WorkTaskNameBO workTaskNameBO){
         workTaskService.setWorkTaskTitle(workTaskNameBO);
         return R.ok();
@@ -79,6 +88,7 @@ public class WorkTaskController {
 
     @PostMapping("/setWorkTaskDescription")
     @ApiOperation("设置项目任务描述")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result setWorkTaskDescription(@RequestBody WorkTaskDescriptionBO workTaskDescriptionBO){
         workTaskService.setWorkTaskDescription(workTaskDescriptionBO);
         return R.ok();
@@ -86,13 +96,15 @@ public class WorkTaskController {
 
     @PostMapping("/setWorkTaskMainUser")
     @ApiOperation("设置项目任务负责人")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result setWorkTaskMainUser(@RequestBody WorkTaskUserBO workTaskUserBO){
         workTaskService.setWorkTaskMainUser(workTaskUserBO);
         return R.ok();
     }
 
     @PostMapping("/setWorkTaskOwnerUser")
-    @ApiOperation("新建项目任务")
+    @ApiOperation("设置项目任务参与人")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result setWorkTaskOwnerUser(@RequestBody WorkTaskOwnerUserBO workTaskOwnerUserBO){
         workTaskService.setWorkTaskOwnerUser(workTaskOwnerUserBO);
         return R.ok();
@@ -100,6 +112,7 @@ public class WorkTaskController {
 
     @PostMapping("/setWorkTaskTime")
     @ApiOperation("设置项目任务开始结束时间")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result setWorkTaskTime(@RequestBody WorkTask workTask){
         workTaskService.setWorkTaskTime(workTask);
         return R.ok();
@@ -107,6 +120,7 @@ public class WorkTaskController {
 
     @PostMapping("/setWorkTaskLabel")
     @ApiOperation("设置项目任务标签")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result setWorkTaskLabel(@RequestBody WorkTaskLabelsBO workTaskLabelsBO){
         workTaskService.setWorkTaskLabel(workTaskLabelsBO);
         return R.ok();
@@ -114,6 +128,7 @@ public class WorkTaskController {
 
     @PostMapping("/setWorkTaskPriority")
     @ApiOperation("设置项目任务优先级")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result setWorkTaskPriority(@RequestBody WorkTaskPriorityBO workTaskPriorityBO){
         workTaskService.setWorkTaskPriority(workTaskPriorityBO);
         return R.ok();
@@ -121,6 +136,7 @@ public class WorkTaskController {
 
     @PostMapping("/addWorkChildTask")
     @ApiOperation("新建项目子任务")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE)
     public Result<WorkTask> addWorkChildTask(@RequestBody WorkTask workTask){
         WorkTask task = workTaskService.addWorkChildTask(workTask);
         return R.ok(task);
@@ -149,6 +165,7 @@ public class WorkTaskController {
 
     @PostMapping("/deleteWorkTaskLabel")
     @ApiOperation("删除项目任务标签")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result deleteWorkTaskLabel(@RequestBody WorkTaskLabelBO workTaskLabelBO){
         workTaskService.deleteWorkTaskLabel(workTaskLabelBO);
         return R.ok();
@@ -168,6 +185,7 @@ public class WorkTaskController {
 
     @PostMapping("/deleteWorkTask/{taskId}")
     @ApiOperation("删除任务")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteWorkTask(@PathVariable Integer taskId){
         workTaskService.deleteWorkTask(taskId);
         return R.ok();
@@ -175,6 +193,7 @@ public class WorkTaskController {
 
     @PostMapping("/deleteWorkChildTask/{taskId}")
     @ApiOperation("删除子任务")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteWorkChildTask(@PathVariable Integer taskId){
         workTaskService.deleteWorkTask(taskId);
         return R.ok();
@@ -182,6 +201,7 @@ public class WorkTaskController {
 
     @PostMapping("/archiveByTaskId/{taskId}")
     @ApiOperation("归档任务")
+    @SysLogHandler(behavior = BehaviorEnum.ARCHIVE)
     public Result archiveByTaskId(@PathVariable Integer taskId){
         workTaskService.archiveByTaskId(taskId);
         return R.ok();
@@ -207,6 +227,7 @@ public class WorkTaskController {
 
     @PostMapping("/deleteTask/{taskId}")
     @ApiOperation("彻底删除任务")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteTask(@PathVariable Integer taskId){
         workTaskService.deleteTask(taskId);
         return R.ok();
@@ -214,6 +235,7 @@ public class WorkTaskController {
 
     @PostMapping("/restore/{taskId}")
     @ApiOperation("还原任务")
+    @SysLogHandler(behavior = BehaviorEnum.RESTORE)
     public Result restore(@PathVariable Integer taskId){
         workTaskService.restore(taskId);
         return R.ok();
@@ -227,6 +249,7 @@ public class WorkTaskController {
 
     @PostMapping("/workBenchTaskExport")
     @ApiOperation("导出工作台任务")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "导出工作台任务",detail = "导出工作台任务")
     public void workBenchTaskExport(HttpServletResponse response) {
         List<Map<String, Object>> list = workTaskService.workBenchTaskExport();
         ExcelWriter writer = ExcelUtil.getWriter();

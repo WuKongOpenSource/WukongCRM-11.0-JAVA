@@ -73,6 +73,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         record.put("receivablesUserIds", AuthUtil.filterUserIdListByDataType(map.get("receivables"), biAuthority.getUserIds()));
         record.put("contractUserIds", AuthUtil.filterUserIdListByDataType(map.get("contract"), biAuthority.getUserIds()));
         record.put("leadsUserIds", AuthUtil.filterUserIdListByDataType(map.get("leads"), biAuthority.getUserIds()));
+        record.put("recordUserIds", AuthUtil.filterUserIdListByDataType(map.get("record"), biAuthority.getUserIds()));
         Map<String, Object> info = crmInstrumentMapper.queryBulletin(biTimeEntity, record);
         boolean isCustom = !StrUtil.isAllEmpty(biParams.getStartTime(), biParams.getEndTime());
         Map<String, Object> prevRecord = new HashMap<>();
@@ -544,6 +545,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         kv.set("receivablesUserIds", AuthUtil.filterUserIdListByDataType(map.get("receivables"), userIds));
         kv.set("contractUserIds", AuthUtil.filterUserIdListByDataType(map.get("contract"), userIds));
         kv.set("leadsUserIds", AuthUtil.filterUserIdListByDataType(map.get("leads"), userIds));
+        kv.set("recordUserIds", AuthUtil.filterUserIdListByDataType(map.get("record"), userIds));
         List<JSONObject> recordList = crmInstrumentMapper.queryRecordCount(kv);
         if (recordList.stream().noneMatch(record -> CrmEnum.LEADS.getType().equals(record.getInteger("crmType")))) {
             recordList.add(new JSONObject().fluentPut("crmType", CrmEnum.LEADS.getType()).fluentPut("count", 0));

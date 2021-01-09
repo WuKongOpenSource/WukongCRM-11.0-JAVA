@@ -2,6 +2,8 @@ package com.kakarote.oa.service;
 
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.entity.BasePage;
+import com.kakarote.core.feign.examine.entity.ExamineConditionDataBO;
+import com.kakarote.core.feign.examine.entity.ExamineInfoVo;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.oa.entity.BO.AuditExamineBO;
 import com.kakarote.oa.entity.BO.ExamineExportBO;
@@ -45,7 +47,13 @@ public interface IOaExamineService extends BaseService<OaExamine> {
 
     OaExamineCategory queryExaminStep(String categoryId);
 
-    List<Map<String, Object>> export(ExamineExportBO examineExportBO, OaExamineCategory category, List<OaExamineField> fieldList);
+    List<Map<String, Object>> export(ExamineExportBO examineExportBO, ExamineInfoVo examineInfoVo , List<OaExamineField> fieldList);
 
     public List<ExamineVO> transfer(List<ExamineVO> recordList);
+
+    Map<String, Object> getDataMapForNewExamine(ExamineConditionDataBO examineConditionDataBO);
+
+    Boolean updateCheckStatusByNewExamine(ExamineConditionDataBO examineConditionDataBO);
+
+    ExamineVO getOaExamineById(Integer oaExamineId);
 }

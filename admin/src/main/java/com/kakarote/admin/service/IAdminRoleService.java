@@ -154,4 +154,7 @@ public interface IAdminRoleService extends BaseService<AdminRole> {
      * */
     List<String> queryNoAuthMenu(Long userId);
 
+    List<AdminRole> queryRoleByRoleTypeAndUserId(Integer type);
+
+    Integer queryHrmDataAuthType(Integer menuId);
 }

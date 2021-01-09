@@ -399,9 +399,11 @@ public class CrmActivityServiceImpl extends BaseServiceImpl<CrmActivityMapper, C
     @Override
     public void deleteCrmActivityRecord(Integer activityId) {
         CrmActivity crmActivity = getById(activityId);
-        boolean auth = AuthUtil.isRwAuth(crmActivity.getActivityTypeId(), CrmEnum.parse(crmActivity.getActivityType()));
-        if (auth) {
-            throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+        if (!crmActivity.getCreateUserId().equals(UserUtil.getUserId())){
+            boolean auth = AuthUtil.isRwAuth(crmActivity.getActivityTypeId(), CrmEnum.parse(crmActivity.getActivityType()));
+            if (auth) {
+                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            }
         }
         if (crmActivity.getType() != 1) {
             throw new CrmException(CrmCodeEnum.CRM_CAN_ONLY_DELETE_FOLLOW_UP_RECORDS);

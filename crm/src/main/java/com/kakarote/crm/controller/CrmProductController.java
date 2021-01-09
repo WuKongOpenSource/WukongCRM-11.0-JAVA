@@ -4,12 +4,17 @@ package com.kakarote.crm.controller;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.common.log.CrmProductLog;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
@@ -42,6 +47,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/crmProduct")
 @Api(tags = "产品模块接口")
+@SysLog(subModel = SubModelType.CRM_PRODUCT,logClass = CrmProductLog.class)
 public class CrmProductController {
 
     @Autowired
@@ -56,6 +62,7 @@ public class CrmProductController {
 
     @PostMapping("/deleteByIds")
     @ApiOperation("根据ID删除数据")
+    @SysLogHandler(behavior = BehaviorEnum.DELETE)
     public Result deleteByIds(@ApiParam(name = "ids", value = "id列表") @RequestBody List<Integer> ids) {
         crmProductService.deleteByIds(ids);
         return R.ok();
@@ -63,6 +70,7 @@ public class CrmProductController {
 
     @PostMapping("/add")
     @ApiOperation("保存数据")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity[name]",detail = "'新建了产品:'+#crmModel.entity[name]")
     public Result add(@RequestBody CrmModelSaveBO crmModel) {
         crmProductService.addOrUpdate(crmModel,false);
         return R.ok();
@@ -70,6 +78,7 @@ public class CrmProductController {
 
     @PostMapping("/update")
     @ApiOperation("修改数据")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result update(@RequestBody CrmModelSaveBO crmModel) {
         crmProductService.addOrUpdate(crmModel,false);
         return R.ok();
@@ -77,6 +86,7 @@ public class CrmProductController {
 
     @PostMapping("/changeOwnerUser")
     @ApiOperation("修改产品负责人")
+    @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
     public Result changeOwnerUser(@RequestBody CrmChangeOwnerUserBO crmChangeOwnerUserBO){
         crmProductService.changeOwnerUser(crmChangeOwnerUserBO.getIds(),crmChangeOwnerUserBO.getOwnerUserId());
         return R.ok();
@@ -90,6 +100,7 @@ public class CrmProductController {
 
     @PostMapping("/allExportExcel")
     @ApiOperation("全部导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "导出产品",detail = "全部导出")
     public void allExportExcel(@RequestBody CrmSearchBO search, HttpServletResponse response) {
         search.setPageType(0);
         crmProductService.exportExcel(response, search);
@@ -97,6 +108,7 @@ public class CrmProductController {
 
     @PostMapping("/batchExportExcel")
     @ApiOperation("选中导出")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "导出产品",detail = "选中导出")
     public void batchExportExcel(@RequestBody @ApiParam(name = "ids", value = "id列表") List<Integer> ids, HttpServletResponse response) {
         CrmSearchBO search = new CrmSearchBO();
         search.setPageType(0);
@@ -133,7 +145,8 @@ public class CrmProductController {
     }
 
     @PostMapping("/updateStatus")
-    @ApiOperation("查询修改数据所需信息")
+    @ApiOperation("修改产品状态")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateStatus(@RequestBody CrmProductStatusBO productStatusBO) {
         crmProductService.updateStatus(productStatusBO);
         return R.ok();
@@ -170,6 +183,7 @@ public class CrmProductController {
 
     @PostMapping("/uploadExcel")
     @ApiOperation("导入产品")
+    @SysLogHandler(behavior = BehaviorEnum.EXCEL_IMPORT,object = "导入产品",detail = "导入产品")
     public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("ownerUserId") Long ownerUserId, @RequestParam("repeatHandling") Integer repeatHandling) {
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
         uploadExcelBO.setOwnerUserId(ownerUserId);
@@ -183,6 +197,7 @@ public class CrmProductController {
 
     @PostMapping("/updateInformation")
     @ApiOperation("基本信息保存修改")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInformation(@RequestBody CrmUpdateInformationBO updateInformationBO) {
         crmProductService.updateInformation(updateInformationBO);
         return R.ok();

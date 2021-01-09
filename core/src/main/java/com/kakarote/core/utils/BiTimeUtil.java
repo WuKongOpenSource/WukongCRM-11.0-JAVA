@@ -8,9 +8,7 @@ import cn.hutool.core.util.StrUtil;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.servlet.ApplicationContextHolder;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 import java.util.*;
@@ -409,8 +407,6 @@ public class BiTimeUtil {
 
 
     @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Accessors(chain = true)
     public static class BiTimeEntity {
         /**
@@ -452,6 +448,24 @@ public class BiTimeUtil {
          * user列表
          */
         private List<Long> userIds = new ArrayList<>();
+
+        public BiTimeEntity(String sqlDateFormat, String dateFormat, Date beginDate, Date endDate, Integer cycleNum, Integer beginTime, Integer finalTime, List<Long> userIds) {
+            this.sqlDateFormat = sqlDateFormat;
+            this.dateFormat = dateFormat;
+            this.beginDate = beginDate;
+            this.endDate = endDate;
+            this.cycleNum = cycleNum;
+            this.beginTime = beginTime;
+            this.finalTime = finalTime;
+            this.userIds = userIds;
+        }
+
+        public BiTimeEntity() {
+        }
+
+        private Integer page;
+
+        private Integer limit;
 
         public Map<String, Object> toMap() {
             return BeanUtil.beanToMap(this);

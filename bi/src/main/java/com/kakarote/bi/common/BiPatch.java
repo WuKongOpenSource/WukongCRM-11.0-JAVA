@@ -40,7 +40,7 @@ public class BiPatch {
                 if ("dealCustomerNum".equals(filedName)) {
                     jsonObject.put(filedName, null);
                 } else {
-                    jsonObject.put(filedName, 0.0);
+                    jsonObject.put(filedName, 0);
                 }
             });
             jsonList.add(jsonObject);

@@ -93,6 +93,9 @@ public enum CrmCodeEnum implements ResultCode {
     INDEX_CREATE_FAILED(2082, "%s索引创建失败,数据初始化异常！"),
     CRM_CONTACTS_DATA_ERROR(2083, "检测到没有绑定客户，请确认！"),
     CRM_CONTRACT_EXAMINE_PASS_HINT_ERROR(2085, "已通过的合同需要作废后才可编辑！"),
+    CRM_ACTIVITY_FORM_NONENTITY_ERROR(2086, "活动表单已不存在！"),
+    THE_FIELD_NAME_OF_THE_FORM_CANNOT_BE_REPEATED(2087,"自定义表单字段名称不能重复"),
+
     ;
 
 

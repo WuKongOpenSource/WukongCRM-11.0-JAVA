@@ -1,5 +1,6 @@
 package com.kakarote.core.utils;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.entity.UserExtraInfo;
@@ -10,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import javax.servlet.http.Cookie;
 import java.util.Date;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * @author z
@@ -26,7 +28,8 @@ public class UserUtil {
     }
 
     public static Long getUserId() {
-        return threadLocal.get().getUserId();
+        UserInfo user = getUser();
+        return Optional.ofNullable(user).orElse(new UserInfo()).getUserId();
     }
 
 
@@ -86,16 +89,12 @@ public class UserUtil {
     public static void userToken(String token, UserInfo userInfo, Integer type) {
         userExit(userInfo.getUserId(), type, 1);
         Redis redis = BaseUtil.getRedis();
-        if (redis.exists(token)) {
-            if (Objects.equals(1, type)) {
-                redis.setex(Const.USER_ADMIN_TOKEN + userInfo.getUserId(), Const.MAX_USER_EXIST_TIME, token);
-            } else if (Objects.equals(2, type)) {
-                redis.setex(Const.USER_MOBILE_TOKEN + userInfo.getUserId(), Const.MAX_USER_EXIST_TIME, token);
-            }
-        }
+        String userToken = (Objects.equals(2, type) ? Const.USER_MOBILE_TOKEN : Const.USER_ADMIN_TOKEN) + userInfo.getUserId();
         redis.setex(token, Const.MAX_USER_EXIST_TIME, userInfo);
+        redis.setex(userToken, Const.MAX_USER_EXIST_TIME, token);
         Cookie cookie = new Cookie(Const.TOKEN_NAME, token);
-        cookie.setMaxAge(157680000);
+        Long second = DateUtil.betweenMs(new Date(), DateUtil.parseDate("2030-01-01"))/1000L;
+        cookie.setMaxAge(second.intValue());
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         BaseUtil.getResponse().addCookie(cookie);
@@ -137,7 +136,7 @@ public class UserUtil {
         if (Objects.equals(1, extra) && token != null) {
             Long time = redis.ttl(token);
             if (time > 1L) {
-                redis.setex(token, time.intValue(), new UserExtraInfo(1, new Date()));
+                redis.setex(token, time.intValue(), new UserExtraInfo(1, DateUtil.formatDateTime(new Date())));
             }
         } else {
             if (token != null) {

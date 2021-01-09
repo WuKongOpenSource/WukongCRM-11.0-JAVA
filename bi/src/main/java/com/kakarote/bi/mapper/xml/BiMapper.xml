@@ -1,24 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
 <mapper namespace="com.kakarote.bi.mapper.BiMapper">
-    <select id="queryProductSell" resultType="com.alibaba.fastjson.JSONObject">
-        SELECT scp.product_id,scpc.name as categoryName, scpc.category_id,
-        scp.name as productName, scc.num as contracNum ,
-        sccp.sales_price as productPrice ,sccp.num as productNum,
-        sccp.subtotal as productSubtotal,
-        scc.contract_id,
-        scc.customer_id,
-        scc.owner_user_id
-        FROM wk_crm_product as scp
-        LEFT JOIN wk_crm_contract_product as sccp on sccp.product_id = scp.product_id
-        LEFT JOIN wk_crm_contract as scc on scc.contract_id = sccp.contract_id
-        LEFT JOIN wk_crm_product_category as scpc on scpc.category_id = scp.category_id
-        where DATE_FORMAT(scc.order_date,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
-        and scc.owner_user_id in
+    <select id="queryProductSell" resultType="com.kakarote.bi.entity.VO.ProductStatisticsVO">
+        SELECT
+        b.product_id,
+        c.name as productName,
+        d.name as categoryName,
+        count(1) as contractNum,
+        SUM(IFNULL(b.num,0)) as num,
+        SUM(IFNULL(b.subtotal,0)) as total
+        FROM
+        wk_crm_contract AS a
+        JOIN wk_crm_contract_product AS b ON a.contract_id = b.contract_id
+        LEFT JOIN wk_crm_product as c on b.product_id = c.product_id
+        LEFT JOIN wk_crm_product_category as d on c.category_id=d.category_id
+        WHERE DATE_FORMAT(a.order_date,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+        and a.owner_user_id in
         <for collection="userIds" item="item">
             #{item}
         </for>
-        order by scp.category_id,scp.product_id
+        GROUP BY b.product_id
+        limit ${page},${limit}
+    </select>
+    <select id="queryProductSellCount" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT COUNT(1) as count,sum(contractNum) as contractNum,sum(num) as num, sum(total) as total FROM (
+        SELECT
+        product_id,
+        count(1) as contractNum,
+        SUM(IFNULL(b.num,0)) as num,
+        SUM(IFNULL(b.subtotal,0)) as total
+        FROM
+        wk_crm_contract AS a
+        JOIN wk_crm_contract_product AS b ON a.contract_id = b.contract_id
+        WHERE DATE_FORMAT(a.order_date,#{sqlDateFormat}) between #{beginTime} and #{finalTime}
+        and a.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        GROUP BY b.product_id
+        ) as a
     </select>
     <select id="taskCompleteStatistics" resultType="com.alibaba.fastjson.JSONObject">
         <foreach collection="map" item="x" index="i" separator="union all">
@@ -51,16 +71,18 @@
                         <when test="status == 1">
                             (select IFNULL(SUM(a.money), 0) as receivables
                             from wk_crm_contract as a
-                            inner join wk_admin_user as b on a.owner_user_id = b.user_id
-                            where b.dept_id = #{deptId}
+                            inner join wk_admin_user as b
+                            where a.owner_user_id = b.user_id
+                            and b.dept_id = #{deptId}
                             and DATE_FORMAT(order_date, '%Y%m') = CONCAT('${year}', '${x.value}')
                             and check_status = 1) as b
                         </when>
                         <when test="status == 2">
                             (select IFNULL(SUM(a.money), 0)  as receivables
                             from wk_crm_receivables as a
-                            inner join wk_admin_user as b on a.owner_user_id = b.user_id
-                            where b.dept_id = #{deptId}
+                            inner join wk_admin_user as b
+                            where a.owner_user_id = b.user_id
+                            and b.dept_id = #{deptId}
                             and DATE_FORMAT(return_time, '%Y%m') = CONCAT('${year}', '${x.value}')
                             and check_status = 1) as b
                         </when>

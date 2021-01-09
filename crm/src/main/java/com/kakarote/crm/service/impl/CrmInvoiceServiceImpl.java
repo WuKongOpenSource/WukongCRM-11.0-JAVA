@@ -13,6 +13,10 @@ import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.examine.entity.ExamineRecordLog;
+import com.kakarote.core.feign.examine.entity.ExamineRecordReturnVO;
+import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
+import com.kakarote.core.feign.examine.service.ExamineService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
@@ -22,9 +26,7 @@ import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.ParamsUtil;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.entity.BO.CrmExamineData;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
-import com.kakarote.crm.entity.PO.CrmExamineLog;
 import com.kakarote.crm.entity.PO.CrmInvoice;
 import com.kakarote.crm.entity.PO.CrmInvoiceInfo;
 import com.kakarote.crm.mapper.CrmInvoiceMapper;
@@ -62,6 +64,9 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
 
     @Autowired
     private ActionRecordUtil actionRecordUtil;
+
+    @Autowired
+    private ExamineService examineService;
 
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
@@ -190,7 +195,7 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void saveInvoice(CrmInvoice crmInvoice, Long checkUserId) {
         List<AdminConfig> configList = adminService.queryConfigByName("numberSetting").getData();
         AdminConfig adminConfig = configList.stream().filter(config -> Objects.equals(getLabel().getType().toString(), config.getValue())).collect(Collectors.toList()).get(0);
@@ -199,33 +204,49 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
             crmInvoice.setInvoiceApplyNumber(result);
         }
         crmInvoice.setOwnerUserId(UserUtil.getUserId());
-        Integer examineCount = crmExamineService.queryCount(CrmEnum.INVOICE);
-        CrmExamineData crmExamineData = null;
-        if (examineCount > 0) {
-            crmExamineData = crmExamineRecordService.saveExamineRecord(3, checkUserId, crmInvoice.getOwnerUserId(), null, crmInvoice.getCheckStatus());
-            if (crmExamineData.getStatus() == 0) {
-                throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_STEP_ERROR);
-            } else if (crmExamineData.getStatus() == 2) {
-                throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_USER_ERROR);
-            } else {
-                crmInvoice.setExamineRecordId(crmExamineData.getRecordId());
-            }
-            crmInvoice.setCheckStatus(0);
+        ExamineRecordSaveBO examineRecordSaveBO = crmInvoice.getExamineFlowData();
+        String batchId = StrUtil.isNotEmpty(crmInvoice.getBatchId()) ? crmInvoice.getBatchId() : IdUtil.simpleUUID();
+        crmInvoice.setCreateUserId(UserUtil.getUserId()).setCreateTime(new Date()).setUpdateTime(new Date()).setBatchId(batchId);
+        save(crmInvoice);
+        ExamineRecordReturnVO crmExamineData = null;
+        if (examineRecordSaveBO != null) {
+            this.supplementFieldInfo(crmInvoice.getInvoiceId(),null,examineRecordSaveBO);
+            examineRecordSaveBO.setTitle(crmInvoice.getInvoiceApplyNumber());
+            crmExamineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
+            crmInvoice.setExamineRecordId(crmExamineData.getRecordId());
+            crmInvoice.setCheckStatus(crmExamineData.getExamineStatus());
         } else {
             if (crmInvoice.getCheckStatus() == null) {
                 crmInvoice.setCheckStatus(1);
             }
         }
-        String batchId = StrUtil.isNotEmpty(crmInvoice.getBatchId()) ? crmInvoice.getBatchId() : IdUtil.simpleUUID();
-        crmInvoice.setCreateUserId(UserUtil.getUserId()).setCreateTime(new Date()).setUpdateTime(new Date()).setBatchId(batchId);
-        save(crmInvoice);
+        updateById(crmInvoice);
         actionRecordUtil.addRecord(crmInvoice.getInvoiceId(), CrmEnum.INVOICE, crmInvoice.getInvoiceApplyNumber());
-        addExamineNotice(crmInvoice, crmExamineData);
+//        addExamineNotice(crmInvoice, crmExamineData);
     }
 
 
+    /**
+     * 补充审批字段信息
+     * @date 2020/12/18 13:44
+     * @param examineRecordSaveBO
+     * @return void
+     **/
+    private void supplementFieldInfo(Integer typeId ,Integer recordId ,ExamineRecordSaveBO examineRecordSaveBO){
+        examineRecordSaveBO.setLabel(3);
+        examineRecordSaveBO.setTypeId(typeId);
+        examineRecordSaveBO.setRecordId(recordId);
+        if(examineRecordSaveBO.getDataMap() != null){
+            examineRecordSaveBO.getDataMap().put("createUserId" ,UserUtil.getUserId());
+        }else {
+            Map<String, Object> entityMap = new HashMap<>(1);
+            entityMap.put("createUserId" ,UserUtil.getUserId());
+            examineRecordSaveBO.setDataMap(entityMap);
+        }
+    }
+
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void updateInvoice(CrmInvoice crmInvoice, Long checkUserId) {
         CrmInvoice oldInvoice = getById(crmInvoice.getInvoiceId());
         if (oldInvoice.getCheckStatus() == 1) {
@@ -234,32 +255,22 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
         if (oldInvoice.getCheckStatus() != 4 && oldInvoice.getCheckStatus() != 2) {
             throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EDIT_ERROR);
         }
-        Integer examineCount = crmExamineService.queryCount(CrmEnum.INVOICE);
-        CrmExamineData crmExamineData = null;
-        if (examineCount > 0) {
-            crmExamineData = crmExamineRecordService.saveExamineRecord(3, checkUserId, oldInvoice.getOwnerUserId(), oldInvoice.getExamineRecordId(), crmInvoice.getCheckStatus());
-            if (crmExamineData.getStatus() == 0) {
-                throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_STEP_ERROR);
-            } else if (crmExamineData.getStatus() == 2) {
-                throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_USER_ERROR);
-            } else {
-                crmInvoice.setExamineRecordId(crmExamineData.getRecordId());
-            }
-            crmInvoice.setCheckStatus(0);
+        ExamineRecordSaveBO examineRecordSaveBO = crmInvoice.getExamineFlowData();
+        ExamineRecordReturnVO crmExamineData = null;
+        if (examineRecordSaveBO != null) {
+            this.supplementFieldInfo(oldInvoice.getInvoiceId(),oldInvoice.getExamineRecordId(),examineRecordSaveBO);
+            examineRecordSaveBO.setTitle(crmInvoice.getInvoiceApplyNumber());
+            crmExamineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
+            crmInvoice.setExamineRecordId(crmExamineData.getRecordId());
+            crmInvoice.setCheckStatus(crmExamineData.getExamineStatus());
         } else {
             if (crmInvoice.getCheckStatus() == null) {
                 crmInvoice.setCheckStatus(1);
-            }
-            if (oldInvoice.getExamineRecordId() != null) {
-                LambdaUpdateWrapper<CrmExamineLog> lambdaUpdateWrapper = new LambdaUpdateWrapper<CrmExamineLog>();
-                lambdaUpdateWrapper.eq(CrmExamineLog::getRecordId, oldInvoice.getExamineRecordId()).set(CrmExamineLog::getIsRecheck, "1");
-                crmExamineLogService.update(lambdaUpdateWrapper);
             }
         }
         actionRecordUtil.updateRecord(BeanUtil.beanToMap(oldInvoice), BeanUtil.beanToMap(crmInvoice), CrmEnum.INVOICE, crmInvoice.getInvoiceApplyNumber(), crmInvoice.getInvoiceId());
         crmInvoice.setUpdateTime(new Date());
         updateById(crmInvoice);
-        addExamineNotice(crmInvoice, crmExamineData);
     }
 
     @Override
@@ -288,6 +299,9 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
                 throw new CrmException(CrmCodeEnum.CAN_ONLY_DELETE_WITHDRAWN_AND_SUBMITTED_EXAMINE);
             }
             ApplicationContextHolder.getBean(AdminFileService.class).delete(Collections.singletonList(crmInvoice.getBatchId()));
+            if (ObjectUtil.isNotEmpty(crmInvoice.getExamineRecordId())) {
+                examineService.deleteExamineRecord(crmInvoice.getExamineRecordId());
+            }
             removeById(crmInvoice.getInvoiceId());
         }
     }
@@ -346,15 +360,16 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
     /*
    添加系统通知
    */
-    private void addExamineNotice(CrmInvoice crmInvoice, CrmExamineData crmExamineData) {
-
+    private void addExamineNotice(CrmInvoice crmInvoice, ExamineRecordReturnVO crmExamineData) {
         if (ObjectUtil.equal(crmInvoice.getCheckStatus(), 0)) {
-            List<Long> examineLogIdList = crmExamineData.getExamineLogIdList();
-            if (CollUtil.isNotEmpty(examineLogIdList)){
-                examineLogIdList.forEach(examineLogId -> {
-                    CrmExamineLog examineLog = crmExamineLogService.getById(examineLogId);
-                    crmExamineRecordService.addMessage(3,1,examineLog, UserUtil.getUserId());
-                });
+            if (crmExamineData != null) {
+                List<Integer> examineLogIdList = crmExamineData.getExamineLogIds();
+                if (CollUtil.isNotEmpty(examineLogIdList)) {
+                    examineLogIdList.forEach(examineLogId -> {
+                        ExamineRecordLog examineLog = examineService.queryExamineLogById(examineLogId).getData();
+                        crmExamineRecordService.addMessageForNewExamine(3, 1, examineLog, UserUtil.getUserId());
+                    });
+                }
             }
         }
     }

@@ -4,6 +4,7 @@
 
     <select id="queryDeptUserList" resultType="com.kakarote.admin.entity.BO.DeptVO">
         select a.*,
+           count(b.status != 0 or null) as currentNum,
            count(b.status != 0 or null) as allNum
             from `wk_admin_dept` a
                 left join `wk_admin_user` b on a.dept_id = b.dept_id

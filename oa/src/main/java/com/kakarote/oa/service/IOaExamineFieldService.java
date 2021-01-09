@@ -20,10 +20,13 @@ public interface IOaExamineFieldService extends BaseService<OaExamineField> {
 
     void recordToFormType(List<OaExamineField> list);
 
+    Boolean updateFieldCategoryId(Long newCategoryId,Long oldCategoryId);
 
     String queryFieldValueByBatchId(Integer fieldId, String batchId);
 
     void transferFieldList(List<OaExamineField> recordList, Integer isDetail);
 
     void saveField(ExamineFieldBO examineFieldBO);
+
+    void saveDefaultField(Long categoryId);
 }

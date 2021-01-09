@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
+import com.kakarote.core.feign.admin.service.AdminMessageService;
+import com.kakarote.core.feign.examine.service.ExamineService;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserUtil;
@@ -141,6 +143,39 @@ public class CrmCommonServiceImpl implements ICrmCommonService {
     @Autowired
     private AdminFileService adminFileService;
 
+    @Autowired
+    private ICrmCustomerPoolRelationService crmCustomerPoolRelationService;
+
+    @Autowired
+    private ICrmCustomerPoolFieldSettingService crmCustomerPoolFieldSettingService;
+
+    @Autowired
+    private ICrmCustomerPoolFieldSortService crmCustomerPoolFieldSortService;
+
+    @Autowired
+    private ICrmCustomerPoolFieldStyleService crmCustomerPoolFieldStyleService;
+
+    @Autowired
+    private ICrmCustomerPoolRuleService crmCustomerPoolRuleService;
+
+    @Autowired
+    private AdminMessageService adminMessageService;
+
+    @Autowired
+    private ICrmMarketingService crmMarketingService;
+
+    @Autowired
+    private ICrmMarketingInfoService crmMarketingInfoService;
+
+    @Autowired
+    private ICrmMarketingFieldService crmMarketingFieldService;
+
+    @Autowired
+    private ICrmMarketingFormService crmMarketingFormService;
+
+    @Autowired
+    private ExamineService examineService;
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -210,8 +245,25 @@ public class CrmCommonServiceImpl implements ICrmCommonService {
         crmReturnVisitService.lambdaUpdate().remove();
         crmReturnVisitDataService.lambdaUpdate().remove();
 
+        crmCustomerPoolRelationService.lambdaUpdate().remove();
+        crmCustomerPoolFieldSettingService.lambdaUpdate().remove();
+        crmCustomerPoolFieldSortService.lambdaUpdate().remove();
+        crmCustomerPoolFieldStyleService.lambdaUpdate().remove();
+        crmCustomerPoolRuleService.lambdaUpdate().remove();
+
+        crmMarketingService.lambdaUpdate().remove();
+        crmMarketingInfoService.lambdaUpdate().remove();
+        crmMarketingFieldService.lambdaUpdate().remove();
+        crmMarketingFormService.lambdaUpdate().remove();
+
+        adminMessageService.deleteByLabel(6);
+
         crmActionRecordService.lambdaUpdate().remove();
         crmBackLogDealService.lambdaUpdate().remove();
+
+        examineService.deleteExamineRecordAndLog(1);
+        examineService.deleteExamineRecordAndLog(2);
+        examineService.deleteExamineRecordAndLog(3);
         log.info("客户管理模块数据初始化成功。开始更新es数据！");
         return this.deleteByQuery(elasticsearchRestTemplate.getClient()) >= 0;
     }
@@ -223,6 +275,7 @@ public class CrmCommonServiceImpl implements ICrmCommonService {
      * @date 2020/11/20 15:41
      * @param baseService
      * @param resultColumn
+     * @param queryColumn
      * @param mapper
      * @return void
      **/

@@ -47,4 +47,6 @@ public interface IAdminMessageService extends BaseService<AdminMessage> {
     void deleteEventMessage(Integer eventId);
 
     void deleteById(Integer messageId);
+
+    void deleteByLabel(Integer label);
 }

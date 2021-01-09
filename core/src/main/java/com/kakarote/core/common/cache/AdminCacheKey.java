@@ -5,6 +5,9 @@ package com.kakarote.core.common.cache;
  * @author hmb
  */
 public interface AdminCacheKey {
+
+    String USER_AUTH_CACHE_KET = "user_auth:";
+
     /**
      * 导入消息缓存key
      */

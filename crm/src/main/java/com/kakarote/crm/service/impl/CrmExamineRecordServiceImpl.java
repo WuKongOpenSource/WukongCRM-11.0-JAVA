@@ -14,6 +14,10 @@ import com.kakarote.core.feign.admin.entity.AdminMessageBO;
 import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
 import com.kakarote.core.feign.admin.service.AdminMessageService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.crm.entity.SimpleCrmInfo;
+import com.kakarote.core.feign.examine.entity.ExamineConditionDataBO;
+import com.kakarote.core.feign.examine.entity.ExamineMessageBO;
+import com.kakarote.core.feign.examine.entity.ExamineRecordLog;
 import com.kakarote.core.feign.hrm.entity.HrmSalaryMonthRecord;
 import com.kakarote.core.feign.hrm.service.SalaryRecordService;
 import com.kakarote.core.feign.jxc.entity.JxcExamine;
@@ -23,6 +27,7 @@ import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
+import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.ElasticUtil;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
@@ -272,7 +277,9 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
     public void updateUnreceivedMoney(Integer id) {
         CrmReceivables receivables = crmReceivablesService.getById(id);
         CrmContract contract = crmContractService.getById(receivables.getContractId());
-        if (contract.getMoney().subtract(receivables.getMoney()).compareTo(BigDecimal.ZERO) < 0) {
+        receivables.setMoney(Optional.ofNullable(receivables.getMoney()).orElse(BigDecimal.ZERO));
+        contract.setMoney(Optional.ofNullable(contract.getMoney()).orElse(BigDecimal.ZERO));
+        if (contract.getMoney().subtract(Optional.ofNullable(receivables.getMoney()).orElse(BigDecimal.ZERO)).compareTo(BigDecimal.ZERO) < 0) {
             return;
         }
         BigDecimal unreceivedMoney = contract.getUnreceivedMoney();
@@ -294,7 +301,9 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
         CrmExamineLogMapper mapper = (CrmExamineLogMapper) examineLogService.getBaseMapper();
         JSONObject jsonObject = new JSONObject();
         JSONObject examineRecord = getBaseMapper().queryExamineRecordById(recordId);
-
+        if (examineRecord == null){
+            return jsonObject;
+        }
         CrmExamine adminExamine = examineService.getById(examineRecord.getInteger("examineId"));
         List<JSONObject> list = new ArrayList<>();
         JSONObject rec = mapper.queryRecordAndId(recordId);
@@ -487,9 +496,9 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
             jsonObject.put("createTime", record.getCreateTime());
             jsonObject.put("examineStatus", record.getExamineStatus());
             jsonObject.put("checkStatus", record.getExamineStatus());
-            jsonObject.put("realname", adminService.queryUserName(record.getCreateUser()).getData());
+            jsonObject.put("realname", UserCacheUtil.getUserName(record.getCreateUser()));
         }else {
-            jsonObject.put("realname", adminService.queryUserName(jsonObject.getLong("ownerUserId")).getData());
+            jsonObject.put("realname", UserCacheUtil.getUserName(jsonObject.getLong("ownerUserId")));
         }
         CrmExamineLogMapper mapper = (CrmExamineLogMapper) examineLogService.getBaseMapper();
         List<JSONObject> logs = mapper.queryExamineLogByRecordIdByStep(recordId);
@@ -836,6 +845,7 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
         }
     }
 
+
     /**
      * @param categoryType 类型
      * @return id
@@ -926,6 +936,9 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
                     throw new CrmException(CrmCodeEnum.CRM_EXAMINE_RECHECK_PASS_ERROR);
                 }
             }
+            ExamineConditionDataBO examineConditionDataBO = new ExamineConditionDataBO();
+            examineConditionDataBO.setTypeId(id);
+            examineConditionDataBO.setCheckStatus(status);
             salaryRecordService.updateCheckStatus(id, status);
         } else if (categoryType == 5 || categoryType == 6 || categoryType == 7 || categoryType == 8 || categoryType == 9 || categoryType == 10 || categoryType == 11 || categoryType == 12) {
             Result<JxcState> result = jxcExamineService.queryJxcById(categoryType, id);
@@ -938,5 +951,257 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
             jxcExamineService.examine(categoryType, status, id);
         }
 
+    }
+
+
+    @Override
+    public void addMessageForNewExamine(ExamineMessageBO examineMessageBO) {
+        this.addMessageForNewExamine(examineMessageBO.getCategoryType(),examineMessageBO.getExamineType(),
+                examineMessageBO.getExamineLog(),examineMessageBO.getOwnerUserId());
+    }
+
+    @Override
+    public void addMessageForNewExamine(Integer categoryType, Integer examineType, Object examineObj, Long ownerUserId) {
+        AdminMessageBO adminMessageBO = new AdminMessageBO();
+        if (examineType == 1) {
+            if (examineObj instanceof ExamineRecordLog) {
+                ExamineRecordLog examineLog = (ExamineRecordLog) examineObj;
+                adminMessageBO.setUserId(ownerUserId);
+                if (categoryType == 1) {
+                    CrmContract one = ApplicationContextHolder.getBean(ICrmContractService.class)
+                            .lambdaQuery().eq(CrmContract::getExamineRecordId, examineLog.getRecordId()).last(" limit 1").one();
+                    if (one == null) {
+                        return;
+                    }
+                    adminMessageBO.setTitle(one.getName());
+                    adminMessageBO.setTypeId(one.getContractId());
+                    adminMessageBO.setMessageType(AdminMessageEnum.CRM_CONTRACT_EXAMINE.getType());
+                } else if (categoryType == 2) {
+                    CrmReceivables one = ApplicationContextHolder.getBean(ICrmReceivablesService.class)
+                            .lambdaQuery().eq(CrmReceivables::getExamineRecordId, examineLog.getRecordId()).last(" limit 1").one();
+                    if (one == null) {
+                        return;
+                    }
+                    adminMessageBO.setTitle(one.getNumber());
+                    adminMessageBO.setTypeId(one.getReceivablesId());
+                    adminMessageBO.setMessageType(AdminMessageEnum.CRM_RECEIVABLES_EXAMINE.getType());
+                } else if (categoryType == 3) {
+                    CrmInvoice one = ApplicationContextHolder.getBean(ICrmInvoiceService.class)
+                            .lambdaQuery().eq(CrmInvoice::getExamineRecordId, examineLog.getRecordId()).last(" limit 1").one();
+                    if (one == null) {
+                        return;
+                    }
+                    adminMessageBO.setTitle(one.getInvoiceApplyNumber());
+                    adminMessageBO.setTypeId(one.getInvoiceId());
+                    adminMessageBO.setMessageType(AdminMessageEnum.CRM_INVOICE_EXAMINE.getType());
+                }else if (categoryType == 4) {
+                    return;
+                }else {
+                    JxcExamine jxcExamine = new JxcExamine();
+                    jxcExamine.setCategoryType(categoryType);
+                    jxcExamine.setExamineType(examineType);
+                    jxcExamine.setExamineObj((JSONObject) JSONObject.toJSON(examineLog));
+                    jxcExamine.setOwnerUserId(ownerUserId);
+                    jxcExamineService.examineMessage(jxcExamine);
+                    return;
+                }
+                adminMessageBO.setIds(Collections.singletonList(examineLog.getExamineUserId()));
+            }
+        } else if (examineType == 2 || examineType == 3) {
+            if (examineObj instanceof ExamineRecordLog) {
+                ExamineRecordLog examineRecord = (ExamineRecordLog) examineObj;
+                adminMessageBO.setContent(examineRecord.getRemarks());
+                adminMessageBO.setUserId(examineRecord.getExamineUserId());
+                if (categoryType == 1) {
+                    CrmContract one = ApplicationContextHolder.getBean(ICrmContractService.class)
+                            .lambdaQuery().eq(CrmContract::getExamineRecordId, examineRecord.getRecordId()).last(" limit 1").one();
+                    if (one == null) {
+                        return;
+                    }
+                    adminMessageBO.setTitle(one.getName());
+                    adminMessageBO.setTypeId(one.getContractId());
+                    adminMessageBO.setMessageType(examineType == 2 ? AdminMessageEnum.CRM_CONTRACT_PASS.getType() : AdminMessageEnum.CRM_CONTRACT_REJECT.getType());
+                    adminMessageBO.setIds(Collections.singletonList(one.getOwnerUserId()));
+                } else if (categoryType == 2) {
+                    CrmReceivables one = ApplicationContextHolder.getBean(ICrmReceivablesService.class)
+                            .lambdaQuery().eq(CrmReceivables::getExamineRecordId, examineRecord.getRecordId()).last(" limit 1").one();
+                    if (one == null) {
+                        return;
+                    }
+                    adminMessageBO.setTitle(one.getNumber());
+                    adminMessageBO.setTypeId(one.getReceivablesId());
+                    adminMessageBO.setMessageType(examineType == 2 ? AdminMessageEnum.CRM_RECEIVABLES_PASS.getType() : AdminMessageEnum.CRM_RECEIVABLES_REJECT.getType());
+                    adminMessageBO.setIds(Collections.singletonList(one.getOwnerUserId()));
+                } else if (categoryType == 3) {
+                    CrmInvoice one = ApplicationContextHolder.getBean(ICrmInvoiceService.class)
+                            .lambdaQuery().eq(CrmInvoice::getExamineRecordId, examineRecord.getRecordId()).last(" limit 1").one();
+                    if (one == null) {
+                        return;
+                    }
+                    adminMessageBO.setTitle(one.getInvoiceApplyNumber());
+                    adminMessageBO.setTypeId(one.getInvoiceId());
+                    adminMessageBO.setMessageType(examineType == 2 ? AdminMessageEnum.CRM_INVOICE_PASS.getType() : AdminMessageEnum.CRM_INVOICE_REJECT.getType());
+                    adminMessageBO.setIds(Collections.singletonList(one.getOwnerUserId()));
+                }else if (categoryType == 4) {
+                    return;
+                }else {
+                    JxcExamine jxcExamine = new JxcExamine();
+                    jxcExamine.setCategoryType(categoryType);
+                    jxcExamine.setExamineType(examineType);
+                    jxcExamine.setExamineObj((JSONObject) JSONObject.toJSON(examineRecord));
+                    jxcExamine.setOwnerUserId(ownerUserId);
+                    jxcExamineService.examineMessage(jxcExamine);
+                    return;
+                }
+            }
+        }
+        if (adminMessageBO.getIds() != null && adminMessageBO.getIds().size() > 0) {
+            AdminMessageService messageService = ApplicationContextHolder.getBean(AdminMessageService.class);
+            messageService.sendMessage(adminMessageBO);
+        }
+
+    }
+
+
+    @Override
+    public Map<String, Object> getDataMapForNewExamine(ExamineConditionDataBO examineConditionDataBO) {
+        Map<String, Object> dataMap = new HashMap<>(8);
+        Integer label = examineConditionDataBO.getLabel();
+        Integer id = examineConditionDataBO.getTypeId();
+        if (label == 1){
+            CrmModel crmModel = crmContractService.queryById(id);
+            List<String> fieldList = examineConditionDataBO.getFieldList();
+            fieldList.forEach(fieldName -> dataMap.put(fieldName,crmModel.get(fieldName)));
+            dataMap.put("createUserId",crmModel.get("createUserId"));
+        }else if (label == 2){
+            CrmModel crmModel = crmReceivablesService.queryById(id);
+            List<String> fieldList = examineConditionDataBO.getFieldList();
+            fieldList.forEach(fieldName -> dataMap.put(fieldName,crmModel.get(fieldName)));
+            dataMap.put("createUserId",crmModel.get("createUserId"));
+        }else if (label == 3){
+            ICrmInvoiceService crmInvoiceService = ApplicationContextHolder.getBean(ICrmInvoiceService.class);
+            LambdaQueryWrapper<CrmInvoice> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+            lambdaQueryWrapper.eq(CrmInvoice::getInvoiceId,id);
+            Map<String, Object> crmModel = crmInvoiceService.getMap(lambdaQueryWrapper);
+            List<String> fieldList = examineConditionDataBO.getFieldList();
+            fieldList.forEach(fieldName -> dataMap.put(fieldName,crmModel.get(fieldName)));
+            dataMap.put("createUserId",crmModel.get("createUserId"));
+        }
+        return dataMap;
+    }
+
+    @Override
+    public Boolean updateCheckStatusByNewExamine(ExamineConditionDataBO examineConditionDataBO) {
+        Integer categoryType = examineConditionDataBO.getLabel();
+        Integer id = examineConditionDataBO.getTypeId();
+        Integer status = examineConditionDataBO.getCheckStatus();
+        //审核是否能够撤回的逻辑
+        if (categoryType == 1) {
+            CrmContract contract = ApplicationContextHolder.getBean(ICrmContractService.class).getById(id);
+            if (status == 4) {
+                if (contract.getCheckStatus() == 1) {
+                    throw new CrmException(CrmCodeEnum.CRM_EXAMINE_RECHECK_PASS_ERROR);
+                }
+            } else if (status == 1) {
+                CrmCustomer customer = ApplicationContextHolder.getBean(ICrmCustomerService.class).getById(contract.getCustomerId());
+                customer.setDealStatus(1);
+                Date dealTime = contract.getOrderDate() != null ? contract.getOrderDate() : new Date();
+                customer.setDealTime(dealTime);
+                ApplicationContextHolder.getBean(ICrmCustomerService.class).updateById(customer);
+                Map<String, Object> map = new HashMap<>();
+                map.put("dealTime", DateUtil.formatDateTime(dealTime));
+                map.put("dealStatus", 1);
+                ElasticUtil.updateField(elasticsearchRestTemplate, map, customer.getCustomerId(), CrmEnum.CUSTOMER.getIndex());
+            }
+            contract.setCheckStatus(status);
+            ApplicationContextHolder.getBean(ICrmContractService.class).updateById(contract);
+            ElasticUtil.updateField(elasticsearchRestTemplate, "checkStatus", status, Collections.singletonList(contract.getContractId()), CrmEnum.CONTRACT.getIndex());
+        } else if (categoryType == 2) {
+            CrmReceivables receivables = ApplicationContextHolder.getBean(ICrmReceivablesService.class).getById(id);
+            if (status == 4) {
+                if (receivables.getCheckStatus() == 1) {
+                    throw new CrmException(CrmCodeEnum.CRM_EXAMINE_RECHECK_PASS_ERROR);
+                }
+            } else if (status == 1) {
+                updateContractMoney(id);
+            }
+            receivables.setCheckStatus(status);
+            //回款
+            ApplicationContextHolder.getBean(ICrmReceivablesService.class).updateById(receivables);
+            ElasticUtil.updateField(elasticsearchRestTemplate, "checkStatus", status, Collections.singletonList(receivables.getReceivablesId()), CrmEnum.RECEIVABLES.getIndex());
+        } else if (categoryType == 3) {
+            CrmInvoice invoice = ApplicationContextHolder.getBean(ICrmInvoiceService.class).getById(id);
+            if (status == 4) {
+                if (invoice.getCheckStatus() == 1) {
+                    throw new CrmException(CrmCodeEnum.CRM_EXAMINE_RECHECK_PASS_ERROR);
+                }
+            }
+            invoice.setCheckStatus(status);
+            ApplicationContextHolder.getBean(ICrmInvoiceService.class).updateById(invoice);
+        } else if (categoryType == 4) {
+            Result<HrmSalaryMonthRecord> hrmSalaryMonthRecordResult = salaryRecordService.querySalaryRecordById(id);
+            HrmSalaryMonthRecord salaryMonthRecord = hrmSalaryMonthRecordResult.getData();
+            if (status == 4) {
+                if (salaryMonthRecord.getCheckStatus() == 1) {
+                    throw new CrmException(CrmCodeEnum.CRM_EXAMINE_RECHECK_PASS_ERROR);
+                }
+            }
+            salaryRecordService.updateCheckStatus(id, status);
+        } else if (categoryType == 5 || categoryType == 6 || categoryType == 7 || categoryType == 8 || categoryType == 9 || categoryType == 10 || categoryType == 11 || categoryType == 12) {
+            Result<JxcState> result = jxcExamineService.queryJxcById(categoryType, id);
+            JxcState jxcState = result.getData();
+            if (status == 4) {
+                if (jxcState.getState() == 3) {
+                    throw new CrmException(CrmCodeEnum.CRM_EXAMINE_RECHECK_PASS_ERROR);
+                }
+            }
+            jxcExamineService.examine(categoryType, status, id);
+        }
+        return true;
+    }
+
+    @Override
+    public SimpleCrmInfo getCrmSimpleInfo(ExamineConditionDataBO examineConditionDataBO) {
+        SimpleCrmInfo simpleCrmInfo = new SimpleCrmInfo();
+        Integer label = examineConditionDataBO.getLabel();
+        Integer id = examineConditionDataBO.getTypeId();
+        if (label == 1){
+            CrmContract crmContract = crmContractService.getById(id);
+            if (crmContract == null){
+                return null;
+            }
+            CrmCustomer crmCustomer = ApplicationContextHolder.getBean(ICrmCustomerService.class).getById(crmContract.getCustomerId());
+            simpleCrmInfo.setCategory(crmContract.getName());
+            simpleCrmInfo.setCategoryId(crmContract.getContractId());
+            simpleCrmInfo.setOrderDate(crmContract.getOrderDate());
+            simpleCrmInfo.setCategoryCiteId(crmCustomer.getCustomerId());
+            simpleCrmInfo.setCategoryCiteName(crmCustomer.getCustomerName());
+            simpleCrmInfo.setCreateUser(adminService.queryUserById(crmContract.getCreateUserId()).getData());
+        }else if (label == 2){
+            CrmReceivables crmReceivables = crmReceivablesService.getById(id);
+            if (crmReceivables == null){
+                return null;
+            }
+            CrmContract crmContract = crmContractService.getById(crmReceivables.getContractId());
+            simpleCrmInfo.setCategory(crmReceivables.getNumber());
+            simpleCrmInfo.setCategoryId(crmReceivables.getReceivablesId());
+            simpleCrmInfo.setReturnTime(crmReceivables.getReturnTime());
+            simpleCrmInfo.setCategoryCiteId(crmContract.getContractId());
+            simpleCrmInfo.setCategoryCiteName(crmContract.getName());
+            simpleCrmInfo.setCreateUser(adminService.queryUserById(crmReceivables.getCreateUserId()).getData());
+        }else if (label == 3){
+            CrmInvoice crmInvoice = ApplicationContextHolder.getBean(ICrmInvoiceService.class).getById(id);
+            if (crmInvoice == null){
+                return null;
+            }
+            CrmContract crmContract = crmContractService.getById(crmInvoice.getContractId());
+            simpleCrmInfo.setCategory(crmInvoice.getInvoiceApplyNumber());
+            simpleCrmInfo.setCategoryId(crmInvoice.getInvoiceId());
+            simpleCrmInfo.setRealInvoiceDate(crmInvoice.getRealInvoiceDate());
+            simpleCrmInfo.setCategoryCiteId(crmContract.getContractId());
+            simpleCrmInfo.setCategoryCiteName(crmContract.getName());
+            simpleCrmInfo.setCreateUser(adminService.queryUserById(crmInvoice.getCreateUserId()).getData());
+        }
+        return simpleCrmInfo;
     }
 }

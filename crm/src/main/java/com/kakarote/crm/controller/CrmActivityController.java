@@ -6,10 +6,14 @@ import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.log.BehaviorEnum;
+import com.kakarote.core.common.log.SysLog;
+import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.crm.common.AuthUtil;
+import com.kakarote.crm.common.log.CrmActivityLog;
 import com.kakarote.crm.constant.CrmActivityEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.CrmActivityBO;
@@ -34,6 +38,7 @@ import javax.validation.Valid;
 @RestController
 @RequestMapping("/crmActivity")
 @Api(tags = "活动模块")
+@SysLog(logClass = CrmActivityLog.class)
 public class CrmActivityController {
 
     @Autowired
@@ -48,6 +53,7 @@ public class CrmActivityController {
 
     @PostMapping("/addCrmActivityRecord")
     @ApiOperation("添加跟进记录")
+    @SysLogHandler(behavior = BehaviorEnum.FOLLOW_UP)
     public Result addCrmActivityRecord(@RequestBody @Valid CrmActivity crmActivity) {
         boolean auth = AuthUtil.isCrmAuth(CrmEnum.parse(crmActivity.getActivityType()), crmActivity.getActivityTypeId());
         if (auth) {

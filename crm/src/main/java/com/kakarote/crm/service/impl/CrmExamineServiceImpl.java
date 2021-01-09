@@ -17,6 +17,7 @@ import com.kakarote.core.feign.hrm.service.SalaryRecordService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.TagUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
@@ -156,7 +157,7 @@ public class CrmExamineServiceImpl extends BaseServiceImpl<CrmExamineMapper, Crm
                 adminExamine.setStepList(new ArrayList<>());
             }
 
-            adminExamine.setUpdateUserName(adminService.queryUserName(adminExamine.getUpdateUserId()).getData());
+            adminExamine.setUpdateUserName(UserCacheUtil.getUserName(adminExamine.getUpdateUserId()));
             if (StrUtil.isNotEmpty((String) adminExamine.getUserIds())) {
                 adminExamine.setUserIds(adminService.queryUserByIds(TagUtil.toLongSet((String) adminExamine.getUserIds())).getData());
             } else {
@@ -252,7 +253,7 @@ public class CrmExamineServiceImpl extends BaseServiceImpl<CrmExamineMapper, Crm
                     if (recordId != null) {
                         CrmExamineLog examineLog = examineLogService.lambdaQuery().eq(CrmExamineLog::getIsRecheck, 0).eq(CrmExamineLog::getRecordId, recordId).last("limit 1").one();
                         if (examineLog != null) {
-                            String examineUserName = adminService.queryUserName(examineLog.getExamineUser()).getData();
+                            String examineUserName = UserCacheUtil.getUserName(examineLog.getExamineUser());
                             examineStepVO.setExamineUser(examineLog.getExamineUser());
                             examineStepVO.setExamineUserName(examineUserName);
                         }
