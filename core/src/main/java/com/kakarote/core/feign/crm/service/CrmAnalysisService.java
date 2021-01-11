@@ -11,15 +11,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 @FeignClient(name = "crm",contextId = "analysis")
 public interface CrmAnalysisService {
 
-
-    /**
-    * 统计客户信息
-    * @date 2020/9/16 13:45
-    * @return
-    **/
-    @PostMapping("/crmAnalysis/customerStats")
-    Result<Boolean> customerStats();
-
     /**
      * 初始化数据
      * @date 2020/9/16 13:45

@@ -19,10 +19,7 @@ public class BiCustomerStatsJob {
 
     @XxlJob("BiCustomerStatsJob")
     public ReturnT<String> biCustomerStatsJobHandler(String param) {
-        XxlJobLogger.log("---------准备同步客户统计信息---------");
-        Boolean b =  crmAnalysisService.customerStats().getData();
-        XxlJobLogger.log("---------同步客户统计信息"+(b ? "成功":"失败"));
-        return b ? ReturnT.SUCCESS:ReturnT.SUCCESS;
+        return ReturnT.SUCCESS;
     }
 
 }
