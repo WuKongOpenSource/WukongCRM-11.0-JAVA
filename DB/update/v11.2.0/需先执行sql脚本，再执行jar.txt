@@ -1,0 +1,2 @@
+先在wk_crm_single数据库执行v11.2.0.sql
+再执行 java -jar update-V11.2.0.jar即可
