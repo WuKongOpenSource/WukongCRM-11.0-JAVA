@@ -11,7 +11,7 @@ spring:
         enabled: true
         server-addr: 127.0.0.1:8848
         file-extension: yaml
-        prefix: admin
+        prefix: authorization
       discovery:
         enabled: true
         server-addr: 127.0.0.1:8848
