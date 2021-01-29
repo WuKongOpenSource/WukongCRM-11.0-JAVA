@@ -14,9 +14,9 @@ import java.util.Date;
 @Component
 public class BaseMetaObjectHandler implements MetaObjectHandler {
 
-    private static final String FIELD_CREATE_TIME = "createTime";
-    private static final String FIELD_UPDATE_TIME = "updateTime";
-    private static final String FIELD_CREATE_USER = "createUserId";
+    public static final String FIELD_CREATE_TIME = "createTime";
+    public static final String FIELD_UPDATE_TIME = "updateTime";
+    public static final String FIELD_CREATE_USER = "createUserId";
 
     /**
      * 插入元对象字段填充（用于插入时对公共字段的填充）
