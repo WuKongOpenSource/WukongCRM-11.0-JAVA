@@ -42,7 +42,7 @@ public class PermissionServiceImpl implements PermissionService {
     /**
      * 不需要cookies
      */
-    private static final List<String> NOT_AUTH_URLS = Lists.newArrayList("/crmMarketing/queryMarketingId", "/crmMarketing/queryAddField", "/crmMarketing/saveMarketingInfo", "/adminUser/queryLoginUser","/adminUser/querySystemStatus","/adminUser/initUser");
+    private static final List<String> NOT_AUTH_URLS = Lists.newArrayList("/crmMarketing/queryMarketingId", "/crmMarketing/queryAddField", "/crmMarketing/saveMarketingInfo", "/adminUser/queryLoginUser", "/crmCall/upload","/adminUser/querySystemStatus","/adminUser/initUser");
 
 
     /**

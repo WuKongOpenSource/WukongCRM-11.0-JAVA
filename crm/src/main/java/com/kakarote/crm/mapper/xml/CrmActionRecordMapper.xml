@@ -7,8 +7,8 @@
       where action_id = #{actionId} and types = #{types} and content is not null and content != '' order by create_time desc
     </select>
     <select id="queryFieldValue" resultType="com.kakarote.crm.entity.VO.CrmModelFiledVO">
-        select a.field_id, value,b.field_name,b.name from ${data.dataTableName} as a
-        left join wk_crm_field b on a.field_id = b.field_id
+        select a.field_id, a.value,b.field_name,b.name,b.type from ${data.dataTableName} as a
+        join wk_crm_field b on a.field_id = b.field_id
         where batch_id = #{data.batchId} and b.field_name is not null
     </select>
 </mapper>

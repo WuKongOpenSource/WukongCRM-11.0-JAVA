@@ -10,7 +10,10 @@ import com.kakarote.admin.entity.PO.AdminRole;
 import com.kakarote.admin.entity.VO.AdminRoleVO;
 import com.kakarote.admin.service.IAdminModelSortService;
 import com.kakarote.admin.service.IAdminRoleService;
-import com.kakarote.core.common.*;
+import com.kakarote.core.common.ApiExplain;
+import com.kakarote.core.common.R;
+import com.kakarote.core.common.Result;
+import com.kakarote.core.common.SubModelType;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.SysLog;
 import com.kakarote.core.common.log.SysLogHandler;
@@ -22,9 +25,9 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -114,17 +117,10 @@ public class AdminRoleController {
         return R.ok(dataType);
     }
 
-    @PostMapping("/queryMaxDataType")
-    @ApiExplain("查询数据权限")
-    public Result<Integer> queryMaxDataType(@RequestParam("userId") Long userId, @RequestParam("menuId") Integer menuId) {
-        Integer dataType = adminRoleService.queryMaxDataType(userId, menuId);
-        return R.ok(dataType);
-    }
-
     @PostMapping("/queryUserByAuth")
     @ApiExplain("查询数据权限")
-    public Result<List<Long>> queryUserByAuth(@RequestParam("userId") Long userId, @RequestParam("realm") String realm) {
-        List<Long> longs = adminRoleService.queryUserByAuth(userId, realm);
+    public Result<Collection<Long>> queryUserByAuth(@RequestParam("userId") Long userId, @RequestParam("menuId") Integer menuId) {
+        Collection<Long> longs = adminRoleService.queryUserByAuth(userId, menuId);
         return R.ok(longs);
     }
 
@@ -225,14 +221,11 @@ public class AdminRoleController {
         return R.ok(adminRoles);
     }
 
-    @PostMapping(value = "/queryHrmDataAuthType")
-    @ApiExplain("查询人力资源数据权限")
-    public Result<Integer> queryHrmDataAuthType(@RequestParam("menuId")Integer menuId){
-        if (UserUtil.isAdmin()){
-            return R.ok(DataAuthEnum.ALL.getValue());
-        }
-        Integer dataAuthType =adminRoleService.queryHrmDataAuthType(menuId);
-        return R.ok(Optional.ofNullable(dataAuthType).orElse(0));
+    @PostMapping("/adminRole/queryUserIdByRoleId")
+    @ApiExplain("根据角色ID查询用户列表")
+    public Result<List<Long>> queryUserIdByRoleId(@RequestParam("roleId") Integer roleId){
+        List<Long> userIds = adminRoleService.queryUserIdByRoleId(roleId);
+        return R.ok(userIds);
     }
 }
 

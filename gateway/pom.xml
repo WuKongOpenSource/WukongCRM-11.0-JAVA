@@ -7,36 +7,12 @@
         <groupId>com.kakarote</groupId>
         <artifactId>wkcrm</artifactId>
         <version>0.0.1-SNAPSHOT</version>
-
     </parent>
 
     <artifactId>wk_gateway</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>gateway</name>
     <description>gateway网关</description>
-    <repositories>
-        <repository>
-            <id>public</id>
-            <name>local private nexus</name>
-            <url>http://nexus.72crm.com/repository/maven-public/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </repository>
-    </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>public</id>
-            <name>local private nexus</name>
-            <url>http://nexus.72crm.com/repository/maven-public/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
     <dependencies>
         <dependency>
             <groupId>com.kakarote</groupId>

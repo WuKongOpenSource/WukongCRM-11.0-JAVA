@@ -1,6 +1,7 @@
 package com.kakarote.crm.controller;
 
 
+import cn.hutool.core.util.StrUtil;
 import com.kakarote.core.common.*;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.SysLog;
@@ -14,9 +15,9 @@ import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.log.CrmContactsLog;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmContacts;
 import com.kakarote.crm.entity.VO.CrmInfoNumVO;
@@ -82,22 +83,27 @@ public class CrmContactsController {
     }
     @PostMapping("/field")
     @ApiOperation("查询新增所需字段")
-    public Result<List<CrmModelFiledVO>> queryField() {
-        List<CrmModelFiledVO> crmModelFiledList = crmContactsService.queryField(null);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryContactsField(@RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmContactsService.queryField(null));
+        }
+        return R.ok(crmContactsService.queryFormPositionField(null));
     }
 
     @PostMapping("/field/{id}")
     @ApiOperation("查询修改数据所需信息")
-    public Result<List<CrmModelFiledVO>> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id) {
-        List<CrmModelFiledVO> crmModelFiledList = crmContactsService.queryField(id);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id,
+                                   @RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmContactsService.queryField(id));
+        }
+        return R.ok(crmContactsService.queryFormPositionField(id));
     }
 
     @PostMapping("/queryBusiness")
     @ApiOperation("联系人下查询商机")
     public Result<BasePage<Map<String, Object>>> queryBusiness(@RequestBody CrmBusinessPageBO businessPageBO) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTACTS, businessPageBO.getContactsId());
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTACTS, businessPageBO.getContactsId(), CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -210,9 +216,8 @@ public class CrmContactsController {
     @PostMapping("/uploadExcel")
     @ApiOperation("导入联系人")
     @SysLogHandler(behavior = BehaviorEnum.EXCEL_IMPORT,object = "导入联系人",detail = "导入联系人")
-    public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("ownerUserId") Long ownerUserId, @RequestParam("repeatHandling") Integer repeatHandling) {
+    public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("repeatHandling") Integer repeatHandling) {
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
-        uploadExcelBO.setOwnerUserId(ownerUserId);
         uploadExcelBO.setUserInfo(UserUtil.getUser());
         uploadExcelBO.setCrmEnum(CrmEnum.CONTACTS);
         uploadExcelBO.setPoolId(null);

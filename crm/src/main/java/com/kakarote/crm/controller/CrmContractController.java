@@ -1,6 +1,7 @@
 package com.kakarote.crm.controller;
 
 
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.*;
 import com.kakarote.core.common.log.BehaviorEnum;
@@ -17,9 +18,9 @@ import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.log.CrmContractLog;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmContract;
 import com.kakarote.crm.entity.PO.CrmReceivablesPlan;
@@ -90,16 +91,21 @@ public class CrmContractController {
 
     @PostMapping("/field")
     @ApiOperation("查询新增所需字段")
-    public Result<List<CrmModelFiledVO>> queryField() {
-        List<CrmModelFiledVO> crmModelFiledList = crmContractService.queryField(null);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryContractField(@RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmContractService.queryField(null));
+        }
+        return R.ok(crmContractService.queryFormPositionField(null));
     }
 
     @PostMapping("/field/{id}")
     @ApiOperation("查询修改数据所需信息")
-    public Result<List<CrmModelFiledVO>> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id) {
-        List<CrmModelFiledVO> crmModelFiledList = crmContractService.queryField(id);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id,
+                                   @RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmContractService.queryField(id));
+        }
+        return R.ok(crmContractService.queryFormPositionField(id));
     }
 
     @PostMapping("/changeOwnerUser")
@@ -130,7 +136,7 @@ public class CrmContractController {
     @PostMapping("/getMembers/{contractId}")
     @ApiOperation("获取团队成员")
     public Result<List<CrmMembersSelectVO>> getMembers(@PathVariable("contractId") @ApiParam("合同ID") Integer contractId) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, contractId);
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, contractId, CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -173,7 +179,7 @@ public class CrmContractController {
     @PostMapping("/qureyReceivablesListByContractId")
     @ApiOperation("删除团队成员")
     public Result<BasePage<JSONObject>> queryReceivablesListByContractId(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, crmRelationPageBO.getContractId());
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, crmRelationPageBO.getContractId(),CrmAuthEnum.EDIT);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -184,7 +190,7 @@ public class CrmContractController {
     @PostMapping("/queryProductListByContractId")
     @ApiOperation("查询合同下产品")
     public Result<JSONObject> queryProductListByContractId(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, crmRelationPageBO.getContractId());
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, crmRelationPageBO.getContractId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -196,7 +202,7 @@ public class CrmContractController {
     @PostMapping("/queryReturnVisit")
     @ApiOperation("查询合同下产品")
     public Result<BasePage<JSONObject>> queryReturnVisit(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, crmRelationPageBO.getContractId());
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, crmRelationPageBO.getContractId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -207,7 +213,7 @@ public class CrmContractController {
     @PostMapping("/queryReceivablesPlanListByContractId")
     @ApiOperation("查询合同下回款计划")
     public Result<BasePage<CrmReceivablesPlan>> queryReceivablesPlanListByContractId(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, crmRelationPageBO.getContractId());
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, crmRelationPageBO.getContractId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -260,7 +266,7 @@ public class CrmContractController {
     @ApiOperation("合同作废")
     @SysLogHandler
     public Result contractDiscard(@RequestParam("contractId") Integer contractId) {
-        boolean auth = AuthUtil.isRwAuth(contractId, CrmEnum.CONTRACT);
+        boolean auth = AuthUtil.isRwAuth(contractId, CrmEnum.CONTRACT,CrmAuthEnum.EDIT);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }

@@ -3,9 +3,9 @@ package com.kakarote.crm.service.impl;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.kakarote.core.feign.admin.service.AdminService;
-import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.entity.PO.CrmField;
@@ -98,7 +98,10 @@ public class CrmRoleFieldServiceImpl extends BaseServiceImpl<CrmRoleFieldMapper,
         List<CrmRoleField> fields = lambdaQuery().eq(CrmRoleField::getRoleId, roleId).eq(CrmRoleField::getLabel, label).list();
         //需要初始化
         if (fields.size() == 0) {
-            List<CrmField> list = ApplicationContextHolder.getBean(ICrmFieldService.class).list(label, true);
+            LambdaQueryWrapper<CrmField> fieldQueryWrapper = new LambdaQueryWrapper<>();
+            fieldQueryWrapper.select(CrmField::getFieldId,CrmField::getFieldName,CrmField::getName,CrmField::getFieldType);
+            fieldQueryWrapper.eq(CrmField::getLabel,label);
+            List<CrmField> list = crmFieldService.list(fieldQueryWrapper);
             list.forEach(crmField -> {
                 CrmRoleField roleField = new CrmRoleField();
                 roleField.setRoleId(roleId);

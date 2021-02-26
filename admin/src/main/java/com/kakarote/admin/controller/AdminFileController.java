@@ -52,7 +52,21 @@ public class AdminFileController {
         if (StrUtil.isEmpty(isPublic)){
             isPublic = "0";
         }
-        UploadEntity entity = adminFileService.upload(file, batchId, type,isPublic);
+        UploadEntity entity = adminFileService.upload(file,batchId, type,isPublic);
+        return Result.ok(entity);
+    }
+
+    @PostMapping("/uploadBySingle")
+    @ApiOperation("上传文件")
+    public Result<UploadEntity> uploadBySingle(@RequestParam("file")
+                                       @ApiParam("文件") MultipartFile file,
+                                       @ApiParam("batchId") String batchId,
+                                       @ApiParam("文件类型") String type,
+                                       @RequestParam(value = "isPublic",required = false)String isPublic) throws IOException {
+        if (StrUtil.isEmpty(isPublic)){
+            isPublic = "0";
+        }
+        UploadEntity entity = adminFileService.uploadBySingle(file,batchId, type,isPublic);
         return Result.ok(entity);
     }
 

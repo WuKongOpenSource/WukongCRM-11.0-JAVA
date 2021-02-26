@@ -18,11 +18,11 @@ public interface IAdminUserHisTableService extends BaseService<AdminUserHisTable
     /**
      * 员工坐席授权
      */
-    boolean authorize(List<Long> userIds, Integer status);
+    boolean authorize(List<Long> userIds, Integer status,Integer hisUse);
 
     /**
      * 判断用户是否为坐席
      * @return
      */
-    boolean checkAuth();
+    public Integer checkAuth();
 }

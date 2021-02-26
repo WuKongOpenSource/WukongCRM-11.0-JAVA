@@ -3,12 +3,14 @@ package com.kakarote.crm.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.entity.PO.CrmBusinessData;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmBusinessDataMapper;
 import com.kakarote.crm.service.ICrmBusinessDataService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,6 +27,10 @@ import java.util.List;
  */
 @Service
 public class CrmBusinessDataServiceImpl extends BaseServiceImpl<CrmBusinessDataMapper, CrmBusinessData> implements ICrmBusinessDataService {
+
+    @Autowired
+    private FieldService fieldService;
+
     /**
      * 设置用户数据
      *
@@ -50,6 +56,7 @@ public class CrmBusinessDataServiceImpl extends BaseServiceImpl<CrmBusinessDataM
         Date date = new Date();
         for (CrmModelFiledVO obj : array) {
             CrmBusinessData businessData = BeanUtil.copyProperties(obj, CrmBusinessData.class);
+            businessData.setValue(fieldService.convertObjectValueToString(obj.getType(),obj.getValue(),businessData.getValue()));
             businessData.setName(obj.getFieldName());
             businessData.setCreateTime(date);
             businessData.setBatchId(batchId);

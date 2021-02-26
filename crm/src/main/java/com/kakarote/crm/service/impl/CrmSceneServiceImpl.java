@@ -9,6 +9,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.servlet.ApplicationContextHolder;
@@ -16,7 +17,6 @@ import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.CrmSceneEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmSceneConfigBO;
 import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
@@ -240,7 +240,9 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
                     crmFieldService.recordToFormType(filedVO, FieldEnum.parse(filedVO.getType()));
                     return filedVO;
                 }).collect(Collectors.toList());
-        records.removeIf(record -> record.getFormType().equals("file"));
+        List<FieldEnum> fieldEnums = Arrays.asList(FieldEnum.FILE,FieldEnum.DATE_INTERVAL,
+                FieldEnum.HANDWRITING_SIGN,FieldEnum.DESC_TEXT,FieldEnum.DETAIL_TABLE,FieldEnum.CALCULATION_FUNCTION);
+        records.removeIf(record -> fieldEnums.contains(FieldEnum.parse(record.getType())));
         fieldList.addAll(records);
         return fieldList;
     }

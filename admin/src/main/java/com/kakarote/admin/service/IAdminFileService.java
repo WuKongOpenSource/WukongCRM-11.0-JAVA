@@ -32,6 +32,7 @@ public interface IAdminFileService extends BaseService<AdminFile> {
      */
     public UploadEntity upload(MultipartFile file,String batchId, String type,String isPublic) throws IOException;
 
+    public UploadEntity uploadBySingle(MultipartFile file, String batchId, String type, String isPublic) throws IOException;
 
     /**
      * 获取文件列表

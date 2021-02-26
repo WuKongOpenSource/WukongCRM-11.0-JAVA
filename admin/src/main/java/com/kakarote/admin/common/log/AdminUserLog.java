@@ -23,7 +23,7 @@ public class AdminUserLog {
     public List<Content> setUserStatus(AdminUserStatusBO adminUserStatusBO) {
         List<Content> contentList = new ArrayList<>();
         String detail;
-        if (adminUserStatusBO.getStatus() == 0){
+        if (adminUserStatusBO.getStatus() == 1){
             detail = "启用了";
         }else {
             detail = "禁用了";

@@ -15,6 +15,7 @@ import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
+import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.PO.CrmActionRecord;
 import com.kakarote.crm.entity.PO.CrmCustomer;
@@ -118,23 +119,15 @@ public class SysLogUtil {
         List<CrmModelFiledVO> oldFieldList = ApplicationContextHolder.getBean(ICrmActionRecordService.class).queryFieldValue(kv);
         newFieldList.forEach(newField -> {
             for (CrmModelFiledVO oldField : oldFieldList) {
-                String oldFieldValue;
-                String newFieldValue;
-                if (ObjectUtil.isEmpty(oldField.getValue()) && ObjectUtil.isEmpty(newField.getValue())) {
-                    continue;
-                }
-                if (ObjectUtil.isEmpty(oldField.getValue())) {
-                    oldFieldValue = "空";
-                } else {
-                    oldFieldValue = oldField.getValue().toString();
-                }
-                if (ObjectUtil.isEmpty(newField.getValue())) {
-                    newFieldValue = "空";
-                } else {
-                    newFieldValue = newField.getValue().toString();
-                }
-                if (oldField.getName().equals(newField.getName()) && !oldFieldValue.equals(newFieldValue)) {
-                    textList.add("将" + oldField.getName() + " 由" + oldFieldValue + "修改为" + newFieldValue + "。");
+                if (oldField.getFieldId().equals(newField.getFieldId())) {
+                    if (ObjectUtil.isEmpty(oldField.getValue()) && ObjectUtil.isEmpty(newField.getValue())) {
+                        continue;
+                    }
+                    String oldFieldValue = (String) ActionRecordUtil.parseValue(oldField.getValue(),oldField.getType(),true);;
+                    String newFieldValue = (String) ActionRecordUtil.parseValue(newField.getValue(),newField.getType(),true);;
+                    if (!oldFieldValue.equals(newFieldValue)) {
+                        textList.add("将" + oldField.getName() + " 由" + oldFieldValue + "修改为" + newFieldValue + "。");
+                    }
                 }
             }
         });

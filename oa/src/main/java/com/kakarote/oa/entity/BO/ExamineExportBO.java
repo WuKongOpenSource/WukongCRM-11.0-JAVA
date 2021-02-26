@@ -14,7 +14,7 @@ public class ExamineExportBO extends PageEntity {
 
     private Integer queryType;
 
-    private Integer checkStatus;
+    private Integer stauts;
 
     private Date startTime;
 

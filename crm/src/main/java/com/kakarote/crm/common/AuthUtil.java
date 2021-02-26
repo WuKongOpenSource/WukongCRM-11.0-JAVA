@@ -1,14 +1,15 @@
 package com.kakarote.crm.common;
 
-import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
-import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.redis.Redis;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserUtil;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.PO.CrmCustomer;
 import com.kakarote.crm.entity.PO.CrmCustomerPool;
@@ -16,7 +17,9 @@ import com.kakarote.crm.mapper.CrmAuthMapper;
 import com.kakarote.crm.service.ICrmCustomerPoolService;
 import com.kakarote.crm.service.ICrmCustomerService;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 权限相关封装
@@ -25,88 +28,20 @@ import java.util.*;
  */
 public class AuthUtil {
 
-    public static Map<String, String> getCrmTablePara(CrmEnum Enum) {
-        Map<String, String> tableParaMap = new HashMap<>();
-        switch (Enum) {
-            case CUSTOMER:
-            case CUSTOMER_POOL:
-                tableParaMap.put("tableName", "wk_crm_customer");
-                tableParaMap.put("tableId", "customer_id");
-                break;
-            case LEADS:
-                tableParaMap.put("tableName", "wk_crm_leads");
-                tableParaMap.put("tableId", "leads_id");
-                break;
-            case CONTRACT:
-                tableParaMap.put("tableName", "wk_crm_contract");
-                tableParaMap.put("tableId", "contract_id");
-                break;
-            case CONTACTS:
-                tableParaMap.put("tableName", "wk_crm_contacts");
-                tableParaMap.put("tableId", "contacts_id");
-                break;
-            case BUSINESS:
-                tableParaMap.put("tableName", "wk_crm_business");
-                tableParaMap.put("tableId", "business_id");
-                break;
-            case RECEIVABLES:
-                tableParaMap.put("tableName", "wk_crm_receivables");
-                tableParaMap.put("tableId", "receivables_id");
-                break;
-            case PRODUCT:
-                tableParaMap.put("tableName", "wk_crm_product");
-                tableParaMap.put("tableId", "product_id");
-                break;
-            case MARKETING:
-                tableParaMap.put("tableName", "wk_crm_marketing");
-                tableParaMap.put("tableId", "marketing_id");
-                break;
-            default:
-                return tableParaMap;
-        }
-        return tableParaMap;
-    }
-
-    public static boolean isCrmAuth(CrmEnum crmEnum, Integer id) {
+    public static boolean isCrmAuth(CrmEnum crmEnum, Integer id,CrmAuthEnum crmAuthEnum) {
         String name = crmEnum.getTable();
-        String conditions = name + "_id" + " = " + id +
-                getCrmAuthSql(crmEnum, 1);
+        String conditions = name + "_id" + " = " + id + getCrmAuthSql(crmEnum, 1,crmAuthEnum);
         Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + name, conditions);
         return integer == 0;
-    }
-
-    public static boolean isCrmOperateAuth(CrmEnum crmEnum, Integer id) {
-        String name = crmEnum.getTable();
-        String conditions = name + "_id" + " = " + id +
-                getCrmAuthSql(crmEnum, 0);
-        Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + name, conditions);
-
-        return integer == 0;
-    }
-
-    public static boolean oaAuth(JSONObject record) {
-        boolean auth = false;
-        if (record.getString("business_ids") != null) {
-            auth = isCrmAuth(CrmEnum.BUSINESS, Integer.valueOf(record.getString("business_ids")));
-        } else if (record.getString("contacts_ids") != null) {
-            auth = isCrmAuth(CrmEnum.CONTACTS, Integer.valueOf(record.getString("contacts_ids")));
-        } else if (record.getString("contract_ids") != null) {
-            auth = isCrmAuth(CrmEnum.CONTRACT, Integer.valueOf(record.getString("contract_ids")));
-        } else if (record.getString("customer_ids") != null) {
-            auth = isCrmAuth(CrmEnum.CUSTOMER, Integer.valueOf(record.getString("customer_ids")));
-        }
-        return auth;
     }
 
     /**
      * 团队成员是否有操作权限
      */
-    public static boolean isRwAuth(Integer id, CrmEnum crmEnum) {
+    public static boolean isRwAuth(Integer id, CrmEnum crmEnum,CrmAuthEnum crmAuthEnum) {
         String name = crmEnum.getTable();
-        String conditions = name + "_id" + " = " + id +
-                getCrmAuthSql(crmEnum, 0);
+        String conditions = name + "_id" + " = " + id + getCrmAuthSql(crmEnum, 0,crmAuthEnum);
         Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + name, conditions);
-
         return integer == 0;
     }
 
@@ -116,12 +51,12 @@ public class AuthUtil {
      * @param customerId 客户ID
      * @return data
      */
-    public static boolean isPoolAuth(Integer customerId) {
+    public static boolean isPoolAuth(Integer customerId,CrmAuthEnum crmAuthEnum) {
         CrmCustomer customer = ApplicationContextHolder.getBean(ICrmCustomerService.class).getById(customerId);
         if (customer == null || customer.getOwnerUserId() == null) {
             return false;
         } else {
-            return AuthUtil.isCrmAuth(CrmEnum.CUSTOMER, customerId);
+            return AuthUtil.isCrmAuth(CrmEnum.CUSTOMER, customerId,crmAuthEnum);
         }
     }
 
@@ -138,10 +73,16 @@ public class AuthUtil {
         Long userId = UserUtil.getUserId();
         List<Long> subUserIdList = ApplicationContextHolder.getBean(AdminService.class).queryChildUserId(userId).getData();
         subUserIdList.add(userId);
-        userIds.retainAll(subUserIdList);
-        return userIds;
+        subUserIdList.retainAll(userIds);
+        return subUserIdList;
     }
 
+    /**
+     * 根据当前用户的部门及下属部门取交集
+     *
+     * @param deptIds dept列表
+     * @return data
+     */
     public static List<Integer> filterDeptId(List<Integer> deptIds) {
         if (UserUtil.isAdmin()) {
             return deptIds;
@@ -149,52 +90,25 @@ public class AuthUtil {
         Integer deptId = UserUtil.getUser().getDeptId();
         List<Integer> subDeptIdList = ApplicationContextHolder.getBean(AdminService.class).queryChildDeptId(deptId).getData();
         subDeptIdList.add(deptId);
-        deptIds.retainAll(subDeptIdList);
-        return deptIds;
+        subDeptIdList.retainAll(deptIds);
+        return subDeptIdList;
     }
 
-    public static boolean isSubDept(Integer deptId) {
-        List<Integer> deptIdList = ApplicationContextHolder.getBean(AdminService.class).queryChildDeptId(UserUtil.getUser().getDeptId()).getData();
-        return deptId.equals(UserUtil.getUser().getDeptId()) || deptIdList.contains(deptId);
-    }
-
-    public static boolean isSubUser(Long userId) {
-        if (!UserUtil.isAdmin()) {
-            List<Long> userIdList = ApplicationContextHolder.getBean(AdminService.class).queryChildUserId(userId).getData();
-            return userId.equals(UserUtil.getUserId()) || userIdList.contains(userId);
-        }
-        return true;
-    }
-
-    @SuppressWarnings("unchecked")
-    public static List<String> queryAuth(Map<String, Object> map, String key) {
-        List<String> permissions = new ArrayList<>();
-        map.keySet().forEach(str -> {
-            if (map.get(str) instanceof Map) {
-                permissions.addAll(queryAuth((Map<String, Object>) map.get(str), key + str + ":"));
-            } else {
-                permissions.add(key + str);
-            }
-        });
-        return permissions;
-    }
 
     /**
      * 拼客户管理数据权限sql
      *
-     * @param crmEnum
-     * @return
+     * @param crmEnum 类型
+     * @return sql
      */
-    public static String getCrmAuthSql(CrmEnum crmEnum, String alias, Integer readOnly) {
+    public static String getCrmAuthSql(CrmEnum crmEnum, String alias, Integer readOnly,CrmAuthEnum crmAuthEnum) {
         UserInfo user = UserUtil.getUser();
         Long userId = user.getUserId();
         if (UserUtil.isAdmin() || crmEnum.equals(CrmEnum.PRODUCT) || crmEnum.equals(CrmEnum.CUSTOMER_POOL)) {
             return "";
         }
-        AdminService adminService = ApplicationContextHolder.getBean(AdminService.class);
-        String tableName = "wk_crm_" + crmEnum.getTable();
         StringBuilder conditions = new StringBuilder();
-        List<Long> longs = adminService.queryUserByAuth(userId, StrUtil.subAfter(tableName, "wk_crm_", false)).getData();
+        List<Long> longs = queryAuthUserList(crmEnum, crmAuthEnum);
         if (longs != null && longs.size() > 0) {
             if (crmEnum.equals(CrmEnum.MARKETING)) {
                 conditions.append(" and (");
@@ -221,48 +135,15 @@ public class AuthUtil {
         return StrUtil.format(conditions.toString(), map);
     }
 
-    public static String getCrmAuthSql(CrmEnum crmEnum, Integer readOnly) {
-        return getCrmAuthSql(crmEnum, "", readOnly);
+    public static String getCrmAuthSql(CrmEnum crmEnum, Integer readOnly,CrmAuthEnum crmAuthEnum) {
+        return getCrmAuthSql(crmEnum, "", readOnly,crmAuthEnum);
     }
 
     /**
      * 根据数据权限查询权限范围内员工
      */
     public static List<Long> getUserIdByAuth(Integer menuId) {
-        List<Long> authUserIdList = new ArrayList<>();
-        AdminService adminService = ApplicationContextHolder.getBean(AdminService.class);
-        List<Long> allUserIdList = adminService.queryUserList().getData();
-        if (UserUtil.isAdmin()) {
-            authUserIdList = allUserIdList;
-        } else {
-            Integer dataType = adminService.queryDataType(UserUtil.getUserId(), menuId).getData();
-            authUserIdList = getAuthUserIdByDataType(authUserIdList, allUserIdList, dataType);
-        }
-        return authUserIdList;
-    }
-
-    private static List<Long> getAuthUserIdByDataType(List<Long> authUserIdList, List<Long> allUserIdList, Integer dataType) {
-        AdminService adminService = ApplicationContextHolder.getBean(AdminService.class);
-        if (dataType == null) {
-            authUserIdList.clear();
-        } else if (dataType == 1) {
-            authUserIdList.add(UserUtil.getUserId());
-        } else if (dataType == 2) {
-            authUserIdList.addAll(adminService.queryChildUserId(UserUtil.getUserId()).getData());
-            authUserIdList.add(UserUtil.getUserId());
-        } else if (dataType == 3) {
-            List<Long> longList = adminService.queryUserByDeptIds(Collections.singletonList(UserUtil.getUser().getDeptId())).getData();
-            authUserIdList.addAll(longList);
-        } else if (dataType == 4) {
-            Integer deptId = UserUtil.getUser().getDeptId();
-            List<Integer> deptIds = adminService.queryChildDeptId(deptId).getData();
-            deptIds.add(deptId);
-            List<Long> longList = adminService.queryUserByDeptIds(deptIds).getData();
-            authUserIdList.addAll(longList);
-        } else if (dataType == 5) {
-            authUserIdList = allUserIdList;
-        }
-        return authUserIdList;
+        return ApplicationContextHolder.getBean(AdminService.class).queryUserByAuth(UserUtil.getUserId(), menuId).getData();
     }
 
     /**
@@ -276,62 +157,37 @@ public class AuthUtil {
         return false;
     }
 
-    public static Map<String, Integer> getDataTypeByUserId() {
+
+    /**
+     * 查询当前用户可查询的用户列表
+     * @param crmEnum     crm类型
+     * @param crmAuthEnum 数据操作权限类型
+     * @return 用户列表
+     */
+    public static List<Long> queryAuthUserList(CrmEnum crmEnum, CrmAuthEnum crmAuthEnum) {
         Long userId = UserUtil.getUserId();
-        Map<String, Integer> map = BaseUtil.getRedis().get("role:dataType:" + userId);
-        if (CollectionUtil.isEmpty(map)) {
-            map = new HashMap<>();
-            if (!UserUtil.isAdmin()) {
-                AdminService adminService = ApplicationContextHolder.getBean(AdminService.class);
-                Integer leadsMenuId = 20;
-                Integer leadsDataType = adminService.queryDataType(userId, leadsMenuId).getData();
-                map.put("leads", leadsDataType);
-                Integer customerMenuId = 29;
-                Integer customerDataType = adminService.queryDataType(userId, customerMenuId).getData();
-                map.put("customer", customerDataType);
-                Integer contactsMenuId = 43;
-                Integer contactsDataType = adminService.queryDataType(userId, contactsMenuId).getData();
-                map.put("contacts", contactsDataType);
-                Integer businessMenuId = 49;
-                Integer businessDataType = adminService.queryDataType(userId, businessMenuId).getData();
-                map.put("business", businessDataType);
-                Integer contractMenuId = 56;
-                Integer contractDataType = adminService.queryDataType(userId, contractMenuId).getData();
-                map.put("contract", contractDataType);
-                Integer receivablesMenuId = 63;
-                Integer receivablesDataType = adminService.queryDataType(userId, receivablesMenuId).getData();
-                map.put("receivables", receivablesDataType);
-                Integer productMenuId = 68;
-                Integer productDataType = adminService.queryDataType(userId, productMenuId).getData();
-                map.put("product", productDataType);
-                Integer recordMenuId = 441;
-                Integer recordDataType = adminService.queryDataType(userId, recordMenuId).getData();
-                map.put("record", recordDataType);
-            } else {
-                map.put("leads", 5);
-                map.put("customer", 5);
-                map.put("contacts", 5);
-                map.put("business", 5);
-                map.put("contract", 5);
-                map.put("receivables", 5);
-                map.put("product", 5);
-                map.put("record", 5);
-            }
-            BaseUtil.getRedis().setex("role:dataType:" + userId.toString(), 60 * 30, map);
+        Integer menuId = crmAuthEnum.getMenuId(crmEnum);
+        String key = CrmCacheKey.CRM__AUTH_USER_CACHE_KEY + menuId.toString() + ":User:" + userId.toString();
+        Redis redis = BaseUtil.getRedis();
+        List<Long> userIds = redis.get(key);
+        if (userIds != null && userIds.size() > 0) {
+            return userIds;
         }
-        return map;
+        userIds = ApplicationContextHolder.getBean(AdminService.class).queryUserByAuth(UserUtil.getUserId(), menuId).getData();
+        redis.setex(key, 60 * 30, userIds);
+        return userIds;
     }
 
-    public static List<Long> filterUserIdListByDataType(Integer dataType, List<Long> allUserIdList) {
-        List<Long> authUserIdList;
-        if (UserUtil.isAdmin()){
-            authUserIdList = allUserIdList;
-        }else {
-            authUserIdList = getAuthUserIdByDataType(new ArrayList<>(), allUserIdList, dataType);
-        }
-        ArrayList<Long> longs = new ArrayList<>(allUserIdList);
-        longs.retainAll(authUserIdList);
-        return longs;
+    /**
+     * 查询当前用户可查询的用户列表与数据的交集
+     * @param crmEnum     crm类型
+     * @param crmAuthEnum 数据操作权限类型
+     * @return 用户列表
+     */
+    public static List<Long> filterUserIdList(CrmEnum crmEnum, CrmAuthEnum crmAuthEnum,List<Long> allUserIdList) {
+        List<Long> authUserList = queryAuthUserList(crmEnum, crmAuthEnum);
+        authUserList.retainAll(allUserIdList);
+        return authUserList;
     }
 
     public static boolean isReadFollowRecord(Integer crmType) {

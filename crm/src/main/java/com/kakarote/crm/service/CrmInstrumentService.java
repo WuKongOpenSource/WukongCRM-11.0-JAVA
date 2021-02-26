@@ -5,6 +5,7 @@ import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.crm.entity.BO.CrmSearchParamsBO;
 import com.kakarote.crm.entity.PO.CrmActivity;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -63,10 +64,13 @@ public interface CrmInstrumentService {
 
     BasePage<CrmActivity> queryRecordList(BiParams biParams);
 
+    List<CrmActivity> exportRecordList(BiParams biParams);
+
     List<JSONObject> queryRecordCount(BiParams biParams);
 
     BasePage<Map<String, Object>> forgottenCustomerPageList(BiParams biParams);
 
     BasePage<Map<String, Object>> unContactCustomerPageList(BiParams biParams);
 
+    JSONObject importRecordList(MultipartFile file,Integer crmType);
 }

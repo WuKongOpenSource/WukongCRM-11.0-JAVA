@@ -3,12 +3,14 @@ package com.kakarote.crm.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.entity.PO.CrmReturnVisitData;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmReturnVisitDataMapper;
 import com.kakarote.crm.service.ICrmReturnVisitDataService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -26,6 +28,9 @@ import java.util.List;
 @Service
 public class CrmReturnVisitDataServiceImpl extends BaseServiceImpl<CrmReturnVisitDataMapper, CrmReturnVisitData> implements ICrmReturnVisitDataService {
 
+    @Autowired
+    private FieldService fieldService;
+
     /**
      * 保存自定义字段数据
      * @param array data
@@ -38,6 +43,7 @@ public class CrmReturnVisitDataServiceImpl extends BaseServiceImpl<CrmReturnVisi
         Date date = new Date();
         for (CrmModelFiledVO obj : array) {
             CrmReturnVisitData crmCustomerData = BeanUtil.copyProperties(obj, CrmReturnVisitData.class);
+            crmCustomerData.setValue(fieldService.convertObjectValueToString(obj.getType(),obj.getValue(),crmCustomerData.getValue()));
             crmCustomerData.setName(obj.getFieldName());
             crmCustomerData.setCreateTime(date);
             crmCustomerData.setBatchId(batchId);

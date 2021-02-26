@@ -18,9 +18,9 @@ import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.log.CrmCustomerLog;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmContacts;
 import com.kakarote.crm.entity.PO.CrmCustomer;
@@ -98,7 +98,7 @@ public class CrmCustomerController {
         if (number == 0) {
             throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED, "客户");
         }
-        boolean auth = AuthUtil.isPoolAuth(customerId);
+        boolean auth = AuthUtil.isPoolAuth(customerId, CrmAuthEnum.READ);
         if (auth) {
             CrmModel crmModel = new CrmModel();
             crmModel.put("dataAuth", 0);
@@ -110,22 +110,27 @@ public class CrmCustomerController {
 
     @PostMapping("/field")
     @ApiOperation("查询新增所需字段")
-    public Result<List<CrmModelFiledVO>> queryField() {
-        List<CrmModelFiledVO> crmModelFiledList = crmCustomerService.queryField(null);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryCustomerField(@RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmCustomerService.queryField(null));
+        }
+        return R.ok(crmCustomerService.queryFormPositionField(null));
     }
 
     @PostMapping("/field/{id}")
     @ApiOperation("查询修改数据所需信息")
-    public Result<List<CrmModelFiledVO>> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id) {
-        List<CrmModelFiledVO> crmModelFiledList = crmCustomerService.queryField(id);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id,
+                                                          @RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmCustomerService.queryField(id));
+        }
+        return R.ok(crmCustomerService.queryFormPositionField(id));
     }
 
     @PostMapping("/queryContacts")
     @ApiOperation("查询客户下联系人")
     public Result<BasePage<CrmContacts>> queryContacts(@RequestBody CrmContactsPageBO pageEntity) {
-        boolean auth = AuthUtil.isPoolAuth(pageEntity.getCustomerId());
+        boolean auth = AuthUtil.isPoolAuth(pageEntity.getCustomerId(), CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -151,7 +156,7 @@ public class CrmCustomerController {
     @PostMapping("/queryBusiness")
     @ApiOperation("查询客户下商机")
     public Result<BasePage<Map<String, Object>>> queryBusiness(@RequestBody CrmContactsPageBO pageEntity) {
-        boolean auth = AuthUtil.isPoolAuth(pageEntity.getCustomerId());
+        boolean auth = AuthUtil.isPoolAuth(pageEntity.getCustomerId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -162,7 +167,7 @@ public class CrmCustomerController {
     @PostMapping("/queryContract")
     @ApiOperation("查询客户下合同")
     public Result<BasePage<Map<String, Object>>> queryContract(@RequestBody CrmContactsPageBO pageEntity) {
-        boolean auth = AuthUtil.isPoolAuth(pageEntity.getCustomerId());
+        boolean auth = AuthUtil.isPoolAuth(pageEntity.getCustomerId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -173,7 +178,7 @@ public class CrmCustomerController {
     @PostMapping("/queryReceivablesPlan")
     @ApiOperation("根据客户id查询回款计划")
     public Result<BasePage<JSONObject>> queryReceivablesPlan(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId());
+        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -184,7 +189,7 @@ public class CrmCustomerController {
     @PostMapping("/queryReceivables")
     @ApiOperation("根据客户id查询回款")
     public Result<BasePage<JSONObject>> queryReceivables(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId());
+        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -195,7 +200,7 @@ public class CrmCustomerController {
     @PostMapping("/queryReturnVisit")
     @ApiOperation("根据客户id查询回款")
     public Result<BasePage<JSONObject>> queryReturnVisit(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId());
+        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -206,7 +211,7 @@ public class CrmCustomerController {
     @PostMapping("/queryInvoice")
     @ApiOperation("根据客户id查询发票")
     public Result<BasePage<JSONObject>> queryInvoice(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId());
+        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -217,7 +222,7 @@ public class CrmCustomerController {
     @PostMapping("/queryInvoiceInfo")
     @ApiOperation("根据客户id查询发票抬头信息")
     public Result<BasePage<JSONObject>> queryInvoiceInfo(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId());
+        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -228,7 +233,7 @@ public class CrmCustomerController {
     @PostMapping("/queryCallRecord")
     @ApiOperation("根据客户id查询呼叫记录")
     public Result<BasePage<JSONObject>> queryCallRecord(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId());
+        boolean auth = AuthUtil.isPoolAuth(crmRelationPageBO.getCustomerId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -263,7 +268,7 @@ public class CrmCustomerController {
     @PostMapping("/getMembers/{customerId}")
     @ApiOperation("获取团队成员")
     public Result<List<CrmMembersSelectVO>> getMembers(@PathVariable("customerId") @ApiParam("客户ID") Integer customerId) {
-        boolean auth = AuthUtil.isPoolAuth(customerId);
+        boolean auth = AuthUtil.isPoolAuth(customerId,CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -413,9 +418,8 @@ public class CrmCustomerController {
     @PostMapping("/uploadExcel")
     @ApiOperation("导入客户")
     @SysLogHandler(behavior = BehaviorEnum.EXCEL_IMPORT,object = "导入客户",detail = "导入客户")
-    public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("ownerUserId") Long ownerUserId, @RequestParam("repeatHandling") Integer repeatHandling) {
+    public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("repeatHandling") Integer repeatHandling) {
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
-        uploadExcelBO.setOwnerUserId(ownerUserId);
         uploadExcelBO.setUserInfo(UserUtil.getUser());
         uploadExcelBO.setCrmEnum(CrmEnum.CUSTOMER);
         uploadExcelBO.setPoolId(null);

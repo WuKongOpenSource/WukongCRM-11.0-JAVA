@@ -7,11 +7,13 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.google.common.collect.Lists;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.entity.BasePage;
@@ -30,6 +32,7 @@ import com.kakarote.core.feign.examine.entity.ExamineInfoVo;
 import com.kakarote.core.feign.examine.entity.ExamineRecordReturnVO;
 import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
 import com.kakarote.core.feign.examine.service.ExamineService;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
@@ -111,6 +114,9 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
     @Autowired
     private ExamineService examineService;
 
+    @Autowired
+    private FieldService fieldService;
+
     @Override
     public BasePage<ExamineVO> myInitiate(ExaminePageBO examinePageBO) {
 //        BasePage<ExamineVO> page = examineMapper.myInitiate(examinePageBO.parse().setOptimizeCountSql(false), examinePageBO, UserUtil.getUserId(), UserUtil.isAdmin(), null);
@@ -149,8 +155,6 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             }
             record.setExamineStatus(examineStatus);
             List<Long> userIds = recordReturnVO.getExamineUserIds();
-//            Integer examineStatus = record.getExamineStatus();
-//            List<Long> userIds = examineMapper.queryExamineUserByExamineLog(record);
             String examineName = "";
             if (CollUtil.isNotEmpty(userIds) && examineStatus != 4) {
                 Result<List<SimpleUser>> userList = adminService.queryUserByIds(userIds);
@@ -166,6 +170,7 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             if(examineInfoVo != null){
                 title = examineInfoVo.getExamineName();
                 record.setExamineIcon(examineInfoVo.getExamineIcon());
+                record.setType(examineInfoVo.getOaType());
             }
             record.setCategoryTitle(title);
             Result<List<FileEntity>> fileList = adminFileService.queryFileList(batchId);
@@ -210,7 +215,6 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
                 //如果审批删除,直接审核0
                 permission.put("isCheck", 0);
             } else {
-//                OaExamineLog oaExamineLog = examineLogMapper.queryExamineLog(record.getExamineRecordId(), userId, record.getExamineStepId());
                 if (examineStatus == 3 && CollUtil.isNotEmpty(userIds) && userIds.contains(userId)) {
                     permission.put("isCheck", 1);
                 } else {
@@ -286,7 +290,6 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         OaExamine oaExamineInfo = getById(getExamineFieldBO.getExamineId());
         Integer categoryId = oaExamineInfo.getCategoryId();
         ExamineInfoVo examineInfoVo = examineService.queryExamineById(Long.valueOf(categoryId)).getData();
-//        OaExamineCategory oaExamineCategory = examineCategoryService.getById(categoryId);
         List<OaExamineTravel> examineTravelList = examineTravelService.lambdaQuery().eq(OaExamineTravel::getExamineId, oaExamineInfo.getExamineId()).list();
         examineTravelList.forEach(record -> {
             if (StrUtil.isNotEmpty(record.getBatchId())) {
@@ -310,52 +313,53 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         Integer oaType = Optional.ofNullable(examineInfoVo.getOaType()).orElse(0);
         switch (oaType) {
             case 1:
-                fieldUtil.oaFieldAdd("content", "审批内容", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1)
-                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1);
+                fieldUtil.oaFieldAdd("content", "审批内容", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1,"0,0")
+                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1,"1,0");
                 break;
             case 2:
-                fieldUtil.oaFieldAdd("type_id", "请假类型", "select", Lists.newArrayList("年假", "事假", "病假", "产假", "调休", "婚假", "丧假", "其他"), 1, 0, oaExamineInfo.getTypeId(), "", 3, 1)
-                        .oaFieldAdd("content", "审批内容", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1)
-                        .oaFieldAdd("start_time", "开始时间", "datetime", arr, 1, 0, oaExamineInfo.getStartTime(), "", 3, 1)
-                        .oaFieldAdd("end_time", "结束时间", "datetime", arr, 1, 0, oaExamineInfo.getEndTime(), "", 3, 1)
-                        .oaFieldAdd("duration", "时长(天)", "floatnumber", arr, 1, 0, String.valueOf(oaExamineInfo.getDuration()), "", 3, 1)
-                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1);
+                fieldUtil.oaFieldAdd("type_id", "请假类型", "select", Lists.newArrayList("年假", "事假", "病假", "产假", "调休", "婚假", "丧假", "其他"), 1, 0, oaExamineInfo.getTypeId(), "", 3, 1,"0,0")
+                        .oaFieldAdd("content", "请假事由", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1,"1,0")
+                        .oaFieldAdd("start_time", "开始时间", "datetime", arr, 1, 0, oaExamineInfo.getStartTime(), "", 3, 1,"2,0")
+                        .oaFieldAdd("end_time", "结束时间", "datetime", arr, 1, 0, oaExamineInfo.getEndTime(), "", 3, 1,"2,1")
+                        .oaFieldAdd("duration", "时长(天)", "floatnumber", arr, 1, 0, String.valueOf(oaExamineInfo.getDuration()), "", 3, 1,"3,0")
+                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1,"4,0");
                 break;
             case 3:
-                fieldUtil.oaFieldAdd("content", "出差事由", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1)
-                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1)
-                        .oaFieldAdd("cause", "行程明细", "business_cause", arr, 1, 0, examineTravelList, "", 3, 1)
-                        .oaFieldAdd("duration", "出差总天数", "floatnumber", arr, 1, 0, String.valueOf(oaExamineInfo.getDuration()), "", 3, 1);
+                fieldUtil.oaFieldAdd("content", "出差事由", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1,"0,0")
+                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1,"1,0")
+                        .oaFieldAdd("cause", "行程明细", "business_cause", arr, 1, 0, examineTravelList, "", 3, 1,"2,0")
+                        .oaFieldAdd("duration", "出差总天数", "floatnumber", arr, 1, 0, String.valueOf(oaExamineInfo.getDuration()), "", 3, 1,"3,0");
                 break;
             case 4:
-                fieldUtil.oaFieldAdd("content", "加班原因", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1)
-                        .oaFieldAdd("start_time", "开始时间", "datetime", arr, 1, 0, oaExamineInfo.getStartTime(), "", 3, 1)
-                        .oaFieldAdd("end_time", "结束时间", "datetime", arr, 1, 0, oaExamineInfo.getEndTime(), "", 3, 1)
-                        .oaFieldAdd("duration", "加班总天数", "floatnumber", arr, 1, 0, oaExamineInfo.getDuration(), "", 3, 1)
-                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1);
+                fieldUtil.oaFieldAdd("content", "加班原因", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1,"0,0")
+                        .oaFieldAdd("start_time", "开始时间", "datetime", arr, 1, 0, oaExamineInfo.getStartTime(), "", 3, 1,"1,0")
+                        .oaFieldAdd("end_time", "结束时间", "datetime", arr, 1, 0, oaExamineInfo.getEndTime(), "", 3, 1,"1,1")
+                        .oaFieldAdd("duration", "加班总天数", "floatnumber", arr, 1, 0, oaExamineInfo.getDuration(), "", 3, 1,"2,0")
+                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1,"3,0");
                 break;
             case 5:
-                fieldUtil.oaFieldAdd("content", "差旅事由", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1)
-                        .oaFieldAdd("cause", "费用明细", "examine_cause", arr, 1, 0, examineTravelList, "", 3, 1)
-                        .oaFieldAdd("money", "报销总金额", "floatnumber", arr, 1, 0, String.valueOf(oaExamineInfo.getMoney()), "", 3, 1)
-                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1);
+                fieldUtil.oaFieldAdd("content", "差旅事由", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1,"0,0")
+                        .oaFieldAdd("cause", "费用明细", "examine_cause", arr, 1, 0, examineTravelList, "", 3, 1,"1,0")
+                        .oaFieldAdd("money", "报销总金额", "floatnumber", arr, 1, 0, String.valueOf(oaExamineInfo.getMoney()), "", 3, 1,"2,0")
+                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1,"3,0");
                 break;
             case 6:
-                fieldUtil.oaFieldAdd("content", "借款事由", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1)
-                        .oaFieldAdd("money", "借款金额（元）", "floatnumber", arr, 1, 0, String.valueOf(oaExamineInfo.getMoney()), "", 3, 1)
-                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1);
+                fieldUtil.oaFieldAdd("content", "借款事由", "text", arr, 1, 0, oaExamineInfo.getContent(), "", 3, 1,"0,0")
+                        .oaFieldAdd("money", "借款金额（元）", "floatnumber", arr, 1, 0, String.valueOf(oaExamineInfo.getMoney()), "", 3, 1,"1,0")
+                        .oaFieldAdd("remark", "备注", "textarea", arr, 0, 0, oaExamineInfo.getRemark(), "", 3, 1,"2,0");
                 break;
             default:
                 List<OaExamineField> examineFields = examineFieldService.queryField(categoryId);
+                Map<Integer, String> fieldData = examineFieldService.queryFieldData(oaExamineInfo.getBatchId());
                 examineFields.forEach(field -> {
                     if ("content".equals(field.getFieldName())) {
                         field.setValue(oaExamineInfo.getContent());
                     } else if ("remark".equals(field.getFieldName())) {
                         field.setValue(oaExamineInfo.getRemark());
                     } else {
-                        String value = examineFieldService.queryFieldValueByBatchId(field.getFieldId(), oaExamineInfo.getBatchId());
-                        field.setValue(value);
+                        field.setValue(Optional.ofNullable(fieldData.get(field.getFieldId())).orElse(""));
                     }
+                    field.setFormType(FieldEnum.parse(field.getType()).getFormType());
                 });
                 examineFieldService.transferFieldList(examineFields, getExamineFieldBO.getIsDetail());
                 recordList.addAll(examineFields);
@@ -363,6 +367,14 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         }
         return fieldUtil.getRecordList();
     }
+
+    @Override
+    public List<List<OaExamineField>> getFormPositionField(GetExamineFieldBO getExamineFieldBO){
+        List<OaExamineField> oaExamineFields = this.getField(getExamineFieldBO);
+        return fieldService.convertFormPositionFieldList(oaExamineFields,OaExamineField::getXAxis,OaExamineField::getYAxis,OaExamineField::getSorting);
+    }
+
+
 
     @Override
     public void setOaExamine(JSONObject jsonObject) {
@@ -396,8 +408,6 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         String batchId = StrUtil.isNotEmpty(oaExamine.getBatchId()) ? oaExamine.getBatchId() : IdUtil.simpleUUID();
         saveField(jsonObject.getJSONArray("field"), batchId);
         oaExamine.setBatchId(batchId);
-        String checkUserIds = jsonObject.getString("checkUserId");
-        Integer categoryId = oaExamine.getCategoryId();
 
         ExamineRecordSaveBO examineRecordSaveBO = jsonObject.getObject("examineFlowData", ExamineRecordSaveBO.class);
         if (oaExamine.getExamineId() == null) {
@@ -529,9 +539,11 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             return;
         }
         examineDataService.lambdaUpdate().eq(OaExamineData::getBatchId, batchId).remove();
+        List<OaExamineField> oaExamineFields = JSONArray.parseArray(array.toJSONString(), OaExamineField.class);
         List<OaExamineData> Fieldvs = new ArrayList<>();
-        array.forEach(obj -> {
-            OaExamineData fieldv = TypeUtils.castToJavaBean(obj, OaExamineData.class);
+        oaExamineFields.forEach(oaExamineField -> {
+            OaExamineData fieldv = BeanUtil.copyProperties(oaExamineField, OaExamineData.class);
+            fieldv.setValue(fieldService.convertObjectValueToString(oaExamineField.getType(),oaExamineField.getValue(),fieldv.getValue()));
             fieldv.setId(null);
             fieldv.setCreateTime(DateUtil.date());
             fieldv.setBatchId(batchId);
@@ -657,8 +669,6 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
                 //判断是否是并签
                 if (examineStep.getStepType() == 3) {
                     //查询当前并签是否都完成
-                    //根据审核记录ID，审核步骤ID，查询审核日志
-                    // List<AdminExamineLog> examineLogs = AdminExamineLog.dao.find(Db.getSql("admin.examineLog.queryNowadayExamineLogByRecordIdAndStepId"),examineRecord.getRecordId(),examineRecord.getExamineStepId());
                     //当前并签人员
                     for (Long userId : TagUtil.toLongSet(examineStep.getCheckUserId())) {
                         OaExamineLog examineLog = examineLogService.lambdaQuery().eq(OaExamineLog::getRecordId, examineRecord.getRecordId())
@@ -755,6 +765,7 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         if(examineInfoVo != null){
             title = examineInfoVo.getExamineName();
             examineVO.setExamineIcon(examineInfoVo.getExamineIcon());
+            examineVO.setType(examineInfoVo.getOaType());
         }
         examineVO.setCategoryTitle(title);
         Result<List<FileEntity>> fileEntityResult = adminFileService.queryFileList(batchId);
@@ -1052,12 +1063,11 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             examineList = examineMapper.myInitiateOaExcel(examineExportBO, userId, UserUtil.isAdmin());
             //待我审批的
         } else if (queryType == 2) {
-//            examineList = examineMapper.myOaExamineExcel(examineExportBO, userId, UserUtil.isAdmin());
-            List<Integer> ids = examineService.queryOaExamineIdList(examineExportBO.getCheckStatus(), examineExportBO.getCategoryId()).getData();
+            List<Integer> ids = examineService.queryOaExamineIdList(examineExportBO.getStauts(), examineExportBO.getCategoryId()).getData();
             if (CollUtil.isNotEmpty(ids)){
-                List<OaExamine> oaExamineList = oaExamineService.lambdaQuery().select(OaExamine::getExamineId, OaExamine::getBatchId).in(OaExamine::getExamineId, ids).list();
+                List<OaExamine> oaExamineList = oaExamineService.lambdaQuery().select(OaExamine::getExamineId, OaExamine::getBatchId,OaExamine::getStartTime,OaExamine::getEndTime).in(OaExamine::getExamineId, ids).list();
                 for (OaExamine oaExamine : oaExamineList) {
-                    examineList.add((JSONObject) JSONObject.toJSON(oaExamine));
+                    examineList.add((JSONObject) JSON.toJSON(oaExamine));
                 }
             }
         }
@@ -1207,14 +1217,14 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             throw new CrmException(OaCodeEnum.EXAMINE_ALREADY_DELETE);
         }
         List<OaExamineField> examineFields = examineFieldService.queryField(categoryId);
+        Map<Integer, String> fieldData = examineFieldService.queryFieldData(oaExamine.getBatchId());
         examineFields.forEach(field -> {
             if ("content".equals(field.getFieldName())) {
                 field.setValue(oaExamine.getContent());
             } else if ("remark".equals(field.getFieldName())) {
                 field.setValue(oaExamine.getRemark());
             } else {
-                String value = examineFieldService.queryFieldValueByBatchId(field.getFieldId(), oaExamine.getBatchId());
-                field.setValue(value);
+                field.setValue(Optional.ofNullable(fieldData.get(field.getFieldId())).orElse(""));
             }
         });
         examineFieldService.transferFieldList(examineFields, 2);

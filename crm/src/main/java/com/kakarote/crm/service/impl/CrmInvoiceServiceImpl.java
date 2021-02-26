@@ -24,13 +24,17 @@ import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.ParamsUtil;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.PO.CrmInvoice;
 import com.kakarote.crm.entity.PO.CrmInvoiceInfo;
 import com.kakarote.crm.mapper.CrmInvoiceMapper;
-import com.kakarote.crm.service.*;
+import com.kakarote.crm.service.ICrmExamineRecordService;
+import com.kakarote.crm.service.ICrmInvoiceInfoService;
+import com.kakarote.crm.service.ICrmInvoiceService;
+import com.kakarote.crm.service.ICrmNumberSettingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,12 +56,9 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
     private AdminService adminService;
     @Autowired
     private ICrmNumberSettingService crmNumberSettingService;
-    @Autowired
-    private ICrmExamineService crmExamineService;
+
     @Autowired
     private ICrmExamineRecordService crmExamineRecordService;
-    @Autowired
-    private ICrmExamineLogService crmExamineLogService;
 
     @Autowired
     private ICrmInvoiceInfoService crmInvoiceInfoService;
@@ -190,7 +191,7 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
             });
 
         }
-        conditions.append(AuthUtil.getCrmAuthSql(CrmEnum.INVOICE, "a", 1));
+        conditions.append(AuthUtil.getCrmAuthSql(CrmEnum.INVOICE, "a", 1, CrmAuthEnum.LIST));
         return baseMapper.queryPageList(search.parse(), conditions.toString());
     }
 
@@ -338,7 +339,7 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
 
     @Override
     public void updateInvoiceInfo(CrmInvoiceInfo crmInvoiceInfo) {
-        boolean auth = AuthUtil.isRwAuth(crmInvoiceInfo.getCustomerId(), CrmEnum.CUSTOMER);
+        boolean auth = AuthUtil.isRwAuth(crmInvoiceInfo.getCustomerId(), CrmEnum.CUSTOMER,CrmAuthEnum.EDIT);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -348,7 +349,7 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
     @Override
     public void deleteInvoiceInfo(Integer infoId) {
         CrmInvoiceInfo invoiceInfo = crmInvoiceInfoService.getById(infoId);
-        boolean auth = AuthUtil.isRwAuth(invoiceInfo.getCustomerId(), CrmEnum.CUSTOMER);
+        boolean auth = AuthUtil.isRwAuth(invoiceInfo.getCustomerId(), CrmEnum.CUSTOMER,CrmAuthEnum.DELETE);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }

@@ -37,7 +37,7 @@ public class AdminUserHisTableServiceImpl extends BaseServiceImpl<AdminUserHisTa
      * 员工坐席授权
      */
     @Override
-    public boolean authorize(List<Long> userIds, Integer status){
+    public boolean authorize(List<Long> userIds, Integer status,Integer hisUse){
         AdminConfig adminConfig = adminConfigService.lambdaQuery()
                 .eq(AdminConfig::getName,"call").last(" limit 1").one();
         if(adminConfig == null || adminConfig.getStatus() != 1){
@@ -49,11 +49,15 @@ public class AdminUserHisTableServiceImpl extends BaseServiceImpl<AdminUserHisTa
         AdminUserHisTable userHisTable;
         for (Long userId: userIds) {
             userHisTable = this.lambdaQuery()
-                    .eq(AdminUserHisTable::getUserId,userId).eq(AdminUserHisTable::getType,1).last(" limit 1").one();
+                    .eq(AdminUserHisTable::getUserId,userId).last(" limit 1").one();
             if (userHisTable == null){
                 userHisTable = new AdminUserHisTable();
             }
-            userHisTable.setType(1);
+            if(hisUse!=null && hisUse == 2){
+                userHisTable.setType(2);
+            }else {
+                userHisTable.setType(1);
+            }
             userHisTable.setUserId(userId);
             userHisTable.setHisTable(status);
             if (userHisTable.getHisTableId() == null && status == 1){
@@ -71,14 +75,20 @@ public class AdminUserHisTableServiceImpl extends BaseServiceImpl<AdminUserHisTa
      * @return
      */
     @Override
-    public boolean checkAuth(){
+    public Integer checkAuth(){
         Long userId= UserUtil.getUserId();
         AdminUser adminUser = adminUserService.getById(userId);
         if(adminUser==null){
             throw new CrmException(AdminCodeEnum.ADMIN_USER_NOT_EXIST_ERROR);
         }
         AdminUserHisTable userHisTable = this.lambdaQuery()
-                .eq(AdminUserHisTable::getUserId,userId).eq(AdminUserHisTable::getType,1).last(" limit 1").one();
-        return userHisTable != null && userHisTable.getHisTable() != 0;
+                .eq(AdminUserHisTable::getUserId,userId).last(" limit 1").one();
+        if(userHisTable == null){
+            return null;
+        }
+        if(userHisTable.getHisTable() == 0){
+            return null;
+        }
+        return userHisTable.getType();
     }
 }

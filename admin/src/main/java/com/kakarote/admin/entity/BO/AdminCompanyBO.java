@@ -15,10 +15,15 @@ import javax.validation.constraints.NotEmpty;
 @ToString
 @ApiModel(value="AdminCompany对象", description="云平台公司配置表")
 public class AdminCompanyBO {
+
     @ApiModelProperty(value = "企业名称",required = true,example = "良心企业")
     @NotEmpty
     private String companyName;
 
     @ApiModelProperty(value = "企业LOGO", example = "/logo")
     private String companyLogo;
+
+    private String endTime;
+
+    private Integer endDay;
 }

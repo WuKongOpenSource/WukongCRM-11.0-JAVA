@@ -1,6 +1,7 @@
 package com.kakarote.crm.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.IdUtil;
@@ -11,6 +12,7 @@ import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
@@ -28,6 +30,7 @@ import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.feign.examine.entity.ExamineRecordReturnVO;
 import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
 import com.kakarote.core.feign.examine.service.ExamineService;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
@@ -91,15 +94,6 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
     private ICrmContractDataService crmContractDataService;
 
     @Autowired
-    private ICrmExamineService crmExamineService;
-
-    @Autowired
-    private ICrmExamineLogService examineLogService;
-
-    @Autowired
-    private ICrmExamineRecordService examineRecordService;
-
-    @Autowired
     private AdminService adminService;
 
     @Autowired
@@ -137,6 +131,9 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
 
     @Autowired
     private ExamineService examineService;
+
+    @Autowired
+    private FieldService fieldService;
 
     /**
      * 大的搜索框的搜索字段
@@ -212,6 +209,36 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         JSONObject object = new JSONObject();
         object.fluentPut("discountRate", crmModel.get("discountRate")).fluentPut("product", crmContractProductService.queryList(id)).fluentPut("totalPrice", crmModel.get("totalPrice"));
         vos.add(new CrmModelFiledVO().setFieldName("product").setName("产品").setValue(object).setFormType("product").setSetting(new ArrayList<>()).setIsNull(0).setFieldType(1));
+        return vos;
+    }
+
+    @Override
+    public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id) {
+        CrmModel crmModel = queryById(id);
+        if (id != null) {
+            List<JSONObject> customerList = new ArrayList<>();
+            if (crmModel.get("customerId")!=null){
+                JSONObject customer = new JSONObject();
+                customerList.add(customer.fluentPut("customerId", crmModel.get("customerId")).fluentPut("customerName", crmModel.get("customerName")));
+            }
+            crmModel.put("customerId", customerList);
+            if (crmModel.get("businessId") != null){
+                crmModel.put("businessId", Collections.singletonList(new JSONObject().fluentPut("businessId", crmModel.get("businessId")).fluentPut("businessName", crmModel.get("businessName"))));
+            }else {
+                crmModel.put("businessId", new ArrayList<>());
+            }
+            if (crmModel.get("contactsId") != null){
+                crmModel.put("contactsId", Collections.singletonList(new JSONObject().fluentPut("contactsId", crmModel.get("contactsId")).fluentPut("name", crmModel.get("contactsName"))));
+            }else {
+                crmModel.put("contactsId", new ArrayList<>());
+            }
+        }
+        List<List<CrmModelFiledVO>> vos = crmFieldService.queryFormPositionFieldVO(crmModel);
+        JSONObject object = new JSONObject();
+        object.fluentPut("discountRate", crmModel.get("discountRate")).fluentPut("product", crmContractProductService.queryList(id)).fluentPut("totalPrice", crmModel.get("totalPrice"));
+        CrmModelFiledVO crmModelFiledVO = new CrmModelFiledVO().setFieldName("product").setName("产品").setValue(object).setFormType("product").setSetting(new ArrayList<>()).setIsNull(0).setFieldType(1);
+        crmModelFiledVO.setStylePercent(100);
+        vos.add(ListUtil.toList(crmModelFiledVO));
         return vos;
     }
 
@@ -314,7 +341,6 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         }
         crmContract.setUnreceivedMoney(crmContract.getMoney());
         crmContract.setReceivedMoney(new BigDecimal("0"));
-//        Integer examineCount = crmExamineService.queryCount(getLabel());
         ExamineRecordSaveBO examineRecordSaveBO = crmModel.getExamineFlowData();
         ExamineRecordReturnVO examineData = null;
         if (crmContract.getContractId() == null) {
@@ -520,7 +546,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         }
         String ownerUserName = UserCacheUtil.getUserName(changOwnerUserBO.getOwnerUserId());
         changOwnerUserBO.getIds().forEach(id -> {
-            if (AuthUtil.isRwAuth(id, CrmEnum.CONTRACT)) {
+            if (AuthUtil.isRwAuth(id, CrmEnum.CONTRACT,CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
             CrmContract contract = getById(id);
@@ -565,6 +591,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         List<Map<String, Object>> dataList = queryPageList(search).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+            headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
             headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
             writer.merge(headList.size() - 1, "合同信息");
             if (dataList.size() == 0) {
@@ -573,6 +600,9 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
                 dataList.add(record);
             }
             for (Map<String, Object> map : dataList) {
+                headList.forEach(field ->{
+                    map.put(field.getFieldName(),ActionRecordUtil.parseValue(map.get(field.getFieldName()),field.getType(),false));
+                });
                 if(map.get("checkStatus")==null||"".equals(map.get("checkStatus"))){
                     continue;
                 }
@@ -691,7 +721,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
     @Transactional(rollbackFor = Exception.class)
     public void addMember(CrmMemberSaveBO crmMemberSaveBO) {
         for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isCrmOperateAuth(CrmEnum.CONTRACT, id)) {
+            if (AuthUtil.isRwAuth(id,CrmEnum.CONTRACT,CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
             CrmContract oldContract = lambdaQuery().eq(CrmContract::getContractId,id).ne(CrmContract::getCheckStatus,7).one();
@@ -731,7 +761,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
     @Transactional(rollbackFor = Exception.class)
     public void deleteMember(CrmMemberSaveBO crmMemberSaveBO) {
         for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isCrmOperateAuth(CrmEnum.CONTRACT, id)) {
+            if (AuthUtil.isRwAuth(id,CrmEnum.CONTRACT,CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
             deleteMembers(id, crmMemberSaveBO.getMemberIds());
@@ -859,9 +889,9 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         }
         batchIdList.add(crmContract.getBatchId());
         batchIdList.addAll(crmActivityService.queryFileBatchId(crmContract.getContractId(), getLabel().getType()));
-        String receivableCon = AuthUtil.getCrmAuthSql(CrmEnum.RECEIVABLES, 1);
-        String returnVisitCon = AuthUtil.getCrmAuthSql(CrmEnum.RETURN_VISIT, 1);
-        String invoiceCon = AuthUtil.getCrmAuthSql(CrmEnum.INVOICE, 1);
+        String receivableCon = AuthUtil.getCrmAuthSql(CrmEnum.RECEIVABLES, 1,CrmAuthEnum.READ);
+        String returnVisitCon = AuthUtil.getCrmAuthSql(CrmEnum.RETURN_VISIT, 1,CrmAuthEnum.READ);
+        String invoiceCon = AuthUtil.getCrmAuthSql(CrmEnum.INVOICE, 1,CrmAuthEnum.READ);
         Map<String, Object> map = new HashMap<>();
         map.put("contractId", contractId);
         map.put("receivableCon", receivableCon);
@@ -980,16 +1010,17 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
                 String value = contractData != null ? contractData.getValue() : null;
                 String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
                 actionRecordUtil.publicContentRecord(CrmEnum.CONTRACT, BehaviorEnum.UPDATE, contractId, oldContract.getName(), detail);
+                String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
                 boolean bol = crmContractDataService.lambdaUpdate()
                         .set(CrmContractData::getName,record.getString("fieldName"))
-                        .set(CrmContractData::getValue, record.getString("value"))
+                        .set(CrmContractData::getValue, newValue)
                         .eq(CrmContractData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmContractData::getBatchId, batchId).update();
                 if (!bol) {
                     CrmContractData crmContractData = new CrmContractData();
                     crmContractData.setFieldId(record.getInteger("fieldId"));
                     crmContractData.setName(record.getString("fieldName"));
-                    crmContractData.setValue(record.getString("value"));
+                    crmContractData.setValue(newValue);
                     crmContractData.setCreateTime(new Date());
                     crmContractData.setBatchId(batchId);
                     crmContractDataService.save(crmContractData);
@@ -997,12 +1028,13 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             }
             updateField(record, contractId);
         });
+        this.lambdaUpdate().set(CrmContract::getUpdateTime,new Date()).eq(CrmContract::getContractId,contractId).update();
     }
 
 
     @Override
     public BasePage<JSONObject> queryListByContractId(CrmRelationPageBO crmRelationPageBO) {
-        String conditions = AuthUtil.getCrmAuthSql(CrmEnum.RECEIVABLES, "rec", 1);
+        String conditions = AuthUtil.getCrmAuthSql(CrmEnum.RECEIVABLES, "rec", 1,CrmAuthEnum.READ);
         return crmReceivablesService.queryListByContractId(crmRelationPageBO.parse(), crmRelationPageBO.getContractId(), conditions);
     }
 
@@ -1022,7 +1054,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
     public BasePage<JSONObject> queryReturnVisit(CrmRelationPageBO crmRelationPageBO) {
         List<CrmField> nameList = crmFieldService.lambdaQuery().select(CrmField::getFieldId, CrmField::getFieldName).eq(CrmField::getLabel, CrmEnum.RETURN_VISIT.getType())
                 .eq(CrmField::getIsHidden, 0).ne(CrmField::getFieldType, 1).list();
-        String conditions = AuthUtil.getCrmAuthSql(CrmEnum.RECEIVABLES, "a", 1);
+        String conditions = AuthUtil.getCrmAuthSql(CrmEnum.RECEIVABLES, "a", 1,CrmAuthEnum.READ);
         BasePage<JSONObject> basePage = getBaseMapper().queryReturnVisit(crmRelationPageBO.parse(), crmRelationPageBO.getContractId(), conditions, nameList);
         for (JSONObject jsonObject : basePage.getList()) {
             String ownerUserName = UserCacheUtil.getUserName(jsonObject.getLong("ownerUserId"));

@@ -76,7 +76,7 @@ public class ExamineController {
     @PostMapping("/updateStatus")
     @ApiOperation("修改审批状态")
     public Result updateStatus(@RequestParam("status") Integer status, @RequestParam("examineId") Long examineId) {
-        examineService.updateStatus(examineId,status);
+        examineService.updateStatus(examineId,status,true);
         return Result.ok();
     }
 

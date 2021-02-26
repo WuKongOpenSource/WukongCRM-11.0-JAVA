@@ -1,6 +1,8 @@
 package com.kakarote.crm.controller;
 
 
+import cn.hutool.core.util.StrUtil;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SubModelType;
@@ -14,7 +16,6 @@ import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.log.CrmReceivablesLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmChangeOwnerUserBO;
 import com.kakarote.crm.entity.BO.CrmContractSaveBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
@@ -88,16 +89,21 @@ public class CrmReceivablesController {
 
     @PostMapping("/field")
     @ApiOperation("查询新增所需字段")
-    public Result<List<CrmModelFiledVO>> queryField() {
-        List<CrmModelFiledVO> crmModelFiledList = crmReceivablesService.queryField(null);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryReceivablesField(@RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmReceivablesService.queryField(null));
+        }
+        return R.ok(crmReceivablesService.queryFormPositionField(null));
     }
 
     @PostMapping("/field/{id}")
     @ApiOperation("查询修改数据所需信息")
-    public Result<List<CrmModelFiledVO>> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id) {
-        List<CrmModelFiledVO> crmModelFiledList = crmReceivablesService.queryField(id);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id,
+                                   @RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmReceivablesService.queryField(id));
+        }
+        return R.ok(crmReceivablesService.queryFormPositionField(id));
     }
 
     @PostMapping("/deleteByIds")

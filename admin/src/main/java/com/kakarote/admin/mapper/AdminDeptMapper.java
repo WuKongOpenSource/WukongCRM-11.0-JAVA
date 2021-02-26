@@ -17,4 +17,6 @@ import java.util.List;
 public interface AdminDeptMapper extends BaseMapper<AdminDept> {
 
     List<DeptVO> queryDeptUserList();
+
+    List<AdminDept> queryDeptList();
 }

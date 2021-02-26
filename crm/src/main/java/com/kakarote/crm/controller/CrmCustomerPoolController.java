@@ -5,10 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
-import com.kakarote.core.common.Const;
-import com.kakarote.core.common.R;
-import com.kakarote.core.common.Result;
-import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.*;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.SysLog;
 import com.kakarote.core.common.log.SysLogHandler;
@@ -19,7 +16,6 @@ import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.log.CrmCustomerPoolLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmCustomerPoolBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.BO.UploadExcelBO;
@@ -113,7 +109,6 @@ public class CrmCustomerPoolController {
     @ApiOperation("导入客户")
     public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("repeatHandling") Integer repeatHandling, @RequestParam("poolId") Integer poolId) {
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
-        uploadExcelBO.setOwnerUserId(null);
         uploadExcelBO.setUserInfo(UserUtil.getUser());
         uploadExcelBO.setCrmEnum(CrmEnum.CUSTOMER);
         uploadExcelBO.setPoolId(poolId);

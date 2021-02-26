@@ -1,6 +1,7 @@
 package com.kakarote.crm.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.IdUtil;
@@ -11,15 +12,18 @@ import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.examine.entity.ExamineInfoVo;
 import com.kakarote.core.feign.examine.entity.ExamineRecordReturnVO;
 import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
 import com.kakarote.core.feign.examine.service.ExamineService;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
@@ -30,7 +34,6 @@ import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.constant.CrmActivityEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmContractSaveBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
@@ -85,12 +88,6 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
     private ICrmContractService crmContractService;
 
     @Autowired
-    private ICrmExamineService crmExamineService;
-
-    @Autowired
-    private ICrmExamineLogService examineLogService;
-
-    @Autowired
     private ICrmExamineRecordService examineRecordService;
 
     @Autowired
@@ -122,6 +119,9 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
 
     @Autowired
     private ExamineService examineService;
+
+    @Autowired
+    private FieldService fieldService;
 
 
     /**
@@ -174,6 +174,19 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
             crmModel.put("contractId", Collections.singletonList(new JSONObject().fluentPut("contractId",crmModel.get("contractId")).fluentPut("contractNum",crmModel.get("contractNum"))));
         }
         return crmFieldService.queryField(crmModel);
+    }
+
+    @Override
+    public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id) {
+        CrmModel crmModel = queryById(id);
+        if (id != null){
+            List<JSONObject> customerList = new ArrayList<>();
+            JSONObject customer = new JSONObject();
+            customerList.add(customer.fluentPut("customerId", crmModel.get("customerId")).fluentPut("customerName", crmModel.get("customerName")));
+            crmModel.put("customerId", customerList);
+            crmModel.put("contractId", Collections.singletonList(new JSONObject().fluentPut("contractId",crmModel.get("contractId")).fluentPut("contractNum",crmModel.get("contractNum"))));
+        }
+        return crmFieldService.queryFormPositionFieldVO(crmModel);
     }
 
     /**
@@ -424,6 +437,7 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
         List<Map<String, Object>> dataList = queryPageList(search).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+            headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
             headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
             writer.merge(headList.size() - 1, "回款信息");
             if (dataList.size() == 0) {
@@ -432,6 +446,9 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
                 dataList.add(record);
             }
             dataList.forEach(record -> {
+                headList.forEach(field ->{
+                    record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                });
                 if (record.get("checkStatus") == null || "".equals(record.get("checkStatus"))) {
                     return;
                 }
@@ -582,9 +599,9 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
     public void updateInformation(CrmUpdateInformationBO updateInformationBO) {
         String batchId = updateInformationBO.getBatchId();
         Integer receivablesId = updateInformationBO.getId();
-        Integer examineCount = crmExamineService.queryCount(getLabel());
+        List<ExamineInfoVo> infoVos = examineService.queryNormalExamine(2).getData();
         CrmReceivables receivables = getById(receivablesId);
-        if (!receivables.getCreateUserId().equals(UserUtil.getUserId()) && examineCount > 0) {
+        if (!receivables.getCreateUserId().equals(UserUtil.getUserId()) && CollUtil.isNotEmpty(infoVos)) {
             throw new CrmException(CrmCodeEnum.CRM_RECEIVABLES_EDIT_ERROR);
         }
         if (receivables.getCheckStatus() == 1){
@@ -609,16 +626,17 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
                 String value = receivablesData != null ? receivablesData.getValue() : null;
                 String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
                 actionRecordUtil.publicContentRecord(CrmEnum.RECEIVABLES, BehaviorEnum.UPDATE, receivablesId, oldReceivables.getNumber(), detail);
+                String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
                 boolean bol = crmReceivablesDataService.lambdaUpdate()
                         .set(CrmReceivablesData::getName,record.getString("fieldName"))
-                        .set(CrmReceivablesData::getValue, record.getString("value"))
+                        .set(CrmReceivablesData::getValue, newValue)
                         .eq(CrmReceivablesData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmReceivablesData::getBatchId, batchId).update();
                 if (!bol) {
                     CrmReceivablesData crmReceivabelsData = new CrmReceivablesData();
                     crmReceivabelsData.setFieldId(record.getInteger("fieldId"));
                     crmReceivabelsData.setName(record.getString("fieldName"));
-                    crmReceivabelsData.setValue(record.getString("value"));
+                    crmReceivabelsData.setValue(newValue);
                     crmReceivabelsData.setCreateTime(new Date());
                     crmReceivabelsData.setBatchId(batchId);
                     crmReceivablesDataService.save(crmReceivabelsData);
@@ -626,6 +644,7 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
             }
             updateField(record, receivablesId);
         });
+        this.lambdaUpdate().set(CrmReceivables::getUpdateTime,new Date()).eq(CrmReceivables::getReceivablesId,receivablesId).update();
     }
 
     @Override

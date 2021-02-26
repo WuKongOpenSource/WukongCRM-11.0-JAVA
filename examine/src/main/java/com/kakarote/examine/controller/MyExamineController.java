@@ -41,7 +41,7 @@ public class MyExamineController {
 
     @PostMapping("/queryOaExamineIdList")
     @ApiExplain("查询OA审批流关联业务主键列表")
-    public Result<List<Integer>> queryOaExamineIdList(@RequestParam("status")Integer status, @RequestParam("categoryId")Integer categoryId) {
+    public Result<List<Integer>> queryOaExamineIdList(@RequestParam(value = "status",required = false)Integer status, @RequestParam("categoryId")Integer categoryId) {
         return Result.ok(examineService.queryOaExamineIdList(status,categoryId));
     }
 

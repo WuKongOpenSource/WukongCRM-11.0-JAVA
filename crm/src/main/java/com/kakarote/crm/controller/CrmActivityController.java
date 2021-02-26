@@ -15,6 +15,7 @@ import com.kakarote.core.exception.CrmException;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.log.CrmActivityLog;
 import com.kakarote.crm.constant.CrmActivityEnum;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.CrmActivityBO;
 import com.kakarote.crm.entity.PO.CrmActivity;
@@ -55,7 +56,7 @@ public class CrmActivityController {
     @ApiOperation("添加跟进记录")
     @SysLogHandler(behavior = BehaviorEnum.FOLLOW_UP)
     public Result addCrmActivityRecord(@RequestBody @Valid CrmActivity crmActivity) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.parse(crmActivity.getActivityType()), crmActivity.getActivityTypeId());
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.parse(crmActivity.getActivityType()), crmActivity.getActivityTypeId(),CrmAuthEnum.READ);
         if (auth) {
             return R.noAuth();
         }
@@ -88,7 +89,7 @@ public class CrmActivityController {
     @PostMapping("/updateActivityRecord")
     @ApiOperation("修改跟进记录")
     public Result<CrmActivity> updateActivityRecord(@RequestBody CrmActivity crmActivity) {
-        boolean auth = AuthUtil.isRwAuth(crmActivity.getActivityTypeId(), CrmEnum.parse(crmActivity.getActivityType()));
+        boolean auth = AuthUtil.isRwAuth(crmActivity.getActivityTypeId(), CrmEnum.parse(crmActivity.getActivityType()), CrmAuthEnum.EDIT);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }

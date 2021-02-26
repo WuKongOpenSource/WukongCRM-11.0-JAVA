@@ -44,7 +44,17 @@
         <if test="data.roleId != null">
             and g.role_id=#{data.roleId}
         </if>
-        order by status desc
+        <choose>
+            <when test="data.deptOwnerUserId != null">
+                order by a.user_id = ${data.deptOwnerUserId} desc,status desc
+            </when>
+            <when test="data.deptId == null and data.userId != null">
+                order by a.user_id = ${data.userId} desc,status desc
+            </when>
+            <otherwise>
+                order by status desc
+            </otherwise>
+        </choose>
     </select>
     <select id="queryListName" resultType="com.kakarote.admin.entity.VO.UserBookVO">
         select a.*,
@@ -97,5 +107,31 @@
         (SELECT realname FROM wk_admin_user WHERE user_id=a.parent_id) as parentName
         FROM wk_admin_user as a
         where a.user_id = #{userId}
+    </select>
+    <select id="queryByUserName" resultType="com.kakarote.admin.entity.PO.AdminUser">
+        select a.*,
+        b.company_name as companyName
+        from wk_admin_user as a
+        LEFT JOIN wk_admin_company as b on a.username=b.phone
+        where a.username = #{username}
+    </select>
+    <select id="countUserByLabel" resultType="java.lang.Integer">
+        select count(1)
+        from wk_admin_user as a
+        where 1 = 1
+        <if test="status != null">
+            and a.status = #{status}
+        </if>
+        <choose>
+            <when test="label != null and label==1">
+                AND DATE_SUB(CURDATE(), INTERVAL 7 DAY) &lt;= date(a.create_time)
+            </when>
+            <when test="label != null and label==2">
+                and a.status='2'
+            </when>
+            <when test="label != null and label==3">
+                and a.status = '0'
+            </when>
+        </choose>
     </select>
 </mapper>

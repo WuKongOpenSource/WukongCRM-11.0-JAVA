@@ -26,12 +26,12 @@ public class AdminUserHisTableController {
     @PostMapping("/authorize")
     @ApiOperation("员工坐席授权")
     public Result<Boolean> authorize(@RequestBody CallUser callUser){
-        return Result.ok(adminUserHisTableService.authorize(callUser.getUserIds(),callUser.getState()));
+        return Result.ok(adminUserHisTableService.authorize(callUser.getUserIds(),callUser.getState(),callUser.getHisUse()));
     }
 
     @PostMapping("/checkAuth")
     @ApiOperation("判断用户是否为坐席")
-    public Result<Boolean> checkAuth() {
+    public Result<Integer> checkAuth() {
         return Result.ok(adminUserHisTableService.checkAuth());
     }
 

@@ -71,6 +71,40 @@ public class AdminFileServiceImpl extends BaseServiceImpl<AdminFileMapper, Admin
         return entity;
     }
 
+
+    @Override
+    public UploadEntity uploadBySingle(MultipartFile file, String batchId, String type, String isPublic) throws IOException {
+        String fileName = file.getOriginalFilename();
+        String fileId = BaseUtil.getNextId() + "";
+        if (StrUtil.isEmpty(batchId)) {
+            batchId = IdUtil.simpleUUID();
+        } else {
+            AdminFile adminFile = this.lambdaQuery().eq(AdminFile::getBatchId, batchId).last(" limit 1 ").one();
+            if (adminFile != null) {
+                fileName = adminFile.getName();
+                fileId = adminFile.getFileId() + "";
+            }
+        }
+
+        UploadEntity entity = new UploadEntity(fileId, fileName, file.getSize(), batchId, isPublic);
+        entity = FileServiceFactory.build().uploadFile(file.getInputStream(), entity);
+        AdminFile adminFile = new AdminFile();
+        adminFile.setFileId(Long.valueOf(fileId));
+        adminFile.setName(entity.getName());
+        adminFile.setSize(entity.getSize());
+        adminFile.setPath(entity.getPath());
+        adminFile.setBatchId(batchId);
+        if (StrUtil.isEmpty(type)) {
+            type = "file";
+        }
+        adminFile.setFileType(type);
+        adminFile.setType(entity.getType());
+        adminFile.setIsPublic(Integer.valueOf(isPublic));
+        saveOrUpdate(adminFile);
+        return entity;
+
+    }
+
     /**
      * 获取文件列表
      *
@@ -154,9 +188,10 @@ public class AdminFileServiceImpl extends BaseServiceImpl<AdminFileMapper, Admin
      */
     @Override
     public FileEntity queryOneByBatchId(String batchId) {
-        FileEntity entity = new FileEntity();
+        FileEntity entity = null;
         AdminFile adminFile = lambdaQuery().eq(AdminFile::getBatchId, batchId).last("limit 1").one();
         if (adminFile != null) {
+            entity = new FileEntity();
             entity.setIsPublic(adminFile.getIsPublic().toString());
             entity.setPath(adminFile.getPath());
             entity.setFileId(adminFile.getFileId().toString());
@@ -214,7 +249,10 @@ public class AdminFileServiceImpl extends BaseServiceImpl<AdminFileMapper, Admin
         AdminFile adminFile = getById(fileId);
         if (adminFile != null) {
             if (Objects.equals(1, adminFile.getType())) {
-                ServletUtil.write(response, FileUtil.file(adminFile.getPath()));
+                boolean exist = FileUtil.exist(adminFile.getPath());
+                if (exist) {
+                    ServletUtil.write(response, FileUtil.file(adminFile.getPath()));
+                }
                 return;
             }
             UploadEntity entity = new UploadEntity(adminFile.getFileId() + "", adminFile.getName(), adminFile.getSize(), adminFile.getBatchId(), "0");

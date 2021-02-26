@@ -1,11 +1,19 @@
 package com.kakarote.crm.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.collection.ListUtil;
+import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Dict;
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.poi.excel.BigExcelWriter;
+import cn.hutool.poi.excel.ExcelUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.common.Const;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.UserInfo;
@@ -18,21 +26,30 @@ import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.BiTimeUtil;
 import com.kakarote.core.utils.UserUtil;
+import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.AuthUtil;
+import com.kakarote.crm.constant.CrmAuthEnum;
+import com.kakarote.crm.constant.CrmBackLogEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.constant.MonthEnum;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.BO.CrmSearchParamsBO;
-import com.kakarote.crm.entity.PO.CrmActivity;
+import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.mapper.CrmActivityMapper;
 import com.kakarote.crm.mapper.CrmInstrumentMapper;
 import com.kakarote.crm.service.*;
+import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -56,7 +73,25 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
     private ICrmActivityService crmActivityService;
 
     @Autowired
+    private ICrmCustomerService crmCustomerService;
+
+    @Autowired
     private ICrmBusinessService crmBusinessService;
+
+    @Autowired
+    private ICrmLeadsService crmLeadsService;
+
+    @Autowired
+    private ICrmContractService crmContractService;
+
+    @Autowired
+    private ICrmContactsService crmContactsService;
+
+    @Autowired
+    private ICrmBackLogDealService crmBackLogDealService;
+
+    @Autowired
+    private ActionRecordUtil actionRecordUtil;
 
     @Autowired
     private CrmActivityMapper crmActivityMapper;
@@ -65,15 +100,14 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
     public JSONObject queryBulletin(BiParams biParams) {
         BiTimeUtil.BiTimeEntity biTimeEntity = BiTimeUtil.analyzeTime(biParams);
         BiAuthority biAuthority = handleDataType(biParams);
-        Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
         Map<String, Object> record = new HashMap<>();
-        record.put("businessUserIds", AuthUtil.filterUserIdListByDataType(map.get("business"), biAuthority.getUserIds()));
-        record.put("contactsUserIds", AuthUtil.filterUserIdListByDataType(map.get("contacts"), biAuthority.getUserIds()));
-        record.put("customerUserIds", AuthUtil.filterUserIdListByDataType(map.get("customer"), biAuthority.getUserIds()));
-        record.put("receivablesUserIds", AuthUtil.filterUserIdListByDataType(map.get("receivables"), biAuthority.getUserIds()));
-        record.put("contractUserIds", AuthUtil.filterUserIdListByDataType(map.get("contract"), biAuthority.getUserIds()));
-        record.put("leadsUserIds", AuthUtil.filterUserIdListByDataType(map.get("leads"), biAuthority.getUserIds()));
-        record.put("recordUserIds", AuthUtil.filterUserIdListByDataType(map.get("record"), biAuthority.getUserIds()));
+        record.put("businessUserIds", AuthUtil.filterUserIdList(CrmEnum.BUSINESS, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        record.put("contactsUserIds", AuthUtil.filterUserIdList(CrmEnum.CONTACTS, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        record.put("customerUserIds", AuthUtil.filterUserIdList(CrmEnum.CUSTOMER, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        record.put("receivablesUserIds", AuthUtil.filterUserIdList(CrmEnum.RECEIVABLES, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        record.put("contractUserIds", AuthUtil.filterUserIdList(CrmEnum.CONTRACT, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        record.put("leadsUserIds", AuthUtil.filterUserIdList(CrmEnum.LEADS, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        record.put("recordUserIds", AuthUtil.filterUserIdList(null, CrmAuthEnum.LIST,biAuthority.getUserIds()));
         Map<String, Object> info = crmInstrumentMapper.queryBulletin(biTimeEntity, record);
         boolean isCustom = !StrUtil.isAllEmpty(biParams.getStartTime(), biParams.getEndTime());
         Map<String, Object> prevRecord = new HashMap<>();
@@ -113,28 +147,8 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
     public BasePage<Map<String, Object>> queryBulletinInfo(BiParams biParams) {
         BiTimeUtil.BiTimeEntity biTimeEntity = BiTimeUtil.analyzeTime(biParams);
         BiAuthority biAuthority = handleDataType(biParams);
-        Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
         CrmEnum crmEnum = CrmEnum.parse(biParams.getLabel());
-        List<Long> userIds = new ArrayList<>();
-        switch (crmEnum) {
-            case CUSTOMER:
-                userIds = AuthUtil.filterUserIdListByDataType(map.get("customer"), biAuthority.getUserIds());
-                break;
-            case CONTACTS:
-                userIds = AuthUtil.filterUserIdListByDataType(map.get("contacts"), biAuthority.getUserIds());
-                break;
-            case BUSINESS:
-                userIds = AuthUtil.filterUserIdListByDataType(map.get("business"), biAuthority.getUserIds());
-                break;
-            case CONTRACT:
-                userIds = AuthUtil.filterUserIdListByDataType(map.get("contract"), biAuthority.getUserIds());
-                break;
-            case RECEIVABLES:
-                userIds = AuthUtil.filterUserIdListByDataType(map.get("receivables"), biAuthority.getUserIds());
-                break;
-            default:
-                break;
-        }
+        List<Long> userIds = AuthUtil.filterUserIdList(crmEnum, CrmAuthEnum.LIST, biAuthority.getUserIds());
         if (userIds.isEmpty()) {
             return new BasePage<>();
         }
@@ -178,9 +192,8 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
     @Override
     public JSONObject forgottenCustomerCount(BiParams biParams) {
         JSONObject object = new JSONObject();
-        Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
         BiAuthority biAuthority = handleDataType(biParams);
-        List<Long> userIds = AuthUtil.filterUserIdListByDataType(map.get("customer"), biAuthority.getUserIds());
+        List<Long> userIds = AuthUtil.filterUserIdList(CrmEnum.CUSTOMER,CrmAuthEnum.LIST, biAuthority.getUserIds());
         Integer sevenDays = crmInstrumentMapper.forgottenCustomerCount(7, userIds);
         Integer fifteenDays = crmInstrumentMapper.forgottenCustomerCount(15, userIds);
         Integer oneMonth = crmInstrumentMapper.forgottenCustomerCount(30, userIds);
@@ -296,13 +309,12 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         Integer cycleNum = record.getCycleNum();
         Integer beginTime = record.getBeginTime();
         List<Map<String, Object>> recordList = new ArrayList<>();
-        Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
         BiAuthority biAuthority = handleDataType(biParams);
         List<Long> userIds = new ArrayList<>();
         if (Objects.equals(biParams.getLabel(), 1)) {
-            userIds.addAll(AuthUtil.filterUserIdListByDataType(map.get("contract"), biAuthority.getUserIds()));
+            userIds.addAll(AuthUtil.filterUserIdList(CrmEnum.CONTRACT,CrmAuthEnum.LIST, biAuthority.getUserIds()));
         } else if (Objects.equals(biParams.getLabel(), 2)) {
-            userIds.addAll(AuthUtil.filterUserIdListByDataType(map.get("receivables"), biAuthority.getUserIds()));
+            userIds.addAll(AuthUtil.filterUserIdList(CrmEnum.RECEIVABLES,CrmAuthEnum.LIST, biAuthority.getUserIds()));
         }
         for (int i = 1; i <= cycleNum; i++) {
             JSONObject object = new JSONObject();
@@ -323,13 +335,12 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
     @Override
     public JSONObject queryDataInfo(BiParams biParams) {
         BiAuthority biAuthority = handleDataType(biParams);
-        Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
         BiTimeUtil.BiTimeEntity timeEntity = BiTimeUtil.analyzeTime(biParams);
-        Map<String, Object> costumer = crmInstrumentMapper.dataInfoCustomer(timeEntity, AuthUtil.filterUserIdListByDataType(map.get("customer"), biAuthority.getUserIds()));
-        Map<String, Object> activity = crmInstrumentMapper.dataInfoActivity(timeEntity, AuthUtil.filterUserIdListByDataType(map.get("customer"), biAuthority.getUserIds()));
-        Map<String, Object> business = crmInstrumentMapper.dataInfoBusiness(timeEntity, AuthUtil.filterUserIdListByDataType(map.get("business"), biAuthority.getUserIds()));
-        Map<String, Object> contract = crmInstrumentMapper.dataInfoContract(timeEntity, AuthUtil.filterUserIdListByDataType(map.get("contract"), biAuthority.getUserIds()));
-        Map<String, Object> receivables = crmInstrumentMapper.dataInfoReceivables(timeEntity, AuthUtil.filterUserIdListByDataType(map.get("receivables"), biAuthority.getUserIds()));
+        Map<String, Object> costumer = crmInstrumentMapper.dataInfoCustomer(timeEntity, AuthUtil.filterUserIdList(CrmEnum.CUSTOMER,CrmAuthEnum.LIST, biAuthority.getUserIds()));
+        Map<String, Object> activity = crmInstrumentMapper.dataInfoActivity(timeEntity, AuthUtil.filterUserIdList(CrmEnum.CUSTOMER,CrmAuthEnum.LIST, biAuthority.getUserIds()));
+        Map<String, Object> business = crmInstrumentMapper.dataInfoBusiness(timeEntity, AuthUtil.filterUserIdList(CrmEnum.BUSINESS,CrmAuthEnum.LIST, biAuthority.getUserIds()));
+        Map<String, Object> contract = crmInstrumentMapper.dataInfoContract(timeEntity, AuthUtil.filterUserIdList(CrmEnum.CONTRACT,CrmAuthEnum.LIST, biAuthority.getUserIds()));
+        Map<String, Object> receivables = crmInstrumentMapper.dataInfoReceivables(timeEntity, AuthUtil.filterUserIdList(CrmEnum.RECEIVABLES,CrmAuthEnum.LIST, biAuthority.getUserIds()));
         JSONObject object = new JSONObject();
         object.putAll(costumer);
         object.putAll(activity);
@@ -430,12 +441,11 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             beginTime = BiTimeUtil.estimateTime(beginTime);
         }
         JSONObject kv = new JSONObject(record.toMap()).fluentPut("label", status);
-        Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
         BiAuthority biAuthority = handleDataType(biParams);
         if (ObjectUtil.equal(status, 1)) {
-            kv.put("userIds", AuthUtil.filterUserIdListByDataType(map.get("contract"), biAuthority.getUserIds()));
+            kv.put("userIds", AuthUtil.filterUserIdList(CrmEnum.CONTRACT,CrmAuthEnum.LIST, biAuthority.getUserIds()));
         } else if (ObjectUtil.equal(status, 2)) {
-            kv.put("userIds", AuthUtil.filterUserIdListByDataType(map.get("receivables"), biAuthority.getUserIds()));
+            kv.put("userIds", AuthUtil.filterUserIdList(CrmEnum.RECEIVABLES,CrmAuthEnum.LIST, biAuthority.getUserIds()));
         }
         if ("week".equals(type) || "lastWeek".equals(type) || "today".equals(type) || "yesterday".equals(type)) {
             b = false;
@@ -462,61 +472,18 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
 
     @Override
     public BasePage<CrmActivity> queryRecordList(BiParams biParams) {
-        Long userId = biParams.getUserId();
-        Integer deptId = biParams.getDeptId();
         String startTime = biParams.getStartTime();
         String endTime = biParams.getEndTime();
-        Integer dataType = biParams.getDataType();
         Integer crmType = biParams.getLabel();
         Integer queryType = biParams.getQueryType();
-        Integer subUser = biParams.getSubUser();
         String search = biParams.getSearch() == null ? null : biParams.getSearch().trim();
         BiAuthority biAuthority = handleDataType(biParams);
         List<Long> userIds = biAuthority.getUserIds();
         if (CollUtil.isEmpty(userIds)) {
             return new BasePage<>();
         }
-        if (subUser != null) {
-            if (subUser == 1 && ObjectUtil.isAllEmpty(userId, deptId)) {
-                userIds = adminService.queryChildUserId(UserUtil.getUserId()).getData();
-            } else if (subUser == 0) {
-                userIds = Collections.singletonList(UserUtil.getUserId());
-            }
-        }
-        if (UserUtil.isAdmin() && ObjectUtil.isAllEmpty(userId, deptId) && subUser == null && dataType == null) {
-            userIds = adminService.queryUserList().getData();
-        }
         Integer type = BiTimeUtil.analyzeType(biParams.getType());
-        if (!UserUtil.isAdmin()) {
-            Integer followRecordReadMenuId = adminService.queryMenuId("crm", "followRecord", "read").getData();
-            List<Long> authUserIdList = AuthUtil.getUserIdByAuth(followRecordReadMenuId);
-            if (authUserIdList.size() == 0) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
-        }
-        Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
-        CrmEnum crmEnum = CrmEnum.parse(crmType);
-        if (crmEnum != null) {
-            switch (crmEnum) {
-                case CUSTOMER:
-                    AuthUtil.filterUserIdListByDataType(map.get("customer"), userIds);
-                    break;
-                case CONTACTS:
-                    AuthUtil.filterUserIdListByDataType(map.get("contacts"), userIds);
-                    break;
-                case BUSINESS:
-                    AuthUtil.filterUserIdListByDataType(map.get("business"), userIds);
-                    break;
-                case CONTRACT:
-                    AuthUtil.filterUserIdListByDataType(map.get("contract"), userIds);
-                    break;
-                case RECEIVABLES:
-                    AuthUtil.filterUserIdListByDataType(map.get("receivables"), userIds);
-                    break;
-                default:
-                    break;
-            }
-        }
+        userIds = this.handleUserIds(biParams,userIds);
         BasePage<CrmActivity> page = crmActivityMapper.queryRecordList(biParams.parse(), Dict.create().set("crmType", crmType).set("type", type).set("userIds", userIds).set("startTime", startTime)
                 .set("endTime", endTime).set("queryType", queryType).set("search", search));
         for (CrmActivity crmActivity : page.getList()) {
@@ -529,6 +496,56 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
     }
 
     @Override
+    public List<CrmActivity> exportRecordList(BiParams biParams) {
+        Integer crmType = biParams.getLabel();
+        String endTime = biParams.getEndTime();
+        String startTime = biParams.getStartTime();
+        Integer queryType = biParams.getQueryType();
+        String search = biParams.getSearch() == null ? null : biParams.getSearch().trim();
+        BiAuthority biAuthority = handleDataType(biParams);
+        List<Long> userIds = biAuthority.getUserIds();
+        if (CollUtil.isEmpty(userIds)) {
+            return new ArrayList<>();
+        }
+        userIds = this.handleUserIds(biParams,userIds);
+        Integer type = BiTimeUtil.analyzeType(biParams.getType());
+        return crmActivityMapper.exportRecordList( Dict.create().set("crmType", crmType).set("type", type).set("userIds", userIds).set("startTime", startTime)
+                .set("endTime", endTime).set("queryType", queryType).set("search", search));
+    }
+
+    private List<Long> handleUserIds(BiParams biParams,List<Long> userIds){
+        Integer subUser = biParams.getSubUser();
+        Long userId = biParams.getUserId();
+        Integer deptId = biParams.getDeptId();
+        Integer dataType = biParams.getDataType();
+        Integer crmType = biParams.getLabel();
+        if (subUser != null) {
+            if (subUser == 1 && ObjectUtil.isAllEmpty(userId, deptId)) {
+                userIds = adminService.queryChildUserId(UserUtil.getUserId()).getData();
+            } else if (subUser == 0) {
+                userIds = Collections.singletonList(UserUtil.getUserId());
+            }
+        }
+        if (UserUtil.isAdmin() && ObjectUtil.isAllEmpty(userId, deptId) && subUser == null && dataType == null) {
+            userIds = adminService.queryUserList().getData();
+        }
+        if (!UserUtil.isAdmin()) {
+            Integer followRecordReadMenuId = adminService.queryMenuId("crm", "followRecord", "read").getData();
+            List<Long> authUserIdList = AuthUtil.getUserIdByAuth(followRecordReadMenuId);
+            if (authUserIdList.size() == 0) {
+                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+            }
+        }
+        CrmEnum crmEnum = CrmEnum.parse(crmType);
+        List<Long> authUserIds  =  new ArrayList<>(userIds);
+        if(crmEnum != null) {
+            List<Long> longList = AuthUtil.queryAuthUserList(crmEnum, CrmAuthEnum.LIST);
+            authUserIds.retainAll(longList);
+        }
+        return authUserIds;
+    }
+
+    @Override
     public List<JSONObject> queryRecordCount(BiParams biParams) {
         BiAuthority biAuthority = handleDataType(biParams);
         List<Long> userIds = biAuthority.getUserIds();
@@ -538,14 +555,13 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         //1.今天 2.昨天 3.本周 4.上周 5.本月6.上月7.本季度8.上季度9.本年10上年
         Integer type = BiTimeUtil.analyzeType(biParams.getType());
         Dict kv = Dict.create().set("type", type).set("startTime", biParams.getStartTime()).set("endTime", biParams.getEndTime());
-        Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
-        kv.set("businessUserIds", AuthUtil.filterUserIdListByDataType(map.get("business"), userIds));
-        kv.set("contactsUserIds", AuthUtil.filterUserIdListByDataType(map.get("contacts"), userIds));
-        kv.set("customerUserIds", AuthUtil.filterUserIdListByDataType(map.get("customer"), userIds));
-        kv.set("receivablesUserIds", AuthUtil.filterUserIdListByDataType(map.get("receivables"), userIds));
-        kv.set("contractUserIds", AuthUtil.filterUserIdListByDataType(map.get("contract"), userIds));
-        kv.set("leadsUserIds", AuthUtil.filterUserIdListByDataType(map.get("leads"), userIds));
-        kv.set("recordUserIds", AuthUtil.filterUserIdListByDataType(map.get("record"), userIds));
+        kv.put("businessUserIds", AuthUtil.filterUserIdList(CrmEnum.BUSINESS, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        kv.put("contactsUserIds", AuthUtil.filterUserIdList(CrmEnum.CONTACTS, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        kv.put("customerUserIds", AuthUtil.filterUserIdList(CrmEnum.CUSTOMER, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        kv.put("receivablesUserIds", AuthUtil.filterUserIdList(CrmEnum.RECEIVABLES, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        kv.put("contractUserIds", AuthUtil.filterUserIdList(CrmEnum.CONTRACT, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        kv.put("leadsUserIds", AuthUtil.filterUserIdList(CrmEnum.LEADS, CrmAuthEnum.LIST,biAuthority.getUserIds()));
+        kv.put("recordUserIds", AuthUtil.filterUserIdList(null, CrmAuthEnum.LIST,biAuthority.getUserIds()));
         List<JSONObject> recordList = crmInstrumentMapper.queryRecordCount(kv);
         if (recordList.stream().noneMatch(record -> CrmEnum.LEADS.getType().equals(record.getInteger("crmType")))) {
             recordList.add(new JSONObject().fluentPut("crmType", CrmEnum.LEADS.getType()).fluentPut("count", 0));
@@ -565,9 +581,6 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         return recordList;
     }
 
-    @Autowired
-    private ICrmCustomerService crmCustomerService;
-
     @Override
     public BasePage<Map<String, Object>> forgottenCustomerPageList(BiParams biParams) {
         BiAuthority biAuthority = handleDataType(biParams);
@@ -576,9 +589,9 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             return new BasePage<>();
         }
         Integer day = biParams.getDay();
-        Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
-        AuthUtil.filterUserIdListByDataType(map.get("customer"), userIds);
-        List<Integer> customerIds = crmCustomerService.forgottenCustomer(day, userIds, biParams.getSearch());
+        List<Long> authUserList = AuthUtil.queryAuthUserList(CrmEnum.CUSTOMER, CrmAuthEnum.LIST);
+        authUserList.retainAll(userIds);
+        List<Integer> customerIds = crmCustomerService.forgottenCustomer(day, authUserList, biParams.getSearch());
         if (customerIds.size() == 0) {
             return new BasePage<>();
         }
@@ -599,9 +612,9 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             return new BasePage<>();
         }
         String search = biParams.getSearch();
-        Map<String, Integer> map = AuthUtil.getDataTypeByUserId();
-        AuthUtil.filterUserIdListByDataType(map.get("customer"), userIds);
-        List<Integer> customerIds = crmCustomerService.unContactCustomer(search, userIds);
+        List<Long> authUserList = AuthUtil.queryAuthUserList(CrmEnum.CUSTOMER, CrmAuthEnum.LIST);
+        authUserList.retainAll(userIds);
+        List<Integer> customerIds = crmCustomerService.unContactCustomer(search, authUserList);
         if (customerIds.size() == 0) {
             return new BasePage<>();
         }
@@ -612,5 +625,225 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         List<String> collect = customerIds.stream().map(Object::toString).collect(Collectors.toList());
         searchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect)));
         return crmCustomerService.queryPageList(searchBO);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public JSONObject importRecordList(MultipartFile file, Integer crmType) {
+        List<List<Object>> errList = new ArrayList<>();
+        if (!Arrays.asList(1,2,3,5,6).contains(crmType)){
+            throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
+        }
+        CrmEnum crmEnum = CrmEnum.parse(crmType);
+        String filePath = getFilePath(file);
+        List<UserInfo> userInfos = adminService.queryUserInfoList().getData();
+        Map<String, Long> map = userInfos.stream().collect(Collectors.toMap(UserInfo::getRealname, UserInfo::getUserId, (k1, k2) -> k1));
+        AtomicReference<Integer> num = new AtomicReference<>(0);
+        Integer size = crmType == 2 ? 7 : 5;
+        //客户 ：跟进内容（必填）、创建人（必填）、所属客户（必填）、跟进时间、跟进方式、相关联系人、相关商机
+        //非客户：跟进内容（必填）、创建人（必填）、所属线索/联系人/商机/合同（必填）、跟进时间、跟进方式
+        ExcelUtil.readBySax(filePath, 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
+            if (rowList.size() < size) {
+                for (int i = rowList.size(); i < size; i++) {
+                    rowList.add(null);
+                }
+            }
+            if (rowIndex > 1) {
+                num.getAndSet(num.get() + 1);
+                if (StrUtil.isEmptyIfStr(rowList.get(0))) {
+                    rowList.add(0, "跟进内容不能为空");
+                    errList.add(rowList);
+                    return;
+                }
+                if (StrUtil.isEmptyIfStr(rowList.get(1))) {
+                    rowList.add(0, "创建人不能为空");
+                    errList.add(rowList);
+                    return;
+                }
+                if (StrUtil.isEmptyIfStr(rowList.get(2))) {
+                    rowList.add(0, "所属"+crmEnum.getRemarks()+"不能为空");
+                    errList.add(rowList);
+                    return;
+                }
+                String content = rowList.get(0).toString().trim();
+                String createUserName = rowList.get(1).toString().trim();
+                Long createUserId = map.get(createUserName);
+                if (createUserId == null){
+                    rowList.add(0, "创建人不存在");
+                    errList.add(rowList);
+                    return;
+                }
+                String crmTypeName = rowList.get(2).toString().trim();
+                String createTime = Optional.ofNullable(rowList.get(3)).orElse("").toString().trim();
+                Date createDate = null;
+                if (StrUtil.isNotEmpty(createTime)){
+                    createDate = DateUtil.parse(createTime, DatePattern.NORM_DATE_PATTERN);
+                }
+                String category = Optional.ofNullable(rowList.get(4)).orElse("").toString().trim();
+                String contactsNames = null;
+                String businessNames = null;
+                Integer crmTypeId = null;
+                switch (crmEnum){
+                    case CUSTOMER:
+                        contactsNames = Optional.ofNullable(rowList.get(5)).orElse("").toString().trim();
+                        businessNames = Optional.ofNullable(rowList.get(6)).orElse("").toString().trim();
+                        CrmCustomer crmCustomer = crmCustomerService.lambdaQuery().select(CrmCustomer::getCustomerId)
+                                .eq(CrmCustomer::getCustomerName, crmTypeName).ne(CrmCustomer::getStatus,3)
+                                .orderByDesc(CrmCustomer::getCreateTime).last(" limit 1 ").one();
+                        if (crmCustomer == null){
+                            rowList.add(0, "所属客户不存在");
+                            errList.add(rowList);
+                            return;
+                        }
+                        crmTypeId = crmCustomer.getCustomerId();
+                        if (StrUtil.isNotEmpty(contactsNames)){
+                            List<String> names;
+                            if(contactsNames.contains("/")){
+                                names = Arrays.asList(contactsNames.split("/"));
+                            }else {
+                                names = ListUtil.toList(contactsNames);
+                            }
+                            List<CrmContacts> list = crmContactsService.lambdaQuery().select(CrmContacts::getContactsId)
+                                    .in(CrmContacts::getName, names).list();
+                            if (CollUtil.isNotEmpty(list)){
+                                List<Integer> contactsIdList = list.stream().map(CrmContacts::getContactsId).collect(Collectors.toList());
+                                contactsNames = StrUtil.join(Const.SEPARATOR, contactsIdList);
+                            }
+                        }
+
+                        if (StrUtil.isNotEmpty(businessNames)){
+                            List<String> names;
+                            if(businessNames.contains("/")){
+                                names = Arrays.asList(businessNames.split("/"));
+                            }else {
+                                names = ListUtil.toList(businessNames);
+                            }
+                            List<CrmBusiness> list = crmBusinessService.lambdaQuery().select(CrmBusiness::getBusinessId)
+                                    .in(CrmBusiness::getBusinessName, names).ne(CrmBusiness::getStatus,3).list();
+                            if (CollUtil.isNotEmpty(list)){
+                                List<Integer> businessIdList = list.stream().map(CrmBusiness::getBusinessId).collect(Collectors.toList());
+                                businessNames = StrUtil.join(Const.SEPARATOR, businessIdList);
+                            }
+                        }
+
+                        break;
+                    case LEADS:
+                        CrmLeads crmLeads = crmLeadsService.lambdaQuery().select(CrmLeads::getLeadsId)
+                                .eq(CrmLeads::getLeadsName, crmTypeName).orderByDesc(CrmLeads::getCreateTime).last(" limit 1 ").one();
+                        if (crmLeads == null){
+                            rowList.add(0, "所属线索不存在");
+                            errList.add(rowList);
+                            return;
+                        }
+                        crmTypeId = crmLeads.getLeadsId();
+                        break;
+                    case CONTACTS:
+                        CrmContacts crmContacts = crmContactsService.lambdaQuery().select(CrmContacts::getContactsId)
+                                .eq(CrmContacts::getName, crmTypeName).orderByDesc(CrmContacts::getCreateTime).last(" limit 1 ").one();
+                        if (crmContacts == null){
+                            rowList.add(0, "所属联系人不存在");
+                            errList.add(rowList);
+                            return;
+                        }
+                        crmTypeId = crmContacts.getContactsId();
+                        break;
+                    case BUSINESS:
+                        CrmBusiness crmBusiness = crmBusinessService.lambdaQuery().select(CrmBusiness::getBusinessId)
+                                .eq(CrmBusiness::getBusinessName, crmTypeName).ne(CrmBusiness::getStatus,3)
+                                .orderByDesc(CrmBusiness::getCreateTime).last(" limit 1 ").one();
+                        if (crmBusiness == null){
+                            rowList.add(0, "所属商机不存在");
+                            errList.add(rowList);
+                            return;
+                        }
+                        crmTypeId = crmBusiness.getBusinessId();
+                        break;
+                    case CONTRACT:
+                        CrmContract crmContract = crmContractService.lambdaQuery().select(CrmContract::getContractId)
+                                .eq(CrmContract::getNum, crmTypeName).ne(CrmContract::getCheckStatus,7)
+                                .orderByDesc(CrmContract::getCreateTime).last(" limit 1 ").one();
+                        if (crmContract == null){
+                            rowList.add(0, "所属合同不存在");
+                            errList.add(rowList);
+                            return;
+                        }
+                        crmTypeId = crmContract.getContractId();
+                        break;
+                    default:
+                        break;
+                }
+
+                UserInfo user = UserUtil.getUser();
+                CrmActivity crmActivity = new CrmActivity();
+                crmActivity.setContent(content);
+                crmActivity.setCategory(category);
+                crmActivity.setType(1);
+                crmActivity.setActivityType(crmEnum.getType());
+                crmActivity.setActivityTypeId(crmTypeId);
+                crmActivity.setContactsIds(contactsNames);
+                crmActivity.setBusinessIds(businessNames);
+
+                String batchId = StrUtil.isEmpty(crmActivity.getBatchId()) ? IdUtil.simpleUUID() : crmActivity.getBatchId();
+                crmActivity.setType(1);
+                crmActivity.setCreateUserId(createUserId);
+                crmActivity.setBatchId(batchId);
+                crmActivity.setCreateTime(createDate != null ? createDate : new Date());
+                crmActivityService.save(crmActivity);
+                if (crmActivity.getType() == 1) {
+                    crmBackLogDealService.deleteByType(user.getUserId(), CrmEnum.parse(crmActivity.getActivityType()), CrmBackLogEnum.TODAY_CUSTOMER, crmActivity.getActivityTypeId());
+                    crmBackLogDealService.deleteByType(user.getUserId(), CrmEnum.parse(crmActivity.getActivityType()), CrmBackLogEnum.FOLLOW_LEADS, crmActivity.getActivityTypeId());
+                    crmBackLogDealService.deleteByType(user.getUserId(), CrmEnum.parse(crmActivity.getActivityType()), CrmBackLogEnum.FOLLOW_CUSTOMER, crmActivity.getActivityTypeId());
+                    crmBackLogDealService.deleteByType(user.getUserId(), CrmEnum.parse(crmActivity.getActivityType()), CrmBackLogEnum.TO_ENTER_CUSTOMER_POOL, crmActivity.getActivityTypeId());
+                }
+                actionRecordUtil.addFollowupActionRecord(crmActivity.getActivityType(), crmActivity.getActivityTypeId(), "");
+            }
+        });
+        FileUtil.del(filePath);
+        JSONObject result = new JSONObject().fluentPut("totalSize", num.get()).fluentPut("errSize", 0);
+        if (errList.size() > 0) {
+            BigExcelWriter writer = null;
+            try {
+                String token = IdUtil.simpleUUID();
+                writer = ExcelUtil.getBigWriter(FileUtil.getTmpDirPath() + "/" + token);
+                int columnNum = crmType == 2 ? 7 : 5;
+                writer.merge(columnNum, "系统用户导入模板(*)为必填项");
+                for (int i = 0; i < columnNum + 1; i++) {
+                    writer.setColumnWidth(i, 20);
+                }
+                writer.setDefaultRowHeight(20);
+                Cell cell = writer.getCell(0, 0);
+                CellStyle cellStyle = cell.getCellStyle();
+                cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
+                cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                Font font = writer.createFont();
+                font.setBold(true);
+                font.setFontHeightInPoints((short) 16);
+                cellStyle.setFont(font);
+                cell.setCellStyle(cellStyle);
+                if (crmType == 2) {
+                    writer.writeHeadRow(Arrays.asList("错误信息", "跟进内容(*)", "创建人(*)", "所属客户(*)", "跟进时间", "跟进方式","相关联系人","相关商机"));
+                }else {
+                    writer.writeHeadRow(Arrays.asList("错误信息", "跟进内容(*)", "创建人(*)", "所属" + crmEnum.getRemarks() + "(*)", "跟进时间", "跟进方式"));
+                }
+                writer.write(errList);
+                result.fluentPut("errSize", errList.size()).fluentPut("token", token);
+            } finally {
+                if (writer != null) {
+                    writer.close();
+                }
+            }
+        }
+        return result;
+    }
+
+    private String getFilePath(MultipartFile file) {
+        String dirPath = FileUtil.getTmpDirPath();
+        try {
+            InputStream inputStream = file.getInputStream();
+            File fromStream = FileUtil.writeFromStream(inputStream, dirPath + "/" + IdUtil.simpleUUID() + file.getOriginalFilename());
+            return fromStream.getAbsolutePath();
+        } catch (IOException e) {
+            throw new CrmException(SystemCodeEnum.SYSTEM_UPLOAD_FILE_ERROR);
+        }
     }
 }

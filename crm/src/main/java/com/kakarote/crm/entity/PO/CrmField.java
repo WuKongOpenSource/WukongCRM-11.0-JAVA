@@ -1,7 +1,10 @@
 package com.kakarote.crm.entity.PO;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.*;
-import com.kakarote.crm.constant.FieldEnum;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.kakarote.core.common.Const;
+import com.kakarote.core.common.FieldEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -88,6 +91,24 @@ public class CrmField implements Serializable {
     private Integer relevant;
 
 
+    @ApiModelProperty(value = "样式百分比  1 100%  2 75%  3 50%  4 25%")
+    private Integer stylePercent;
+
+    @ApiModelProperty(value = "精度，允许的最大小数位/地图精度")
+    @TableField(fill = FieldFill.UPDATE)
+    private Integer precisions;
+
+    @ApiModelProperty(value = "表单定位 坐标格式： 1,1")
+    private String formPosition;
+
+    @ApiModelProperty(value = "限制的最大数值")
+    @TableField(fill = FieldFill.UPDATE)
+    private String maxNumRestrict;
+
+    @ApiModelProperty(value = "限制的最小数值")
+    @TableField(fill = FieldFill.UPDATE)
+    private String minNumRestrict;
+
     @TableField(exist = false)
     @ApiModelProperty(value = "类型")
     private String formType;
@@ -102,4 +123,36 @@ public class CrmField implements Serializable {
         this.type = fieldEnum.getType();
     }
 
+
+    /**
+     * 坐标
+     * */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "x轴")
+    @JsonIgnore
+    private Integer xAxis;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "y轴")
+    @JsonIgnore
+    private Integer yAxis;
+
+
+    public void setFormPosition(String formPosition) {
+        this.formPosition = formPosition;
+        if (StrUtil.isNotEmpty(formPosition)){
+            if (formPosition.contains(Const.SEPARATOR)){
+                String[] axisArr = formPosition.split(Const.SEPARATOR);
+                if (axisArr.length == 2){
+                    if (axisArr[0].matches("[0-9]+") && axisArr[1].matches("[0-9]+")) {
+                        this.xAxis = Integer.valueOf(axisArr[0]);
+                        this.yAxis = Integer.valueOf(axisArr[1]);
+                        return;
+                    }
+                }
+            }
+        }
+        this.xAxis = -1;
+        this.yAxis = -1;
+    }
 }

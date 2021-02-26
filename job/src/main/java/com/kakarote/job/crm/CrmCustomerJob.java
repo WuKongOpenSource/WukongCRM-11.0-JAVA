@@ -26,6 +26,9 @@ public class CrmCustomerJob {
     private CrmService crmService;
 
     @Autowired
+    private AdminService adminService;
+
+    @Autowired
     private Redis redis;
 
     @XxlJob("CrmCustomerJob")

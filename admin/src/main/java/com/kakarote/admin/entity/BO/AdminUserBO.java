@@ -38,4 +38,14 @@ public class AdminUserBO extends PageEntity {
     @ApiModelProperty("部门ID列表")
     private List<Integer> deptIdList = new ArrayList<>();
 
+
+    @ApiModelProperty(value = "用户列表")
+    private List<Long> userIdList;
+
+    private Long deptOwnerUserId;
+
+    private Long userId;
+
+    @ApiModelProperty(value = "是否展示子级部门 0不需要 1 需要")
+    private Integer isNeedChild;
 }

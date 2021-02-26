@@ -6,7 +6,7 @@ import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.util.TypeUtils;
-import com.baomidou.mybatisplus.extension.conditions.update.LambdaUpdateChainWrapper;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminMessageBO;
@@ -23,6 +23,7 @@ import com.kakarote.core.feign.hrm.entity.HrmSalaryMonthRecord;
 import com.kakarote.core.feign.hrm.service.SalaryRecordService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
+import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.examine.constant.ExamineCodeEnum;
 import com.kakarote.examine.constant.ExamineEnum;
@@ -149,13 +150,11 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
                             .eq(ExamineRecord::getRecordId, recordId).update();
                     return new ExamineRecordReturnVO(recordId, ExamineStatusEnum.UNDERWAY.getStatus(), examineLogIds);
                 }
-
-            }else {
-                //默认返回初始层级
-                recordOptionalService.lambdaUpdate().eq(ExamineRecordOptional::getRecordId, recordId).remove();
-                examineRecordLogService.lambdaUpdate().eq(ExamineRecordLog::getRecordId, recordId).remove();
-                this.lambdaUpdate().eq(ExamineRecord::getRecordId, recordId).remove();
             }
+            //默认返回初始层级
+            recordOptionalService.lambdaUpdate().eq(ExamineRecordOptional::getRecordId, recordId).remove();
+            examineRecordLogService.lambdaUpdate().eq(ExamineRecordLog::getRecordId, recordId).remove();
+            this.lambdaUpdate().eq(ExamineRecord::getRecordId, recordId).remove();
         }
         //初次审批
         ExamineFlow examineFlow = examineFlowService.queryNextExamineFlow(examine.getExamineId(), null, examineRecordSaveBO.getDataMap());
@@ -351,8 +350,9 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
          修改审核记录状态
          */
         examineRecord.setExamineStatus(statusEnum.getStatus());
-        examineRecordLog.setExamineStatus(statusEnum.getStatus());
         updateById(examineRecord);
+        examineRecordLog.setExamineStatus(statusEnum.getStatus());
+        examineRecordLog.setUpdateTime(new Date());
         examineRecordLogService.updateById(examineRecordLog);
         /*
          修改关联模块审核状态
@@ -395,6 +395,10 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
             examineRecordLog.setSort(0);
             examineRecordLog.setBatchId(IdUtil.simpleUUID());
             examineRecordLogService.save(examineRecordLog);
+            List<Long> longList = adminService.queryUserIdByRoleId(examineUserBO.getRoleId()).getData();
+            for (Long userId : longList) {
+                BaseUtil.getRedis().del(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + userId.toString());
+            }
             return ListUtil.toList(examineRecordLog.getLogId());
         } else {
             /*
@@ -424,6 +428,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
                 }else {
                     examineRecordLog.setExamineStatus(ExamineStatusEnum.UNDERWAY.getStatus());
                 }
+                BaseUtil.getRedis().del(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + userId.toString());
                 examineRecordLog.setFlowId(examineFlow.getFlowId());
                 examineRecordLog.setRecordId(recordId);
                 examineRecordLog.setSort(i++);

@@ -194,8 +194,8 @@ public class BiTimeUtil {
                     cycleNum = 1;
                     break;
                 case "yesterday":
-                    beginDate = DateUtil.offsetDay(DateUtil.date(), -1);
-                    endDate = DateUtil.offsetDay(DateUtil.date(), -1);
+                    beginDate = DateUtil.beginOfDay(new Date(System.currentTimeMillis() - 86400000));
+                    endDate = DateUtil.endOfDay(new Date(System.currentTimeMillis() - 86400000));
                     sqlDateFormat = "%Y%m%d";
                     dateFormat = "yyyyMMdd";
                     cycleNum = 1;

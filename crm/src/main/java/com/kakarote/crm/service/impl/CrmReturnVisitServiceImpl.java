@@ -8,6 +8,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
@@ -15,6 +16,7 @@ import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
@@ -24,7 +26,6 @@ import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmBusinessSaveBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
@@ -83,6 +84,9 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
 
     @Autowired
     private ICrmContactsService crmContactsService;
+
+    @Autowired
+    private FieldService fieldService;
 
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
@@ -171,6 +175,42 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
 
     @Override
     public List<CrmModelFiledVO> queryField(Integer id) {
+        CrmModel crmModel = this.supplementCrmModel(id);
+        List<CrmModelFiledVO> crmModelFiledVOS = crmFieldService.queryField(crmModel);
+        if (id == null) {
+            crmModelFiledVOS.forEach(field -> {
+                if ("ownerUserId".equals(field.getFieldName())) {
+                    SimpleUser user = new SimpleUser();
+                    user.setUserId(UserUtil.getUserId());
+                    user.setRealname(UserUtil.getUser().getRealname());
+                    field.setDefaultValue(Collections.singleton(user));
+                }
+            });
+        }
+
+        return crmModelFiledVOS;
+    }
+
+    @Override
+    public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id) {
+        CrmModel crmModel = this.supplementCrmModel(id);
+        List<List<CrmModelFiledVO>> crmModelFiledVOS = crmFieldService.queryFormPositionFieldVO(crmModel);
+        if (id == null) {
+            for (List<CrmModelFiledVO> filedVOList : crmModelFiledVOS) {
+                filedVOList.forEach(field ->{
+                    if ("ownerUserId".equals(field.getFieldName())) {
+                        SimpleUser user = new SimpleUser();
+                        user.setUserId(UserUtil.getUserId());
+                        user.setRealname(UserUtil.getUser().getRealname());
+                        field.setDefaultValue(Collections.singleton(user));
+                    }
+                });
+            }
+        }
+        return crmModelFiledVOS;
+    }
+
+    private CrmModel supplementCrmModel(Integer id){
         CrmModel crmModel = queryById(id);
         if (id != null) {
             List<JSONObject> customerList = new ArrayList<>();
@@ -192,19 +232,7 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
                 crmModel.put("contactsId", contactsList);
             }
         }
-        List<CrmModelFiledVO> crmModelFiledVOS = crmFieldService.queryField(crmModel);
-        if (id == null) {
-            crmModelFiledVOS.forEach(field -> {
-                if ("ownerUserId".equals(field.getFieldName())) {
-                    SimpleUser user = new SimpleUser();
-                    user.setUserId(UserUtil.getUserId());
-                    user.setRealname(UserUtil.getUser().getRealname());
-                    field.setDefaultValue(Collections.singleton(user));
-                }
-            });
-        }
-
-        return crmModelFiledVOS;
+        return crmModel;
     }
 
     @Override
@@ -350,16 +378,17 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
                 String value = returnVisitData != null ? returnVisitData.getValue() : null;
                 String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
                 actionRecordUtil.publicContentRecord(CrmEnum.RETURN_VISIT, BehaviorEnum.UPDATE, visitId, oldReturnVisit.getVisitNumber(), detail);
+                String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
                 boolean bol = crmReturnVisitDataService.lambdaUpdate()
                         .set(CrmReturnVisitData::getName, record.getString("fieldName"))
-                        .set(CrmReturnVisitData::getValue, record.getString("value"))
+                        .set(CrmReturnVisitData::getValue, newValue)
                         .eq(CrmReturnVisitData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmReturnVisitData::getBatchId, batchId).update();
                 if (!bol) {
                     CrmReturnVisitData crmReturnVisitData = new CrmReturnVisitData();
                     crmReturnVisitData.setFieldId(record.getInteger("fieldId"));
                     crmReturnVisitData.setName(record.getString("fieldName"));
-                    crmReturnVisitData.setValue(record.getString("value"));
+                    crmReturnVisitData.setValue(newValue);
                     crmReturnVisitData.setCreateTime(new Date());
                     crmReturnVisitData.setBatchId(batchId);
                     crmReturnVisitDataService.save(crmReturnVisitData);
@@ -367,5 +396,6 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
             }
             updateField(record, visitId);
         });
+        this.lambdaUpdate().set(CrmReturnVisit::getUpdateTime,new Date()).eq(CrmReturnVisit::getVisitId,visitId).update();
     }
 }

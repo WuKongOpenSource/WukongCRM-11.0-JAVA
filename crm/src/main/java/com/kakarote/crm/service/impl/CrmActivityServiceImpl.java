@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.entity.UserInfo;
@@ -20,14 +21,12 @@ import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.AuthUtil;
-import com.kakarote.crm.constant.CrmActivityEnum;
-import com.kakarote.crm.constant.CrmBackLogEnum;
-import com.kakarote.crm.constant.CrmCodeEnum;
-import com.kakarote.crm.constant.CrmEnum;
+import com.kakarote.crm.constant.*;
 import com.kakarote.crm.entity.BO.CrmActivityBO;
 import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.entity.VO.CrmActivityVO;
@@ -175,6 +174,7 @@ public class CrmActivityServiceImpl extends BaseServiceImpl<CrmActivityMapper, C
             throw new CrmException(CrmCodeEnum.CRM_NEXT_TIME_ERROR);
         }
         UserInfo user = UserUtil.getUser();
+        BaseUtil.getRedis().del(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + user.getUserId().toString());
         String batchId = StrUtil.isEmpty(crmActivity.getBatchId()) ? IdUtil.simpleUUID() : crmActivity.getBatchId();
         crmActivity.setType(1);
         crmActivity.setCreateUserId(user.getUserId());
@@ -211,7 +211,8 @@ public class CrmActivityServiceImpl extends BaseServiceImpl<CrmActivityMapper, C
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
 
 
-    private void updateNextTime(CrmActivity crmActivity) {
+    @Override
+    public void updateNextTime(CrmActivity crmActivity) {
         updateNextTime(crmActivity,false);
     }
     /**
@@ -400,7 +401,7 @@ public class CrmActivityServiceImpl extends BaseServiceImpl<CrmActivityMapper, C
     public void deleteCrmActivityRecord(Integer activityId) {
         CrmActivity crmActivity = getById(activityId);
         if (!crmActivity.getCreateUserId().equals(UserUtil.getUserId())){
-            boolean auth = AuthUtil.isRwAuth(crmActivity.getActivityTypeId(), CrmEnum.parse(crmActivity.getActivityType()));
+            boolean auth = AuthUtil.isRwAuth(crmActivity.getActivityTypeId(), CrmEnum.parse(crmActivity.getActivityType()), CrmAuthEnum.READ);
             if (auth) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }

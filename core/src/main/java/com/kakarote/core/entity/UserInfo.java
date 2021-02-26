@@ -2,6 +2,7 @@ package com.kakarote.core.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
@@ -51,6 +52,9 @@ public class UserInfo implements Serializable {
 
     private String companyName;
 
+    @ApiModelProperty("登录类型 1 pc")
+    private Integer loginType = 1;
+
     private List<String> authoritiesUrlList = new ArrayList<>();
 
     @JsonIgnore
@@ -68,7 +72,7 @@ public class UserInfo implements Serializable {
     private Integer superRoleId;
 
     public Long getSuperUserId() {
-        return 16360L;
+        return 14773L;
     }
 
     public void setSuperUserId(Long superUserId) {

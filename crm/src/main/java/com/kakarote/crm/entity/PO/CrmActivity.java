@@ -121,4 +121,13 @@ public class CrmActivity implements Serializable {
     @ApiModelProperty(value = "联系人列表")
     @TableField(exist = false)
     private List<SimpleCrmEntity> contactsList;
+
+    @TableField(exist = false)
+    private String createUserName;
+
+    @TableField(exist = false)
+    private String contactsNames;
+
+    @TableField(exist = false)
+    private String businessNames;
 }

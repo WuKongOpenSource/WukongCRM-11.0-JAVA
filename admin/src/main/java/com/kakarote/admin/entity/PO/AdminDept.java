@@ -1,6 +1,7 @@
 package com.kakarote.admin.entity.PO;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
@@ -43,6 +44,12 @@ public class AdminDept implements Serializable {
     @ApiModelProperty(value = "部门备注")
     private String remark;
 
+    @ApiModelProperty(value = "部门负责人")
+    private Long ownerUserId;
+
+    @ApiModelProperty("当前部门在职人数")
+    @TableField(exist = false)
+    private Integer currentNum;
 
 
 }

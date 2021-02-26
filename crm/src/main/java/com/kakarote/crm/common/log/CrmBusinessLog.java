@@ -3,6 +3,7 @@ package com.kakarote.crm.common.log;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.StrUtil;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.Content;
@@ -16,8 +17,8 @@ import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmBusinessChangOwnerUserBO;
 import com.kakarote.crm.entity.BO.CrmBusinessSaveBO;
 import com.kakarote.crm.entity.BO.CrmMemberSaveBO;
@@ -94,7 +95,7 @@ public class CrmBusinessLog {
     public List<Content> deleteMembers(CrmMemberSaveBO crmMemberSaveBO) {
         List<Content> contentList = new ArrayList<>();
         for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isCrmOperateAuth(CrmEnum.CUSTOMER, id)) {
+            if (AuthUtil.isRwAuth(id,CrmEnum.CUSTOMER, CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
             String businessName = crmBusinessService.getBusinessName(id);

@@ -5,29 +5,28 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
-import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.ExamineField;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
-import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
-import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.ElasticUtil;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.entity.VO.CrmFieldSortVO;
@@ -95,6 +94,10 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
     @Autowired
     private ICrmCustomerPoolFieldStyleService crmCustomerPoolFieldStyleService;
 
+
+    @Autowired
+    private FieldService fieldService;
+
     /**
      * 查询自定义字段列表
      *
@@ -161,6 +164,13 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                     throw new CrmException(CrmCodeEnum.REQUIRED_OPTIONS_CANNOT_BE_HIDDEN);
                 }
             }
+            if(FieldEnum.NUMBER.getType().equals(crmField.getType())
+                    || FieldEnum.FLOATNUMBER.getType().equals(crmField.getType())
+                    || FieldEnum.PERCENT.getType().equals(crmField.getType())){
+                if (!fieldService.verifyStrForNumRestrict(crmField.getMaxNumRestrict(),crmField.getMinNumRestrict())){
+                    throw new CrmException(CrmCodeEnum.THE_FIELD_NUM_RESTRICT_ERROR);
+                }
+            }
             crmField.setLabel(label);
             if (crmField.getFieldId() != null) {
                 fieldIds.add(crmField.getFieldId());
@@ -220,8 +230,18 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
         AtomicInteger sort = new AtomicInteger(0);
         crmFieldBO.getData().forEach(field -> {
             field.setSorting(sort.getAndIncrement());
-            if (field.getDefaultValue() instanceof Collection) {
-                field.setDefaultValue(StrUtil.join(Const.SEPARATOR, field.getDefaultValue()));
+            if (ObjectUtil.isEmpty(field.getDefaultValue())){
+                field.setDefaultValue("");
+            }else {
+                boolean isNeedHandle = FieldEnum.AREA.getType().equals(field.getType())
+                        || FieldEnum.AREA_POSITION.getType().equals(field.getType())
+                        || FieldEnum.CURRENT_POSITION.getType().equals(field.getType());
+                if (isNeedHandle) {
+                    field.setDefaultValue(JSON.toJSONString(field.getDefaultValue()));
+                }
+                if (field.getDefaultValue() instanceof Collection) {
+                    field.setDefaultValue(StrUtil.join(Const.SEPARATOR, field.getDefaultValue()));
+                }
             }
             List<CrmFieldSort> crmFieldSortList = new ArrayList<>();
             QueryWrapper<CrmFieldSort> crmFieldSortQueryWrapper = new QueryWrapper<>();
@@ -309,6 +329,12 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
         return fieldList;
     }
 
+    @Override
+    public List<List<CrmField>> queryFormPositionFieldList(Integer label, boolean isQueryHide){
+        List<CrmField> fieldList = list(label,isQueryHide);
+        return fieldService.convertFormPositionFieldList(fieldList,CrmField::getXAxis,CrmField::getYAxis, CrmField::getSorting);
+    }
+
     /**
      * 查询模块字段列表
      *
@@ -341,6 +367,14 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             }).collect(Collectors.toList());
             fieldSortVOList.removeIf(field -> fieldList.contains(field.getFieldName()));
         }
+        fieldSortVOList.forEach(fieldSort -> {
+            if ("website".equals(fieldSort.getFieldName())) {
+                fieldSort.setFormType(FieldEnum.WEBSITE.getFormType());
+            }else {
+                fieldSort.setFormType(FieldEnum.parse(fieldSort.getType()).getFormType());
+            }
+        });
+        fieldSortVOList.removeIf(fieldSort -> FieldEnum.DESC_TEXT.getType().equals(fieldSort.getType()));
         return fieldSortVOList;
     }
 
@@ -391,7 +425,9 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
     @Override
     public JSONObject queryFieldConfig(Integer label) {
         //查出自定义字段，查看顺序表是否存在该字段，没有则插入，设为隐藏
-        List<CrmFieldSort> fieldList = crmFieldSortService.lambdaQuery().eq(CrmFieldSort::getLabel, label).eq(CrmFieldSort::getUserId, UserUtil.getUserId()).select(CrmFieldSort::getId, CrmFieldSort::getName, CrmFieldSort::getFieldName, CrmFieldSort::getIsHide)
+        List<CrmFieldSort> fieldList = crmFieldSortService.lambdaQuery().eq(CrmFieldSort::getLabel, label).eq(CrmFieldSort::getUserId, UserUtil.getUserId())
+                .select(CrmFieldSort::getId, CrmFieldSort::getName, CrmFieldSort::getFieldName, CrmFieldSort::getIsHide)
+                .notIn(CrmFieldSort::getType,Arrays.asList(8,50))
                 .orderByAsc(CrmFieldSort::getSort).list();
         List<CrmRoleField> roleFields = crmRoleFieldService.queryUserFieldAuth(label, 2);
 //        List<String> nameList = roleFields.stream().map(crmRoleField -> StrUtil.toCamelCase(crmRoleField.getFieldName())).collect(Collectors.toList());
@@ -469,24 +505,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                 if (ObjectUtil.isEmpty(value)) {
                     crmModelFiled.setValue(null);
                 } else {
-                    switch (typeEnum) {
-                        case USER:
-                            crmModelFiled.setValue(adminService.queryUserByIds(TagUtil.toLongSet(value.toString())).getData());
-                            break;
-                        case STRUCTURE:
-                            crmModelFiled.setValue(adminService.queryDeptByIds(TagUtil.toSet(value.toString())).getData());
-                            break;
-                        case FILE:
-                            List<FileEntity> data = ApplicationContextHolder.getBean(AdminFileService.class).queryFileList(value.toString()).getData();
-                            crmModelFiled.setValue(data);
-                            break;
-                        case SINGLE_USER:
-                            crmModelFiled.setValue(adminService.queryUserById((Long) value).getData());
-                            break;
-                        default:
-                            crmModelFiled.setValue(value);
-                            break;
-                    }
+                    crmModelFiled.setValue(fieldService.convertValueByFormType(value,typeEnum));
                 }
             }
             recordToFormType(crmModelFiled, typeEnum);
@@ -523,8 +542,20 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                     }
                 }
             }
+        }else if(crmEnum == CrmEnum.CUSTOMER){
+            fieldList.forEach(field -> {
+                if ("website".equals(field.getFieldName())){
+                    field.setFormType(FieldEnum.WEBSITE.getFormType());
+                }
+            });
         }
         return fieldList;
+    }
+
+    @Override
+    public List<List<CrmModelFiledVO>> queryFormPositionFieldVO(CrmModel crmModel) {
+        List<CrmModelFiledVO> crmModelFiledVOList = queryField(crmModel);
+        return fieldService.convertFormPositionFieldList(crmModelFiledVOList,CrmModelFiledVO::getXAxis,CrmModelFiledVO::getYAxis,CrmModelFiledVO::getSorting);
     }
 
     @Override
@@ -722,6 +753,15 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                             map.put(modelField.getFieldName(), DateUtil.formatDateTime((Date) value));
                         }
                     }
+                    if (FieldEnum.AREA.getType().equals(modelField.getType())
+                            || FieldEnum.AREA_POSITION.getType().equals(modelField.getType())
+                            || FieldEnum.CURRENT_POSITION.getType().equals(modelField.getType())) {
+                        Object value = map.remove(modelField.getFieldName());
+                        if (!ObjectUtil.isEmpty(value)) {
+                            map.put(modelField.getFieldName(), JSON.toJSONString(value));
+                        }
+                    }
+
                 });
             });
             ElasticUtil.initData(restTemplate.getClient(), mapList, crmEnum, index);
@@ -973,9 +1013,28 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                     record.setSetting(new ArrayList<>(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR)));
                 }
                 break;
+            case DATE_INTERVAL:
+                record.setDefaultValue(StrUtil.split((String)record.getDefaultValue(), Const.SEPARATOR));
+                if (record.getValue() instanceof String){
+                    record.setValue(StrUtil.split((String)record.getValue(), Const.SEPARATOR));
+                }
+                break;
             case USER:
             case STRUCTURE:
                 record.setDefaultValue(new ArrayList<>(0));
+                break;
+            case AREA:
+            case AREA_POSITION:
+            case CURRENT_POSITION:
+                String defaultValue = Optional.ofNullable(record.getDefaultValue()).orElse("").toString();
+                record.setDefaultValue(JSON.parse(defaultValue));
+                if (record.getValue() instanceof String) {
+                    String value = Optional.ofNullable(record.getValue()).orElse("").toString();
+                    record.setValue(JSON.parse(value));
+                }
+                break;
+            case DESC_TEXT:
+                record.setValue(record.getDefaultValue());
                 break;
             default:
                 record.setSetting(new ArrayList<>());
@@ -991,9 +1050,19 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             case SELECT:
                 record.setSetting(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR));
                 break;
+            case DATE_INTERVAL:
+                String dataValueStr = Optional.ofNullable(record.getDefaultValue()).orElse("").toString();
+                record.setDefaultValue(StrUtil.split(dataValueStr, Const.SEPARATOR));
+                break;
             case USER:
             case STRUCTURE:
                 record.setDefaultValue(new ArrayList<>(0));
+                break;
+            case AREA:
+            case AREA_POSITION:
+            case CURRENT_POSITION:
+                String defaultValue = Optional.ofNullable(record.getDefaultValue()).orElse("").toString();
+                record.setDefaultValue(JSON.parse(defaultValue));
                 break;
             default:
                 record.setSetting(new ArrayList<>());

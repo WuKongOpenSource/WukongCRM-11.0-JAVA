@@ -130,7 +130,7 @@ public class AdminMessageServiceImpl extends BaseServiceImpl<AdminMessageMapper,
             case CRM_BUSINESS_REMOVE_TEAM:
             case CRM_CUSTOMER_REMOVE_TEAM:
             case CRM_CONTRACT_REMOVE_TEAM:
-                addCrmTeamMessage(messageEnum, adminMessageBO.getTypeId(), adminMessageBO.getTitle(), adminMessageBO.getUserId());
+                addCrmTeamMessage(messageEnum, adminMessageBO.getTypeId(), adminMessageBO.getTitle(), adminMessageBO.getUserId(),adminMessageBO.getIds());
                 break;
             case OA_EXAMINE_NOTICE:
                 addOaExamineNotice(messageEnum, adminMessageBO.getTitle(), adminMessageBO.getTypeId(), adminMessageBO.getUserId(), adminMessageBO.getIds());
@@ -351,13 +351,13 @@ public class AdminMessageServiceImpl extends BaseServiceImpl<AdminMessageMapper,
     /**
      * 团队成员提醒
      */
-    private void addCrmTeamMessage(AdminMessageEnum messageEnum, Integer typeId, String title, Long userId) {
+    private void addCrmTeamMessage(AdminMessageEnum messageEnum, Integer typeId, String title, Long userId, List<Long> ids) {
         AdminMessage adminMessage = new AdminMessage();
         adminMessage.setCreateTime(new Date());
-        adminMessage.setCreateUser(UserUtil.getUserId());
+        adminMessage.setCreateUser(userId);
         adminMessage.setType(messageEnum.getType());
         adminMessage.setLabel(messageEnum.getLabel());
-        adminMessage.setRecipientUser(userId);
+        adminMessage.setRecipientUser(ids.get(0));
         adminMessage.setTypeId(typeId);
         adminMessage.setTitle(title);
         save(adminMessage);

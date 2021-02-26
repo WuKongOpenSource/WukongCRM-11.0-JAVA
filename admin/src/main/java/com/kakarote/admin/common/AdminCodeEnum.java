@@ -11,7 +11,6 @@ public enum AdminCodeEnum implements ResultCode {
     //客户模块管理
     ADMIN_MODULE_CLOSE_ERROR(1101, "客户管理模块不能关闭"),
     ADMIN_DATA_EXIST_ERROR(1102, "数据不存在"),
-    ADMIN_PARENT_USER_NOTNULL_ERROR(1105, "请先给用户设置直属上级"),
     ADMIN_PASSWORD_INTENSITY_ERROR(1106, "密码必须由 6-20位字母、数字组成"),
     ADMIN_USER_EXIST_ERROR(1107, "用户已存在！"),
     ADMIN_PARENT_USER_ERROR(1109, "这个用户的下属不能设置为直属上级！"),
@@ -20,7 +19,6 @@ public enum AdminCodeEnum implements ResultCode {
     ADMIN_DEPT_REMOVE_EXIST_DEPT_ERROR(1112, "这个部门下有下级部门，不能删除！"),
     ADMIN_USER_NOT_ROLE_ERROR(1113, "请先给用户设置角色"),
     ADMIN_USER_NOT_DEPT_ERROR(1114, "请先给用户设置部门"),
-    ADMIN_USER_NOT_PARENT_ERROR(1115, "请先给用户设置直属上级"),
     ADMIN_SUPER_USER_DISABLED_ERROR(1116, "超级管理员用户不可禁用"),
     ADMIN_ROLE_NAME_EXIST_ERROR(1117, "角色名称已存在"),
     ADMIN_PHONE_CODE_ERROR(1118, "手机验证码出错！"),
@@ -45,6 +43,14 @@ public enum AdminCodeEnum implements ResultCode {
     ADMIN_LANGUAGE_PACK_NAME_ERROR(1137, "语言包名称有误！"),
     ADMIN_LANGUAGE_PACK_EXIST_USER_ERROR(1138, "这个语言包有用户正在使用，不可删！"),
     ADMIN_LANGUAGE_PACK_CHOINESE_ERROR(1139, "缺少中文语言包！"),
+    ADMIN_DEFAULT_ROLE_CANNOT_BE_DELETED(1140, "默认角色不能删除!"),
+    ADMIN_USER_REAL_NAME_EXIST_ERROR(1141, "用户姓名重复!"),
+    ADMIN_DEPT_NOT_EXIST_ERROR(1142, "部门已不存在！"),
+    /**
+     * 企业微信错误code从1200开始
+     */
+    ADMIN_CP_ERROR(1200, "%s!"),
+    ADMIN_CP_DOES_NOT_EXIST(1201, "企业不存在,请先绑定应用!"),
     ;
 
     AdminCodeEnum(int code, String msg) {

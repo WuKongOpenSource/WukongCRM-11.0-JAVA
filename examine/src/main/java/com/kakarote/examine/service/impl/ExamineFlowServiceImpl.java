@@ -41,7 +41,7 @@ public class ExamineFlowServiceImpl extends BaseServiceImpl<ExamineFlowMapper, E
         查询第一层审批流
          */
         if (flowId == null) {
-            ExamineFlow examineFlow = lambdaQuery().eq(ExamineFlow::getExamineId, examineId).gt(ExamineFlow::getSort, 0).orderByAsc(ExamineFlow::getSort).last(" limit 1").one();
+            ExamineFlow examineFlow = lambdaQuery().eq(ExamineFlow::getExamineId, examineId).ge(ExamineFlow::getSort, 0).orderByAsc(ExamineFlow::getSort).last(" limit 1").one();
             if (examineFlow == null){
                 return null;
             }

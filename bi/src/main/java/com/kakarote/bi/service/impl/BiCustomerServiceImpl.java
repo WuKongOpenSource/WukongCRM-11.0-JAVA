@@ -55,6 +55,11 @@ public class BiCustomerServiceImpl implements BiCustomerService {
             beginTime = BiTimeUtil.estimateTime(beginTime);
         }
         List<JSONObject> customerNumObjectList = biEsStatisticsService.getStatisticsCustomerInfo(timeEntity,false);
+        if(customerNumObjectList.size() == 0){
+            for (Integer type : timeList) {
+                customerNumObjectList.add(new JSONObject().fluentPut("type", type).fluentPut("customerNum", 0));
+            }
+        }
         List<JSONObject> dealNumList = biEsStatisticsService.getStatisticsCustomerInfo(timeEntity,true);
         List<JSONObject> jsonObjectList = biEsStatisticsService.mergeJsonObjectList(customerNumObjectList,dealNumList);
         BiPatch.supplementJsonList(jsonObjectList,"type",timeList, "customerNum","dealCustomerNum");

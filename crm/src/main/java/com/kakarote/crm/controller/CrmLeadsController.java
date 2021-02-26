@@ -1,6 +1,8 @@
 package com.kakarote.crm.controller;
 
 
+import cn.hutool.core.util.StrUtil;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SubModelType;
@@ -15,7 +17,6 @@ import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.log.CrmLeadsLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmLeads;
 import com.kakarote.crm.entity.VO.CrmInfoNumVO;
@@ -130,16 +131,21 @@ public class CrmLeadsController {
 
     @PostMapping("/field")
     @ApiOperation("查询新增所需字段")
-    public Result<List<CrmModelFiledVO>> queryField() {
-        List<CrmModelFiledVO> crmModelFiledList = crmLeadsService.queryField(null);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryLeadsField(@RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)){
+            return R.ok(crmLeadsService.queryField(null));
+        }
+        return R.ok(crmLeadsService.queryFormPositionField(null));
     }
 
     @PostMapping("/field/{id}")
     @ApiOperation("查询修改数据所需信息")
-    public Result<List<CrmModelFiledVO>> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id) {
-        List<CrmModelFiledVO> crmModelFiledList = crmLeadsService.queryField(id);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id,
+                                   @RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmLeadsService.queryField(id));
+        }
+        return R.ok(crmLeadsService.queryFormPositionField(id));
     }
 
     @PostMapping("/add")
@@ -189,9 +195,8 @@ public class CrmLeadsController {
     @PostMapping("/uploadExcel")
     @ApiOperation("导入线索")
     @SysLogHandler(behavior = BehaviorEnum.EXCEL_IMPORT,object = "导入线索",detail = "导入线索")
-    public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("ownerUserId") Long ownerUserId, @RequestParam("repeatHandling") Integer repeatHandling) {
+    public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("repeatHandling") Integer repeatHandling) {
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
-        uploadExcelBO.setOwnerUserId(ownerUserId);
         uploadExcelBO.setUserInfo(UserUtil.getUser());
         uploadExcelBO.setCrmEnum(CrmEnum.LEADS);
         uploadExcelBO.setPoolId(null);

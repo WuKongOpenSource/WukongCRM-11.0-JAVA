@@ -3,12 +3,14 @@ package com.kakarote.crm.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.entity.PO.CrmContactsData;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmContactsDataMapper;
 import com.kakarote.crm.service.ICrmContactsDataService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,6 +27,9 @@ import java.util.List;
  */
 @Service
 public class CrmContactsDataServiceImpl extends BaseServiceImpl<CrmContactsDataMapper, CrmContactsData> implements ICrmContactsDataService {
+
+    @Autowired
+    private FieldService fieldService;
 
     /**
      * 设置用户数据
@@ -51,6 +56,7 @@ public class CrmContactsDataServiceImpl extends BaseServiceImpl<CrmContactsDataM
         Date date = new Date();
         for (CrmModelFiledVO obj : array) {
             CrmContactsData contactsData = BeanUtil.copyProperties(obj, CrmContactsData.class);
+            contactsData.setValue(fieldService.convertObjectValueToString(obj.getType(),obj.getValue(),contactsData.getValue()));
             contactsData.setName(obj.getFieldName());
             contactsData.setCreateTime(date);
             contactsData.setBatchId(batchId);

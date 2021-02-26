@@ -57,7 +57,14 @@ public class AdminDeptVO {
         this.id = deptId;
     }
 
+    @ApiModelProperty(value = "部门负责人")
+    private Long ownerUserId;
+
     @ApiModelProperty(value = "下级部门列表")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<AdminDeptVO> children;
+
+
+    @ApiModelProperty("当前部门在职人数")
+    private Integer currentNum;
 }

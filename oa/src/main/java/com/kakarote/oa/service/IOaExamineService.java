@@ -33,6 +33,8 @@ public interface IOaExamineService extends BaseService<OaExamine> {
 
     List<OaExamineField> getField(GetExamineFieldBO getExamineFieldBO);
 
+    List<List<OaExamineField>> getFormPositionField(GetExamineFieldBO getExamineFieldBO);
+
     void setOaExamine(JSONObject jsonObject);
 
     void oaExamine(AuditExamineBO auditExamineBO);

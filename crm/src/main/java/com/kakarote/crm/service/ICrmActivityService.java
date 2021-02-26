@@ -66,6 +66,8 @@ public interface ICrmActivityService extends BaseService<CrmActivity> {
      */
     public List<String> queryFileBatchId(Integer id,Integer activityType);
 
+    public void updateNextTime(CrmActivity crmActivity);
+
     public void buildActivityRelation(CrmActivity record);
 
     void deleteCrmActivityRecord(Integer activityId);

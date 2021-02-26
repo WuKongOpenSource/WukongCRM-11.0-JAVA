@@ -6,6 +6,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.extra.servlet.ServletUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.admin.common.AdminCodeEnum;
 import com.kakarote.admin.common.log.AdminUserLog;
@@ -44,10 +45,7 @@ import javax.validation.constraints.NotNull;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -87,6 +85,12 @@ public class AdminUserController {
         return R.ok(adminUserService.queryUserList(adminUserBO));
     }
 
+    @ApiOperation("查询员工状态人数")
+    @PostMapping("/countNumOfUser")
+    public Result<JSONObject> countUserByLabel() {
+        return R.ok(adminUserService.countUserByLabel());
+    }
+
     @ApiExplain("通过条件分页查询员工列表")
     @PostMapping("/queryAllUserList")
     public Result<List<Long>> queryAllUserList() {
@@ -105,6 +109,13 @@ public class AdminUserController {
     @ApiOperation("修改用户")
     public Result setUser(@RequestBody AdminUserVO adminUserVO) {
         adminUserService.setUser(adminUserVO);
+        return R.ok();
+    }
+
+    @PostMapping("/setUserDept")
+    @ApiOperation("批量修改用户部门")
+    public Result setUserDept(@RequestBody AdminUserBO adminUserBO) {
+        adminUserService.setUserDept(adminUserBO);
         return R.ok();
     }
 
@@ -227,6 +238,10 @@ public class AdminUserController {
         if (config != null && config.getStatus() == 1) {
             Integer data = ApplicationContextHolder.getBean(EmailService.class).getEmailId(adminUser.getUserId()).getData();
             adminUser.setEmailId(data);
+        }
+        AdminUserConfig userConfigByName = adminUserConfigService.queryUserConfigByName("InitUserConfig");
+        if(userConfigByName != null){
+            adminUser.setServerUserInfo(JSON.parseObject(userConfigByName.getValue()));
         }
         return R.ok(adminUser);
     }

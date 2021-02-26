@@ -5,6 +5,7 @@ import com.kakarote.oa.entity.BO.ExamineFieldBO;
 import com.kakarote.oa.entity.PO.OaExamineField;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -18,11 +19,16 @@ public interface IOaExamineFieldService extends BaseService<OaExamineField> {
 
     List<OaExamineField> queryField(Integer id);
 
-    void recordToFormType(List<OaExamineField> list);
+    List<List<OaExamineField>> queryFormPositionField(Integer id);
 
     Boolean updateFieldCategoryId(Long newCategoryId,Long oldCategoryId);
 
-    String queryFieldValueByBatchId(Integer fieldId, String batchId);
+    /**
+     * 根据batchId查询values
+     * @param batchId batchId
+     * @return valuesMap
+     */
+    public Map<Integer,String> queryFieldData(String batchId);
 
     void transferFieldList(List<OaExamineField> recordList, Integer isDetail);
 

@@ -8,8 +8,11 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
+import cn.hutool.crypto.asymmetric.KeyType;
+import cn.hutool.crypto.asymmetric.RSA;
 import cn.hutool.poi.excel.BigExcelWriter;
 import cn.hutool.poi.excel.ExcelUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.nacos.api.NacosFactory;
 import com.alibaba.nacos.api.config.ConfigService;
@@ -109,25 +112,74 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
     public BasePage<AdminUserVO> queryUserList(AdminUserBO adminUserBO) {
         if (adminUserBO == null) {
             BasePage<AdminUserVO> userBasePage = new BasePage<>();
-            userBasePage.setRecords(list().stream().map(adminUser -> {
-                AdminUserVO userVO = BeanUtil.copyProperties(adminUser, AdminUserVO.class);
-                userVO.setDeptName(UserCacheUtil.getDeptName(userVO.getDeptId()));
-                return userVO;
-            }).collect(Collectors.toList()));
+            List<AdminUserVO> adminUserVOList = this.lambdaQuery().ne(AdminUser::getUserId, UserUtil.getSuperUser())
+                    .list().stream().map(adminUser -> this.convertAdminUserToVo(adminUser, 2)).collect(Collectors.toList());
+            //置顶超级管理员
+            AdminUser adminSuperUser = this.getById(UserUtil.getSuperUser());
+            adminUserVOList.add(0, this.convertAdminUserToVo(adminSuperUser, 0));
+            userBasePage.setRecords(adminUserVOList);
             return userBasePage;
         }
+        Long deptOwnerUserId = null;
+        adminUserBO.setUserId(UserUtil.getSuperUser());
         if (adminUserBO.getDeptId() != null) {
-            List<Integer> list = adminDeptService.queryChildDept(adminUserBO.getDeptId());
+            List<Integer> list;
+            if (Objects.equals(adminUserBO.getIsNeedChild(), 1)) {
+                list = adminDeptService.queryChildDept(adminUserBO.getDeptId());
+            } else {
+                list = new ArrayList<>();
+            }
             list.add(adminUserBO.getDeptId());
             adminUserBO.setDeptIdList(list);
+            deptOwnerUserId = adminDeptService.getById(adminUserBO.getDeptId()).getOwnerUserId();
+            adminUserBO.setDeptOwnerUserId(deptOwnerUserId);
         }
         BasePage<AdminUserVO> basePage = getBaseMapper().queryUserList(adminUserBO.parse(), adminUserBO);
+        //标识部门负责人
+        if (deptOwnerUserId != null) {
+            if (adminUserBO.getPage() == 1) {
+                for (AdminUserVO adminUserVO : basePage.getRecords()) {
+                    if (Objects.equals(adminUserVO.getUserId(), deptOwnerUserId)) {
+                        adminUserVO.setUserIdentity(1);
+                    }
+                }
+            }
+        } else {
+            //标识超级管理员
+            if (adminUserBO.getPage() == 1) {
+                for (AdminUserVO adminUserVO : basePage.getRecords()) {
+                    if (Objects.equals(adminUserVO.getUserId(), UserUtil.getSuperUser())) {
+                        adminUserVO.setUserIdentity(0);
+                    }
+                }
+            }
+        }
         basePage.getRecords().forEach(adminUserVO -> {
             List<AdminRole> adminRoleList = adminRoleService.queryRoleListByUserId(adminUserVO.getUserId());
             adminUserVO.setRoleId(adminRoleList.stream().map(adminRole -> adminRole.getRoleId().toString()).collect(Collectors.joining(",")));
             adminUserVO.setRoleName(adminRoleList.stream().map(AdminRole::getRoleName).collect(Collectors.joining(",")));
         });
         return basePage;
+    }
+
+    private AdminUserVO convertAdminUserToVo(AdminUser adminUser, Integer userIdentity) {
+        AdminUserVO userVO = BeanUtil.copyProperties(adminUser, AdminUserVO.class);
+        userVO.setUserIdentity(userIdentity);
+        userVO.setDeptName(UserCacheUtil.getDeptName(userVO.getDeptId()));
+        return userVO;
+    }
+
+
+    @Override
+    public JSONObject countUserByLabel() {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject
+                .fluentPut("allUserCount", getBaseMapper().countUserByLabel(0, null))
+                .fluentPut("addNewlyCount", getBaseMapper().countUserByLabel(1, null))
+                .fluentPut("activateCount", getBaseMapper().countUserByLabel(null, 1))
+                .fluentPut("inactiveCount", getBaseMapper().countUserByLabel(2, null))
+                .fluentPut("disableCount", getBaseMapper().countUserByLabel(3, null));
+        return jsonObject;
     }
 
     /**
@@ -153,15 +205,17 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         if (adminUserVO.getParentId() == null) {
             adminUserVO.setParentId(0L);
         }
-        if (!UserUtil.isAdmin() && adminUserVO.getParentId() == 0) {
-            throw new CrmException(AdminCodeEnum.ADMIN_PARENT_USER_NOTNULL_ERROR);
-        }
         List<Long> userList = queryChildUserId(adminUserVO.getUserId());
         if (userList.contains(adminUserVO.getParentId())) {
             throw new CrmException(AdminCodeEnum.ADMIN_PARENT_USER_ERROR);
         }
         if (adminUserVO.getUserId().equals(adminUserVO.getParentId())) {
             throw new CrmException(AdminCodeEnum.ADMIN_PARENT_USER_ERROR1);
+        }
+        //用户姓名处理
+        Integer nameCount = query().eq("realname", adminUserVO.getRealname()).ne("user_id", adminUserVO.getUserId()).count();
+        if (nameCount > 0) {
+            throw new CrmException(AdminCodeEnum.ADMIN_USER_REAL_NAME_EXIST_ERROR);
         }
         //不修改用户名
         adminUserVO.setUsername(null);
@@ -176,13 +230,24 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
     }
 
     @Override
+    public void setUserDept(AdminUserBO adminUserBO) {
+        Integer deptId = adminUserBO.getDeptId();
+        List<Long> userIdList = adminUserBO.getUserIdList();
+        if (CollUtil.isEmpty(userIdList) || deptId == null) {
+            return;
+        }
+        AdminDept dept = adminDeptService.getById(deptId);
+        if (dept == null) {
+            throw new CrmException(AdminCodeEnum.ADMIN_DEPT_NOT_EXIST_ERROR);
+        }
+        this.lambdaUpdate().set(AdminUser::getDeptId, deptId).in(AdminUser::getUserId, userIdList).update();
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void addUser(AdminUserVO adminUser) {
         if (adminUser.getParentId() == null) {
             adminUser.setParentId(0L);
-        }
-        if (!UserUtil.isAdmin() && adminUser.getParentId() == 0) {
-            throw new CrmException(AdminCodeEnum.ADMIN_PARENT_USER_NOTNULL_ERROR);
         }
         if (!ReUtil.isMatch(AdminConst.DEFAULT_PASSWORD_INTENSITY, adminUser.getPassword())) {
             throw new CrmException(AdminCodeEnum.ADMIN_PASSWORD_INTENSITY_ERROR);
@@ -190,6 +255,10 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         Integer count = query().eq("username", adminUser.getUsername()).count();
         if (count > 0) {
             throw new CrmException(AdminCodeEnum.ADMIN_USER_EXIST_ERROR);
+        }
+        Integer nameCount = query().eq("realname", adminUser.getRealname()).count();
+        if (nameCount > 0) {
+            throw new CrmException(AdminCodeEnum.ADMIN_USER_REAL_NAME_EXIST_ERROR);
         }
         String salt = IdUtil.fastSimpleUUID();
         AdminUser adminUserPO = BeanUtil.copyProperties(adminUser, AdminUser.class);
@@ -294,10 +363,18 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                     errList.add(rowList);
                     return;
                 }
+
                 if (StrUtil.isEmptyIfStr(rowList.get(2))) {
                     rowList.add(0, "姓名不能为空");
                     errList.add(rowList);
                     return;
+                } else {
+                    Integer count = query().eq("realname", rowList.get(2).toString().trim()).count();
+                    if (count > 0) {
+                        rowList.add(0, "姓名重复");
+                        errList.add(rowList);
+                        return;
+                    }
                 }
                 String username = rowList.get(0).toString().trim();
                 Integer count = lambdaQuery().eq(AdminUser::getUsername, username).count();
@@ -311,12 +388,26 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                     errList.add(rowList);
                     return;
                 }
+                AdminUser adminUser = new AdminUser();
+                String parentName = Optional.ofNullable(rowList.get(6)).orElse("").toString().trim();
+                if (!StrUtil.isEmpty(parentName)) {
+                    AdminUser user = lambdaQuery().select(AdminUser::getUserId)
+                            .eq(AdminUser::getRealname, parentName)
+                            .last("limit 1")
+                            .one();
+                    if (user == null) {
+                        rowList.add(0, "直属上级不存在");
+                        errList.add(rowList);
+                        return;
+                    }
+                    adminUser.setParentId(user.getUserId());
+                }
+
                 String password = rowList.get(1).toString().trim();
                 String realname = rowList.get(2).toString().trim();
                 String sex = Optional.ofNullable(rowList.get(3)).orElse("").toString().trim();
                 String email = Optional.ofNullable(rowList.get(4)).orElse("").toString().trim();
                 String post = Optional.ofNullable(rowList.get(5)).orElse("").toString().trim();
-                AdminUser adminUser = new AdminUser();
                 String salt = IdUtil.fastSimpleUUID();
                 adminUser.setUsername(username);
                 adminUser.setPassword(UserUtil.sign((adminUser.getUsername().trim() + password.trim()), salt));
@@ -405,9 +496,6 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                 AdminUser adminUser = getById(id);
                 if (adminUser.getDeptId() == null) {
                     throw new CrmException(AdminCodeEnum.ADMIN_USER_NOT_DEPT_ERROR);
-                }
-                if (adminUser.getParentId() == null || adminUser.getParentId() == 0) {
-                    throw new CrmException(AdminCodeEnum.ADMIN_USER_NOT_PARENT_ERROR);
                 }
             }
             lambdaUpdate().set(AdminUser::getStatus, adminUserStatusBO.getStatus()).eq(AdminUser::getUserId, id).update();
@@ -541,10 +629,10 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         String idStr = ids.stream().map(String::valueOf).collect(Collectors.joining(Const.SEPARATOR));
         queryWrapper.select(AdminUser::getUserId, AdminUser::getImg, AdminUser::getRealname)
                 .in(AdminUser::getUserId, ids)
-                .eq(AdminUser::getStatus,1)
+                .eq(AdminUser::getStatus, 1)
                 .last(" ORDER BY instr('," + idStr + ",',CONCAT(',',user_id,','))");
         List<AdminUser> list = list(queryWrapper);
-        if (CollUtil.isNotEmpty(list)){
+        if (CollUtil.isNotEmpty(list)) {
             userIdList = list.stream().map(AdminUser::getUserId).collect(Collectors.toList());
         }
         return userIdList;
@@ -562,7 +650,12 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
             return new ArrayList<>();
         }
         LambdaQueryWrapper<AdminUser> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.select(AdminUser::getUserId).in(AdminUser::getDeptId, ids);
+        queryWrapper.select(AdminUser::getUserId);
+        if (ids.size() > 1) {
+            queryWrapper.in(AdminUser::getDeptId, ids);
+        } else {
+            queryWrapper.eq(AdminUser::getDeptId, ids.get(0));
+        }
         return listObjs(queryWrapper, obj -> Long.valueOf(obj.toString()));
     }
 
@@ -591,14 +684,14 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
     }
 
     @Override
-    public DeptUserListVO queryDeptUserList(Integer deptId,boolean isAllUser) {
+    public DeptUserListVO queryDeptUserList(Integer deptId, boolean isAllUser) {
         DeptUserListVO deptUserListVO = new DeptUserListVO();
         List<DeptVO> deptList = adminDeptService.queryDeptUserList();
         createTree(deptId, deptList);
         List<HrmSimpleUserVO> userList;
-        if (isAllUser){
+        if (isAllUser) {
             userList = getBaseMapper().querySimpleUserByDeptId(deptId);
-        }else {
+        } else {
             userList = getBaseMapper().querySimpleUserByDeptIdAndExamine(deptId);
         }
         List<DeptVO> collect = deptList.stream().filter(dept -> dept.getPid().equals(deptId)).collect(Collectors.toList());
@@ -676,6 +769,7 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         userInfo.setRoles(queryUserRoleIds(userInfo.getUserId()));
         return userInfo;
     }
+
     /**
      * 查询当前系统有没有初始化
      *
@@ -686,6 +780,7 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         Integer count = lambdaQuery().count();
         return count > 0 ? 1 : 0;
     }
+
     /**
      * 系统用户初始化
      */
@@ -695,16 +790,18 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         if (integer > 0) {
             return;
         }
-        String md5 = SecureUtil.md5(systemUserBO.getUsername());
-        String mobile = systemUserBO.getUsername();
-        String proCode = mobile.substring(mobile.length() - 6);
-        StringBuilder code = new StringBuilder();
-        for (Character c : proCode.toCharArray()) {
-            code.append(md5.charAt(Integer.valueOf(c.toString())));
+        JSONObject jsonObject = null;
+        try {
+            RSA rsa = SecureUtil.rsa((String) null, AdminConst.userPublicKey);
+            String fromBcd = rsa.decryptStrFromBcd(systemUserBO.getCode(), KeyType.PublicKey);
+            jsonObject = JSON.parseObject(fromBcd);
+        } catch (Exception e) {
+            throw new CrmException(AdminCodeEnum.ADMIN_PHONE_VERIFY_ERROR);
         }
-        if (!code.toString().equals(systemUserBO.getCode())) {
-            throw new CrmException(AdminCodeEnum.ADMIN_PHONE_CODE_ERROR);
+        if (jsonObject == null) {
+            throw new CrmException(AdminCodeEnum.ADMIN_PHONE_VERIFY_ERROR);
         }
+
         AdminUser adminUser = new AdminUser();
         adminUser.setUsername(systemUserBO.getUsername());
         adminUser.setSalt(IdUtil.simpleUUID());
@@ -719,6 +816,7 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         save(adminUser);
         lambdaUpdate().set(AdminUser::getUserId, UserUtil.getSuperUser())
                 .eq(AdminUser::getUserId, adminUser.getUserId()).update();
+        adminUserConfigService.save(new AdminUserConfig(null, UserUtil.getSuperUser(), 1, "InitUserConfig", jsonObject.toJSONString(), "用户信息"));
         registerSeataToNacos();
     }
 

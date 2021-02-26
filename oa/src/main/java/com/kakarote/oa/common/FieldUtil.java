@@ -32,7 +32,9 @@ public class FieldUtil {
      * @param isUnique 是否验证 0否 1 是
      * @return
      */
-    public FieldUtil oaFieldAdd(String fieldName, String name, String formType, List<String> settingArr, Integer isNull,Integer isUnique,Object value,String defaultValue,Integer operating,Integer fieldType){
+    public FieldUtil oaFieldAdd(String fieldName, String name, String formType, List<String> settingArr, Integer isNull,
+                                Integer isUnique,Object value,String defaultValue,Integer operating,Integer fieldType,
+                                String formPosition){
         OaExamineField record = new OaExamineField();
         record.setFieldName(fieldName);
         record.setName(name);
@@ -45,6 +47,9 @@ public class FieldUtil {
         record.setSetting(settingArr);
         record.setValue(value);
         record.setDefaultValue(defaultValue);
+        record.setFormPosition(formPosition);
+        record.setStylePercent(100);
+        record.setSorting(0);
         recordList.add(record);
         return this;
     }

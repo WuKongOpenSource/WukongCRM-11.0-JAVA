@@ -26,4 +26,7 @@ public class DeptVO {
     @ApiModelProperty("是否有下级部门 0 否 1 是")
     private Integer hasChildren;
 
+    @ApiModelProperty(value = "部门负责人")
+    private Long ownerUserId;
+
 }

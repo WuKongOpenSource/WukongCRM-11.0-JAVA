@@ -5,6 +5,7 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.Content;
@@ -19,8 +20,8 @@ import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmCustomer;
 import com.kakarote.crm.entity.PO.CrmCustomerData;
@@ -114,7 +115,7 @@ public class CrmCustomerLog {
     public List<Content> deleteMembers(CrmMemberSaveBO crmMemberSaveBO) {
         List<Content> contentList = new ArrayList<>();
         for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isCrmOperateAuth(CrmEnum.CUSTOMER, id)) {
+            if (AuthUtil.isRwAuth(id,CrmEnum.CUSTOMER, CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
             CrmCustomer oldCustomer = crmCustomerService.getById(id);

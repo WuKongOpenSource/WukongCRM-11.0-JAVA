@@ -6,10 +6,12 @@ import com.kakarote.authorization.common.AuthorizationCodeEnum;
 import com.kakarote.authorization.entity.AuthorizationUser;
 import com.kakarote.authorization.service.LoginService;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.LoginType;
 import com.kakarote.core.common.ParamAspect;
 import com.kakarote.core.common.Result;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +27,7 @@ import java.util.Arrays;
  */
 @RestController
 @Api(tags = "用户登录相关接口")
+@Slf4j
 public class AuthController {
 
     @Autowired
@@ -45,12 +48,13 @@ public class AuthController {
     @PostMapping(value = "/login")
     @ApiOperation(tags = "用户登录", httpMethod = "POST", value = "/doLogin")
     public Result doLogin(@Valid @RequestBody AuthorizationUser user,HttpServletResponse response,HttpServletRequest request) {
-
-        if (StrUtil.trimToNull(user.getUsername()) == null) {
-            return Result.error(AuthorizationCodeEnum.AUTHORIZATION_USERNAME_REQUIRED);
-        }
-        if (StrUtil.trimToNull(user.getPassword()) == null && StrUtil.trimToNull(user.getSmscode()) == null) {
-            return Result.error(AuthorizationCodeEnum.AUTHORIZATION_PASSWORD_REQUIRED);
+        if (StrUtil.isNotEmpty(user.getUsername())){
+            if (StrUtil.trimToNull(user.getUsername()) == null) {
+                return Result.error(AuthorizationCodeEnum.AUTHORIZATION_USERNAME_REQUIRED);
+            }
+            if (StrUtil.trimToNull(user.getPassword()) == null && StrUtil.trimToNull(user.getSmscode()) == null) {
+                return Result.error(AuthorizationCodeEnum.AUTHORIZATION_PASSWORD_REQUIRED);
+            }
         }
         return loginService.doLogin(user,response,request);
     }

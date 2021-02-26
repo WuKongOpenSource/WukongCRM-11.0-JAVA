@@ -32,7 +32,7 @@ public interface ICrmContactsService extends BaseService<CrmContacts> {
      * @return data
      */
     public List<CrmModelFiledVO> queryField(Integer id);
-
+    public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id);
     /**
      * 分页查询
      *

@@ -45,3 +45,11 @@ spring:
         locator:
           lower-case-service-id: true
           enabled: true
+
+crm:
+  gateway:
+    ignoreUrl:
+      - /adminSuite/dataReceive
+      - /adminSuite/authReceive
+      - /adminSuite/getPreAuthCode
+      - /adminSuite/cpRegister

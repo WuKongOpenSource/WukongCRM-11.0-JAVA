@@ -2,6 +2,7 @@ package com.kakarote.crm.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
@@ -12,12 +13,14 @@ import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
@@ -26,7 +29,6 @@ import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmModelSaveBO;
 import com.kakarote.crm.entity.BO.CrmProductStatusBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
@@ -96,6 +98,9 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
     @Autowired
     private ICrmProductDetailImgService productDetailImgService;
 
+    @Autowired
+    private FieldService fieldService;
+
     /**
      * 查询字段配置
      *
@@ -106,8 +111,8 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
     public List<CrmModelFiledVO> queryField(Integer id) {
         CrmModel crmModel = queryById(id);
         crmModel.setLabel(getLabel().getType());
-        List<CrmModelFiledVO> crmModelFiledVOS = crmFieldService.queryField(crmModel);
-        for (CrmModelFiledVO crmModelFiledVO : crmModelFiledVOS) {
+        List<CrmModelFiledVO> crmModelFiledVoS = crmFieldService.queryField(crmModel);
+        for (CrmModelFiledVO crmModelFiledVO : crmModelFiledVoS) {
             if ("categoryId".equals(crmModelFiledVO.getFieldName())) {
                 List<Integer> list = crmProductCategoryService.queryId(null, (Integer) crmModelFiledVO.getValue());
                 if (CollUtil.isNotEmpty(list)){
@@ -129,8 +134,42 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
         List<Object> statusList = new ArrayList<>();
         statusList.add(new JSONObject().fluentPut("name", "上架").fluentPut("value", 1));
         statusList.add(new JSONObject().fluentPut("name", "下架").fluentPut("value", 0));
-        crmModelFiledVOS.add(new CrmModelFiledVO("status", FieldEnum.SELECT, "是否上下架", 1).setIsNull(1).setSetting(statusList).setValue(crmModel.get("status")).setAuthLevel(authLevel));
-        return crmModelFiledVOS;
+        crmModelFiledVoS.add(new CrmModelFiledVO("status", FieldEnum.SELECT, "是否上下架", 1).setIsNull(1).setSetting(statusList).setValue(crmModel.get("status")).setAuthLevel(authLevel));
+        return crmModelFiledVoS;
+    }
+
+    @Override
+    public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id) {
+        CrmModel crmModel = queryById(id);
+        crmModel.setLabel(getLabel().getType());
+        List<List<CrmModelFiledVO>> crmModelFiledVoS = crmFieldService.queryFormPositionFieldVO(crmModel);
+        for (List<CrmModelFiledVO> filedVOList : crmModelFiledVoS) {
+            for (CrmModelFiledVO crmModelFiledVO : filedVOList) {
+                if ("categoryId".equals(crmModelFiledVO.getFieldName())) {
+                    List<Integer> list = crmProductCategoryService.queryId(null, (Integer) crmModelFiledVO.getValue());
+                    if (CollUtil.isNotEmpty(list)) {
+                        crmModelFiledVO.setValue(list);
+                    } else {
+                        crmModelFiledVO.setValue(null);
+                    }
+                }
+            }
+        }
+
+        int authLevel = 3;
+        Long userId = UserUtil.getUserId();
+        String key = userId.toString();
+        List<String> noAuthMenuUrls = BaseUtil.getRedis().get(key);
+        if (noAuthMenuUrls != null && noAuthMenuUrls.contains(PRODUCT_STATUS_URL)) {
+            authLevel = 2;
+        }
+        List<Object> statusList = new ArrayList<>();
+        statusList.add(new JSONObject().fluentPut("name", "上架").fluentPut("value", 1));
+        statusList.add(new JSONObject().fluentPut("name", "下架").fluentPut("value", 0));
+        CrmModelFiledVO crmModelFiledVO = new CrmModelFiledVO("status", FieldEnum.SELECT, "是否上下架", 1).setIsNull(1).setSetting(statusList).setValue(crmModel.get("status")).setAuthLevel(authLevel);
+        crmModelFiledVO.setStylePercent(50);
+        crmModelFiledVoS.add(ListUtil.toList(crmModelFiledVO));
+        return crmModelFiledVoS;
     }
 
     /**
@@ -315,7 +354,14 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
     @Override
     public void downloadExcel(HttpServletResponse response) throws IOException {
         List<CrmModelFiledVO> crmModelFiledList = queryField(null);
-        crmModelFiledList.removeIf(model -> Arrays.asList(FieldEnum.FILE, FieldEnum.CHECKBOX, FieldEnum.USER, FieldEnum.STRUCTURE).contains(FieldEnum.parse(model.getType())));
+        int k = 0;
+        for (int i = 0; i < crmModelFiledList.size(); i++) {
+            if(crmModelFiledList.get(i).getFieldName().equals("name")){
+                k=i;break;
+            }
+        }
+        crmModelFiledList.add(k+1,new CrmModelFiledVO("ownerUserId",FieldEnum.TEXT,"负责人",1).setIsNull(1));
+        removeFieldByType(crmModelFiledList);
         HSSFWorkbook wb = new HSSFWorkbook();
         HSSFSheet sheet = wb.createSheet("产品导入表");
         sheet.setDefaultRowHeight((short) 400);
@@ -345,7 +391,7 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
         titleRow.createCell(0).setCellValue("产品导入模板(*)为必填项");
         cellStyle.setAlignment(HorizontalAlignment.CENTER);
         titleRow.getCell(0).setCellStyle(cellStyle);
-        CellRangeAddress region = new CellRangeAddress(0, 0, 0, crmModelFiledList.size() - 1);
+        CellRangeAddress region = new CellRangeAddress(0, 0, 0, crmModelFiledList.size()-1);
         sheet.addMergedRegion(region);
         try {
             HSSFRow row = sheet.createRow(1);
@@ -407,12 +453,18 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
         List<Map<String, Object>> dataList = queryPageList(search).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+            headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
             headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
             writer.merge(headList.size() - 1, "产品信息");
             if (dataList.size() == 0) {
                 Map<String, Object> record = new HashMap<>();
                 headList.forEach(head -> record.put(head.getFieldName(), ""));
                 dataList.add(record);
+            }
+            for (Map<String, Object> record : dataList) {
+                headList.forEach(field ->{
+                    record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                });
             }
             writer.setOnlyAlias(true);
             writer.write(dataList, true);
@@ -628,16 +680,17 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
                 String value = productData != null ? productData.getValue() : null;
                 String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
                 actionRecordUtil.publicContentRecord(CrmEnum.PRODUCT, BehaviorEnum.UPDATE, productId, oldProduct.getName(), detail);
+                String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
                 boolean bol = crmProductDataService.lambdaUpdate()
                         .set(CrmProductData::getName,record.getString("fieldName"))
-                        .set(CrmProductData::getValue, record.getString("value"))
+                        .set(CrmProductData::getValue, newValue)
                         .eq(CrmProductData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmProductData::getBatchId, batchId).update();
                 if (!bol) {
                     CrmProductData crmProductData = new CrmProductData();
                     crmProductData.setFieldId(record.getInteger("fieldId"));
                     crmProductData.setName(record.getString("fieldName"));
-                    crmProductData.setValue(record.getString("value"));
+                    crmProductData.setValue(newValue);
                     crmProductData.setCreateTime(new Date());
                     crmProductData.setBatchId(batchId);
                     crmProductDataService.save(crmProductData);
@@ -645,5 +698,6 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
             }
             updateField(record,productId);
         });
+        this.lambdaUpdate().set(CrmProduct::getUpdateTime,new Date()).eq(CrmProduct::getProductId,productId).update();
     }
 }

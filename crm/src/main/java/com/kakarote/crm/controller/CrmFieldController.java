@@ -69,8 +69,8 @@ public class CrmFieldController {
 
     @ApiOperation("查询字段列表")
     @RequestMapping(value = "/list/{label}", method = RequestMethod.POST)
-    public Result<List<CrmField>> list(@PathVariable("label") Integer label) {
-        List<CrmField> crmFieldList = crmFieldService.list(label, true);
+    public Result<List<List<CrmField>>> list(@PathVariable("label") Integer label) {
+        List<List<CrmField>> crmFieldList = crmFieldService.queryFormPositionFieldList(label, true);
         return Result.ok(crmFieldList);
     }
 

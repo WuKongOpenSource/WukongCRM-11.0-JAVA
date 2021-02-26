@@ -10,6 +10,6 @@ public class CrmActivityLog {
 
     public Content addCrmActivityRecord(CrmActivity crmActivity) {
         CrmEnum crmEnum = CrmEnum.parse(crmActivity.getActivityType());
-        return new Content(crmEnum.getRemarks(),"","新建了跟进记录");
+        return new Content(crmEnum.getRemarks(),crmEnum.getRemarks(),"新建了跟进记录");
     }
 }

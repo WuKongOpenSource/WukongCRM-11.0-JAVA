@@ -192,6 +192,7 @@ public class EsSysLogServiceImpl implements ISysLogService {
                         .set(AdminUser::getLastLoginTime,loginLog.getLoginTime())
                         .set(AdminUser::getLastLoginIp,loginLog.getIpAddress())
                         .eq(AdminUser::getUserId,loginLog.getUserId())
+                        .eq(AdminUser::getIsDel,0)
                         .update();
             }
             IndexRequest indexRequest = new IndexRequest(index, "_doc");

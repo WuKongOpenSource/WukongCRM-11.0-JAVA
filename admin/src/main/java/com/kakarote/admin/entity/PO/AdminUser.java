@@ -88,5 +88,8 @@ public class AdminUser implements Serializable {
     @TableField(exist = false)
     private String companyName;
 
+    @ApiModelProperty("是否删除 0 未删除 1 已删除")
+    private Integer isDel;
+
 
 }

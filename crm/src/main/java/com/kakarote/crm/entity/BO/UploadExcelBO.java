@@ -16,9 +16,6 @@ public class UploadExcelBO {
     @ApiModelProperty("文件路径")
     private String filePath;
 
-    @ApiModelProperty("负责人ID")
-    private Long ownerUserId;
-
     @ApiModelProperty("公海ID")
     private Integer poolId;
 

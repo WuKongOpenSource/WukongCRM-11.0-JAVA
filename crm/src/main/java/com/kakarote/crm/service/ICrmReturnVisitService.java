@@ -32,6 +32,8 @@ public interface ICrmReturnVisitService extends BaseService<CrmReturnVisit> {
 
     List<CrmModelFiledVO> queryField(Integer id);
 
+    List<List<CrmModelFiledVO>> queryFormPositionField(Integer id);
+
     List<CrmModelFiledVO> information(Integer visitId);
 
     List<FileEntity> queryFileList(Integer id);

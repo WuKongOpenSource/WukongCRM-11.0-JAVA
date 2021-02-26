@@ -1,12 +1,8 @@
 package com.kakarote.gateway.controller;
 
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
-import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Const;
-import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.entity.ProjectVersionEntity;
 import com.kakarote.core.entity.UpdateConfigEntity;
@@ -54,15 +50,6 @@ public class IndexController {
         });
     }
 
-    @RequestMapping("/updates/login")
-    public JSONObject login(@RequestBody JSONObject jsonObject) {
-        HttpRequest httpRequest = HttpUtil.createPost("https://center.72crm.com/updates/login");
-        httpRequest.form("username", jsonObject.getString("username"));
-        httpRequest.form("password", jsonObject.getString("password"));
-        HttpResponse execute = httpRequest.execute();
-        return JSONObject.parseObject(execute.body());
-    }
-
     @RequestMapping("/ping")
     public Result ping() {
         return Result.ok();
@@ -91,7 +78,7 @@ public class IndexController {
         if (Objects.equals(100, progress)) {
             UpdateProjectVersionUtil.setProgress(null);
         }
-        return R.ok(progress);
+        return Result.ok(progress);
     }
 
     @PostMapping("/queryDatabase")
@@ -109,16 +96,16 @@ public class IndexController {
             } catch (Exception ignored) {
 
             }
-            return R.ok(databaseList);
+            return Result.ok(databaseList);
         }
-        return R.ok();
+        return Result.ok();
     }
 
     @PostMapping("/backupDatabase")
     public Result<String> backupDatabase(@RequestBody UpdateConfigEntity entity) {
         entity.setBackupPath(FileUtil.getParent(getClass().getProtectionDomain().getCodeSource().getLocation().getPath(), 2));
         String backupSql = UpdateProjectVersionUtil.backupSql(entity);
-        return R.ok(FileUtil.normalize(backupSql));
+        return Result.ok(FileUtil.normalize(backupSql));
     }
 
 
@@ -127,6 +114,7 @@ public class IndexController {
         UpdateProjectVersionUtil.setProgress(0);
         TaskExecutor taskExecutor = ApplicationContextHolder.getBean(TaskExecutor.class);
         taskExecutor.execute(() -> projectUpdateService.updateVersion(entity));
-        return R.ok();
+        return Result.ok();
     }
+
 }

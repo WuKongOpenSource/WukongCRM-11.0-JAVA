@@ -56,10 +56,12 @@ public class AdminDeptServiceImpl extends BaseServiceImpl<AdminDeptMapper, Admin
         if (queryBO.getId() == null) {
             queryBO.setId(0);
         }
-        List<AdminDept> adminDeptList = list();
         if ("tree".equals(queryBO.getType())) {
+            List<AdminDept> adminDeptList = getBaseMapper().queryDeptList();
             return RecursionUtil.getChildListTree(adminDeptList, "pid", queryBO.getId(), "deptId", "children", AdminDeptVO.class);
         }
+
+        List<AdminDept> adminDeptList = list();
         if ("update".equals(queryBO.getType())) {
             List<Integer> ids = RecursionUtil.getChildList(adminDeptList, "pid", queryBO.getId(), "deptId", "deptId");
             adminDeptList.removeIf(dept -> ids.contains(dept.getDeptId()));
@@ -109,9 +111,12 @@ public class AdminDeptServiceImpl extends BaseServiceImpl<AdminDeptMapper, Admin
         if ((!adminDept.getPid().equals(0)) && adminDeptBO.getPid().equals(0)) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
         }
-        adminDept.setName(adminDeptBO.getName());
-        adminDept.setPid(adminDeptBO.getPid());
-        updateById(adminDept);
+        lambdaUpdate()
+                .set(AdminDept::getName,adminDeptBO.getName())
+                .set(AdminDept::getPid,adminDeptBO.getPid())
+                .set(AdminDept::getOwnerUserId,adminDeptBO.getOwnerUserId())
+                .eq(AdminDept::getDeptId,adminDept.getDeptId())
+                .update();
         deptCache.remove(adminDeptBO.getDeptId());
     }
 

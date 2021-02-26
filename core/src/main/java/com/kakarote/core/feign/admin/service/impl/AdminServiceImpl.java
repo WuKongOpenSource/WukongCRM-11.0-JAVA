@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -152,7 +153,7 @@ public class AdminServiceImpl implements AdminService {
      */
     @Override
     public Result<List<Long>> queryUserByDeptIds(Collection<Integer> ids) {
-        return R.ok(new ArrayList<>());
+        return R.ok(Collections.emptyList());
     }
 
     @Override
@@ -160,20 +161,15 @@ public class AdminServiceImpl implements AdminService {
         return R.ok(1);
     }
 
-    @Override
-    public Result<Integer> queryMaxDataType(Long userId, Integer menuId) {
-        return R.ok(1);
-    }
-
     /**
      * 查询权限内用户
      * @param userId 用户ID
-     * @param realm 菜单标识
+     * @param menuId 菜单ID
      * @return 权限
      */
     @Override
-    public Result<List<Long>> queryUserByAuth(Long userId, String realm) {
-        return R.ok(new ArrayList<>());
+    public Result<List<Long>> queryUserByAuth(Long userId, Integer menuId) {
+        return R.ok(Collections.emptyList());
     }
 
     @Override
@@ -189,12 +185,12 @@ public class AdminServiceImpl implements AdminService {
      */
     @Override
     public Result<List<Integer>> queryRoleByRoleType(Integer roleType) {
-        return R.ok(new ArrayList<>());
+        return R.ok(Collections.emptyList());
     }
 
     @Override
     public Result<List<AdminRole>> queryRoleByRoleTypeAndUserId(Integer type) {
-        return R.ok(new ArrayList<>());
+        return R.ok(Collections.emptyList());
     }
 
     @Override
@@ -229,7 +225,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public Result<List<Long>> queryUserIdByRealName(List<String> realNames) {
-        return Result.ok(new ArrayList<>());
+        return Result.ok(Collections.emptyList());
     }
 
     @Override
@@ -243,12 +239,13 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public Result<Integer> queryHrmDataAuthType(Integer menuId) {
-        return Result.ok(0);
-    }
-    @Override
     public Result<List<UserInfo>> queryUserInfoList() {
-        return Result.ok(new ArrayList<>());
+        return Result.ok(Collections.emptyList());
+    }
+
+    @Override
+    public Result<List<Long>> queryUserIdByRoleId(Integer roleId) {
+        return Result.ok(Collections.emptyList());
     }
 
 }

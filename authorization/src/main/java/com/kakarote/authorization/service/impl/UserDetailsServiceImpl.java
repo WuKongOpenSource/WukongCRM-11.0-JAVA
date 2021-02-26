@@ -10,6 +10,7 @@ import com.kakarote.authorization.entity.AuthorizationUserInfo;
 import com.kakarote.authorization.entity.VO.LoginVO;
 import com.kakarote.authorization.service.AdminUserService;
 import com.kakarote.authorization.service.LoginService;
+import com.kakarote.core.common.LoginType;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.cache.AdminCacheKey;
@@ -105,13 +106,16 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
      */
     @Override
     public Result doLogin(AuthorizationUser user, HttpServletResponse response,HttpServletRequest request) {
-        String key = AdminCacheKey.PASSWORD_ERROR_CACHE_KEY + user.getUsername().trim();
-        Integer errorNum = redis.get(key);
-        if (errorNum != null && errorNum > 2) {
-            Integer second = Optional.ofNullable(redis.ttl(key)).orElse(0L).intValue();
-            if (second > 0) {
-                String errorTimeDesc = this.getErrorTimeDesc(second);
-                return Result.error(AuthorizationCodeEnum.AUTHORIZATION_LOGIN_PASSWORD_TO_MANY_ERROR, "密码错误次数过多，请在"+errorTimeDesc+"后重试！");
+        LoginType loginType = LoginType.valueOf(user.getLoginType());
+        if (loginType.equals(LoginType.PASSWORD) ){
+            String key = AdminCacheKey.PASSWORD_ERROR_CACHE_KEY + user.getUsername().trim();
+            Integer errorNum = redis.get(key);
+            if (errorNum != null && errorNum > 2) {
+                Integer second = Optional.ofNullable(redis.ttl(key)).orElse(0L).intValue();
+                if (second > 0) {
+                    String errorTimeDesc = this.getErrorTimeDesc(second);
+                    return Result.error(AuthorizationCodeEnum.AUTHORIZATION_LOGIN_PASSWORD_TO_MANY_ERROR, "密码错误次数过多，请在"+errorTimeDesc+"后重试！");
+                }
             }
         }
         try {
@@ -119,13 +123,13 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
             Authentication authentication = authenticationManager.authenticate(authenticationToken);
             AuthorizationUserInfo userInfo = (AuthorizationUserInfo) authentication.getDetails();
             if (userInfo.getAuthorizationUserList().size() == 0) {
-                return this.handleLoginPassWordToManyError(key,user.getUsername().trim());
+                return this.handleLoginPassWordToManyError(user.getUsername().trim());
             }
             return login(userInfo.getAuthorizationUserList().get(0).setType(user.getType()), response, request);
         } catch (AuthException e) {
             return Result.error(e.getResultCode());
         } catch (BadCredentialsException e) {
-            return this.handleLoginPassWordToManyError(key,user.getUsername().trim());
+            return this.handleLoginPassWordToManyError(user.getUsername().trim());
         }
 
     }
@@ -152,11 +156,11 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
     /**
      * 密码失败次数处理
      * @date 2020/11/9 15:42
-     * @param key
      * @param userName
      * @return com.kakarote.core.common.Result
      **/
-    private Result handleLoginPassWordToManyError(String key,String userName){
+    private Result handleLoginPassWordToManyError(String userName){
+        String key = AdminCacheKey.PASSWORD_ERROR_CACHE_KEY + userName;
         Integer errorNum = redis.get(key);
         if (errorNum == null) {
             redis.setex(AdminCacheKey.PASSWORD_ERROR_CACHE_KEY + userName, 60 * 3, 1);

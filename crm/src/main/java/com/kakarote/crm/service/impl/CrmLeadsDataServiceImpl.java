@@ -3,12 +3,14 @@ package com.kakarote.crm.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.entity.PO.CrmLeadsData;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmLeadsDataMapper;
 import com.kakarote.crm.service.ICrmLeadsDataService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -26,6 +28,8 @@ import java.util.List;
 @Service
 public class CrmLeadsDataServiceImpl extends BaseServiceImpl<CrmLeadsDataMapper, CrmLeadsData> implements ICrmLeadsDataService {
 
+    @Autowired
+    private FieldService fieldService;
 
     /**
      * 设置用户数据
@@ -52,6 +56,7 @@ public class CrmLeadsDataServiceImpl extends BaseServiceImpl<CrmLeadsDataMapper,
         Date date = new Date();
         for (CrmModelFiledVO obj : array) {
             CrmLeadsData leadsData = BeanUtil.copyProperties(obj, CrmLeadsData.class);
+            leadsData.setValue(fieldService.convertObjectValueToString(obj.getType(),obj.getValue(),leadsData.getValue()));
             leadsData.setName(obj.getFieldName());
             leadsData.setCreateTime(date);
             leadsData.setBatchId(batchId);

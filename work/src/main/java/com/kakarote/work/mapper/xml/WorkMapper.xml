@@ -125,7 +125,7 @@
       count(is_archive=1 or null) as archive,
       ifnull(ROUND((count((status=5 and is_archive=0) or null)/count(is_archive=0 or null))*100,2),0) as completionRate,
       ifnull(ROUND((count((status=2 and is_archive=0) or null)/count(is_archive=0 or null))*100,2),0) as overdueRate
-      from wk_work_task where ishidden = 0
+      from wk_work_task where ishidden = 0 and work_id != 0
         <if test="workId != null and workId != ''">
             and work_id = #{workId}
         </if>
@@ -184,6 +184,11 @@
         left join wk_admin_role as c on a.role_id = c.role_id
         where a.work_id = #{workId}
     </select>
+
+    <select id="queryRoleName" resultType="java.lang.String">
+        select a.role_name from wk_admin_role as a where a.role_id = #{roleId}
+    </select>
+
     <select id="queryWorkTaskByCondition" resultType="com.kakarote.work.entity.VO.TaskInfoVO">
         select a.*,ifnull(b.class_id,-1) as classId,b.order_num as classOrder,
         d.customer_ids,d.contacts_ids,d.business_ids,d.contract_ids,

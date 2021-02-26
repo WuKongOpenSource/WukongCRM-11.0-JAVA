@@ -4,10 +4,14 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
+import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.kakarote.core.utils.UserUtil;
@@ -45,11 +49,17 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M, 
         if (CollUtil.isEmpty(entityList)) {
             return true;
         }
-        insertFill(entityList);
         T model = entityList.iterator().next();
         Class<?> tClass = model.getClass();
+        TableInfo table = SqlHelper.table(tClass);
+        insertFill(entityList,table);
         List<Field> allFields = TableInfoHelper.getAllFields(tClass);
-        Set<String> fieldSet = allFields.stream().map(field -> StrUtil.toUnderlineCase(field.getName())).collect(Collectors.toSet());
+        Set<String> fieldSet = allFields.stream()
+                .filter(field -> {
+                            TableId tableId = field.getAnnotation(TableId.class);
+                            return tableId == null || !Objects.equals(tableId.type(),IdType.AUTO);
+                        })
+                .map(field -> StrUtil.toUnderlineCase(field.getName())).collect(Collectors.toSet());
         Map<String, Object> attrs = BeanUtil.beanToMap(model, true, true);
         int index = 0;
         StringBuilder columns = new StringBuilder();
@@ -63,7 +73,7 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M, 
         }
         StringBuilder sql = new StringBuilder();
         List<Object> parasNoUse = new ArrayList<>();
-        TableInfo table = SqlHelper.table(tClass);
+
         forModelSave(table, attrs, sql, parasNoUse);
         int[] result = batch(tClass,sql.toString(), columns.toString(), entityList, batchSize);
         return result.length > 0;
@@ -72,9 +82,22 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M, 
     /**
      * 字段填充
      */
-    private void insertFill(Collection<T> entityList) {
+    private void insertFill(Collection<T> entityList,TableInfo tableInfo) {
+        final IdentifierGenerator identifierGenerator = GlobalConfigUtils.getGlobalConfig(tableInfo.getConfiguration()).getIdentifierGenerator();
         for (T model : entityList) {
             Map<String, Object> attrs = BeanUtil.beanToMap(model);
+            Object obj = attrs.get(tableInfo.getKeyColumn());
+            if(obj == null) {
+                if (tableInfo.getIdType().getKey() == IdType.ASSIGN_ID.getKey()) {
+                    if (Number.class.isAssignableFrom(tableInfo.getKeyType())) {
+                        attrs.put(tableInfo.getKeyColumn(), identifierGenerator.nextId(model));
+                    } else {
+                        attrs.put(tableInfo.getKeyColumn(), identifierGenerator.nextId(model).toString());
+                    }
+                } else if (tableInfo.getIdType().getKey() == IdType.ASSIGN_UUID.getKey()) {
+                    attrs.put(tableInfo.getKeyColumn(), identifierGenerator.nextUUID(model));
+                }
+            }
             for (String key : attrs.keySet()) {
                 if (attrs.get(key) == null) {
                     switch (key) {
@@ -100,6 +123,9 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M, 
     private void forModelSave(TableInfo table, Map<String, Object> attrs, StringBuilder sql, List<Object> paras) {
         sql.append("insert into `").append(table.getTableName()).append("`(");
         Set<String> columnTypeSet = table.getFieldList().stream().map(TableFieldInfo::getColumn).collect(Collectors.toSet());
+        if(!table.getIdType().equals(IdType.AUTO)){
+            columnTypeSet.add(table.getKeyColumn());
+        }
         CollUtil.newArrayList(table.getAllSqlSelect().split(","));
         StringBuilder temp = new StringBuilder(") values(");
         for (Map.Entry<String, Object> e : attrs.entrySet()) {
@@ -165,13 +191,13 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M, 
             Map map = BeanUtil.beanToMap(list.get(i), true, true);
             for (int j = 0; j < columnArray.length; j++) {
                 Object value = map.get(columnArray[j]);
-                if (value instanceof java.util.Date) {
+                if (value instanceof Date) {
                     if (value instanceof java.sql.Date) {
                         pst.setDate(j + 1, (java.sql.Date) value);
                     } else if (value instanceof java.sql.Timestamp) {
                         pst.setTimestamp(j + 1, (java.sql.Timestamp) value);
                     } else {
-                        java.util.Date d = (java.util.Date) value;
+                        Date d = (Date) value;
                         pst.setTimestamp(j + 1, new java.sql.Timestamp(d.getTime()));
                     }
                 } else {

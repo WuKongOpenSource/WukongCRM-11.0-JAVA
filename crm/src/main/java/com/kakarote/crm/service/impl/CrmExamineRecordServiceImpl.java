@@ -251,9 +251,6 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
     public void updateContractMoney(Integer id) {
         CrmReceivables receivables = crmReceivablesService.getById(id);
         CrmContract contract = crmContractService.getById(receivables.getContractId());
-        if (contract.getMoney().subtract(receivables.getMoney()).compareTo(BigDecimal.ZERO) < 0) {
-            return;
-        }
         BigDecimal unreceivedMoney = contract.getUnreceivedMoney();
         LambdaUpdateWrapper<CrmContract> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.set(CrmContract::getReceivedMoney, contract.getReceivedMoney().add(receivables.getMoney()));
@@ -279,9 +276,6 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
         CrmContract contract = crmContractService.getById(receivables.getContractId());
         receivables.setMoney(Optional.ofNullable(receivables.getMoney()).orElse(BigDecimal.ZERO));
         contract.setMoney(Optional.ofNullable(contract.getMoney()).orElse(BigDecimal.ZERO));
-        if (contract.getMoney().subtract(Optional.ofNullable(receivables.getMoney()).orElse(BigDecimal.ZERO)).compareTo(BigDecimal.ZERO) < 0) {
-            return;
-        }
         BigDecimal unreceivedMoney = contract.getUnreceivedMoney();
         LambdaUpdateWrapper<CrmContract> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.set(CrmContract::getReceivedMoney, contract.getReceivedMoney().subtract(receivables.getMoney()));
@@ -309,7 +303,6 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
         JSONObject rec = mapper.queryRecordAndId(recordId);
         //当前审批人
         Long auditUserId = UserUtil.getUserId();
-        //jsonObject.put("isRecheck",0);
         //判断是否有撤回权限
         if ((auditUserId.equals(examineRecord.getLong("createUser")) || auditUserId.equals(UserUtil.getSuperUser()))
                 && (examineRecord.getInteger("examineStatus") == 0 || examineRecord.getInteger("examineStatus") == 3)) {

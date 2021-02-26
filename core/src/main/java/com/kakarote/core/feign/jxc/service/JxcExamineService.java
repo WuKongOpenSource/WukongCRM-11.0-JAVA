@@ -28,6 +28,8 @@ public interface JxcExamineService {
     @PostMapping("/jxcExamine/queryJxcById")
     Result<JxcState> queryJxcById(@RequestParam("label") Integer label,@RequestParam("id") Integer id);
 
+    @PostMapping("/jxcExamine/initJxcData")
+    Result<Boolean> initJxcData() ;
 
     @PostMapping("/jxcExamine/queryExamineField")
     Result<List<ExamineField>> queryExamineField(@RequestParam("label") Integer label);

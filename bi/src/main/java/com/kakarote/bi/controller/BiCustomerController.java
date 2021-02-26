@@ -305,7 +305,6 @@ public class BiCustomerController {
         List<JSONObject> recordList = kv.getJSONArray("list").toJavaList(JSONObject.class);
         List<Map<String, Object>> list = new ArrayList<>(recordList);
         JSONObject total = kv.getJSONObject("total");
-        total.put("cycle", "");
         list.add(total);
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             writer.addHeaderAlias("realname", "姓名");
@@ -357,7 +356,6 @@ public class BiCustomerController {
         List<JSONObject> recordList = kv.getJSONArray("list").toJavaList(JSONObject.class);
         List<Map<String, Object>> list = new ArrayList<>(recordList);
         JSONObject total = kv.getJSONObject("total");
-        total.put("cycle", "");
         list.add(total);
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             writer.addHeaderAlias("type", "地区");
@@ -408,7 +406,6 @@ public class BiCustomerController {
         List<JSONObject> recordList = kv.getJSONArray("list").toJavaList(JSONObject.class);
         List<Map<String, Object>> list = new ArrayList<>(recordList);
         JSONObject total = kv.getJSONObject("total");
-        total.put("cycle", "");
         list.add(total);
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             writer.addHeaderAlias("productName", "产品名称");

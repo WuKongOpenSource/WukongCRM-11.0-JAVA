@@ -1,9 +1,7 @@
 package com.kakarote.admin.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReUtil;
-import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -17,13 +15,13 @@ import com.kakarote.admin.entity.VO.AdminRoleVO;
 import com.kakarote.admin.mapper.AdminRoleMapper;
 import com.kakarote.admin.service.*;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.DataAuthEnum;
 import com.kakarote.core.common.cache.AdminCacheKey;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.crm.service.CrmService;
 import com.kakarote.core.feign.hrm.service.HrmService;
 import com.kakarote.core.redis.Redis;
-import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.UserUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -61,6 +59,9 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
     private IAdminUserService adminUserService;
 
     @Autowired
+    private IAdminDeptService adminDeptService;
+
+    @Autowired
     private IAdminRoleService adminRoleService;
 
     @Autowired
@@ -79,8 +80,8 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
      */
     @Override
     public JSONObject auth(Long userId) {
-        String cacheKey = AdminCacheKey.USER_AUTH_CACHE_KET+UserUtil.getUserId();
-        if (redis.exists(cacheKey)){
+        String cacheKey = AdminCacheKey.USER_AUTH_CACHE_KET + UserUtil.getUserId();
+        if (redis.exists(cacheKey)) {
             return redis.get(cacheKey);
         }
         List<AdminMenu> adminMenus = adminMenuService.queryMenuList(userId);
@@ -173,15 +174,15 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
                 }
             }
         });
-        if (jsonObject.containsKey("hrm") && jsonObject.getJSONObject("hrm").isEmpty() && !UserUtil.isAdmin()){
-            List<AdminRole> roles = adminRoleService.queryRoleByRoleTypeAndUserId(9);
+        if (jsonObject.containsKey("hrm") && jsonObject.getJSONObject("hrm").isEmpty() && !UserUtil.isAdmin()) {
+            List<AdminRole> roles = queryRoleByRoleTypeAndUserId(9);
             Boolean isInHrm = hrmService.queryIsInHrm().getData();
             //不在人资员工并且人资没有角色不展示人资导航
-            if (!isInHrm && CollUtil.isEmpty(roles)){
+            if (!isInHrm && CollUtil.isEmpty(roles)) {
                 jsonObject.remove("hrm");
             }
         }
-        redis.setex(cacheKey,300,jsonObject);
+        redis.setex(cacheKey, 300, jsonObject);
         return jsonObject;
     }
 
@@ -298,111 +299,52 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
 
     @Override
     public Integer queryDataType(Long userId, Integer menuId) {
-        List<Integer> list = getBaseMapper().queryDataType(userId, menuId);
-        return (list != null && list.size() > 0) ? list.get(0) : null;
+        Integer dataType = getBaseMapper().queryDataType(userId, menuId);
+        return dataType != null ? dataType : 1;
     }
 
+    /**
+     * 查询下属用户
+     *
+     * @param userId 用户ID
+     * @param menuId 菜单ID
+     * @return 权限
+     */
     @Override
-    public Integer queryMaxDataType(Long userId, Integer menuId) {
-        List<Integer> list = getBaseMapper().queryMaxDataType(userId, menuId);
-        return (list != null && list.size() > 0) ? list.get(0) : null;
-    }
-
-    @Override
-    public List<Long> queryUserByAuth(Long userId, String realm) {
-        if (ObjectUtil.equal("return_visit", realm)) {
-            realm = "visit";
+    public Collection<Long> queryUserByAuth(Long userId, Integer menuId) {
+        if(UserUtil.isAdmin()){
+            List<AdminUser> adminUsers = adminUserService.lambdaQuery().select(AdminUser::getUserId).list();
+            return adminUsers.stream().map(AdminUser::getUserId).collect(Collectors.toList());
         }
-        List<Long> adminUsers = new ArrayList<>();
-        //查询用户数据权限，从高到低排序
-        List<Integer> list = getBaseMapper().queryDataType(userId, null);
-        if (list.size() == 0) {
-            //无权限查询自己的数据
-            adminUsers.add(userId);
-            return adminUsers;
-        }
-        List<AdminMenu> userRoleList = getBaseMapper().queryUserRoleListByUserId(userId, realm);
-        if (list.size() == 1 && userRoleList.size() == 1) {
-            //如果为1的话 验证是否有最高权限，否则及有多个权限
-            //拥有最高数据权限
-            if (list.contains(5)) {
-                return adminUserService.list().stream().map(AdminUser::getUserId).collect(Collectors.toList());
-            } else {
-                AdminUser adminUser = adminUserService.getById(userId);
-                if (list.contains(4)) {
-                    List<Integer> deptIds = ApplicationContextHolder.getBean(IAdminDeptService.class).queryChildDept(adminUser.getDeptId());
-                    deptIds.add(adminUser.getDeptId());
-                    List<Long> longList = adminUserService.queryUserByDeptIds(deptIds);
-                    adminUsers.addAll(longList);
-                } else if (list.contains(3)) {
-                    List<Long> longList = adminUserService.queryUserByDeptIds(Collections.singletonList(adminUser.getDeptId()));
-                    adminUsers.addAll(longList);
-                }
-
-                if (list.contains(2)) {
-                    adminUsers.addAll(adminUserService.queryChildUserId(adminUser.getUserId()));
-                }
-                adminUsers.add(adminUser.getUserId());
+        Integer dataType = queryDataType(userId, menuId);
+        Set<Long> userSet = new HashSet<>();
+        userSet.add(userId);
+        switch (DataAuthEnum.valueOf(dataType)) {
+            case MYSELF: {
+                return userSet;
             }
-        } else {
-            if (StrUtil.isNotEmpty(realm)) {
+            case MYSELF_AND_SUBORDINATE: {
+                userSet.addAll(adminUserService.queryChildUserId(userId));
+                break;
+            }
+            case THIS_DEPARTMENT: {
                 AdminUser adminUser = adminUserService.getById(userId);
-                for (AdminMenu adminMenu : userRoleList) {//如果有多个权限 验证当前用户是否对当前管理 是否为本人操作
-                    if (adminMenu.getRealm().equals(realm) && adminMenu.getDataType() == 1) {//当前操作的管理链接地址
-                        adminUsers.add(userId);
-                        HashSet<Long> hashSet = new HashSet<>(adminUsers);
-                        adminUsers.clear();
-                        adminUsers.addAll(hashSet);
-                        return adminUsers;
-                    } else if (adminMenu.getRealm().equals(realm) && adminMenu.getDataType() == 2) {//本人及其
-                        adminUsers.addAll(adminUserService.queryChildUserId(adminUser.getUserId()));
-                        adminUsers.add(userId);
-                        HashSet<Long> hashSet = new HashSet<>(adminUsers);
-                        adminUsers.clear();
-                        adminUsers.addAll(hashSet);
-                        return adminUsers;
-                    } else if (adminMenu.getRealm().equals(realm) && adminMenu.getDataType() == 3) {//本部门
-                        List<Long> longList = adminUserService.queryUserByDeptIds(Collections.singletonList(adminUser.getDeptId()));
-                        adminUsers.addAll(longList);
-                        return adminUsers;
-                    } else if (adminMenu.getRealm().equals(realm) && adminMenu.getDataType() == 4) {//本部门及下属部门
-                        List<Integer> deptIds = ApplicationContextHolder.getBean(IAdminDeptService.class).queryChildDept(adminUser.getDeptId());
-                        deptIds.add(adminUser.getDeptId());
-                        List<Long> longList = adminUserService.queryUserByDeptIds(deptIds);
-                        adminUsers.addAll(longList);
-                        return adminUsers;
-                    } else if (adminMenu.getRealm().equals(realm) && adminMenu.getDataType() == 5) {//全部
-                        return adminUserService.list().stream().map(AdminUser::getUserId).collect(Collectors.toList());
-                    }
-                }
-            } else {
-                if (list.contains(5)) {
-                    return adminUserService.list().stream().map(AdminUser::getUserId).collect(Collectors.toList());
-                } else {
-                    AdminUser adminUser = adminUserService.getById(userId);
-                    if (list.contains(4)) {
-                        List<Integer> deptIds = ApplicationContextHolder.getBean(IAdminDeptService.class).queryChildDept(adminUser.getDeptId());
-                        deptIds.add(adminUser.getDeptId());
-                        List<Long> longList = adminUserService.queryUserByDeptIds(deptIds);
-                        adminUsers.addAll(longList);
-                    } else if (list.contains(3)) {
-                        List<Long> longList = adminUserService.queryUserByDeptIds(Collections.singletonList(adminUser.getDeptId()));
-                        adminUsers.addAll(longList);
-                    }
-
-                    if (list.contains(2)) {
-                        adminUsers.addAll(adminUserService.queryChildUserId(adminUser.getUserId()));
-                    }
-                    adminUsers.add(adminUser.getUserId());
-                }
+                userSet.addAll(adminUserService.queryUserByDeptIds(Collections.singletonList(adminUser.getDeptId())));
+                break;
+            }
+            case THIS_DEPARTMENT_AND_SUBORDINATE: {
+                AdminUser adminUser = adminUserService.getById(userId);
+                List<Integer> deptIds = adminDeptService.queryChildDept(adminUser.getDeptId());
+                deptIds.add(adminUser.getDeptId());
+                userSet.addAll(adminUserService.queryUserByDeptIds(deptIds));
+                break;
+            }
+            case ALL: {
+                List<AdminUser> adminUsers = adminUserService.lambdaQuery().select(AdminUser::getUserId).list();
+                userSet.addAll(adminUsers.stream().map(AdminUser::getUserId).collect(Collectors.toSet()));
             }
         }
-
-        adminUsers.add(userId);
-        HashSet<Long> hashSet = new HashSet<>(adminUsers);
-        adminUsers.clear();
-        adminUsers.addAll(hashSet);
-        return adminUsers;
+        return userSet;
     }
 
     /**
@@ -741,11 +683,18 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
 
     @Override
     public List<AdminRole> queryRoleByRoleTypeAndUserId(Integer type) {
-        return getBaseMapper().queryRoleByRoleTypeAndUserId(type,UserUtil.getUserId());
+        return getBaseMapper().queryRoleByRoleTypeAndUserId(type, UserUtil.getUserId());
     }
 
+    /**
+     * 跟进角色ID查询下属员工
+     *
+     * @param roleId 角色ID
+     * @return userIds
+     */
     @Override
-    public Integer queryHrmDataAuthType(Integer menuId) {
-        return getBaseMapper().queryHrmDataAuthType(menuId,UserUtil.getUserId());
+    public List<Long> queryUserIdByRoleId(Integer roleId) {
+        LambdaQueryChainWrapper<AdminUserRole> queryChainWrapper = adminUserRoleService.lambdaQuery().select(AdminUserRole::getUserId).eq(AdminUserRole::getRoleId, roleId);
+        return queryChainWrapper.list().stream().map(AdminUserRole::getUserId).collect(Collectors.toList());
     }
 }

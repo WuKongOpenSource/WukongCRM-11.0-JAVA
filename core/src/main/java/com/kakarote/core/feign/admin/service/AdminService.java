@@ -146,25 +146,14 @@ public interface AdminService {
     @PostMapping(value = "/adminRole/queryDataType")
     public Result<Integer> queryDataType(@RequestParam("userId") Long userId, @RequestParam("menuId") Integer menuId);
 
-
-
-    /**
-     * 查询数据权限
-     * @param userId 用户ID
-     * @param menuId 菜单ID
-     * @return 权限
-     */
-    @PostMapping(value = "/adminRole/queryMaxDataType")
-    public Result<Integer> queryMaxDataType(@RequestParam("userId") Long userId, @RequestParam("menuId") Integer menuId);
-
     /**
      * 查询权限内用户
      * @param userId 用户ID
-     * @param realm 菜单标识
+     * @param menuId 菜单Id
      * @return 权限
      */
     @PostMapping(value = "/adminRole/queryUserByAuth")
-    public Result<List<Long>> queryUserByAuth(@RequestParam("userId") Long userId, @RequestParam("realm") String realm);
+    public Result<List<Long>> queryUserByAuth(@RequestParam("userId") Long userId, @RequestParam("menuId") Integer menuId);
 
     @PostMapping(value = "/adminRole/queryWorkRole")
     public Result<Integer> queryWorkRole(@RequestParam("label") Integer label);
@@ -225,12 +214,11 @@ public interface AdminService {
     @ApiExplain("查询用户id通过用户名")
     Result<Long> queryUserIdByUserName(@RequestParam("userName")String userName);
 
-    @PostMapping(value = "/adminRole/queryHrmDataAuthType")
-    @ApiExplain("查询人力资源数据权限")
-    Result<Integer> queryHrmDataAuthType(@RequestParam("menuId")Integer menuId);
-
     @PostMapping("/adminUser/queryAllUserInfoList")
     @ApiExplain("查询所有员工")
     public Result<List<UserInfo>> queryUserInfoList();
+
+    @PostMapping("/adminRole/queryUserIdByRoleId")
+    public Result<List<Long>> queryUserIdByRoleId(@RequestParam("roleId") Integer roleId);
 
 }

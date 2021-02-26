@@ -11,6 +11,7 @@ import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
@@ -18,6 +19,7 @@ import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
@@ -28,9 +30,9 @@ import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.ElasticUtil;
 import com.kakarote.crm.constant.CrmActivityEnum;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.entity.VO.CrmFieldSortVO;
@@ -102,6 +104,8 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
     @Autowired
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
 
+    @Autowired
+    private FieldService fieldService;
 
     /**
      * 查询字段配置
@@ -121,6 +125,20 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
             crmModel.put("customerId", customerList);
         }
         return crmFieldService.queryField(crmModel);
+    }
+
+    @Override
+    public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id) {
+        CrmModel crmModel = queryById(id);
+        if (id != null){
+            List<JSONObject> customerList = new ArrayList<>();
+            if (crmModel.get("customerId")!=null){
+                JSONObject customer = new JSONObject();
+                customerList.add(customer.fluentPut("customerId", crmModel.get("customerId")).fluentPut("customerName", crmModel.get("customerName")));
+            }
+            crmModel.put("customerId", customerList);
+        }
+        return crmFieldService.queryFormPositionFieldVO(crmModel);
     }
 
     /**
@@ -274,7 +292,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
             return;
         }
         for (Integer id : ids) {
-            if (AuthUtil.isRwAuth(id, CrmEnum.CONTACTS)) {
+            if (AuthUtil.isRwAuth(id, CrmEnum.CONTACTS,CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
             actionRecordUtil.addConversionRecord(id,CrmEnum.CONTACTS,newOwnerUserId,getById(id).getName());
@@ -300,7 +318,14 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
     @Override
     public void downloadExcel(HttpServletResponse response) throws IOException {
         List<CrmModelFiledVO> crmModelFiledList = queryField(null);
-        crmModelFiledList.removeIf(model -> Arrays.asList(FieldEnum.FILE, FieldEnum.CHECKBOX, FieldEnum.USER, FieldEnum.STRUCTURE).contains(FieldEnum.parse(model.getType())));
+        int k = 0;
+        for (int i = 0; i < crmModelFiledList.size(); i++) {
+            if(crmModelFiledList.get(i).getFieldName().equals("name")){
+                k=i;break;
+            }
+        }
+        crmModelFiledList.add(k+1,new CrmModelFiledVO("ownerUserId",FieldEnum.TEXT,"负责人",1).setIsNull(1));
+        removeFieldByType(crmModelFiledList);
         HSSFWorkbook wb = new HSSFWorkbook();
         HSSFSheet sheet = wb.createSheet("联系人导入表");
         sheet.setDefaultRowHeight((short) 400);
@@ -335,7 +360,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
         titleRow.createCell(0).setCellValue("联系人导入模板(*)为必填项");
         cellStyle.setAlignment(HorizontalAlignment.CENTER);
         titleRow.getCell(0).setCellStyle(cellStyle);
-        CellRangeAddress region = new CellRangeAddress(0, 0, 0, crmModelFiledList.size() - 1);
+        CellRangeAddress region = new CellRangeAddress(0, 0, 0, crmModelFiledList.size()-1);
         sheet.addMergedRegion(region);
         try {
             HSSFRow row = sheet.createRow(1);
@@ -390,12 +415,18 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
         List<Map<String, Object>> dataList = queryPageList(search).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+            headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
             headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
             writer.merge(headList.size() - 1, "线索信息");
             if (dataList.size() == 0) {
                 Map<String, Object> record = new HashMap<>();
                 headList.forEach(head -> record.put(head.getFieldName(), ""));
                 dataList.add(record);
+            }
+            for (Map<String, Object> record : dataList) {
+                headList.forEach(field ->{
+                    record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                });
             }
             writer.setOnlyAlias(true);
             writer.write(dataList, true);
@@ -626,16 +657,17 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
                 String value = contactsData != null ? contactsData.getValue() : null;
                 String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
                 actionRecordUtil.publicContentRecord(CrmEnum.CONTACTS, BehaviorEnum.UPDATE,contactsId,oldContacts.getName(),detail);
+                String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
                 boolean bol = crmContactsDataService.lambdaUpdate()
                         .set(CrmContactsData::getName,record.getString("fieldName"))
-                        .set(CrmContactsData::getValue,record.getString("value"))
+                        .set(CrmContactsData::getValue,newValue)
                         .eq(CrmContactsData::getFieldId,record.getInteger("fieldId"))
                         .eq(CrmContactsData::getBatchId,batchId).update();
                 if (!bol){
                     CrmContactsData crmContactsData = new CrmContactsData();
                     crmContactsData.setFieldId(record.getInteger("fieldId"));
                     crmContactsData.setName(record.getString("fieldName"));
-                    crmContactsData.setValue(record.getString("value"));
+                    crmContactsData.setValue(newValue);
                     crmContactsData.setCreateTime(new Date());
                     crmContactsData.setBatchId(batchId);
                     crmContactsDataService.save(crmContactsData);
@@ -643,6 +675,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
             }
             updateField(record,contactsId);
         });
+        this.lambdaUpdate().set(CrmContacts::getUpdateTime,new Date()).eq(CrmContacts::getContactsId,contactsId).update();
     }
 
     @Override

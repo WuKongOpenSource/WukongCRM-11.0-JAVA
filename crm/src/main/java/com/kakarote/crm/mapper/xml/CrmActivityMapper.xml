@@ -325,4 +325,77 @@
         </if>
         order by create_time desc
     </select>
+    <select id="exportRecordList" resultType="com.kakarote.crm.entity.PO.CrmActivity">
+        select a.activity_id,a.type,a.create_time,a.content,a.category,a.next_time,a.batch_id,a.business_ids,a.contacts_ids,a.activity_type,a.activity_type_id,a.status,
+        a.lng,a.lat,a.address,a.create_user_id,
+        (select GROUP_CONCAT(name) from `wk_crm_contacts` where contacts_id in (a.contacts_ids)) as contacts_names,
+        (select GROUP_CONCAT(business_name) from `wk_crm_business` where business_id in (a.business_ids)) as business_names,
+        (select realname from `wk_admin_user` where user_id = a.create_user_id) as create_user_name,
+        (case a.activity_type
+        when 2 then (select customer_name from `wk_crm_customer` where customer_id = a.activity_type_id)
+        when 1 then (select leads_name from `wk_crm_leads` where leads_id = a.activity_type_id)
+        when 5 then (select business_name from `wk_crm_business` where business_id = a.activity_type_id)
+        when 6 then (select num from `wk_crm_contract` where contract_id = a.activity_type_id)
+        when 3 then (select name from `wk_crm_contacts` where contacts_id = a.activity_type_id)
+        end) as 'crmTypeName'
+        from wk_crm_activity as a
+        where a.create_user_id in
+        <for collection="data.userIds" item="item">
+            #{item}
+        </for>
+        and a.status = 1
+        <choose>
+            <when test="data.queryType == 1">
+                and a.type = 1
+            </when>
+            <when test="data.queryType == 4">
+                and a.type = 4
+            </when>
+            <when test="data.queryType == 0">
+                and a.type in (1,4)
+            </when>
+        </choose>
+        <if test="data.crmType != null">
+            and a.activity_type = #{data.crmType}
+        </if>
+        <if test="data.search != null">
+            and a.content like concat('%',#{data.search},'%')
+        </if>
+        <choose>
+            <when test="data.type == 1">
+                AND TO_DAYS(a.create_time) = TO_DAYS(now())
+            </when>
+            <when test="data.type == 2">
+                AND to_days(NOW()) - TO_DAYS(a.create_time) = 1
+            </when>
+            <when test="data.type == 3">
+                AND   YEARWEEK(date_format(a.create_time,'%Y-%m-%d')) = YEARWEEK(now())
+            </when>
+            <when test="data.type == 4">
+                AND  YEARWEEK(date_format(a.create_time,'%Y-%m-%d')) = YEARWEEK(now()) -1
+            </when>
+            <when test="data.type == 5">
+                AND  date_format(a.create_time,'%Y-%m')=date_format(now(),'%Y-%m')
+            </when>
+            <when test="data.type == 6">
+                AND  date_format(a.create_time,'%Y-%m')=date_format(DATE_SUB(curdate(), INTERVAL 1 MONTH),'%Y-%m')
+            </when>
+            <when test="data.type == 7">
+                AND  QUARTER(a.create_time)=QUARTER(now())
+            </when>
+            <when test="data.type == 8">
+                AND  QUARTER(a.create_time)=QUARTER(DATE_SUB(now(),interval 1 QUARTER))
+            </when>
+            <when test="data.type == 9">
+                AND   YEAR(a.create_time)=YEAR(NOW())
+            </when>
+            <when test="data.type == 10">
+                AND  YEAR(a.create_time)=YEAR(date_sub(now(),interval 1 year))
+            </when>
+            <when test="data.type == 11">
+                AND  TO_DAYS(a.create_time) >= TO_DAYS(#{data.startTime}) and  TO_DAYS(a.create_time) &lt;= TO_DAYS(#{data.endTime})
+            </when>
+        </choose>
+        order by a.create_time desc
+    </select>
 </mapper>

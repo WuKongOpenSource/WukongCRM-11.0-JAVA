@@ -12,7 +12,7 @@ public class Const implements Serializable {
     /**
      * 项目版本
      */
-    public static final String PROJECT_VERSION = "11.2.0";
+    public static final String PROJECT_VERSION = "11.3.1";
 
     /**
      * 默认分隔符
@@ -42,12 +42,7 @@ public class Const implements Serializable {
     /**
      * PC端登录的userKey
      */
-    public static final String USER_ADMIN_TOKEN = "WK:USER:ADMIN:TOKEN:";
-
-    /**
-     * 手机端登录的userKey
-     */
-    public static final String USER_MOBILE_TOKEN = "WK:USER:MOBILE:TOKEN:";
+    public static final String USER_TOKEN = "WK:USER:TOKEN:";
 
     /**
      * 用户token的最长过期时间

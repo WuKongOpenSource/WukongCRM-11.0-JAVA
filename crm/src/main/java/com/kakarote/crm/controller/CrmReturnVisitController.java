@@ -1,6 +1,7 @@
 package com.kakarote.crm.controller;
 
 
+import cn.hutool.core.util.StrUtil;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SubModelType;
@@ -77,15 +78,21 @@ public class CrmReturnVisitController {
 
     @PostMapping("/field")
     @ApiOperation("查询新增所需字段")
-    public Result<List<CrmModelFiledVO>> queryField() {
-        List<CrmModelFiledVO> crmModelFiledList = crmReturnVisitService.queryField(null);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryReturnVisitField(@RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmReturnVisitService.queryField(null));
+        }
+        return R.ok(crmReturnVisitService.queryFormPositionField(null));
     }
+
     @PostMapping("/field/{id}")
     @ApiOperation("查询修改数据所需信息")
-    public Result<List<CrmModelFiledVO>> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id) {
-        List<CrmModelFiledVO> crmModelFiledList = crmReturnVisitService.queryField(id);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id,
+                                   @RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmReturnVisitService.queryField(id));
+        }
+        return R.ok(crmReturnVisitService.queryFormPositionField(id));
     }
     /**
      * 查询详情页基本信息

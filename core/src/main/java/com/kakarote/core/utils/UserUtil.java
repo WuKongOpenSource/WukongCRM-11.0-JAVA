@@ -9,6 +9,7 @@ import com.kakarote.core.redis.Redis;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.servlet.http.Cookie;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
@@ -73,11 +74,11 @@ public class UserUtil {
 
     public static void userExpire(String token) {
         Redis redis = BaseUtil.getRedis();
+        UserInfo userInfo = getUser();
         if (redis.exists(token)) {
             Integer time = Const.MAX_USER_EXIST_TIME;
             redis.expire(token, time);
-            redis.expire(Const.USER_ADMIN_TOKEN + getUserId(), time);
-            redis.expire(Const.USER_MOBILE_TOKEN + getUserId(), time);
+            redis.expire(getUserToken(userInfo.getLoginType(),userInfo.getUserId()), time);
         }
     }
 
@@ -87,13 +88,16 @@ public class UserUtil {
      * @param type     type 1 PC登录 2 mobile登录
      */
     public static void userToken(String token, UserInfo userInfo, Integer type) {
+        if (type == null) {
+            type = 1;
+        }
         userExit(userInfo.getUserId(), type, 1);
         Redis redis = BaseUtil.getRedis();
-        String userToken = (Objects.equals(2, type) ? Const.USER_MOBILE_TOKEN : Const.USER_ADMIN_TOKEN) + userInfo.getUserId();
+        String userToken = getUserToken(type,userInfo.getUserId());
         redis.setex(token, Const.MAX_USER_EXIST_TIME, userInfo);
         redis.setex(userToken, Const.MAX_USER_EXIST_TIME, token);
         Cookie cookie = new Cookie(Const.TOKEN_NAME, token);
-        Long second = DateUtil.betweenMs(new Date(), DateUtil.parseDate("2030-01-01"))/1000L;
+        Long second = DateUtil.betweenMs(new Date(), DateUtil.parseDate("2030-01-01")) / 1000L;
         cookie.setMaxAge(second.intValue());
         cookie.setPath("/");
         cookie.setHttpOnly(true);
@@ -114,23 +118,22 @@ public class UserUtil {
     }
 
     public static void userExit(Long userId, Integer type) {
-        userExit(userId, type, null);
+        if (type == null) {
+            for (Integer integer : Arrays.asList(1, 2, 3, 4)) {
+                userExit(userId, integer, null);
+            }
+        } else {
+            userExit(userId, type, null);
+        }
+
     }
 
-    public static void userExit(Long userId, Integer type, Integer extra) {
+    private static void userExit(Long userId, Integer type, Integer extra) {
         Redis redis = BaseUtil.getRedis();
-        String token = null, key = null;
-        if (type == null || type == 1) {
-            key = Const.USER_ADMIN_TOKEN + userId;
-        }
-        if (type == null || type == 2) {
-            key = Const.USER_MOBILE_TOKEN + userId;
-        }
-        if (key != null) {
-            if (redis.exists(key)) {
-                token = redis.get(key);
-                redis.del(key);
-            }
+        String token = null, key = getUserToken(type, userId);
+        if (redis.exists(key)) {
+            token = redis.get(key);
+            redis.del(key);
         }
         //1代表被挤掉提示
         if (Objects.equals(1, extra) && token != null) {
@@ -143,6 +146,14 @@ public class UserUtil {
                 redis.del(token);
             }
         }
+    }
+
+    /**
+     * 获取用户登录的token标识
+     * @return key
+     */
+    private static String getUserToken(Integer type,Long userId){
+        return Const.USER_TOKEN + ":" + type + ":" + userId.toString();
     }
 
 }

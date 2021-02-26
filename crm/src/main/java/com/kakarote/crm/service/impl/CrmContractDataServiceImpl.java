@@ -3,12 +3,14 @@ package com.kakarote.crm.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.entity.PO.CrmContractData;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmContractDataMapper;
 import com.kakarote.crm.service.ICrmContractDataService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,6 +27,9 @@ import java.util.List;
  */
 @Service
 public class CrmContractDataServiceImpl extends BaseServiceImpl<CrmContractDataMapper, CrmContractData> implements ICrmContractDataService {
+
+    @Autowired
+    private FieldService fieldService;
 
     /**
      * 设置用户数据
@@ -51,6 +56,7 @@ public class CrmContractDataServiceImpl extends BaseServiceImpl<CrmContractDataM
         Date date = new Date();
         for (CrmModelFiledVO obj : array) {
             CrmContractData crmContractData = BeanUtil.copyProperties(obj, CrmContractData.class);
+            crmContractData.setValue(fieldService.convertObjectValueToString(obj.getType(),obj.getValue(),crmContractData.getValue()));
             crmContractData.setName(obj.getFieldName());
             crmContractData.setCreateTime(date);
             crmContractData.setBatchId(batchId);

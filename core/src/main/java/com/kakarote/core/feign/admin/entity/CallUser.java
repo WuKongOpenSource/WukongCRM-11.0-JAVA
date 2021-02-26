@@ -22,4 +22,7 @@ public class CallUser implements Serializable {
 
     @ApiModelProperty("状态")
     private Integer state;
+
+    @ApiModelProperty("软呼还是硬呼")
+    private Integer hisUse;
 }

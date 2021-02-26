@@ -39,6 +39,8 @@ public interface AdminUserMapper extends BaseMapper<AdminUser> {
      */
     BasePage<AdminUserVO> queryUserList(BasePage<AdminUserVO> page, @Param("data") AdminUserBO adminUserBO);
 
+
+    Integer countUserByLabel(@Param("label") Integer label,@Param("status") Integer status);
     /**
      * 查询通讯录
      * @param page

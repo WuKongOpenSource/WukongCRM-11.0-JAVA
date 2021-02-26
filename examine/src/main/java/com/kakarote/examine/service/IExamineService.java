@@ -55,7 +55,7 @@ public interface IExamineService extends BaseService<Examine> {
      * @param examineId 审批ID
      * @param status    1 正常 2 停用 3 删除
      */
-    public Integer updateStatus(Long examineId, Integer status);
+    public Integer updateStatus(Long examineId, Integer status,boolean isRequest);
 
 
     /**

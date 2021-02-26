@@ -111,8 +111,12 @@ public class CallController {
         //查看用户权限
         AdminConfig adminConfig = adminService.queryFirstConfigByName("call").getData();
         boolean isStart = adminConfig != null && adminConfig.getStatus() == 1;
-        jsonObject.put("auth", callUserService.checkAuth().getData() && isStart);
+        Integer data = callUserService.checkAuth().getData();
+        jsonObject.put("auth", data != null && isStart);
         jsonObject.put("status", isStart ? 1 : 0);
+        if(data != null){
+            jsonObject.put("hisUse", 2 == data ? 2 :0);
+        }
         return R.ok(jsonObject);
     }
 }

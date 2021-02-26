@@ -3,7 +3,7 @@
 <mapper namespace="com.kakarote.examine.mapper.ExamineRecordLogMapper">
 
     <select id="selectRecordLogListByUser" resultType="com.kakarote.examine.entity.PO.ExamineRecord">
-        SELECT DISTINCT r.type_id, r.create_time FROM  `wk_examine_record` r WHERE r.record_id IN (
+        SELECT r.type_id, MAX(r.create_time) as create_time FROM  `wk_examine_record` r WHERE r.record_id IN (
             SELECT
                 t.record_id
             FROM
@@ -34,6 +34,8 @@
         <if test="data.categoryId != null">
             AND r.examine_id = #{data.categoryId}
         </if>
+        GROUP BY
+            r.type_id
         <choose>
             <when test="data.status == 1">
                 ORDER BY r.create_time DESC

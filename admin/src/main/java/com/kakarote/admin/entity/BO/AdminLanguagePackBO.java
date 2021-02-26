@@ -3,12 +3,14 @@ package com.kakarote.admin.entity.BO;
 import com.kakarote.core.entity.PageEntity;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 /**
  * @author zmj
  * 语言包服务
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @ToString
 public class AdminLanguagePackBO extends PageEntity {

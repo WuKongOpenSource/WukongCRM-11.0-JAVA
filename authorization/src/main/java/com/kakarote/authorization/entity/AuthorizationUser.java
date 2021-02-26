@@ -46,8 +46,8 @@ public class AuthorizationUser extends UserInfo implements UserDetails {
     /**
      * 登录类型 1 密码登录 2 验证码登录
      */
-    @ApiModelProperty(value = "登录类型", allowableValues = "1,2")
-    private Integer loginType;
+    @ApiModelProperty(value = "登录类型", allowableValues = "1,2,3,4")
+    private Integer loginType = 1;
 
     @ApiModelProperty(value = "类型 1 pc 2 ", allowableValues = "1,2")
     private Integer type = 1;

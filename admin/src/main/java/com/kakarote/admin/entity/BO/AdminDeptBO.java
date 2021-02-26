@@ -27,4 +27,7 @@ public class AdminDeptBO {
     @NotNull
     @Size(max = 20)
     private String name;
+
+    @ApiModelProperty(value = "部门负责人")
+    private Long ownerUserId;
 }

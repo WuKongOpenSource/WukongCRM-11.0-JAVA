@@ -1,6 +1,7 @@
 package com.kakarote.crm.controller;
 
 
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.*;
 import com.kakarote.core.common.log.BehaviorEnum;
@@ -13,9 +14,9 @@ import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.log.CrmBusinessLog;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmBusiness;
 import com.kakarote.crm.entity.PO.CrmBusinessType;
@@ -84,7 +85,7 @@ public class CrmBusinessController {
     @ApiOperation("修改数据")
     @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result update(@RequestBody CrmBusinessSaveBO crmModel) {
-        if (AuthUtil.isRwAuth((Integer) crmModel.getEntity().get("businessId"), CrmEnum.BUSINESS)) {
+        if (AuthUtil.isRwAuth((Integer) crmModel.getEntity().get("businessId"), CrmEnum.BUSINESS,CrmAuthEnum.EDIT)) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
         crmBusinessService.addOrUpdate(crmModel);
@@ -105,7 +106,7 @@ public class CrmBusinessController {
     @PostMapping("/queryProduct")
     @ApiOperation("查询产品")
     public Result<JSONObject> queryProduct(@RequestBody CrmBusinessQueryRelationBO businessQueryProductBO) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.BUSINESS, businessQueryProductBO.getBusinessId());
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.BUSINESS, businessQueryProductBO.getBusinessId(),CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -115,7 +116,7 @@ public class CrmBusinessController {
 
     @PostMapping("/queryContract")
     public Result<BasePage<JSONObject>> queryContract(@RequestBody CrmBusinessQueryRelationBO businessQueryRelationBO) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.BUSINESS, businessQueryRelationBO.getBusinessId());
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.BUSINESS, businessQueryRelationBO.getBusinessId(), CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -162,22 +163,27 @@ public class CrmBusinessController {
 
     @PostMapping("/field")
     @ApiOperation("查询新增所需字段")
-    public Result<List<CrmModelFiledVO>> queryField() {
-        List<CrmModelFiledVO> crmModelFiledList = crmBusinessService.queryField(null);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryBusinessField(@RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmBusinessService.queryField(null));
+        }
+        return R.ok(crmBusinessService.queryFormPositionField(null));
     }
 
     @PostMapping("/field/{id}")
     @ApiOperation("查询修改数据所需信息")
-    public Result<List<CrmModelFiledVO>> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id) {
-        List<CrmModelFiledVO> crmModelFiledList = crmBusinessService.queryField(id);
-        return R.ok(crmModelFiledList);
+    public Result<List> queryField(@PathVariable("id") @ApiParam(name = "id", value = "id") Integer id,
+                                   @RequestParam(value = "type",required = false) String type) {
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(crmBusinessService.queryField(id));
+        }
+        return R.ok(crmBusinessService.queryFormPositionField(id));
     }
 
     @PostMapping("/getMembers/{businessId}")
     @ApiOperation("获取团队成员")
     public Result<List<CrmMembersSelectVO>> getMembers(@PathVariable("businessId") @ApiParam("商机ID") Integer businessId) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.BUSINESS, businessId);
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.BUSINESS, businessId,CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -220,7 +226,7 @@ public class CrmBusinessController {
     @PostMapping("/queryBusinessStatus/{businessId}")
     @ApiOperation("查询商机状态")
     public Result<CrmBusinessStatusVO> queryBusinessStatus(@PathVariable("businessId") @ApiParam("商机ID") Integer businessId) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.BUSINESS, businessId);
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.BUSINESS, businessId,CrmAuthEnum.READ);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -231,7 +237,7 @@ public class CrmBusinessController {
     @PostMapping("/boostBusinessStatus")
     @ApiOperation("商机状态组推进")
     public Result boostBusinessStatus(@RequestBody CrmBusinessStatusBO businessStatus) {
-        boolean auth = AuthUtil.isRwAuth(businessStatus.getBusinessId(),CrmEnum.BUSINESS);
+        boolean auth = AuthUtil.isRwAuth(businessStatus.getBusinessId(),CrmEnum.BUSINESS,CrmAuthEnum.EDIT);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
@@ -309,7 +315,7 @@ public class CrmBusinessController {
     @ApiOperation("基本信息保存修改")
     @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInformation(@RequestBody CrmUpdateInformationBO updateInformationBO) {
-        boolean auth = AuthUtil.isRwAuth(updateInformationBO.getId(),CrmEnum.BUSINESS);
+        boolean auth = AuthUtil.isRwAuth(updateInformationBO.getId(),CrmEnum.BUSINESS,CrmAuthEnum.EDIT);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }

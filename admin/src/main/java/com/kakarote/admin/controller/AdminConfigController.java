@@ -86,6 +86,7 @@ public class AdminConfigController {
         return R.ok(adminConfigService.queryAdminConfig());
     }
 
+
     @ApiOperation(value = "头部设置")
     @PostMapping("/queryHeaderModelSort")
     public Result<List<String>> queryHeaderModelSort() {

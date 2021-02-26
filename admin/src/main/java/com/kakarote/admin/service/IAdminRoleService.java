@@ -8,6 +8,7 @@ import com.kakarote.admin.entity.PO.AdminRole;
 import com.kakarote.admin.entity.VO.AdminRoleVO;
 import com.kakarote.core.servlet.BaseService;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -74,10 +75,10 @@ public interface IAdminRoleService extends BaseService<AdminRole> {
     /**
      * 查询下属用户
      * @param userId 用户ID
-     * @param realm 权限标识
+     * @param menuId 菜单ID
      * @return 权限
      */
-    public List<Long> queryUserByAuth(Long userId,String realm);
+    public Collection<Long> queryUserByAuth(Long userId, Integer menuId);
 
     /**
      * 保存角色
@@ -145,8 +146,6 @@ public interface IAdminRoleService extends BaseService<AdminRole> {
      */
     public List<AdminRole> queryProjectRoleList();
 
-    Integer queryMaxDataType(Long userId, Integer menuId);
-
     List<AdminRole> queryRoleList();
 
     /**
@@ -156,5 +155,10 @@ public interface IAdminRoleService extends BaseService<AdminRole> {
 
     List<AdminRole> queryRoleByRoleTypeAndUserId(Integer type);
 
-    Integer queryHrmDataAuthType(Integer menuId);
+    /**
+     * 跟进角色ID查询下属员工
+     * @param roleId 角色ID
+     * @return userIds
+     */
+    public List<Long> queryUserIdByRoleId(Integer roleId);
 }

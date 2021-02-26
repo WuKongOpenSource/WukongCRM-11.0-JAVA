@@ -8,7 +8,7 @@
         from wk_admin_message as a
         left join wk_admin_user as b on a.create_user=b.user_id
         where
-        recipient_user = #{data.userId}
+        recipient_user = #{data.userId} and b.is_del = 0
         <if test="data.isRead != null">
             and is_read=#{data.isRead}
         </if>

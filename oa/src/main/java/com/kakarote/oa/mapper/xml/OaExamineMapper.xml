@@ -232,6 +232,7 @@
     </select>
     <select id="queryExamineList" resultType="com.alibaba.fastjson.JSONObject">
       select a.examine_id,a.create_time,a.money,a.content,a.remark,a.duration,d.realname as create_user_name,
+        a.start_time,a.end_time,
       a.examine_status as examine_status_back, a.examine_record_id,
           (CASE WHEN a.examine_status = 0 THEN '未审核'
                WHEN a.examine_status = 1 THEN '审核通过'

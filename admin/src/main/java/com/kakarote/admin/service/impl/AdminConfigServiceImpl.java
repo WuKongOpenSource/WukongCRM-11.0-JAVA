@@ -25,6 +25,7 @@ import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.cache.AdminCacheKey;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.crm.service.CrmAnalysisService;
+import com.kakarote.core.feign.jxc.service.JxcExamineService;
 import com.kakarote.core.feign.km.KmService;
 import com.kakarote.core.feign.oa.OaService;
 import com.kakarote.core.feign.work.WorkService;
@@ -72,6 +73,8 @@ public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, A
     private OaService oaService;
     @Autowired
     private KmService kmService;
+    @Autowired
+    private JxcExamineService jxcExamineService;
 
     /**
      * 通过name查询系统配置
@@ -331,7 +334,7 @@ public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, A
                         kmService.initKmData();
                         break;
                     case JXC:
-                        log.info("进销存模块数据初始化暂未提供！");
+                        jxcExamineService.initJxcData();
                         break;
                     case HRM:
                         log.info("人资模块数据初始化暂未提供！");

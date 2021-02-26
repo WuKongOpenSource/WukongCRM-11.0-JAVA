@@ -3,6 +3,7 @@ package com.kakarote.oa.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.ListUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
@@ -86,9 +87,11 @@ public class OaExamineController {
 
     @ApiOperation("查询详情或比编辑字段")
     @PostMapping("/getField")
-    public Result<List<OaExamineField>> getField(@RequestBody GetExamineFieldBO getExamineFieldBO){
-        List<OaExamineField> field = oaExamineService.getField(getExamineFieldBO);
-        return Result.ok(field);
+    public Result<List> getField(@RequestBody GetExamineFieldBO getExamineFieldBO){
+        if (StrUtil.isNotEmpty(getExamineFieldBO.getType())) {
+            return Result.ok(oaExamineService.getField(getExamineFieldBO));
+        }
+        return Result.ok(oaExamineService.getFormPositionField(getExamineFieldBO));
     }
 
 

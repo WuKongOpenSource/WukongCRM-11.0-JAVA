@@ -6,10 +6,13 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.UserInfo;
@@ -24,10 +27,11 @@ import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
+import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.CrmSceneEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmCustomerPoolBO;
 import com.kakarote.crm.entity.BO.CrmModelSaveBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
@@ -144,6 +148,21 @@ public interface CrmPageService {
                 if (ObjectUtil.isNotEmpty(value)) {
                     objectMap.put(field.getFieldName(), CollUtil.join(Convert.toList(String.class, value), ","));
                 } else {
+                    objectMap.put(field.getFieldName(), "");
+                }
+            }
+            if (FieldEnum.AREA.getType().equals(field.getType())
+                    || FieldEnum.AREA_POSITION.getType().equals(field.getType())
+                    || FieldEnum.CURRENT_POSITION.getType().equals(field.getType())) {
+                Object value = objectMap.get(field.getFieldName());
+                if (ObjectUtil.isNotEmpty(value)) {
+                    // TODO: 2021/1/29  临时逻辑
+                    try {
+                        objectMap.put(field.getFieldName(), JSON.parse((String) value));
+                    } catch (JSONException e) {
+                        objectMap.put(field.getFieldName(), value.toString());
+                    }
+                }else {
                     objectMap.put(field.getFieldName(), "");
                 }
             }
@@ -455,21 +474,17 @@ public interface CrmPageService {
     }
 
     /**
-     * 拼客户管理数据权限es
-     *
-     * @return
+     * 拼接客户管理数据权限
      */
     default void setCrmDataAuth(BoolQueryBuilder boolQueryBuilder) {
         UserInfo user = UserUtil.getUser();
-        List<Integer> roles = user.getRoles();
         Long userId = user.getUserId();
         CrmEnum crmEnum = getLabel();
-        if (UserUtil.getSuperUser().equals(userId) || roles.contains(UserUtil.getSuperRole())
-                || crmEnum.equals(CrmEnum.CUSTOMER_POOL)) {
+        if (UserUtil.isAdmin() || crmEnum.equals(CrmEnum.CUSTOMER_POOL)) {
             return;
         }
         BoolQueryBuilder authBoolQuery = QueryBuilders.boolQuery();
-        List<Long> dataAuthUserIds = getBean(AdminService.class).queryUserByAuth(UserUtil.getUserId(), getLabel().getTable()).getData();
+        List<Long> dataAuthUserIds = AuthUtil.queryAuthUserList(getLabel(), CrmAuthEnum.LIST);
         if (CollUtil.isNotEmpty(dataAuthUserIds)) {
             if (crmEnum.equals(CrmEnum.MARKETING)) {
                 for (Long id : dataAuthUserIds) {
@@ -641,6 +656,28 @@ public interface CrmPageService {
                     map.put(modelField.getFieldName(), data.stream().map(FileEntity::getName).collect(Collectors.toList()));
                 }
             }
+            if (FieldEnum.AREA.getType().equals(modelField.getType())
+                    || FieldEnum.AREA_POSITION.getType().equals(modelField.getType())
+                    || FieldEnum.CURRENT_POSITION.getType().equals(modelField.getType())) {
+                Object value = map.remove(modelField.getFieldName());
+                if (!ObjectUtil.isEmpty(value)) {
+                    if (value instanceof String) {
+                        map.put(modelField.getFieldName(), value.toString());
+                    }else {
+                        map.put(modelField.getFieldName(), JSON.toJSONString(value));
+                    }
+                }
+            }
+            if (FieldEnum.DATE_INTERVAL.getType().equals(modelField.getType())){
+                Object value = map.remove(modelField.getFieldName());
+                if (!ObjectUtil.isEmpty(value)) {
+                    if (value instanceof String) {
+                        map.put(modelField.getFieldName(), StrUtil.splitTrim(value.toString(), ","));
+                    }else if (value instanceof Collection){
+                        map.put(modelField.getFieldName(), (Collection)value);
+                    }
+                }
+            }
 
         });
         setOtherField(map);
@@ -723,7 +760,14 @@ public interface CrmPageService {
                 Object value = jsonObject.get("value");
                 List<FileEntity> data = getBean(AdminFileService.class).queryFileList((String) value).getData();
                 map.put(fieldName, data.stream().map(FileEntity::getName).collect(Collectors.joining(",")));
-            } else if (jsonObject.getInteger("fieldType") == 0 && Arrays.asList(3, 8, 9, 10, 11, 12).contains(jsonObject.getInteger("type"))) {
+            }else if (FieldEnum.AREA.getType().equals(jsonObject.getInteger("type"))
+                    || FieldEnum.AREA_POSITION.getType().equals(jsonObject.getInteger("type"))
+                    || FieldEnum.CURRENT_POSITION.getType().equals(jsonObject.getInteger("type"))) {
+                Object value = jsonObject.get("value");
+                if (!ObjectUtil.isEmpty(value)) {
+                    map.put(fieldName, JSON.toJSONString(value));
+                }
+            }else if (jsonObject.getInteger("fieldType") == 0 && Arrays.asList(3, 8, 9, 10, 11, 12).contains(jsonObject.getInteger("type"))) {
                 Object value = jsonObject.get("value");
                 if (value != null) {
                     map.put(fieldName, StrUtil.splitTrim(value.toString(), ","));
@@ -921,6 +965,11 @@ public interface CrmPageService {
         AdminService adminService = getBean(AdminService.class);
         List<CrmModelFiledVO> filedVOS = crmFieldService.queryField(crmModel);
         filedVOS.removeIf(field -> !fieldKey.contains(field.getFieldName()) && field.getFieldType() == 1);
+        filedVOS.forEach(field -> {
+            if ("website".equals(field.getFieldName())){
+                field.setFormType(FieldEnum.WEBSITE.getFormType());
+            }
+        });
         if (!getLabel().equals(CrmEnum.RETURN_VISIT)) {
             CrmModelFiledVO filedVO = new CrmModelFiledVO("owner_user_name", FieldEnum.USER);
             filedVO.setName("负责人");
@@ -975,5 +1024,18 @@ public interface CrmPageService {
             entityMap.put("createUserId" ,UserUtil.getUserId());
             examineRecordSaveBO.setDataMap(entityMap);
         }
+    }
+
+    /**
+    * 去除不支持导入的字段
+    * @date 2021/1/30 15:12
+    * @param crmModelFiledList
+    * @return
+    **/
+    default void removeFieldByType(List<CrmModelFiledVO> crmModelFiledList){
+        List<FieldEnum> fieldEnums = Arrays.asList(FieldEnum.FILE, FieldEnum.CHECKBOX, FieldEnum.USER, FieldEnum.STRUCTURE,
+                FieldEnum.AREA,FieldEnum.AREA_POSITION,FieldEnum.CURRENT_POSITION,FieldEnum.DATE_INTERVAL,FieldEnum.BOOLEAN_VALUE,
+                FieldEnum.HANDWRITING_SIGN,FieldEnum.DESC_TEXT,FieldEnum.DETAIL_TABLE,FieldEnum.CALCULATION_FUNCTION);
+        crmModelFiledList.removeIf(model -> fieldEnums.contains(FieldEnum.parse(model.getType())));
     }
 }

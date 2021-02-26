@@ -34,6 +34,8 @@ public interface ICrmReceivablesService extends BaseService<CrmReceivables> {
      */
     public List<CrmModelFiledVO> queryField(Integer id);
 
+    public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id);
+
     /**
      * 分页查询
      *

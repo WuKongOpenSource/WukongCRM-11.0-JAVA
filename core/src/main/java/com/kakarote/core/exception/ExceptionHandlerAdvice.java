@@ -1,5 +1,6 @@
 package com.kakarote.core.exception;
 
+import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
@@ -104,8 +105,8 @@ public class ExceptionHandlerAdvice {
     public Result feignException(FeignException ex) {
         log.error("feign异常：", ex);
         String message = ex.getMessage();
-        if (StrUtil.isNotEmpty(message) && message.matches("[\\u4e00-\\u9fa5]+(!?|！?)")) {
-            return Result.error(SystemCodeEnum.SYSTEM_SERVER_ERROR,message);
+        if (StrUtil.isNotEmpty(message) && ReUtil.contains("[\\u4e00-\\u9fa5]", message)) {
+            return Result.error(ex.status(),message);
         } else {
             return Result.error(SystemCodeEnum.SYSTEM_SERVER_ERROR);
         }

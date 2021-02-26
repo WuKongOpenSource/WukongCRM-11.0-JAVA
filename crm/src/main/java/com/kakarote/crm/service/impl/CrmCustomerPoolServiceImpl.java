@@ -9,6 +9,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
@@ -23,7 +24,6 @@ import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.constant.CrmActivityEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.entity.VO.CrmCustomerPoolVO;
@@ -302,6 +302,7 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
     @Override
     public List<CrmModelFiledVO> queryPoolField() {
         List<CrmModelFiledVO> fieldList = crmFieldService.queryField(CrmEnum.CUSTOMER.getType());
+        fieldList.removeIf(field -> FieldEnum.DESC_TEXT.getType().equals(field.getType()));
         List<Object> dealStatusList = new ArrayList<>();
         dealStatusList.add(new JSONObject().fluentPut("name", "未成交").fluentPut("value", 0));
         dealStatusList.add(new JSONObject().fluentPut("name", "已成交").fluentPut("value", 1));

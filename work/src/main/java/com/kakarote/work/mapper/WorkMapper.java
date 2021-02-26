@@ -53,5 +53,7 @@ public interface WorkMapper extends BaseMapper<Work> {
 
     public List<WorkOwnerRoleBO> queryOwnerRoleList(@Param("workId") Integer workId);
 
+    public String queryRoleName(@Param("roleId") Integer roleId);
+
     public List<Map<String, Object>> workTaskExport(@Param("workId") Integer workId);
 }

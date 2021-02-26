@@ -16,6 +16,7 @@ public enum ExamineCodeEnum implements ResultCode {
     EXAMINE_AUTH_ERROR(4202, "该审核已通过，不能撤回"),
     EXAMINE_ROLE_NO_USER_ERROR(4203, "自选的角色下没有检测到人员，请核实！"),
     EXAMINE_NAME_NO_USER_ERROR(4204, "审批流名称重复，请核实！"),
+    EXAMINE_SPECIAL_TYPE_NOT_DELETE_ERROR(4204, "系统默认审批不允许删除！"),
     ;
 
     ExamineCodeEnum(int code, String msg) {

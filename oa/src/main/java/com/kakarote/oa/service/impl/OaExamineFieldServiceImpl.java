@@ -3,35 +3,28 @@ package com.kakarote.oa.service.impl;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
 import com.kakarote.core.common.Const;
-import com.kakarote.core.common.Result;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.exception.CrmException;
-import com.kakarote.core.feign.admin.entity.SimpleDept;
-import com.kakarote.core.feign.admin.entity.SimpleUser;
-import com.kakarote.core.feign.admin.service.AdminFileService;
-import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.examine.entity.ExamineInfoVo;
 import com.kakarote.core.feign.examine.service.ExamineService;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.BaseServiceImpl;
-import com.kakarote.core.servlet.upload.FileEntity;
-import com.kakarote.core.utils.TagUtil;
 import com.kakarote.oa.common.OaCodeEnum;
-import com.kakarote.oa.constart.FieldEnum;
 import com.kakarote.oa.entity.BO.ExamineFieldBO;
 import com.kakarote.oa.entity.PO.OaExamineData;
 import com.kakarote.oa.entity.PO.OaExamineField;
 import com.kakarote.oa.mapper.OaExamineFieldMapper;
-import com.kakarote.oa.service.IOaExamineCategoryService;
 import com.kakarote.oa.service.IOaExamineDataService;
 import com.kakarote.oa.service.IOaExamineFieldService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -46,23 +39,40 @@ import java.util.stream.Collectors;
 public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMapper, OaExamineField> implements IOaExamineFieldService {
 
     @Autowired
-    private OaExamineFieldMapper examineFieldMapper;
+    private FieldService fieldService;
 
     @Autowired
-    private AdminService adminService;
+    private IOaExamineDataService examineDataService;
 
     @Autowired
-    private AdminFileService adminFileService;
+    private ExamineService examineService;
 
     @Override
     public List<OaExamineField> queryField(Integer id) {
         List<OaExamineField> list = lambdaQuery().eq(OaExamineField::getExamineCategoryId, id).orderByAsc(OaExamineField::getSorting).list();
+        ExamineInfoVo examineInfoVo = examineService.queryExamineById(Long.valueOf(id)).getData();
+        Integer oaType = Optional.ofNullable(examineInfoVo.getOaType()).orElse(0);
+        if (ListUtil.toList(1,2,3,4,5,6).contains(oaType)){
+            for (int i = 0; i < list.size(); i++) {
+                OaExamineField field = list.get(i);
+                if (Objects.equals(oaType,2) && "审批内容".equals(field.getName())){
+                    field.setName("请假事由");
+                }
+                field.setFormPosition(i + ",0");
+                field.setStylePercent(100);
+            }
+        }
         recordToFormType(list);
         return list;
     }
 
     @Override
-    public void recordToFormType(List<OaExamineField> list) {
+    public List<List<OaExamineField>> queryFormPositionField(Integer id) {
+        List<OaExamineField> list = this.queryField(id);
+        return fieldService.convertFormPositionFieldList(list,OaExamineField::getXAxis,OaExamineField::getYAxis, OaExamineField::getSorting);
+    }
+
+    private void recordToFormType(List<OaExamineField> list) {
         for (OaExamineField record : list) {
             FieldEnum typeEnum = FieldEnum.parse(record.getType());
             record.setFormType(typeEnum.getFormType());
@@ -72,9 +82,19 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
                 case SELECT:
                     record.setSetting(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR));
                     break;
+                case DATE_INTERVAL:
+                    String dataValueStr = Optional.ofNullable(record.getDefaultValue()).orElse("").toString();
+                    record.setDefaultValue(StrUtil.split(dataValueStr, Const.SEPARATOR));
+                    break;
                 case USER:
                 case STRUCTURE:
                     record.setDefaultValue(new ArrayList<>(0));
+                    break;
+                case AREA:
+                case AREA_POSITION:
+                case CURRENT_POSITION:
+                    String defaultValue = Optional.ofNullable(record.getDefaultValue()).orElse("").toString();
+                    record.setDefaultValue(JSON.parse(defaultValue));
                     break;
                 default:
                     record.setSetting(new ArrayList<>());
@@ -96,10 +116,19 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
         return false;
     }
 
+    /**
+     * 根据batchId查询values
+     * @param batchId batchId
+     * @return valuesMap
+     */
     @Override
-    public String queryFieldValueByBatchId(Integer fieldId, String batchId) {
-        return examineDataService.lambdaQuery().select(OaExamineData::getValue).eq(OaExamineData::getFieldId,fieldId).eq(OaExamineData::getBatchId,batchId)
-                .oneOpt().map(OaExamineData::getValue).orElse("");
+    public Map<Integer,String> queryFieldData(String batchId) {
+        List<OaExamineData> examineData = examineDataService.lambdaQuery().select(OaExamineData::getFieldId,OaExamineData::getValue).eq(OaExamineData::getBatchId, batchId).list();
+        Map<Integer,String> dataMap = new HashMap<>(examineData.size(),1.0f);
+        for (OaExamineData data : examineData) {
+            dataMap.put(data.getFieldId(),data.getValue());
+        }
+        return dataMap;
     }
 
     @Override
@@ -107,56 +136,23 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
         recordList.forEach(record -> {
             Integer dataType = record.getType();
             if (isDetail == 2) {
-                if (FieldEnum.USER.getType().equals(dataType)) {
-                    if (ObjectUtil.isNotEmpty(record.getValue())) {
-                        Result<List<SimpleUser>> listResult = adminService.queryUserByIds(TagUtil.toLongSet((String) record.getValue()));
-                        record.setValue(listResult.getData());
-                    }
-                } else if (FieldEnum.STRUCTURE.getType().equals(dataType)) {
-                    if (ObjectUtil.isNotEmpty(record.getValue())) {
-                        Result<List<SimpleDept>> listResult = adminService.queryDeptByIds(TagUtil.toSet((String) record.getValue()));
-                        record.setValue(listResult.getData());
-                    }
-                }else if (FieldEnum.CHECKBOX.getType().equals(dataType)) {
+               if (FieldEnum.CHECKBOX.getType().equals(dataType)) {
                     if (ObjectUtil.isNotEmpty(record.getValue())) {
                         String[] split = StrUtil.split((String) record.getValue(), ",");
                         record.setValue(split);
                     }
                 }
-            } else {
-                if (FieldEnum.USER.getType().equals(dataType)) {
-                    if (ObjectUtil.isNotEmpty(record.getValue())) {
-                        Result<List<SimpleUser>> listResult = adminService.queryUserByIds(TagUtil.toLongSet((String) record.getValue()));
-                        String value = listResult.getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
-                        record.setValue(value);
-                    }
-                } else if (FieldEnum.STRUCTURE.getType().equals(dataType)) {
-                    if (ObjectUtil.isNotEmpty(record.getValue())) {
-                        Result<List<SimpleDept>> listResult = adminService.queryDeptByIds(TagUtil.toSet((String) record.getValue()));
-                        String value = listResult.getData().stream().map(SimpleDept::getName).collect(Collectors.joining(","));
-                        record.setValue(value);
-                    }
-                }
             }
-            if (dataType.equals(FieldEnum.FILE.getType())) {
-                if (ObjectUtil.isNotEmpty(record.getValue())) {
-                    Result<List<FileEntity>> fileList = adminFileService.queryFileList((String) record.getValue());
-                    record.setValue(fileList.getData());
-                }
+            if (ObjectUtil.isNotEmpty(record.getValue())) {
+                FieldEnum fieldEnum = FieldEnum.parse(dataType);
+                record.setValue(fieldService.convertValueByFormType(record.getValue(),fieldEnum));
             }
+
         });
     }
 
-    @Autowired
-    private IOaExamineCategoryService categoryService;
-
-    @Autowired
-    private IOaExamineDataService examineDataService;
-
-    @Autowired
-    private ExamineService examineService;
-
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void saveField(ExamineFieldBO examineFieldBO) {
         List<OaExamineField> data = examineFieldBO.getData();
         Map<String, List<OaExamineField>> collect = data.stream().collect(Collectors.groupingBy(OaExamineField::getName));
@@ -178,18 +174,26 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
         for (int i = 0; i < data.size(); i++) {
             OaExamineField entity = data.get(i);
             entity.setUpdateTime(DateUtil.date());
-            if (entity.getFieldType() == null || entity.getFieldType() == 0) {
-                entity.setFieldName(entity.getName());
-            }
             entity.setExamineCategoryId(categoryId);
             entity.setSorting(i);
-            if (entity.getFieldId() != null) {
-                if (!(entity.getDefaultValue() instanceof String)) {
-                    entity.setDefaultValue(entity.getDefaultValue().toString());
+            if (ObjectUtil.isEmpty(entity.getDefaultValue())) {
+                entity.setDefaultValue("");
+            }else {
+                boolean isNeedHandle = FieldEnum.AREA.getType().equals(entity.getType())
+                        || FieldEnum.AREA_POSITION.getType().equals(entity.getType())
+                        || FieldEnum.CURRENT_POSITION.getType().equals(entity.getType());
+                if (isNeedHandle) {
+                    entity.setDefaultValue(JSON.toJSONString(entity.getDefaultValue()));
                 }
+                if (entity.getDefaultValue() instanceof Collection) {
+                    entity.setDefaultValue(StrUtil.join(Const.SEPARATOR, entity.getDefaultValue()));
+                }
+            }
+            if (entity.getFieldId() != null) {
                 updateById(entity);
                 examineDataService.lambdaUpdate().set(OaExamineData::getName,entity.getName()).eq(OaExamineData::getFieldId,entity.getFieldId()).update();
             } else {
+                entity.setFieldName(getFieldName(entity.getExamineCategoryId()));
                 save(entity);
             }
         }
@@ -214,5 +218,20 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
         content.setIsNull(0);
         content.setName("备注");
         this.save(content);
+    }
+
+    /**
+     * 获取fieldName
+     * @param categoryId c
+     * @return fieldName
+     */
+    private String getFieldName(Integer categoryId){
+        List<OaExamineField> fields = lambdaQuery().select(OaExamineField::getFieldName).eq(OaExamineField::getExamineCategoryId, categoryId).list();
+        List<String> names = fields.stream().map(OaExamineField::getFieldName).collect(Collectors.toList());
+        String name = "field_" + RandomUtil.randomString(RandomUtil.BASE_CHAR,6);
+        if(names.contains(name)){
+            return getFieldName(categoryId);
+        }
+        return name;
     }
 }

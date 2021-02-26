@@ -11,7 +11,7 @@
                a.style AS width
         FROM
              wk_crm_field_sort AS a
-        WHERE label = #{label} and user_id=#{userId} and is_hide = '0'
+        WHERE label = #{label} and user_id=#{userId} and is_hide = '0' and type not in (8,50)
         ORDER BY sort asc
     </select>
 </mapper>

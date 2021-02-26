@@ -17,6 +17,4 @@ spring:
       username:
       password:
 
-sys-log:
-  type: es
 

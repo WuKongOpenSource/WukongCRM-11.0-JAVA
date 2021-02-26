@@ -77,4 +77,6 @@ public class AdminUserVO {
 
     private Integer emailId;
 
+    @ApiModelProperty("用户标识,0 主账号 1 部门负责人 2 普通用户")
+    private Integer userIdentity = 2;
 }

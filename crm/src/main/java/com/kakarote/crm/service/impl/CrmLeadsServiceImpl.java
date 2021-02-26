@@ -11,6 +11,8 @@ import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.kakarote.core.common.FieldEnum;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
@@ -18,14 +20,19 @@ import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.feign.crm.entity.QueryEventCrmPageBO;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.CrmModel;
-import com.kakarote.crm.constant.*;
+import com.kakarote.crm.constant.CrmActivityEnum;
+import com.kakarote.crm.constant.CrmBackLogEnum;
+import com.kakarote.crm.constant.CrmCodeEnum;
+import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.CrmModelSaveBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
@@ -100,6 +107,9 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
     @Autowired
     private AdminService adminService;
 
+    @Autowired
+    private FieldService fieldService;
+
     @Resource
     private CrmPageService customerService;
 
@@ -155,6 +165,12 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
     public List<CrmModelFiledVO> queryField(Integer id) {
         CrmModel crmModel = queryById(id);
         return crmFieldService.queryField(crmModel);
+    }
+
+    @Override
+    public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id) {
+        CrmModel crmModel = queryById(id);
+        return crmFieldService.queryFormPositionFieldVO(crmModel);
     }
 
     /**
@@ -284,16 +300,20 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
      * @param newOwnerUserId 新负责人ID
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void changeOwnerUser(List<Integer> leadsIds, Long newOwnerUserId) {
         LambdaUpdateWrapper<CrmLeads> wrapper = new LambdaUpdateWrapper<>();
         wrapper.in(CrmLeads::getLeadsId, leadsIds);
         wrapper.set(CrmLeads::getOwnerUserId, newOwnerUserId);
         wrapper.set(CrmLeads::getFollowup, 0);
         wrapper.set(CrmLeads::getIsReceive, 1);
-        update(wrapper);
         for (Integer leadsId : leadsIds) {
-            actionRecordUtil.addConversionRecord(leadsId,CrmEnum.LEADS,newOwnerUserId,getById(leadsId).getLeadsName());
+            CrmLeads crmLeads = getById(leadsId);
+            BaseUtil.getRedis().del(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + crmLeads.getOwnerUserId().toString());
+            actionRecordUtil.addConversionRecord(leadsId,CrmEnum.LEADS,newOwnerUserId,crmLeads.getLeadsName());
         }
+        update(wrapper);
+        BaseUtil.getRedis().del(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + newOwnerUserId.toString());
         //修改es
         String ownerUserName = UserCacheUtil.getUserName(newOwnerUserId);
         Map<String, Object> map = new HashMap<>();
@@ -467,7 +487,6 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
         elasticsearchRestTemplate.refresh(getIndex());
     }
 
-
     private void saveCustomerField(List<CrmCustomerData> customerDataList, String batchId) {
         if (CollUtil.isEmpty(customerDataList) || StrUtil.isEmpty(batchId)) {
             return;
@@ -492,7 +511,14 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
     @Override
     public void downloadExcel(HttpServletResponse response) throws IOException {
         List<CrmModelFiledVO> crmModelFiledList = queryField(null);
-        crmModelFiledList.removeIf(model -> Arrays.asList(FieldEnum.FILE, FieldEnum.CHECKBOX, FieldEnum.USER, FieldEnum.STRUCTURE).contains(FieldEnum.parse(model.getType())));
+        int k = 0;
+        for (int i = 0; i < crmModelFiledList.size(); i++) {
+            if(crmModelFiledList.get(i).getFieldName().equals("leadsName")){
+                k=i;break;
+            }
+        }
+        crmModelFiledList.add(k+1,new CrmModelFiledVO("ownerUserId",FieldEnum.TEXT,"负责人",1).setIsNull(1));
+        removeFieldByType(crmModelFiledList);
         HSSFWorkbook wb = new HSSFWorkbook();
         HSSFSheet sheet = wb.createSheet("线索导入表");
         sheet.setDefaultRowHeight((short) 400);
@@ -527,7 +553,7 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
         titleRow.createCell(0).setCellValue("线索导入模板(*)为必填项");
         cellStyle.setAlignment(HorizontalAlignment.CENTER);
         titleRow.getCell(0).setCellStyle(cellStyle);
-        CellRangeAddress region = new CellRangeAddress(0, 0, 0, crmModelFiledList.size() - 1);
+        CellRangeAddress region = new CellRangeAddress(0, 0, 0, crmModelFiledList.size()-1);
         sheet.addMergedRegion(region);
         try {
             HSSFRow row = sheet.createRow(1);
@@ -581,12 +607,18 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
         List<Map<String, Object>> dataList = queryPageList(search).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+            headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
             headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
             writer.merge(headList.size() - 1, "线索信息");
             if (dataList.size() == 0) {
                 Map<String, Object> record = new HashMap<>();
                 headList.forEach(head -> record.put(head.getFieldName(), ""));
                 dataList.add(record);
+            }
+            for (Map<String, Object> record : dataList) {
+                headList.forEach(field ->{
+                    record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                });
             }
             writer.setOnlyAlias(true);
             writer.write(dataList, true);
@@ -751,16 +783,17 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
                 String value = leadsData != null ? leadsData.getValue() : null;
                 String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
                 actionRecordUtil.publicContentRecord(CrmEnum.LEADS, BehaviorEnum.UPDATE,leadsId,oldLeads.getLeadsName(),detail);
+                String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
                 boolean bol = crmLeadsDataService.lambdaUpdate()
                         .set(CrmLeadsData::getName,record.getString("fieldName"))
-                        .set(CrmLeadsData::getValue,record.getString("value"))
+                        .set(CrmLeadsData::getValue,newValue)
                         .eq(CrmLeadsData::getFieldId,record.getInteger("fieldId"))
                         .eq(CrmLeadsData::getBatchId,batchId).update();
                 if (!bol){
                     CrmLeadsData crmLeadsData = new CrmLeadsData();
                     crmLeadsData.setFieldId(record.getInteger("fieldId"));
                     crmLeadsData.setName(record.getString("fieldName"));
-                    crmLeadsData.setValue(record.getString("value"));
+                    crmLeadsData.setValue(newValue);
                     crmLeadsData.setCreateTime(new Date());
                     crmLeadsData.setBatchId(batchId);
                     crmLeadsDataService.save(crmLeadsData);
@@ -768,7 +801,7 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
             }
             updateField(record,leadsId);
         });
-
+        this.lambdaUpdate().set(CrmLeads::getUpdateTime,new Date()).eq(CrmLeads::getLeadsId,leadsId).update();
     }
 
     @Override

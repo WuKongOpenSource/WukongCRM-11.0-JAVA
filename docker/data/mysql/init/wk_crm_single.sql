@@ -98,13 +98,14 @@ CREATE TABLE `wk_admin_dept`  (
   `name` varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '部门名称',
   `num` int(4) NULL DEFAULT NULL COMMENT '排序 越大越靠后',
   `remark` varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '部门备注',
+  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '部门负责人',
   PRIMARY KEY (`dept_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 14853 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_dept
 -- ----------------------------
-INSERT INTO `wk_admin_dept` VALUES (14852, 0, '全公司', 1, '');
+INSERT INTO `wk_admin_dept` VALUES (14852, 0, '全公司', 1, '', NULL);
 
 -- ----------------------------
 -- Table structure for wk_admin_file
@@ -369,10 +370,10 @@ INSERT INTO `wk_admin_menu` VALUES (426, 420, '转移', 'transfer', '/crmInvoice
 INSERT INTO `wk_admin_menu` VALUES (427, 420, '标记开票', 'updateInvoiceStatus', '/crmInvoice/updateInvoiceStatus', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (428, 420, '重置开票信息', 'resetInvoiceStatus', '/crmInvoice/resetInvoiceStatus', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (440, 1, '跟进记录管理', 'followRecord', NULL, NULL, 1, 10, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (441, 440, '查看', 'read', '', NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (442, 440, '新建', 'save', '/crmActivity/addCrmActivityRecord', NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (443, 440, '编辑', 'update', '/crmActivity/updateActivityRecord', NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (444, 440, '删除', 'delete', '/crmActivity/deleteCrmActivityRecord/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (441, 440, '查看', 'read', '/crmInstrument/queryRecordList', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (442, 440, '新建', 'save', '/crmActivity/addCrmActivityRecord', NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (443, 440, '编辑', 'update', '/crmActivity/updateActivityRecord', NULL, 3, 3, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (444, 440, '删除', 'delete', '/crmActivity/deleteCrmActivityRecord/*', NULL, 3, 4, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (500, 180, '打印模板设置', 'print', '', NULL, 3, 3, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (501, 12, '打印', 'print', '', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (502, 13, '打印', 'print', '', NULL, 3, 1, 1, NULL);
@@ -563,6 +564,8 @@ INSERT INTO `wk_admin_menu` VALUES (923, 3, '初始化', 'init', NULL, NULL, 1, 
 INSERT INTO `wk_admin_menu` VALUES (924, 923, '初始化管理', 'initData', '/adminConfig/moduleInitData', NULL, 3, 0, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (926, 180, '市场活动表单设置', 'activityForm', '/crmMarketingForm/page', NULL, 3, 6, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (927, 301, '管理参与人权限', 'manageTaskOwnerUser', '', NULL, 3, 29, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (928, 440, '导入', 'excelimport', '/crmInstrument/importRecordList', NULL, 3, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (929, 440, '导出', 'excelexport', '/crmInstrument/exportRecordList', NULL, 3, 6, 1, NULL);
 
 -- ----------------------------
 -- Table structure for wk_admin_message
@@ -983,7 +986,7 @@ CREATE TABLE `wk_admin_user`  (
   `parent_id` bigint(20) NULL DEFAULT 0 COMMENT '直属上级ID',
   `last_login_time` datetime(0) NULL DEFAULT NULL COMMENT '最后登录时间',
   `last_login_ip` varchar(30) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '最后登录IP 注意兼容IPV6',
-  `old_user_id` bigint(20) NULL DEFAULT NULL,
+  `is_del` int(1) NOT NULL DEFAULT 0 COMMENT '是否删除 0 未删除 1 已删除',
   PRIMARY KEY (`user_id`) USING BTREE,
   INDEX `parent_id`(`parent_id`) USING BTREE,
   INDEX `dept_id`(`dept_id`) USING BTREE
@@ -5895,16 +5898,21 @@ CREATE TABLE `wk_crm_field`  (
   `remark` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段说明',
   `input_tips` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '输入提示',
   `max_length` int(12) NULL DEFAULT NULL COMMENT '最大长度',
-  `default_value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '默认值',
+  `default_value` varchar(5000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '默认值',
   `is_unique` int(1) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
   `is_null` int(1) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
   `sorting` int(5) NULL DEFAULT 1 COMMENT '排序 从小到大',
   `options` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '如果类型是选项，此处不能为空，多个选项以，隔开',
-  `operating` int(1) NULL DEFAULT 0 COMMENT '是否可以删除修改 0 改删 1 改 2 删 3 无 4 不可修改必填',
+  `operating` int(1) NULL DEFAULT 255 COMMENT '是否可以删除修改',
   `is_hidden` int(1) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
   `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '最后修改时间',
   `field_type` int(2) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
   `relevant` int(11) NULL DEFAULT NULL COMMENT '只有线索需要，转换客户的自定义字段ID',
+  `style_percent` int(3) NULL DEFAULT 50 COMMENT '样式百分比%',
+  `precisions` int(2) NULL DEFAULT NULL COMMENT '精度，允许的最大小数位',
+  `form_position` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '表单定位 坐标格式： 1,1',
+  `max_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最大数值',
+  `min_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最小数值',
   PRIMARY KEY (`field_id`) USING BTREE,
   INDEX `label`(`label`) USING BTREE,
   INDEX `update_time`(`update_time`) USING BTREE
@@ -5913,83 +5921,83 @@ CREATE TABLE `wk_crm_field`  (
 -- ----------------------------
 -- Records of wk_crm_field
 -- ----------------------------
-INSERT INTO `wk_crm_field` VALUES (1101827, 'customer_name', '客户名称', 1, 2, NULL, NULL, 255, '', 1, 1, 0, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101828, 'source', '客户来源', 3, 2, NULL, NULL, NULL, '', 0, 0, 1, '促销,搜索引擎,广告,转介绍,线上注册,线上询价,预约上门,陌拜,电话咨询,邮件咨询', 1, 0, NULL, 2, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101829, 'mobile', '手机', 7, 2, NULL, NULL, 255, '', 0, 0, 2, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101830, 'telephone', '电话', 1, 2, NULL, NULL, 255, '', 0, 0, 3, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101831, 'website', '网址', 1, 2, NULL, NULL, 255, '', 0, 0, 4, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101832, 'industry', '客户行业', 3, 2, NULL, NULL, NULL, '', 0, 0, 5, 'IT,金融业,房地产,商业服务,运输/物流,生产,政府,文化传媒', 1, 0, NULL, 2, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101833, 'level', '客户级别', 3, 2, NULL, NULL, NULL, '', 0, 0, 6, 'A（重点客户）,B（普通客户）,C（非优先客户）', 1, 0, NULL, 2, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101834, 'next_time', '下次联系时间', 13, 2, NULL, NULL, NULL, '', 0, 0, 7, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101835, 'remark', '备注', 2, 2, NULL, NULL, 255, '', 0, 0, 8, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101836, 'email', '邮箱', 14, 2, NULL, NULL, 255, '', 0, 0, 4, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101837, 'leads_name', '线索名称', 1, 1, NULL, NULL, 255, '', 0, 1, 0, NULL, 1, 0, '2020-08-22 15:33:40', 1, 1101827);
-INSERT INTO `wk_crm_field` VALUES (1101838, 'email', '邮箱', 14, 1, NULL, NULL, 255, '', 0, 0, 1, NULL, 1, 0, '2020-08-22 15:33:40', 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101839, 'source', '线索来源', 3, 1, NULL, NULL, NULL, '', 0, 0, 2, '促销,搜索引擎,广告,转介绍,线上注册,线上询价,预约上门,陌拜,电话咨询,邮件咨询', 1, 0, '2020-08-22 15:33:40', 2, 1101828);
-INSERT INTO `wk_crm_field` VALUES (1101840, 'mobile', '手机', 7, 1, NULL, NULL, 255, '', 0, 0, 3, NULL, 1, 0, '2020-08-22 15:33:40', 1, 1101829);
-INSERT INTO `wk_crm_field` VALUES (1101841, 'telephone', '电话', 1, 1, NULL, NULL, 255, '', 0, 0, 4, NULL, 1, 0, '2020-08-22 15:33:40', 1, 1101830);
-INSERT INTO `wk_crm_field` VALUES (1101842, 'address', '地址', 1, 1, NULL, NULL, 255, '', 0, 0, 5, NULL, 1, 0, '2020-08-22 15:33:40', 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101843, 'industry', '客户行业', 3, 1, NULL, NULL, NULL, '', 0, 0, 6, 'IT,金融业,房地产,商业服务,运输/物流,生产,政府,文化传媒', 1, 0, '2020-08-22 15:33:40', 2, 1101832);
-INSERT INTO `wk_crm_field` VALUES (1101844, 'level', '客户级别', 3, 1, NULL, NULL, NULL, '', 0, 0, 7, 'A（重点客户）,B（普通客户）,C（非优先客户）', 1, 0, '2020-08-22 15:33:40', 2, 1101833);
-INSERT INTO `wk_crm_field` VALUES (1101845, 'next_time', '下次联系时间', 13, 1, NULL, NULL, NULL, '', 0, 0, 8, NULL, 1, 0, '2020-08-22 15:33:40', 1, 1101834);
-INSERT INTO `wk_crm_field` VALUES (1101846, 'remark', '备注', 2, 1, NULL, NULL, 255, '', 0, 0, 9, NULL, 1, 0, '2020-08-22 15:33:40', 1, 1101835);
-INSERT INTO `wk_crm_field` VALUES (1101847, 'name', '姓名', 1, 3, NULL, NULL, 255, '', 0, 1, 0, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101848, 'customer_id', '客户名称', 15, 3, NULL, NULL, NULL, '', 0, 1, 1, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101849, 'mobile', '手机', 7, 3, NULL, NULL, 255, '', 0, 0, 2, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101850, 'telephone', '电话', 1, 3, NULL, NULL, 255, '', 0, 0, 3, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101851, 'email', '邮箱', 14, 3, NULL, NULL, 255, '', 0, 0, 4, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101852, 'post', '职务', 1, 3, NULL, NULL, 255, '', 0, 0, 5, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101853, 'policymakers', '是否关键决策人', 3, 3, NULL, NULL, NULL, '', 0, 0, 6, '是,否', 1, 0, NULL, 2, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101854, 'address', '地址', 1, 3, NULL, NULL, 255, '', 0, 0, 7, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101855, 'next_time', '下次联系时间', 13, 3, NULL, NULL, NULL, '', 0, 0, 8, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101856, 'remark', '备注', 2, 3, NULL, NULL, 255, '', 0, 0, 9, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101857, 'sex', '性别', 3, 3, NULL, NULL, NULL, '', 0, 0, 10, '男,女', 1, 0, NULL, 2, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101858, 'name', '产品名称', 1, 4, NULL, NULL, 255, '', 0, 1, 0, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101859, 'category_id', '产品类型', 19, 4, NULL, NULL, NULL, '', 0, 1, 1, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101860, 'unit', '产品单位', 3, 4, NULL, NULL, NULL, '', 0, 0, 2, '个,块,只,把,枚,瓶,盒,台,吨,千克,米,箱,套', 1, 0, NULL, 2, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101861, 'num', '产品编码', 1, 4, NULL, NULL, 255, '', 1, 1, 3, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101862, 'price', '价格', 6, 4, NULL, NULL, 255, '', 0, 1, 4, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101863, 'description', '产品描述', 1, 4, NULL, NULL, 255, '', 0, 0, 6, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101864, 'business_name', '商机名称', 1, 5, NULL, NULL, 255, '', 0, 1, 0, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101865, 'customer_id', '客户名称', 15, 5, NULL, NULL, NULL, '', 0, 1, 1, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101866, 'money', '商机金额', 6, 5, NULL, NULL, 255, '', 0, 0, 2, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101867, 'deal_date', '预计成交日期', 13, 5, NULL, NULL, NULL, '', 0, 0, 3, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101868, 'remark', '备注', 2, 5, NULL, NULL, 255, '', 0, 0, 4, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101869, 'name', '合同名称', 1, 6, NULL, NULL, 255, '', 0, 1, 1, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101870, 'num', '合同编号', 1, 6, NULL, NULL, 255, '', 1, 1, 0, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101871, 'customer_id', '客户名称', 15, 6, NULL, NULL, NULL, '', 0, 1, 2, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101872, 'business_id', '商机名称', 16, 6, NULL, NULL, NULL, '', 0, 0, 3, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101873, 'money', '合同金额', 6, 6, NULL, NULL, 255, '', 0, 1, 4, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101874, 'order_date', '下单时间', 4, 6, NULL, NULL, NULL, '', 0, 1, 5, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101875, 'start_time', '合同开始时间', 4, 6, NULL, NULL, NULL, '', 0, 0, 6, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101876, 'end_time', '合同结束时间', 4, 6, NULL, NULL, NULL, '', 0, 0, 7, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101877, 'contacts_id', '客户签约人', 17, 6, NULL, NULL, NULL, '', 0, 0, 8, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101878, 'company_user_id', '公司签约人', 10, 6, NULL, NULL, NULL, '', 0, 0, 9, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101879, 'remark', '备注', 2, 6, NULL, NULL, 255, '', 0, 0, 10, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101880, 'flied_xucqai', '合同类型', 3, 6, NULL, NULL, 255, '', 0, 0, 11, '直销合同,代理合同,服务合同,快销合同', 0, 0, NULL, 0, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101881, 'number', '回款编号', 1, 7, NULL, NULL, 255, '', 1, 1, 0, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101882, 'customer_id', '客户名称', 15, 7, NULL, NULL, NULL, '', 0, 1, 1, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101883, 'contract_id', '合同编号', 20, 7, NULL, NULL, NULL, '', 0, 1, 2, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101884, 'plan_id', '期数', 21, 7, NULL, NULL, NULL, '', 0, 0, 3, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101885, 'return_time', '回款日期', 4, 7, NULL, NULL, NULL, '', 0, 1, 4, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101886, 'money', '回款金额', 6, 7, NULL, NULL, 255, '', 0, 1, 5, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101887, 'return_type', '回款方式', 3, 7, NULL, NULL, NULL, '', 0, 0, 6, '支票,现金,邮政汇款,电汇,网上转账,支付宝,微信支付,其他', 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101888, 'remark', '备注', 2, 7, NULL, NULL, 255, '', 0, 0, 7, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101889, 'customer_id', '客户名称', 15, 8, NULL, NULL, NULL, '', 0, 0, 1, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101890, 'contract_id', '合同编号', 20, 8, NULL, NULL, 11, '', 0, 0, 2, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101891, 'money', '计划回款金额', 6, 8, NULL, NULL, NULL, '', 0, 0, 3, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101892, 'return_date', '计划回款日期', 4, 8, NULL, NULL, NULL, '', 0, 0, 4, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101893, 'remind', '提前几天提醒', 5, 8, NULL, NULL, 11, '', 0, 0, 5, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101894, 'remark', '备注', 2, 8, NULL, NULL, 1000, '', 0, 0, 6, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101895, 'visit_number', '回访编号', 1, 17, NULL, NULL, NULL, '', 1, 1, 0, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101896, 'visit_time', '回访时间', 13, 17, NULL, NULL, NULL, '', 0, 1, 1, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101897, 'owner_user_id', '回访人', 28, 17, NULL, NULL, NULL, '', 0, 1, 2, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101898, 'return_visit_type', '回访形式', 3, 17, NULL, NULL, NULL, '', 0, 0, 3, '见面拜访,电话,短信,邮件,微信', 1, 0, NULL, 2, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101899, 'customer_id', '客户名称', 15, 17, NULL, NULL, NULL, '', 0, 1, 4, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101900, 'contacts_id', '联系人', 17, 17, NULL, NULL, NULL, '', 0, 0, 5, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101901, 'contract_id', '合同编号', 20, 17, NULL, NULL, NULL, '', 0, 1, 6, NULL, 1, 0, NULL, 1, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101902, 'satisficing', '客户满意度', 3, 17, NULL, NULL, NULL, '', 0, 0, 7, '很满意,满意,一般,不满意,很不满意', 1, 0, NULL, 2, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101903, 'flied_itvzix', '客户反馈', 2, 17, NULL, NULL, 1000, '', 0, 0, 8, NULL, 0, 0, NULL, 0, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101827, 'customer_name', '客户名称', 1, 2, NULL, NULL, 255, '', 1, 1, 0, NULL, 189, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101828, 'source', '客户来源', 3, 2, NULL, NULL, NULL, '', 0, 0, 1, '促销,搜索引擎,广告,转介绍,线上注册,线上询价,预约上门,陌拜,电话咨询,邮件咨询', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101829, 'mobile', '手机', 7, 2, NULL, NULL, 255, '', 0, 0, 2, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101830, 'telephone', '电话', 1, 2, NULL, NULL, 255, '', 0, 0, 3, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101831, 'website', '网址', 1, 2, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101832, 'industry', '客户行业', 3, 2, NULL, NULL, NULL, '', 0, 0, 5, 'IT,金融业,房地产,商业服务,运输/物流,生产,政府,文化传媒', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101833, 'level', '客户级别', 3, 2, NULL, NULL, NULL, '', 0, 0, 6, 'A（重点客户）,B（普通客户）,C（非优先客户）', 63, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101834, 'next_time', '下次联系时间', 13, 2, NULL, NULL, NULL, '', 0, 0, 7, NULL, 63, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101835, 'remark', '备注', 2, 2, NULL, NULL, 255, '', 0, 0, 8, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101836, 'email', '邮箱', 14, 2, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101837, 'leads_name', '线索名称', 1, 1, NULL, NULL, 255, '', 0, 1, 0, NULL, 189, 0, '2021-02-26 15:04:24', 1, 1101827, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101838, 'email', '邮箱', 14, 1, NULL, NULL, 255, '', 0, 0, 1, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101839, 'source', '线索来源', 3, 1, NULL, NULL, NULL, '', 0, 0, 2, '促销,搜索引擎,广告,转介绍,线上注册,线上询价,预约上门,陌拜,电话咨询,邮件咨询', 191, 0, '2021-02-26 15:04:24', 2, 1101828, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101840, 'mobile', '手机', 7, 1, NULL, NULL, 255, '', 0, 0, 3, NULL, 191, 0, '2021-02-26 15:04:24', 1, 1101829, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101841, 'telephone', '电话', 1, 1, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-02-26 15:04:24', 1, 1101830, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101842, 'address', '地址', 1, 1, NULL, NULL, 255, '', 0, 0, 5, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101843, 'industry', '客户行业', 3, 1, NULL, NULL, NULL, '', 0, 0, 6, 'IT,金融业,房地产,商业服务,运输/物流,生产,政府,文化传媒', 191, 0, '2021-02-26 15:04:24', 2, 1101832, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101844, 'level', '客户级别', 3, 1, NULL, NULL, NULL, '', 0, 0, 7, 'A（重点客户）,B（普通客户）,C（非优先客户）', 191, 0, '2021-02-26 15:04:24', 2, 1101833, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101845, 'next_time', '下次联系时间', 13, 1, NULL, NULL, NULL, '', 0, 0, 8, NULL, 63, 0, '2021-02-26 15:04:24', 1, 1101834, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101846, 'remark', '备注', 2, 1, NULL, NULL, 255, '', 0, 0, 9, NULL, 191, 0, '2021-02-26 15:04:24', 1, 1101835, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101847, 'name', '姓名', 1, 3, NULL, NULL, 255, '', 0, 1, 0, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101848, 'customer_id', '客户名称', 15, 3, NULL, NULL, NULL, '', 0, 1, 1, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101849, 'mobile', '手机', 7, 3, NULL, NULL, 255, '', 0, 0, 2, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101850, 'telephone', '电话', 1, 3, NULL, NULL, 255, '', 0, 0, 3, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101851, 'email', '邮箱', 14, 3, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101852, 'post', '职务', 1, 3, NULL, NULL, 255, '', 0, 0, 5, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101853, 'policymakers', '是否关键决策人', 3, 3, NULL, NULL, NULL, '', 0, 0, 6, '是,否', 190, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101854, 'address', '地址', 1, 3, NULL, NULL, 255, '', 0, 0, 7, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101855, 'next_time', '下次联系时间', 13, 3, NULL, NULL, NULL, '', 0, 0, 8, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101856, 'remark', '备注', 2, 3, NULL, NULL, 255, '', 0, 0, 9, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101857, 'sex', '性别', 3, 3, NULL, NULL, NULL, '', 0, 0, 10, '男,女', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101858, 'name', '产品名称', 1, 4, NULL, NULL, 255, '', 0, 1, 0, NULL, 177, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101859, 'category_id', '产品类型', 19, 4, NULL, NULL, NULL, '', 0, 1, 1, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101860, 'unit', '产品单位', 3, 4, NULL, NULL, NULL, '', 0, 0, 2, '个,块,只,把,枚,瓶,盒,台,吨,千克,米,箱,套', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101861, 'num', '产品编码', 1, 4, NULL, NULL, 255, '', 1, 1, 3, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101862, 'price', '价格', 6, 4, NULL, NULL, 255, '', 0, 1, 4, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101863, 'description', '产品描述', 1, 4, NULL, NULL, 255, '', 0, 0, 6, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101864, 'business_name', '商机名称', 1, 5, NULL, NULL, 255, '', 0, 1, 0, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101865, 'customer_id', '客户名称', 15, 5, NULL, NULL, NULL, '', 0, 1, 1, NULL, 149, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101866, 'money', '商机金额', 6, 5, NULL, NULL, 255, '', 0, 0, 2, NULL, 189, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101867, 'deal_date', '预计成交日期', 13, 5, NULL, NULL, NULL, '', 0, 0, 3, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101868, 'remark', '备注', 2, 5, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101869, 'name', '合同名称', 1, 6, NULL, NULL, 255, '', 0, 1, 1, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101870, 'num', '合同编号', 1, 6, NULL, NULL, 255, '', 1, 1, 0, NULL, 177, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101871, 'customer_id', '客户名称', 15, 6, NULL, NULL, NULL, '', 0, 1, 2, NULL, 149, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101872, 'business_id', '商机名称', 16, 6, NULL, NULL, NULL, '', 0, 0, 3, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101873, 'money', '合同金额', 6, 6, NULL, NULL, 255, '', 0, 1, 4, NULL, 189, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101874, 'order_date', '下单时间', 4, 6, NULL, NULL, NULL, '', 0, 1, 5, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101875, 'start_time', '合同开始时间', 4, 6, NULL, NULL, NULL, '', 0, 0, 6, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101876, 'end_time', '合同结束时间', 4, 6, NULL, NULL, NULL, '', 0, 0, 7, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101877, 'contacts_id', '客户签约人', 17, 6, NULL, NULL, NULL, '', 0, 0, 8, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101878, 'company_user_id', '公司签约人', 10, 6, NULL, NULL, NULL, '', 0, 0, 9, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101879, 'remark', '备注', 2, 6, NULL, NULL, 255, '', 0, 0, 10, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101880, 'flied_xucqai', '合同类型', 3, 6, NULL, NULL, 255, '', 0, 0, 11, '直销合同,代理合同,服务合同,快销合同', 255, 0, '2021-02-26 15:04:24', 0, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101881, 'number', '回款编号', 1, 7, NULL, NULL, 255, '', 1, 1, 0, NULL, 177, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101882, 'customer_id', '客户名称', 15, 7, NULL, NULL, NULL, '', 0, 1, 1, NULL, 149, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101883, 'contract_id', '合同编号', 20, 7, NULL, NULL, NULL, '', 0, 1, 2, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101884, 'plan_id', '期数', 21, 7, NULL, NULL, NULL, '', 0, 0, 3, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101885, 'return_time', '回款日期', 4, 7, NULL, NULL, NULL, '', 0, 1, 4, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101886, 'money', '回款金额', 6, 7, NULL, NULL, 255, '', 0, 1, 5, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101887, 'return_type', '回款方式', 3, 7, NULL, NULL, NULL, '', 0, 0, 6, '支票,现金,邮政汇款,电汇,网上转账,支付宝,微信支付,其他', 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101888, 'remark', '备注', 2, 7, NULL, NULL, 255, '', 0, 0, 7, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101889, 'customer_id', '客户名称', 15, 8, NULL, NULL, NULL, '', 0, 0, 1, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101890, 'contract_id', '合同编号', 20, 8, NULL, NULL, 11, '', 0, 0, 2, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101891, 'money', '计划回款金额', 6, 8, NULL, NULL, NULL, '', 0, 0, 3, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101892, 'return_date', '计划回款日期', 4, 8, NULL, NULL, NULL, '', 0, 0, 4, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101893, 'remind', '提前几天提醒', 5, 8, NULL, NULL, 11, '', 0, 0, 5, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101894, 'remark', '备注', 2, 8, NULL, NULL, 1000, '', 0, 0, 6, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101895, 'visit_number', '回访编号', 1, 17, NULL, NULL, NULL, '', 1, 1, 0, NULL, 177, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101896, 'visit_time', '回访时间', 13, 17, NULL, NULL, NULL, '', 0, 1, 1, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101897, 'owner_user_id', '回访人', 28, 17, NULL, NULL, NULL, '', 0, 1, 2, NULL, 149, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101898, 'return_visit_type', '回访形式', 3, 17, NULL, NULL, NULL, '', 0, 0, 3, '见面拜访,电话,短信,邮件,微信', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101899, 'customer_id', '客户名称', 15, 17, NULL, NULL, NULL, '', 0, 1, 4, NULL, 149, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101900, 'contacts_id', '联系人', 17, 17, NULL, NULL, NULL, '', 0, 0, 5, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101901, 'contract_id', '合同编号', 20, 17, NULL, NULL, NULL, '', 0, 1, 6, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101902, 'satisficing', '客户满意度', 3, 17, NULL, NULL, NULL, '', 0, 0, 7, '很满意,满意,一般,不满意,很不满意', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101903, 'flied_itvzix', '客户反馈', 2, 17, NULL, NULL, 1000, '', 0, 0, 8, NULL, 191, 0, '2021-02-26 15:04:24', 0, NULL, 50, NULL, NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for wk_crm_field_config
@@ -7562,46 +7570,51 @@ CREATE TABLE `wk_oa_examine_field`  (
   `remark` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段说明',
   `input_tips` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '输入提示',
   `max_length` int(12) NULL DEFAULT NULL COMMENT '最大长度',
-  `default_value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '默认值',
+  `default_value` varchar(5000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '默认值',
   `is_unique` int(1) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
   `is_null` int(1) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
   `sorting` int(5) NULL DEFAULT 1 COMMENT '排序 从小到大',
   `options` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '如果类型是选项，此处不能为空，多个选项以，隔开',
-  `operating` int(1) NULL DEFAULT 0 COMMENT '是否可以删除修改 0 改删 1 改 2 删 3 无',
+  `operating` int(1) NULL DEFAULT 255 COMMENT '是否可以删除修改',
   `is_hidden` int(1) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
   `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '最后修改时间',
   `examine_category_id` int(11) NULL DEFAULT NULL COMMENT '审批ID label为10需要',
   `field_type` int(2) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
+  `style_percent` int(3) NULL DEFAULT 50 COMMENT '样式百分比%',
+  `precisions` int(2) NULL DEFAULT NULL COMMENT '精度，允许的最大小数位',
+  `form_position` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '表单定位 坐标格式： 1,1',
+  `max_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最大数值',
+  `min_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最小数值',
   PRIMARY KEY (`field_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 572 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '自定义字段表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_oa_examine_field
 -- ----------------------------
-INSERT INTO `wk_oa_examine_field` VALUES (548, 'content', '审批内容', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072979, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (549, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072979, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (550, 'type_id', '请假类型', 3, NULL, '', NULL, '年假', 0, 1, 0, '年假,事假,病假,产假,调休,婚假,丧假,其他', 3, 0, '2021-01-09 16:03:54', 1072980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (551, 'content', '审批内容', 1, NULL, '', NULL, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (552, 'start_time', '开始时间', 13, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (553, 'end_time', '结束时间', 13, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (554, 'duration', '时长（天）', 6, NULL, '', NULL, '', 0, 1, 4, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (555, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 5, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (556, 'content', '出差事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (557, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (558, 'duration', '出差总天数', 6, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (559, 'cause', '行程明细', 22, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (560, 'content', '加班原因', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (561, 'start_time', '开始时间', 13, NULL, '', NULL, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (562, 'end_time', '结束时间', 13, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (563, 'duration', '加班总天数', 6, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (564, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 4, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (565, 'content', '差旅事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (566, 'money', '报销总金额', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (567, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (568, 'cause', '费用明细', 23, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (569, 'content', '借款事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (570, 'money', '借款金额（元）', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1);
-INSERT INTO `wk_oa_examine_field` VALUES (571, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1);
+INSERT INTO `wk_oa_examine_field` VALUES (548, 'content', '审批内容', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072979, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (549, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072979, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (550, 'type_id', '请假类型', 3, NULL, '', NULL, '年假', 0, 1, 0, '年假,事假,病假,产假,调休,婚假,丧假,其他', 3, 0, '2021-01-09 16:03:54', 1072980, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (551, 'content', '审批内容', 1, NULL, '', NULL, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (552, 'start_time', '开始时间', 13, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (553, 'end_time', '结束时间', 13, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (554, 'duration', '时长（天）', 6, NULL, '', NULL, '', 0, 1, 4, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (555, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 5, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (556, 'content', '出差事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (557, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (558, 'duration', '出差总天数', 6, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (559, 'cause', '行程明细', 22, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (560, 'content', '加班原因', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (561, 'start_time', '开始时间', 13, NULL, '', NULL, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (562, 'end_time', '结束时间', 13, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (563, 'duration', '加班总天数', 6, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (564, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 4, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (565, 'content', '差旅事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (566, 'money', '报销总金额', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (567, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (568, 'cause', '费用明细', 23, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (569, 'content', '借款事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (570, 'money', '借款金额（元）', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1, 50, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (571, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1, 50, NULL, NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for wk_oa_examine_log

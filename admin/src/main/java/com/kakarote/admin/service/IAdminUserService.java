@@ -40,6 +40,8 @@ public interface IAdminUserService extends BaseService<AdminUser> {
      */
     public BasePage<AdminUserVO> queryUserList(AdminUserBO adminUserBO);
 
+
+    public JSONObject countUserByLabel();
     /**
      * 查询该用户下级的用户
      * @param userId 用户ID 0代表全部
@@ -52,6 +54,11 @@ public interface IAdminUserService extends BaseService<AdminUser> {
      * @param adminUserVO data
      */
     public void setUser(AdminUserVO adminUserVO);
+
+    /**
+     * 批量修改用户部门
+     */
+    public void setUserDept(AdminUserBO adminUserBO);
 
     /**
      * 新增用户

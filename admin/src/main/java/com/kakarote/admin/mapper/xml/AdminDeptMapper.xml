@@ -10,4 +10,11 @@
                 left join `wk_admin_user` b on a.dept_id = b.dept_id
             group by a.dept_id
     </select>
+    <select id="queryDeptList" resultType="com.kakarote.admin.entity.PO.AdminDept">
+        select a.*,
+           count(b.status != 0 or null) as currentNum
+            from `wk_admin_dept` a
+                left join `wk_admin_user` b on a.dept_id = b.dept_id
+            group by a.dept_id
+    </select>
 </mapper>

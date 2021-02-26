@@ -2,6 +2,7 @@ package com.kakarote.examine.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -202,7 +203,7 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
             /*
               如果是修改审批直接将原来停用
              */
-            oldStatus = updateStatus(examineSaveBO.getExamineId(), 3);
+            oldStatus = updateStatus(examineSaveBO.getExamineId(), 3,false);
         }
         String examineName = examineSaveBO.getExamineName();
         Integer count;
@@ -281,7 +282,7 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
      * @param status    1 正常 2 停用 3 删除
      */
     @Override
-    public Integer updateStatus(Long examineId, Integer status) {
+    public Integer updateStatus(Long examineId, Integer status,boolean isRequest) {
         if (!ObjectUtil.isAllNotEmpty(examineId, status)) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
         }
@@ -291,6 +292,10 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
         Examine examine = getById(examineId);
         if (examine == null) {
             return -1;
+        }
+        //默认办公审批禁止删除
+        if (isRequest && Objects.equals(3, status) && ListUtil.toList(1,2,3,4,5,6).contains(examine.getOaType())){
+            throw new CrmException(ExamineCodeEnum.EXAMINE_SPECIAL_TYPE_NOT_DELETE_ERROR);
         }
         /*
           状态相同直接跳过

@@ -1,7 +1,7 @@
 package com.kakarote.crm.entity.VO;
 
 import cn.hutool.core.util.StrUtil;
-import com.kakarote.crm.constant.FieldEnum;
+import com.kakarote.core.common.FieldEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -108,4 +108,32 @@ public class CrmModelFiledVO implements Serializable {
         this.fieldName = StrUtil.toCamelCase(fieldName);
         return this;
     }
+
+    @ApiModelProperty(value = "排序 从小到大")
+    private Integer sorting;
+
+    @ApiModelProperty(value = "样式百分比  1 100%  2 75%  3 50%  4 25%")
+    private Integer stylePercent;
+
+    @ApiModelProperty(value = "限制的最大数值")
+    private String maxNumRestrict;
+
+    @ApiModelProperty(value = "限制的最小数值")
+    private String minNumRestrict;
+
+    @ApiModelProperty(value = "精度，允许的最大小数位/地图精度")
+    private Integer precisions;
+
+    @ApiModelProperty(value = "表单定位 坐标格式： 1,1")
+    private String formPosition;
+
+    /**
+     * 坐标
+     * */
+    @ApiModelProperty(value = "x轴")
+    private Integer xAxis;
+
+    @ApiModelProperty(value = "y轴")
+    private Integer yAxis;
+
 }

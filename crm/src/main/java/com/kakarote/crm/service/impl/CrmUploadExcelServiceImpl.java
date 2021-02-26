@@ -9,12 +9,14 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.poi.excel.BigExcelWriter;
 import cn.hutool.poi.excel.ExcelUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.cache.AdminCacheKey;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminMessage;
 import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
+import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.redis.Redis;
@@ -25,6 +27,7 @@ import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmExcelUtil;
 import com.kakarote.crm.common.CrmVerify;
+import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.CrmContactsSaveBO;
 import com.kakarote.crm.entity.BO.CrmModelSaveBO;
@@ -90,19 +93,19 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
         UploadService uploadService;
         switch (uploadExcelBO.getCrmEnum()) {
             case CUSTOMER:
-                uploadService = new CustomerUploadService(uploadExcelBO);
+                uploadService = new CustomerUploadService();
                 adminMessage.setType(AdminMessageEnum.CRM_CUSTOMER_IMPORT.getType());
                 break;
             case LEADS:
-                uploadService = new LeadsUploadService(uploadExcelBO);
+                uploadService = new LeadsUploadService();
                 adminMessage.setType(AdminMessageEnum.CRM_LEADS_IMPORT.getType());
                 break;
             case CONTACTS:
-                uploadService = new ContactsUploadService(uploadExcelBO);
+                uploadService = new ContactsUploadService();
                 adminMessage.setType(AdminMessageEnum.CRM_CONTACTS_IMPORT.getType());
                 break;
             case PRODUCT:
-                uploadService = new ProductUploadService(uploadExcelBO);
+                uploadService = new ProductUploadService();
                 adminMessage.setType(AdminMessageEnum.CRM_PRODUCT_IMPORT.getType());
                 break;
             default:
@@ -110,6 +113,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
         }
         Long messageId = adminService.saveOrUpdateMessage(adminMessage).getData();
         uploadExcelBO.setMessageId(messageId);
+        uploadService.setUploadExcelBO(uploadExcelBO);
         redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + messageId.toString(), UPLOAD_EXCEL_EXIST_TIME, 0);
         TaskExecutor taskExecutor = ApplicationContextHolder.getBean(TaskExecutor.class);
         taskExecutor.execute(uploadService);
@@ -135,33 +139,49 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
 
     public abstract class UploadService implements Runnable {
 
-        protected volatile List<List<Object>> errorList = new ArrayList<>();
+        protected List<List<Object>> errorList = new ArrayList<>();
 
-        protected volatile List<CrmModelFiledVO> fieldList = new ArrayList<>();
+        protected List<CrmModelFiledVO> fieldList = new ArrayList<>();
 
-        protected volatile List<CrmModelFiledVO> fixedFieldList = new ArrayList<>();
+        protected List<CrmModelFiledVO> fixedFieldList = new ArrayList<>();
 
-        protected volatile List<CrmModelFiledVO> uniqueList = new ArrayList<>();
+        protected List<CrmModelFiledVO> uniqueList = new ArrayList<>();
+
+        private UploadExcelBO uploadExcelBO;
+
+        private Map<String,Long> userCacheMap;
 
         /**
          * 导入数量
          */
-        protected volatile Integer num = -2;
+        protected Integer num = -2;
 
         /**
          * 修改数量
          */
-        protected volatile Integer updateNum = 0;
+        protected Integer updateNum = 0;
 
-        protected volatile List<Integer> isNullList = new ArrayList<>();
+        protected List<Integer> isNullList = new ArrayList<>();
 
-        protected volatile boolean templateErr = false;
+        protected boolean templateErr = false;
 
-        protected volatile JSONObject kv = new JSONObject();
+        protected JSONObject kv = new JSONObject();
 
         public abstract void importExcel();
 
-        public abstract UploadExcelBO getUploadExcelBO();
+        public UploadExcelBO getUploadExcelBO(){
+            return uploadExcelBO;
+        }
+
+        private void setUploadExcelBO(UploadExcelBO uploadExcelBO){
+            this.uploadExcelBO = uploadExcelBO;
+            List<Long> longs = adminService.queryUserList().getData();
+            List<SimpleUser> simpleUsers = adminService.queryUserByIds(longs).getData();
+            userCacheMap = new HashMap<>(simpleUsers.size(),1.0f);
+            for (SimpleUser simpleUser : simpleUsers) {
+                userCacheMap.put(simpleUser.getRealname(),simpleUser.getUserId());
+            }
+        }
 
         @Override
         public void run() {
@@ -242,7 +262,10 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                     break;
                 }
             }
-            fieldList.removeIf(record -> Arrays.asList("file", "checkbox", "user", "structure").contains(record.getFormType()));
+            List<FieldEnum> fieldEnums = Arrays.asList(FieldEnum.FILE, FieldEnum.CHECKBOX, FieldEnum.USER, FieldEnum.STRUCTURE,
+                    FieldEnum.AREA,FieldEnum.AREA_POSITION,FieldEnum.CURRENT_POSITION,FieldEnum.DATE_INTERVAL,FieldEnum.BOOLEAN_VALUE,
+                    FieldEnum.HANDWRITING_SIGN,FieldEnum.DESC_TEXT,FieldEnum.DETAIL_TABLE,FieldEnum.CALCULATION_FUNCTION);
+            fieldList.removeIf(record -> fieldEnums.contains(FieldEnum.parse(record.getType())));
             HashMap<String, String> nameMap = new HashMap<>();
             HashMap<String, Integer> isNullMap = new HashMap<>();
             fieldList.forEach(filed -> {
@@ -256,22 +279,25 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                     nameMap.put("省", "province");
                     nameMap.put("市", "city");
                     nameMap.put("区", "site");
+                    nameMap.put("详细地址", "detailAddress");
                     isNullMap.put("省", 0);
                     isNullMap.put("市", 0);
                     isNullMap.put("区", 0);
+                    isNullMap.put("详细地址", 0);
                 } else {
                     boolean isNull = Objects.equals(1, filed.getIsNull());
                     nameMap.put(filed.getName() + (isNull ? "(*)" : ""), filed.getFieldName());
                     isNullMap.put(filed.getName() + (isNull ? "(*)" : ""), filed.getIsNull());
                 }
             });
+            nameMap.put("负责人(*)", "ownerUserName");
             List<String> nameList = new ArrayList<>(nameMap.keySet());
             if (nameList.size() != rowList.size() || !nameList.containsAll(rowList)) {
                 templateErr = true;
             } else {
                 for (int i = 0; i < rowList.size(); i++) {
                     kv.put(nameMap.get(rowList.get(i).toString()), i);
-                    if (1 == isNullMap.get(rowList.get(i).toString())) {
+                    if (Objects.equals(1,isNullMap.get(rowList.get(i).toString()))) {
                         isNullList.add(i);
                     }
                 }
@@ -345,16 +371,21 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
             });
             return array;
         }
+
+        /**
+         * 获取负责人id
+         *
+         * @param rowList 行数据
+         * @return  最终的负责人id
+         */
+        Long getOwnerUserIdByRowList(List<Object> rowList){
+            String ownerUserName = ObjectUtil.isEmpty(rowList.get(kv.getInteger("ownerUserName"))) ? "" : rowList.get(kv.getInteger("ownerUserName")).toString();
+            return userCacheMap.get(ownerUserName);
+        }
     }
 
 
     public class CustomerUploadService extends UploadService {
-
-        private UploadExcelBO uploadExcelBO;
-
-        private CustomerUploadService(UploadExcelBO uploadExcelBO) {
-            this.uploadExcelBO = uploadExcelBO;
-        }
 
         @Override
         public void importExcel() {
@@ -362,7 +393,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
             ICrmCustomerPoolRelationService poolRelationService = ApplicationContextHolder.getBean(ICrmCustomerPoolRelationService.class);
 
             Map<String, List<String>> areaMap = CrmExcelUtil.getAreaMap();
-            ExcelUtil.readBySax(uploadExcelBO.getFilePath(), 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
+            ExcelUtil.readBySax(getUploadExcelBO().getFilePath(), 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
                 num++;
                 redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
                 if (rowList.size() < kv.entrySet().size()) {
@@ -387,6 +418,12 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                                     errorList.add(rowList);
                                     return;
                                 }
+                            }
+                            Long ownerUserId = getOwnerUserIdByRowList(rowList);
+                            if(ownerUserId == null && getUploadExcelBO().getPoolId() ==null) {
+                                rowList.add(0, "负责人不存在");
+                                errorList.add(rowList);
+                                return;
                             }
                             for (CrmModelFiledVO record : uniqueList) {
                                 Object value = rowList.get(kv.getInteger(record.getFieldName()));
@@ -418,6 +455,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                             String province = ObjectUtil.isEmpty(rowList.get(kv.getInteger("province"))) ? "" : rowList.get(kv.getInteger("province")).toString();
                             String city = ObjectUtil.isEmpty(rowList.get(kv.getInteger("city"))) ? "" : rowList.get(kv.getInteger("city")).toString();
                             String site = ObjectUtil.isEmpty(rowList.get(kv.getInteger("site"))) ? "" : rowList.get(kv.getInteger("site")).toString();
+                            String detailAddress = ObjectUtil.isEmpty(rowList.get(kv.getInteger("detailAddress"))) ? "" : rowList.get(kv.getInteger("detailAddress")).toString();
                             if (StrUtil.isNotEmpty(city) && (!areaMap.containsKey(province) || !areaMap.get(province).contains(city))) {
                                 rowList.add(0, "省市区不合要求，请核对");
                                 errorList.add(rowList);
@@ -435,10 +473,10 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                                 entityObject.fluentPut(fieldName, rowList.get(kv.getInteger(fieldName)));
                             });
                             entityObject.fluentPut("address", StrUtil.isNotEmpty(province) ? province + "," + city + "," + site : "")
-                                    .fluentPut("ownerUserId", getUploadExcelBO().getOwnerUserId());
+                                    .fluentPut("ownerUserId",ownerUserId).fluentPut("detailAddress",detailAddress);
                             if (customerList.size() == 1) {
                                 CrmCustomer customer = customerList.get(0);
-                                boolean auth = AuthUtil.isCrmAuth(CrmEnum.CUSTOMER, customer.getCustomerId());
+                                boolean auth = AuthUtil.isCrmAuth(CrmEnum.CUSTOMER, customer.getCustomerId(), CrmAuthEnum.EDIT);
                                 if (auth) {
                                     rowList.add(0, "数据无覆盖权限");
                                     errorList.add(rowList);
@@ -479,24 +517,13 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                 }
             });
         }
-
-        @Override
-        public UploadExcelBO getUploadExcelBO() {
-            return uploadExcelBO;
-        }
     }
 
     public class LeadsUploadService extends UploadService {
 
-        private UploadExcelBO uploadExcelBO;
-
-        private LeadsUploadService(UploadExcelBO uploadExcelBO) {
-            this.uploadExcelBO = uploadExcelBO;
-        }
-
         @Override
         public void importExcel() {
-            ExcelUtil.readBySax(uploadExcelBO.getFilePath(), 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
+            ExcelUtil.readBySax(getUploadExcelBO().getFilePath(), 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
                 num++;
                 redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
                 if (rowList.size() < kv.entrySet().size()) {
@@ -529,7 +556,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                             List<CrmLeads> leadsList = uniqueMapList(uniqueList).stream().map(map -> BeanUtil.mapToBean(map, CrmLeads.class, true)).collect(Collectors.toList());
                             boolean isUpdate = false;
                             if (leadsList.size() > 0) {
-                                if (Objects.equals(2, uploadExcelBO.getRepeatHandling())) {
+                                if (Objects.equals(2, getUploadExcelBO().getRepeatHandling())) {
                                     return;
                                 }
                                 if (leadsList.size() > 1) {
@@ -539,16 +566,22 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                                 }
                                 isUpdate = true;
                             }
+                            Long ownerUserId = getOwnerUserIdByRowList(rowList);
+                            if(ownerUserId == null) {
+                                rowList.add(0, "负责人不存在");
+                                errorList.add(rowList);
+                                return;
+                            }
                             CrmModelSaveBO object = new CrmModelSaveBO();
                             JSONObject entityObject = new JSONObject();
                             fixedFieldList.forEach(field -> {
                                 String fieldName = field.getFieldName();
                                 entityObject.fluentPut(fieldName, rowList.get(kv.getInteger(fieldName)));
                             });
-                            entityObject.fluentPut("ownerUserId", uploadExcelBO.getOwnerUserId());
+                            entityObject.fluentPut("ownerUserId", ownerUserId);
                             if (leadsList.size() == 1) {
                                 CrmLeads leads = leadsList.get(0);
-                                boolean auth = AuthUtil.isCrmAuth(CrmEnum.LEADS, leads.getLeadsId());
+                                boolean auth = AuthUtil.isCrmAuth(CrmEnum.LEADS, leads.getLeadsId(),CrmAuthEnum.EDIT);
                                 if (auth) {
                                     rowList.add(0, "数据无覆盖权限");
                                     errorList.add(rowList);
@@ -589,24 +622,13 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                 }
             });
         }
-
-        @Override
-        public UploadExcelBO getUploadExcelBO() {
-            return uploadExcelBO;
-        }
     }
 
     public class ContactsUploadService extends UploadService {
 
-        private UploadExcelBO uploadExcelBO;
-
-        private ContactsUploadService(UploadExcelBO uploadExcelBO) {
-            this.uploadExcelBO = uploadExcelBO;
-        }
-
         @Override
         public void importExcel() {
-            ExcelUtil.readBySax(uploadExcelBO.getFilePath(), 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
+            ExcelUtil.readBySax(getUploadExcelBO().getFilePath(), 0, (int sheetIndex, int rowIndex, List<Object> rowList) -> {
                 num++;
                 redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId().toString(), UPLOAD_EXCEL_EXIST_TIME, Math.max(num, 0));
                 if (rowList.size() < kv.entrySet().size()) {
@@ -639,6 +661,12 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                                     return;
                                 }
                             }
+                            Long ownerUserId = getOwnerUserIdByRowList(rowList);
+                            if(ownerUserId == null) {
+                                rowList.add(0, "负责人不存在");
+                                errorList.add(rowList);
+                                return;
+                            }
                             for (CrmModelFiledVO record : uniqueList) {
                                 Object value = rowList.get(kv.getInteger(record.getFieldName()));
                                 record.setValue(value);
@@ -646,7 +674,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                             List<CrmContacts> contactsList = uniqueMapList(uniqueList).stream().map(map -> BeanUtil.mapToBean(map, CrmContacts.class, true)).collect(Collectors.toList());
                             boolean isUpdate = false;
                             if (contactsList.size() > 0) {
-                                if (Objects.equals(2, uploadExcelBO.getRepeatHandling())) {
+                                if (Objects.equals(2, getUploadExcelBO().getRepeatHandling())) {
                                     return;
                                 }
                                 if (contactsList.size() > 1) {
@@ -666,10 +694,10 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                             });
                             entityObject
                                     .fluentPut("customerId", customer.getId())
-                                    .fluentPut("ownerUserId", getUploadExcelBO().getOwnerUserId());
+                                    .fluentPut("ownerUserId", ownerUserId);
                             if (contactsList.size() == 1) {
                                 CrmContacts contacts = contactsList.get(0);
-                                boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTACTS, contacts.getContactsId());
+                                boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTACTS, contacts.getContactsId(),CrmAuthEnum.EDIT);
                                 if (auth) {
                                     rowList.add(0, "数据无覆盖权限");
                                     errorList.add(rowList);
@@ -710,20 +738,9 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                 }
             });
         }
-
-        @Override
-        public UploadExcelBO getUploadExcelBO() {
-            return uploadExcelBO;
-        }
     }
 
     public class ProductUploadService extends UploadService {
-
-        private UploadExcelBO uploadExcelBO;
-
-        private ProductUploadService(UploadExcelBO uploadExcelBO) {
-            this.uploadExcelBO = uploadExcelBO;
-        }
 
         @Override
         public void importExcel() {
@@ -760,6 +777,12 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                                     return;
                                 }
                             }
+                            Long ownerUserId = getOwnerUserIdByRowList(rowList);
+                            if(ownerUserId == null) {
+                                rowList.add(0, "负责人不存在");
+                                errorList.add(rowList);
+                                return;
+                            }
                             for (CrmModelFiledVO record : uniqueList) {
                                 Object value = rowList.get(kv.getInteger(record.getFieldName()));
                                 record.setValue(value);
@@ -767,7 +790,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                             List<CrmProduct> productList = uniqueMapList(uniqueList).stream().map(map -> BeanUtil.mapToBean(map, CrmProduct.class, true)).collect(Collectors.toList());
                             boolean isUpdate = false;
                             if (productList.size() > 0) {
-                                if (Objects.equals(2, uploadExcelBO.getRepeatHandling())) {
+                                if (Objects.equals(2, getUploadExcelBO().getRepeatHandling())) {
                                     return;
                                 }
                                 if (productList.size() > 1) {
@@ -781,7 +804,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                             JSONObject entityObject = new JSONObject();
                             if (productList.size() == 1) {
                                 CrmProduct product = productList.get(0);
-                                boolean auth = AuthUtil.isCrmAuth(CrmEnum.PRODUCT, product.getProductId());
+                                boolean auth = AuthUtil.isCrmAuth(CrmEnum.PRODUCT, product.getProductId(),CrmAuthEnum.EDIT);
                                 if (auth) {
                                     rowList.add(0, "数据无覆盖权限");
                                     errorList.add(rowList);
@@ -802,10 +825,10 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
 
                                 }
                             });
-                            entityObject.fluentPut("categoryId", category.getCategoryId()).fluentPut("ownerUserId", uploadExcelBO.getOwnerUserId());
+                            entityObject.fluentPut("categoryId", category.getCategoryId()).fluentPut("ownerUserId", ownerUserId);
                             object.setField(addFieldArray(rowList));
                             object.setEntity(entityObject);
-                            CrmVerify verify = new CrmVerify(uploadExcelBO.getCrmEnum());
+                            CrmVerify verify = new CrmVerify(getUploadExcelBO().getCrmEnum());
                             Result result = verify.verify(object);
                             if (!result.hasSuccess()) {
                                 rowList.add(0, result.getMsg());
@@ -834,11 +857,6 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                     errorList.add(0, rowList);
                 }
             });
-        }
-
-        @Override
-        public UploadExcelBO getUploadExcelBO() {
-            return uploadExcelBO;
         }
     }
 

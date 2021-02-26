@@ -1,10 +1,11 @@
 package com.kakarote.oa.controller;
 
 
+import cn.hutool.core.util.StrUtil;
 import com.kakarote.core.common.ApiExplain;
+import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.oa.entity.BO.ExamineFieldBO;
-import com.kakarote.oa.entity.PO.OaExamineField;
 import com.kakarote.oa.service.IOaExamineFieldService;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,9 +34,12 @@ public class OaExamineFieldController {
      */
     @ApiOperation("查询新增或编辑字段")
     @PostMapping("/queryField/{categoryId}")
-    public Result<List<OaExamineField>> queryField(@PathVariable Integer categoryId){
-        List<OaExamineField> list = examineFieldService.queryField(categoryId);
-        return Result.ok(list);
+    public Result<List> queryField(@PathVariable Integer categoryId,
+                                                   @RequestParam(value = "type",required = false) String type){
+        if (StrUtil.isNotEmpty(type)) {
+            return R.ok(examineFieldService.queryField(categoryId));
+        }
+        return R.ok(examineFieldService.queryFormPositionField(categoryId));
     }
 
     @ApiOperation("保存自定义字段")

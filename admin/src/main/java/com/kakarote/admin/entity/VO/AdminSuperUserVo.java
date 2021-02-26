@@ -1,27 +1,15 @@
 package com.kakarote.admin.entity.VO;
 
+import com.alibaba.fastjson.JSONObject;
+
 public class AdminSuperUserVo extends AdminUserVO {
+    private JSONObject serverUserInfo;
 
-    public AdminSuperUserVo() {
+    public JSONObject getServerUserInfo() {
+        return serverUserInfo;
     }
 
-    private String adminToken;
-
-    private boolean isInitToken = false;
-
-    public String getAdminToken() {
-        return adminToken;
-    }
-
-    public void setAdminToken(String adminToken) {
-        this.adminToken = adminToken;
-    }
-
-    public boolean isInitToken() {
-        return isInitToken;
-    }
-
-    public void setInitToken(boolean initToken) {
-        isInitToken = initToken;
+    public void setServerUserInfo(JSONObject serverUserInfo) {
+        this.serverUserInfo = serverUserInfo;
     }
 }

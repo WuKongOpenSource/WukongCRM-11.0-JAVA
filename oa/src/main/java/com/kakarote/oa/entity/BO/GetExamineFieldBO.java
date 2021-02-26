@@ -11,4 +11,6 @@ public class GetExamineFieldBO {
     Integer examineId;
     @ApiModelProperty("1详情 2 编辑")
     Integer isDetail;
+
+    String type;
 }

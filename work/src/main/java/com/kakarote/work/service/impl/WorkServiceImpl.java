@@ -267,6 +267,15 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         if (Objects.equals(3, work.getStatus())) {
             work.setArchiveTime(new Date());
         }
+        //处理之前上传的封面
+        if (Objects.equals(0, work.getIsSystemCover())){
+            List<FileEntity> fileEntities = adminFileService.queryFileList(work.getBatchId()).getData();
+            if (fileEntities != null && fileEntities.size() > 1){
+                fileEntities.sort(Comparator.comparing(FileEntity::getCreateTime).reversed());
+                fileEntities.remove(0);
+                fileEntities.forEach(fileEntity -> adminFileService.delete(fileEntity.getFileId()));
+            }
+        }
         updateById(work);
         return work.setWorkOwnerRoleList(queryOwnerRoleList(workId));
     }
@@ -665,7 +674,16 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         if (workId == null || byId.getIsOpen() == 1) {
             List<Long> userList = adminService.queryUserList().getData();
             List<SimpleUser> data = adminService.queryUserByIds(userList).getData();
-            return data.stream().map(obj -> BeanUtil.copyProperties(obj, WorkOwnerRoleBO.class)).collect(Collectors.toList());
+            List<WorkOwnerRoleBO> collect = data.stream().map(obj -> BeanUtil.copyProperties(obj, WorkOwnerRoleBO.class)).collect(Collectors.toList());
+            if (byId != null && byId.getOwnerRole() != null) {
+                Integer ownerRole = byId.getOwnerRole();
+                String roleName = getBaseMapper().queryRoleName(ownerRole);
+                collect.forEach(workOwnerRoleBO -> {
+                    workOwnerRoleBO.setRoleId(ownerRole);
+                    workOwnerRoleBO.setRoleName(roleName);
+                });
+            }
+            return collect;
         }
         return getBaseMapper().queryOwnerRoleList(workId);
     }

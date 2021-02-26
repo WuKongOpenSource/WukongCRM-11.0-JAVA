@@ -200,9 +200,11 @@ public class SysLogAspect {
         sysLogEntity.setClassName(methodSignature.getDeclaringTypeName());
         sysLogEntity.setMethodName(methodSignature.getName());
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        HttpServletRequest request = attributes.getRequest();
-        String ipAddress = ServletUtil.getClientIP(request);
-        sysLogEntity.setIpAddress(ipAddress);
+        if (attributes != null) {
+            HttpServletRequest request = attributes.getRequest();
+            String ipAddress = ServletUtil.getClientIP(request);
+            sysLogEntity.setIpAddress(ipAddress);
+        }
         UserInfo user = UserUtil.getUser();
         sysLogEntity.setUserId(user.getUserId());
         sysLogEntity.setRealname(user.getRealname());

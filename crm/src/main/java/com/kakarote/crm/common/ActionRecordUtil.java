@@ -8,6 +8,7 @@ import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Const;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.feign.admin.entity.SimpleDept;
@@ -21,7 +22,6 @@ import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.PO.CrmActionRecord;
 import com.kakarote.crm.entity.PO.CrmCustomer;
 import com.kakarote.crm.entity.PO.CrmMarketing;
@@ -32,7 +32,10 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Component
@@ -43,10 +46,46 @@ public class ActionRecordUtil {
     @Autowired
     private AdminService adminService;
 
+    @SuppressWarnings("unchecked")
+    public static Object parseValue(Object value, Integer type,boolean isNeedStr) {
+        if (ObjectUtil.isEmpty(value)) {
+            return isNeedStr ? "空" : "";
+        }
+        FieldEnum fieldEnum = FieldEnum.parse(type);
+        switch (fieldEnum) {
+            case BOOLEAN_VALUE: {
+                return "1".equals(value) ? "是" : "否";
+            }
+            case AREA_POSITION: {
+                StringBuilder stringBuilder = new StringBuilder();
+                if (value instanceof CharSequence) {
+                    value = JSON.parseArray(value.toString());
+                }
+                for (Map<String, Object> map : ((List<Map<String, Object>>) value)) {
+                    stringBuilder.append(map.get("name")).append(" ");
+                }
+                return stringBuilder.toString();
+            }
+            case CURRENT_POSITION: {
+                if (value instanceof CharSequence) {
+                    value = JSON.parseObject(value.toString());
+                }
+                return Optional.ofNullable(((Map<String, Object>) value).get("address")).orElse("").toString();
+            }
+            case DATE_INTERVAL: {
+                if (value instanceof Collection) {
+                    value = StrUtil.join(Const.SEPARATOR,value);
+                }
+            }
+            default:
+                return isNeedStr ? value.toString() : value;
+        }
+
+    }
 
     public static class ActionRecordTask implements Runnable {
         private static final Integer BATCH_NUMBER = 1;
-        private static volatile List<CrmActionRecord> SQL_LIST = new CopyOnWriteArrayList<>();
+        private List<CrmActionRecord> SQL_LIST = new ArrayList<>(1);
         private UserInfo userInfo;
 
         public ActionRecordTask(CrmActionRecord actionRecord) {
@@ -63,7 +102,7 @@ public class ActionRecordUtil {
                 //底层已经做过size为0的判断，此处不再限制
                 try {
                     UserUtil.setUser(userInfo);
-                    ApplicationContextHolder.getBean(ICrmActionRecordService.class).saveBatch(list, BATCH_NUMBER);
+                    ApplicationContextHolder.getBean(ICrmActionRecordService.class).save(list.get(0));
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
@@ -75,25 +114,24 @@ public class ActionRecordUtil {
     }
 
 
-    public String getDetailByFormTypeAndValue(JSONObject record,String value){
-        if (record == null){
+    public String getDetailByFormTypeAndValue(JSONObject record, String value) {
+        if (record == null) {
             return "";
         }
         FieldEnum fieldEnum = FieldEnum.parse(record.getString("formType"));
-        String oldFieldValue = this.parseValueByFieldEnum(value,fieldEnum);
-        String newFieldValue = this.parseValueByFieldEnum(record.getString("value"),fieldEnum);
+        String oldFieldValue = this.parseValueByFieldEnum(value, fieldEnum);
+        String newFieldValue = this.parseValueByFieldEnum(record.getString("value"), fieldEnum);
         String oldValue = StrUtil.isEmpty(oldFieldValue) ? "空" : oldFieldValue;
         String newValue = StrUtil.isEmpty(newFieldValue) ? "空" : newFieldValue;
-        return  "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
+        return "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
     }
 
 
-
-    private String parseValueByFieldEnum(String value, FieldEnum fieldEnum){
-        if(StrUtil.isEmpty(value)){
+    private String parseValueByFieldEnum(String value, FieldEnum fieldEnum) {
+        if (StrUtil.isEmpty(value)) {
             return null;
         }
-        if (Arrays.asList(FieldEnum.USER,FieldEnum.SINGLE_USER).contains(fieldEnum)) {
+        if (Arrays.asList(FieldEnum.USER, FieldEnum.SINGLE_USER).contains(fieldEnum)) {
             List<SimpleUser> simpleUsers = adminService.queryUserByIds(TagUtil.toLongSet(value)).getData();
             value = simpleUsers.stream().map(SimpleUser::getRealname).collect(Collectors.joining(Const.SEPARATOR));
         } else if (FieldEnum.STRUCTURE.equals(fieldEnum)) {
@@ -184,23 +222,17 @@ public class ActionRecordUtil {
         List<CrmModelFiledVO> oldFieldList = ApplicationContextHolder.getBean(ICrmActionRecordService.class).queryFieldValue(kv);
         newFieldList.forEach(newField -> {
             for (CrmModelFiledVO oldField : oldFieldList) {
-                String oldFieldValue;
-                String newFieldValue;
-                if (ObjectUtil.isEmpty(oldField.getValue()) && ObjectUtil.isEmpty(newField.getValue())) {
-                    continue;
-                }
-                if (ObjectUtil.isEmpty(oldField.getValue())) {
-                    oldFieldValue = "空";
-                } else {
-                    oldFieldValue = oldField.getValue().toString();
-                }
-                if (ObjectUtil.isEmpty(newField.getValue())) {
-                    newFieldValue = "空";
-                } else {
-                    newFieldValue = newField.getValue().toString();
-                }
-                if (oldField.getName().equals(newField.getName()) && !oldFieldValue.equals(newFieldValue)) {
-                    textList.add("将" + oldField.getName() + " 由" + oldFieldValue + "修改为" + newFieldValue + "。");
+                if (oldField.getFieldId().equals(newField.getFieldId())) {
+                    if (ObjectUtil.isEmpty(oldField.getValue()) && ObjectUtil.isEmpty(newField.getValue())) {
+                        continue;
+                    }
+                    String oldFieldValue = (String) parseValue(oldField.getValue(), oldField.getType(),true);
+                    ;
+                    String newFieldValue = (String) parseValue(newField.getValue(), newField.getType(),true);
+                    ;
+                    if (!oldFieldValue.equals(newFieldValue)) {
+                        textList.add("将" + oldField.getName() + " 由" + oldFieldValue + "修改为" + newFieldValue + "。");
+                    }
                 }
             }
         });

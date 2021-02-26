@@ -29,6 +29,6 @@ public interface CallUserService {
      * @return
      **/
     @PostMapping("/adminUserHisTable/checkAuth")
-    Result<Boolean> checkAuth();
+    Result<Integer> checkAuth();
 
 }

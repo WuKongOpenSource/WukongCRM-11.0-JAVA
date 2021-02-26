@@ -1,10 +1,10 @@
 package com.kakarote.crm.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.feign.crm.entity.ExamineField;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.crm.common.CrmModel;
-import com.kakarote.crm.constant.FieldEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmField;
 import com.kakarote.crm.entity.VO.CrmFieldSortVO;
@@ -43,6 +43,8 @@ public interface ICrmFieldService extends BaseService<CrmField> {
      */
     public List<CrmField> list(Integer label, boolean isQueryHide);
 
+    public List<List<CrmField>> queryFormPositionFieldList(Integer label, boolean isQueryHide);
+
     /**
      * 查询模块字段列表
      *
@@ -75,6 +77,8 @@ public interface ICrmFieldService extends BaseService<CrmField> {
      * @return data
      */
     public List<CrmModelFiledVO> queryField(CrmModel crmModel);
+
+    public List<List<CrmModelFiledVO>> queryFormPositionFieldVO(CrmModel crmModel);
 
     /**
      * 查询字段配置
