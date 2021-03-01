@@ -465,7 +465,7 @@ public class CrmPrintTemplateServiceImpl extends BaseServiceImpl<CrmPrintTemplat
                 pdfWriter = PdfWriter.getInstance(document, new FileOutputStream(file));
                 document.open();
                 ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(html.getBytes());
-                XMLWorkerHelper.getInstance().parseXHtml(pdfWriter, document, byteArrayInputStream, StandardCharsets.UTF_8);
+                XMLWorkerHelper.getInstance().parseXHtml(pdfWriter, document, byteArrayInputStream, StandardCharsets.UTF_8,new FontProvider());
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
