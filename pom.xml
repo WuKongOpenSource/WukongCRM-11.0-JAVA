@@ -34,8 +34,41 @@
         <swagger.version>2.9.2</swagger.version>
         <hutool.version>5.3.1</hutool.version>
         <lombok.version>1.18.10</lombok.version>
-        <core.version>1.0.6</core.version>
+        <core.version>1.0.21</core.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>central</id>
+            <name>阿里云公共仓库</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>72crm</id>
+            <name>72crm</name>
+            <url>http://nexus.72crm.com/repository/maven-public/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>central</id>
+            <name>阿里云公共仓库</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <dependencyManagement>
         <dependencies>
