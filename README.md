@@ -82,10 +82,10 @@ wk_crm
 ### 一、前置环境
 - Jdk1.8
 - Maven3.5.0+   
-- Mysql5.7.20 （<a href="https://gitee.com/wukongcrm/crm_pro/wikis/mysql配置说明" target="_blank">数据库安装注意事项</a>）
+- Mysql5.7.20 （<a href="https://github.com/72wukong/72crm-11.0-Spring/wiki/mysql配置说明" target="_blank">数据库安装注意事项</a>）
 - Redis(版本不限)
-- Elasticsearch 6.8.6 （<a href="https://gitee.com/wukongcrm/crm_pro/wikis/elasticsearch配置说明" target="_blank">环境配置注意事项</a>）
-- Seata（1.2.0）（<a href="https://gitee.com/wukongcrm/crm_pro/wikis/seata" target="_blank">配置说明</a>）
+- Elasticsearch 6.8.6 （<a href="https://github.com/72wukong/72crm-11.0-Spring/wiki/elasticsearch配置说明" target="_blank">环境配置注意事项</a>）
+- Seata（1.2.0）（<a href="https://github.com/72wukong/72crm-11.0-Spring/wiki/seata" target="_blank">配置说明</a>）
 - Sentinel（1.7.2）（项目中sentinel使用8079端口）
 - Nacos（1.2.1)
 
@@ -93,11 +93,11 @@ wk_crm
 
 ### 一键安装说明
 
-本项目支持Docker一键安装（建议配置 4核16G以以上），[查看具体安装方法](https://gitee.com/wukongcrm/crm_pro/wikis/Docker一键安装教程?sort_id=3033975)
+本项目支持Docker一键安装（建议配置 4核16G以以上），[查看具体安装方法](https://github.com/72wukong/72crm-11.0-Spring/wiki/Docker一键安装教程)
 
 ### 常见问题
 
-<a href="https://bbs.72crm.com/portal.php?fid=44" target="_blank">常见问题以及解决方案</a>
+<a href="https://github.com/72wukong/72crm-11.0-Spring/wiki/常见问题以及解决方案" target="_blank">常见问题以及解决方案</a>
 
 
 
