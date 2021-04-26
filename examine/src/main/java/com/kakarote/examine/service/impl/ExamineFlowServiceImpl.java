@@ -76,7 +76,7 @@ public class ExamineFlowServiceImpl extends BaseServiceImpl<ExamineFlowMapper, E
             /*
              当前条件层级已完成，跳到上一层审核流程
              */
-            return queryUpperExamineFlow(examineFlow.getConditionId(), conditionMap);
+            nextExamineFlow = queryUpperExamineFlow(examineFlow.getConditionId(), conditionMap);
         }
         /*
         如果是条件审批由条件审批去判断
