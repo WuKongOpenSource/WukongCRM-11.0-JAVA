@@ -62,7 +62,7 @@ public class CrmReceivablesController {
 
     @PostMapping("/add")
     @ApiOperation("保存数据")
-    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity.[number]",detail = "'新增了回款:' + #crmModel.entity[number]")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity[number]",detail = "'新增了回款:' + #crmModel.entity[number]")
     public Result add(@RequestBody CrmContractSaveBO crmModel) {
         crmReceivablesService.addOrUpdate(crmModel);
         return R.ok();
