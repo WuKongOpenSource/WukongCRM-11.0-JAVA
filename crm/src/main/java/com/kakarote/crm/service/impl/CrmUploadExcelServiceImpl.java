@@ -360,9 +360,12 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                 if (record.getFieldType().equals(0) || record.getFieldType().equals(2)) {
                     Integer columnsNum = kv.getInteger(record.getFieldName());
                     Object value = rowList.get(columnsNum);
-                    if (Objects.equals(record.getType(), 4) && value instanceof Long) {
-                        Date date = org.apache.poi.ss.usermodel.DateUtil.getJavaDate((Long) value);
+                    if (Objects.equals(record.getType(), 4) && value instanceof Number) {
+                        Date date = org.apache.poi.ss.usermodel.DateUtil.getJavaDate(((Number)value).doubleValue());
                         record.setValue(DateUtil.formatDate(date));
+                    } else if (Objects.equals(record.getType(), 13) && value instanceof Number) {
+                        Date date = org.apache.poi.ss.usermodel.DateUtil.getJavaDate(((Number)value).doubleValue());
+                        record.setValue(DateUtil.formatDateTime(date));
                     } else {
                         record.setValue(value);
                     }
