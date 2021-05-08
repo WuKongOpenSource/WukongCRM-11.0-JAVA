@@ -2,6 +2,7 @@ package com.kakarote.crm.controller;
 
 
 import cn.hutool.core.util.StrUtil;
+import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SubModelType;
@@ -10,6 +11,7 @@ import com.kakarote.core.common.log.SysLog;
 import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
+import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.log.CrmReturnVisitLog;
@@ -50,6 +52,13 @@ public class CrmReturnVisitController {
         search.setPageType(1);
         BasePage<Map<String, Object>> mapBasePage = crmReturnVisitService.queryPageList(search);
         return R.ok(mapBasePage);
+    }
+
+    @PostMapping("/querySimpleEntity")
+    @ApiExplain("查询简单的客户对象")
+    public Result<List<SimpleCrmEntity>> querySimpleEntity(@RequestBody List<Integer> ids) {
+        List<SimpleCrmEntity> crmEntities = crmReturnVisitService.querySimpleEntity(ids);
+        return R.ok(crmEntities);
     }
 
     @PostMapping("/add")

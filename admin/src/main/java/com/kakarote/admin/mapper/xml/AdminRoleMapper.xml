@@ -14,9 +14,6 @@
         inner join wk_admin_role_menu as c on a.role_id = c.role_id and c.menu_id = #{menuId}
         ORDER BY data_type desc limit 1
     </select>
-    <select id="queryUserRoleListByUserId" resultType="com.kakarote.admin.entity.PO.AdminMenu">
-
-    </select>
     <delete id="deleteWorkRole" >
         update `wk_work_user` set role_id = #{roleId} where role_id = #{editRoleId}
     </delete>

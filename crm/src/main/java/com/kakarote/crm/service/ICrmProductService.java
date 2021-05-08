@@ -12,7 +12,6 @@ import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
 import com.kakarote.crm.entity.PO.CrmProduct;
 import com.kakarote.crm.entity.VO.CrmInfoNumVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -39,12 +38,14 @@ public interface ICrmProductService extends BaseService<CrmProduct> {
     public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id);
 
     /**
-     * 分页查询
+     * 查询所有数据
      *
-     * @param search 搜索添加
+     * @param search 搜索对象
      * @return data
      */
-    public BasePage<Map<String, Object>> queryPageList(@RequestBody CrmSearchBO search);
+    public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search);
+
+    public List<SimpleCrmEntity> querySimpleEntity(List<Integer> ids);
 
     /**
      * 查询字段配置

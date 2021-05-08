@@ -2,7 +2,6 @@ package com.kakarote.crm.entity.PO;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -149,8 +148,5 @@ public class CrmInvoice implements Serializable {
     @ApiModelProperty(value = "批次id")
     private String batchId;
 
-
-    @TableField(exist = false)
-    private ExamineRecordSaveBO examineFlowData;
 
 }

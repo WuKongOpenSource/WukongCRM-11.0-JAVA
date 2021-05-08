@@ -2,6 +2,7 @@ package com.kakarote.core.utils;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
@@ -35,7 +36,7 @@ public class BiTimeUtil {
             userIdList = adminService.queryUserByDeptIds(deptIdList).getData();
         } else {
             if (userId == null) {
-                userIdList = ApplicationContextHolder.getBean(AdminService.class).queryUserList().getData();
+                userIdList = ApplicationContextHolder.getBean(AdminService.class).queryUserList(1).getData();
             } else {
                 userIdList.add(userId);
             }
@@ -199,6 +200,52 @@ public class BiTimeUtil {
                     sqlDateFormat = "%Y%m%d";
                     dateFormat = "yyyyMMdd";
                     cycleNum = 1;
+                    break;
+                case "nextYear":
+                    beginDate = DateUtil.beginOfYear(DateUtil.date());
+                    beginDate =  DateUtil.offset(beginDate, DateField.YEAR,1);
+                    endDate = DateUtil.endOfYear(DateUtil.date());
+                    endDate = DateUtil.offset(endDate, DateField.YEAR,1);
+                    break;
+                case "firstHalfYear":
+                    beginDate = DateUtil.beginOfYear(DateUtil.date());
+                    endDate = DateUtil.offsetMonth(DateUtil.endOfYear(DateUtil.date()),-6);
+                    break;
+                case "nextHalfYear":
+                    beginDate = DateUtil.offsetMonth(DateUtil.beginOfYear(DateUtil.date()),6);
+                    endDate = DateUtil.endOfYear(DateUtil.date());
+                    break;
+                case "nextQuarter":
+                    beginDate = DateUtil.beginOfQuarter(DateUtil.date().offset(DateField.MONTH,3));
+                    endDate = DateUtil.endOfQuarter(DateUtil.date().offset(DateField.MONTH,3));
+                    break;
+                case "nextMonth":
+                    beginDate = DateUtil.beginOfMonth(DateUtil.date().offset(DateField.MONTH,1));
+                    endDate = DateUtil.beginOfMonth(DateUtil.date().offset(DateField.MONTH,1));
+                    break;
+                case "nextWeek":
+                    beginDate = DateUtil.beginOfWeek(DateUtil.date().offset(DateField.DAY_OF_YEAR,7));
+                    endDate = DateUtil.endOfWeek(DateUtil.date().offset(DateField.DAY_OF_YEAR,7));
+                    break;
+                case "tomorrow":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,1));
+                    endDate = DateUtil.endOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,1));
+                    break;
+                case "previous7day":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,-7));
+                    endDate = DateUtil.endOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,-1));
+                    break;
+                case "previous30day":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,-30));
+                    endDate = DateUtil.endOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,-1));
+                    break;
+                case "future7day":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,1));
+                    endDate = DateUtil.endOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,7));
+                    break;
+                case "future30day":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,1));
+                    endDate = DateUtil.endOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,30));
                     break;
                 default:
                     break;

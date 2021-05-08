@@ -16,10 +16,8 @@ import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
-import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
-import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
@@ -47,7 +45,6 @@ import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.entity.VO.CrmFieldSortVO;
 import com.kakarote.crm.entity.VO.CrmInfoNumVO;
-import com.kakarote.crm.entity.VO.CrmMembersSelectVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmContractMapper;
 import com.kakarote.crm.mapper.CrmReceivablesPlanMapper;
@@ -166,8 +163,6 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
         filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
         filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-        filedList.add(new CrmModelFiledVO("roUserId", FieldEnum.CHECKBOX, 1));
-        filedList.add(new CrmModelFiledVO("rwUserId", FieldEnum.CHECKBOX, 1));
         filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
         filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
         filedList.add(new CrmModelFiledVO("companyUserId", FieldEnum.USER, 1));
@@ -175,6 +170,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         filedList.add(new CrmModelFiledVO("contractId", FieldEnum.TEXT, 1));
         filedList.add(new CrmModelFiledVO("receivedMoney", FieldEnum.TEXT, 1));
         filedList.add(new CrmModelFiledVO("unreceivedMoney", FieldEnum.TEXT, 1));
+        filedList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, 0));
         return filedList;
     }
 
@@ -186,6 +182,10 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
      */
     @Override
     public List<CrmModelFiledVO> queryField(Integer id) {
+        return queryField(id,false);
+    }
+
+    private List<CrmModelFiledVO> queryField(Integer id,boolean appendInformation) {
         CrmModel crmModel = queryById(id);
         if (id != null) {
             List<JSONObject> customerList = new ArrayList<>();
@@ -209,6 +209,10 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         JSONObject object = new JSONObject();
         object.fluentPut("discountRate", crmModel.get("discountRate")).fluentPut("product", crmContractProductService.queryList(id)).fluentPut("totalPrice", crmModel.get("totalPrice"));
         vos.add(new CrmModelFiledVO().setFieldName("product").setName("产品").setValue(object).setFormType("product").setSetting(new ArrayList<>()).setIsNull(0).setFieldType(1));
+        if(appendInformation){
+            List<CrmModelFiledVO> modelFiledVOS = appendInformation(crmModel);
+            vos.addAll(modelFiledVOS);
+        }
         return vos;
     }
 
@@ -250,7 +254,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
      */
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
-        BasePage<Map<String, Object>> basePage = queryList(search);
+        BasePage<Map<String, Object>> basePage = queryList(search,false);
         for (Map<String, Object> map : basePage.getList()) {
             Double contractMoney =StrUtil.isNotEmpty(map.get("money").toString()) ? Double.parseDouble(map.get("money").toString()):0D;
             BigDecimal receivedProgress = new BigDecimal(100);
@@ -358,8 +362,6 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             crmContract.setBatchId(batchId);
             crmContract.setCreateTime(DateUtil.date());
             crmContract.setUpdateTime(DateUtil.date());
-            crmContract.setRoUserId(",");
-            crmContract.setRwUserId(",");
             crmContract.setOwnerUserId(UserUtil.getUserId());
             save(crmContract);
             if (crmContract.getCheckStatus() != null && crmContract.getCheckStatus() == 5) {
@@ -397,9 +399,9 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             if (contract.getCheckStatus() == 1) {
                 throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EXAMINE_PASS_HINT_ERROR);
             }
-//            if (contract.getCheckStatus() == 0){
-//                contract.setCheckStatus(4);
-//            }
+            if (contract.getCheckStatus() == 8) {
+                throw new CrmException(CrmCodeEnum.CRM_CONTRACT_CANCELLATION_ERROR);
+            }
             if (contract.getCheckStatus() != 4 && contract.getCheckStatus() != 2 && contract.getCheckStatus() != 5) {
                 throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EDIT_ERROR);
             }
@@ -416,8 +418,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
                     crmContract.setCheckStatus(1);
                 }
             }
-            crmBackLogDealService.deleteByType(crmContract.getOwnerUserId(), CrmEnum.CONTRACT, CrmBackLogEnum.END_CONTRACT, crmContract.getContractId());
-            crmBackLogDealService.deleteByType(crmContract.getOwnerUserId(), CrmEnum.CONTRACT, CrmBackLogEnum.REMIND_RETURN_VISIT_CONTRACT, crmContract.getContractId());
+            crmBackLogDealService.deleteByTypes(null, CrmEnum.CONTRACT, crmContract.getContractId(),CrmBackLogEnum.END_CONTRACT,CrmBackLogEnum.REMIND_RETURN_VISIT_CONTRACT,CrmBackLogEnum.CHECK_CONTRACT);
             crmContract.setUpdateTime(DateUtil.date());
             actionRecordUtil.updateRecord(BeanUtil.beanToMap(contract), BeanUtil.beanToMap(crmContract), CrmEnum.CONTRACT, crmContract.getName(), crmContract.getContractId());
             updateById(crmContract);
@@ -540,31 +541,24 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void changeOwnerUser(CrmBusinessChangOwnerUserBO changOwnerUserBO) {
+    public void changeOwnerUser(CrmChangeOwnerUserBO changOwnerUserBO) {
         if (changOwnerUserBO.getIds().size() == 0) {
             return;
         }
         String ownerUserName = UserCacheUtil.getUserName(changOwnerUserBO.getOwnerUserId());
         changOwnerUserBO.getIds().forEach(id -> {
-            if (AuthUtil.isRwAuth(id, CrmEnum.CONTRACT,CrmAuthEnum.EDIT)) {
+            if (AuthUtil.isChangeOwnerUserAuth(id, CrmEnum.CONTRACT,CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
             CrmContract contract = getById(id);
             if (contract.getCheckStatus() == 8) {
                 throw new CrmException(CrmCodeEnum.CRM_CONTRACT_TRANSFER_ERROR);
             }
-            String memberId = "," + changOwnerUserBO.getOwnerUserId() + ",";
-            getBaseMapper().deleteMember(memberId, id);
             contract = getById(id);
             if (2 == changOwnerUserBO.getTransferType() && !changOwnerUserBO.getOwnerUserId().equals(contract.getOwnerUserId())) {
-                if (1 == changOwnerUserBO.getPower()) {
-                    contract.setRoUserId(contract.getRoUserId() + contract.getOwnerUserId() + Const.SEPARATOR);
-                }
-                if (2 == changOwnerUserBO.getPower()) {
-                    contract.setRwUserId(contract.getRwUserId() + contract.getOwnerUserId() + Const.SEPARATOR);
-                }
-                crmCustomerService.addTermMessage(AdminMessageEnum.CRM_CONTRACT_USER, contract.getContractId(), contract.getName(), contract.getOwnerUserId());
+                ApplicationContextHolder.getBean(ICrmTeamMembersService.class).addSingleMember(getLabel(),contract.getContractId(),contract.getOwnerUserId(),changOwnerUserBO.getPower(),changOwnerUserBO.getExpiresTime(),contract.getName());
             }
+            ApplicationContextHolder.getBean(ICrmTeamMembersService.class).deleteMember(getLabel(),new CrmMemberSaveBO(id,changOwnerUserBO.getOwnerUserId()));
             contract.setOwnerUserId(changOwnerUserBO.getOwnerUserId());
             updateById(contract);
             actionRecordUtil.addConversionRecord(id, CrmEnum.CONTRACT, changOwnerUserBO.getOwnerUserId(), contract.getName());
@@ -572,8 +566,6 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             Map<String, Object> map = new HashMap<>();
             map.put("ownerUserId", changOwnerUserBO.getOwnerUserId());
             map.put("ownerUserName", ownerUserName);
-            map.put("rwUserId", contract.getRwUserId());
-            map.put("roUserId", contract.getRoUserId());
             updateField(map, Collections.singletonList(id));
         });
 
@@ -588,7 +580,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
      */
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
-        List<Map<String, Object>> dataList = queryPageList(search).getList();
+        List<Map<String, Object>> dataList = queryList(search,true).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
             headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
@@ -601,7 +593,9 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
             }
             for (Map<String, Object> map : dataList) {
                 headList.forEach(field ->{
-                    map.put(field.getFieldName(),ActionRecordUtil.parseValue(map.get(field.getFieldName()),field.getType(),false));
+                    if (fieldService.equalsByType(field.getType())) {
+                        map.put(field.getFieldName(),ActionRecordUtil.parseValue(map.get(field.getFieldName()),field.getType(),false));
+                    }
                 });
                 if(map.get("checkStatus")==null||"".equals(map.get("checkStatus"))){
                     continue;
@@ -664,180 +658,9 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         }
     }
 
-
-    /**
-     * 获取团队成员
-     *
-     * @param contractId 合同ID
-     * @return data
-     */
-    @Override
-    public List<CrmMembersSelectVO> getMembers(Integer contractId) {
-        CrmContract crmContract = getById(contractId);
-        List<CrmMembersSelectVO> recordList = new ArrayList<>();
-        if (crmContract.getOwnerUserId() != null) {
-            UserInfo userInfo = UserCacheUtil.getUserInfo(crmContract.getOwnerUserId());
-            CrmMembersSelectVO crmMembersVO = new CrmMembersSelectVO();
-            crmMembersVO.setUserId(userInfo.getUserId());
-            crmMembersVO.setRealname(UserCacheUtil.getUserName(userInfo.getUserId()));
-            crmMembersVO.setDeptName(UserCacheUtil.getDeptName(userInfo.getDeptId()));
-            crmMembersVO.setPower("负责人权限");
-            crmMembersVO.setGroupRole("负责人");
-            crmMembersVO.setPost(userInfo.getPost());
-            recordList.add(crmMembersVO);
-        }
-        String roUserId = crmContract.getRoUserId();
-        String rwUserId = crmContract.getRwUserId();
-        String memberIds = roUserId + rwUserId.substring(1);
-        if (Const.SEPARATOR.equals(memberIds)) {
-            return recordList;
-        }
-        String[] memberIdsArr = memberIds.substring(1, memberIds.length() - 1).split(",");
-        Set<String> memberIdsSet = new HashSet<>(Arrays.asList(memberIdsArr));
-        for (String memberId : memberIdsSet) {
-            UserInfo userInfo = UserCacheUtil.getUserInfo(Long.valueOf(memberId));
-            CrmMembersSelectVO crmMembersVO = new CrmMembersSelectVO();
-            crmMembersVO.setUserId(userInfo.getUserId());
-            crmMembersVO.setRealname(UserCacheUtil.getUserName(userInfo.getUserId()));
-            crmMembersVO.setDeptName(UserCacheUtil.getDeptName(userInfo.getDeptId()));
-            crmMembersVO.setGroupRole("普通成员");
-            crmMembersVO.setPost(userInfo.getPost());
-            if (roUserId.contains(memberId)) {
-                crmMembersVO.setPower("只读");
-            } else if (rwUserId.contains(memberId)) {
-                crmMembersVO.setPower("读写");
-            }
-            recordList.add(crmMembersVO);
-        }
-        return recordList;
-    }
-
-    /**
-     * 添加团队成员
-     *
-     * @param crmMemberSaveBO data
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void addMember(CrmMemberSaveBO crmMemberSaveBO) {
-        for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isRwAuth(id,CrmEnum.CONTRACT,CrmAuthEnum.EDIT)) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
-            CrmContract oldContract = lambdaQuery().eq(CrmContract::getContractId,id).ne(CrmContract::getCheckStatus,7).one();
-            if(oldContract == null){
-                continue;
-            }
-            Long ownerUserId = oldContract.getOwnerUserId();
-            for (Long memberId : crmMemberSaveBO.getMemberIds()) {
-                if (ownerUserId.equals(memberId)) {
-                    throw new CrmException(CrmCodeEnum.CRM_MEMBER_ADD_ERROR);
-                }
-                oldContract.setRoUserId(oldContract.getRoUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-                oldContract.setRwUserId(oldContract.getRwUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-                String name = lambdaQuery().select(CrmContract::getName).eq(CrmContract::getContractId, id).one().getName();
-                crmCustomerService.addTermMessage(AdminMessageEnum.CRM_CONTRACT_USER, oldContract.getContractId(), oldContract.getName(), memberId);
-                actionRecordUtil.addMemberActionRecord(CrmEnum.BUSINESS, id, memberId, name);
-            }
-            if (1 == crmMemberSaveBO.getPower()) {
-                oldContract.setRoUserId(oldContract.getRoUserId() + StrUtil.join(Const.SEPARATOR, crmMemberSaveBO.getMemberIds()) + Const.SEPARATOR);
-            } else if (2 == crmMemberSaveBO.getPower()) {
-                oldContract.setRwUserId(oldContract.getRwUserId() + StrUtil.join(Const.SEPARATOR, crmMemberSaveBO.getMemberIds()) + Const.SEPARATOR);
-            }
-            updateById(oldContract);
-            Map<String, Object> map = new HashMap<>();
-            map.put("roUserId", oldContract.getRoUserId());
-            map.put("rwUserId", oldContract.getRwUserId());
-            updateField(map, Collections.singletonList(id));
-        }
-    }
-
-    /**
-     * 删除团队成员
-     *
-     * @param crmMemberSaveBO data
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteMember(CrmMemberSaveBO crmMemberSaveBO) {
-        for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isRwAuth(id,CrmEnum.CONTRACT,CrmAuthEnum.EDIT)) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
-            deleteMembers(id, crmMemberSaveBO.getMemberIds());
-        }
-    }
-
-    private void deleteMembers(Integer id, List<Long> memberIds) {
-        CrmContract oldContract = getById(id);
-        Long ownerUserId = oldContract.getOwnerUserId();
-        for (Long memberId : memberIds) {
-            if (ownerUserId.equals(memberId)) {
-                throw new CrmException(CrmCodeEnum.CRM_MEMBER_DELETE_ERROR);
-            }
-            oldContract.setRoUserId(oldContract.getRoUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-            oldContract.setRwUserId(oldContract.getRwUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-            if (!memberId.equals(UserUtil.getUserId())) {
-                crmCustomerService.addTermMessage(AdminMessageEnum.CRM_CONTRACT_REMOVE_TEAM,oldContract.getContractId(),oldContract.getName(),memberId);
-                actionRecordUtil.addDeleteMemberActionRecord(CrmEnum.CONTRACT, id, memberId, false, oldContract.getName());
-            } else {
-                crmCustomerService.addTermMessage(AdminMessageEnum.CRM_CONTRACT_TEAM_EXIT,oldContract.getContractId(),oldContract.getName(),oldContract.getOwnerUserId());
-                actionRecordUtil.addDeleteMemberActionRecord(CrmEnum.CONTRACT, id, memberId, true, oldContract.getName());
-            }
-        }
-        updateById(oldContract);
-        Map<String, Object> map = new HashMap<>();
-        map.put("roUserId", oldContract.getRoUserId());
-        map.put("rwUserId", oldContract.getRwUserId());
-        updateField(map, Collections.singletonList(id));
-    }
-
-    /**
-     * 退出团队
-     *
-     * @param contractId 合同ID
-     */
-    @Override
-    public void exitTeam(Integer contractId) {
-        deleteMembers(contractId, Collections.singletonList(UserUtil.getUserId()));
-    }
-
     @Override
     public List<CrmModelFiledVO> information(Integer contractId) {
-        CrmModel crmModel = queryById(contractId);
-        List<String> keyList = Arrays.asList("num", "name", "orderDate", "money", "startTime", "endTime", "remark");
-        List<String> systemFieldList = Arrays.asList("创建人", "创建时间", "更新时间", "下次联系时间", "最后跟进时间", "已收款金额", "未收款金额");
-        List<CrmModelFiledVO> crmModelFiledVOS = queryInformation(crmModel, keyList);
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("checkStatus").setName("审核状态").setValue(crmModel.get("checkStatus")).setFormType("check_status").setFieldType(1));
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("businessId").setName("商机名称").setValue(new JSONObject().fluentPut("businessId", crmModel.get("businessId")).fluentPut("businessName", crmModel.get("businessName"))).setFormType("business").setFieldType(1));
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("contactsId").setName("客户签约人").setValue(new JSONObject().fluentPut("contactsId", crmModel.get("contactsId")).fluentPut("contactsName", crmModel.get("contactsName"))).setFormType("contacts").setFieldType(1));
-        List<Long> ids = StrUtil.splitTrim((String) crmModel.get("companyUserId"), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList());
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("companyUserId").setName("公司签约人").setValue(ids.size() > 0 ? adminService.queryUserByIds(ids).getData() : new ArrayList<>()).setFormType("user").setFieldType(1));
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("customerId").setName("客户名称").setValue(new JSONObject().fluentPut("customerId", crmModel.get("customerId")).fluentPut("customerName", crmModel.get("customerName"))).setFormType("customer").setFieldType(1));
-        if (crmModel.get("receivedMoney") != null){
-            crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("receivedMoney").setName("已收款金额").setValue(new BigDecimal(crmModel.get("receivedMoney").toString())).setFormType(FieldEnum.NUMBER.getFormType()).setFieldType(1));
-        }
-        if (crmModel.get("unreceivedMoney") != null){
-            crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("unreceivedMoney").setName("未收款金额").setValue(new BigDecimal(crmModel.get("unreceivedMoney").toString())).setFormType(FieldEnum.NUMBER.getFormType()).setFieldType(1));
-        }
-        List<CrmModelFiledVO> filedVOS = crmModelFiledVOS.stream().sorted(Comparator.comparingInt(r -> -r.getFieldType())).peek(r -> {
-            r.setFieldType(null);
-            r.setSetting(null);
-            r.setType(null);
-            if (systemFieldList.contains(r.getName())) {
-                r.setSysInformation(1);
-            } else {
-                r.setSysInformation(0);
-            }
-        }).collect(Collectors.toList());
-        ICrmRoleFieldService crmRoleFieldService = ApplicationContextHolder.getBean(ICrmRoleFieldService.class);
-        List<CrmRoleField> roleFieldList = crmRoleFieldService.queryUserFieldAuth(crmModel.getLabel(), 1);
-        Map<String, Integer> levelMap = new HashMap<>();
-        roleFieldList.forEach(crmRoleField -> {
-            levelMap.put(StrUtil.toCamelCase(crmRoleField.getFieldName()), crmRoleField.getAuthLevel());
-        });
-        filedVOS.removeIf(field -> (!UserUtil.isAdmin() && Objects.equals(1, levelMap.get(field.getFieldName()))));
-        return filedVOS;
+        return queryField(contractId,true);
     }
 
     /**
@@ -899,13 +722,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         map.put("invoiceCon", invoiceCon);
         CrmInfoNumVO infoNumVO = getBaseMapper().queryNum(map);
         infoNumVO.setFileCount(adminFileService.queryNum(batchIdList).getData());
-        Set<String> member = new HashSet<>();
-        member.addAll(StrUtil.splitTrim(crmContract.getRoUserId(), Const.SEPARATOR));
-        member.addAll(StrUtil.splitTrim(crmContract.getRwUserId(), Const.SEPARATOR));
-        if (crmContract.getOwnerUserId() != null) {
-            member.add(crmContract.getOwnerUserId().toString());
-        }
-        infoNumVO.setMemberCount(member.size());
+        infoNumVO.setMemberCount(ApplicationContextHolder.getBean(ICrmTeamMembersService.class).queryMemberCount(getLabel(),crmContract.getContractId(),crmContract.getOwnerUserId()));
         return infoNumVO;
     }
 
@@ -960,7 +777,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         if (ids.size() == 0) {
             return new ArrayList<>();
         }
-        List<CrmContract> list = query().in("contract_id", ids).list();
+        List<CrmContract> list = lambdaQuery().select(CrmContract::getContractId,CrmContract::getName).in(CrmContract::getContractId, ids).list();
         return list.stream().map(crmContract -> {
             SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
             simpleCrmEntity.setId(crmContract.getContractId());
@@ -992,6 +809,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         }
         updateInformationBO.getList().forEach(record -> {
             CrmContract oldContract = getById(updateInformationBO.getId());
+            uniqueFieldIsAbnormal(record.getString("name"),record.getInteger("fieldId"),record.getString("value"),batchId);
             Map<String, Object> oldContractMap = BeanUtil.beanToMap(oldContract);
             if (record.getInteger("fieldType") == 1) {
                 Map<String, Object> crmContractMap = new HashMap<>(oldContractMap);
@@ -1004,27 +822,21 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
                 }
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
                 CrmContractData contractData = crmContractDataService.lambdaQuery()
-                        .select(CrmContractData::getValue)
+                        .select(CrmContractData::getValue,CrmContractData::getId)
                         .eq(CrmContractData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmContractData::getBatchId, batchId).last("limit 1").one();
                 String value = contractData != null ? contractData.getValue() : null;
-                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
-                actionRecordUtil.publicContentRecord(CrmEnum.CONTRACT, BehaviorEnum.UPDATE, contractId, oldContract.getName(), detail);
+                actionRecordUtil.publicContentRecord(CrmEnum.CONTRACT, BehaviorEnum.UPDATE, contractId, oldContract.getName(), record,value);
                 String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
-                boolean bol = crmContractDataService.lambdaUpdate()
-                        .set(CrmContractData::getName,record.getString("fieldName"))
-                        .set(CrmContractData::getValue, newValue)
-                        .eq(CrmContractData::getFieldId, record.getInteger("fieldId"))
-                        .eq(CrmContractData::getBatchId, batchId).update();
-                if (!bol) {
-                    CrmContractData crmContractData = new CrmContractData();
-                    crmContractData.setFieldId(record.getInteger("fieldId"));
-                    crmContractData.setName(record.getString("fieldName"));
-                    crmContractData.setValue(newValue);
-                    crmContractData.setCreateTime(new Date());
-                    crmContractData.setBatchId(batchId);
-                    crmContractDataService.save(crmContractData);
-                }
+                CrmContractData crmContractData = new CrmContractData();
+                crmContractData.setId(contractData != null ? contractData.getId() : null);
+                crmContractData.setFieldId(record.getInteger("fieldId"));
+                crmContractData.setName(record.getString("fieldName"));
+                crmContractData.setValue(newValue);
+                crmContractData.setCreateTime(new Date());
+                crmContractData.setBatchId(batchId);
+                crmContractDataService.saveOrUpdate(crmContractData);
+
             }
             updateField(record, contractId);
         });
@@ -1110,7 +922,7 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         }
         List<String> collect = contractIds.stream().map(Object::toString).collect(Collectors.toList());
         CrmSearchBO crmSearchBO = new CrmSearchBO();
-        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect)));
+        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, collect)));
         crmSearchBO.setLabel(CrmEnum.CONTRACT.getType());
         crmSearchBO.setPage(eventCrmPageBO.getPage());
         crmSearchBO.setLimit(eventCrmPageBO.getLimit());
@@ -1154,10 +966,10 @@ public class CrmContractServiceImpl extends BaseServiceImpl<CrmContractMapper, C
         searchBo.setSortField(biParams.getSortField());
         List<String> stringList = products.stream().map(crmContractProduct -> crmContractProduct.getContractId().toString()).collect(Collectors.toList());
         List<CrmSearchBO.Search> searchList = searchBo.getSearchList();
-        searchList.add(new CrmSearchBO.Search("contractId",null,CrmSearchBO.FieldSearchEnum.ID,stringList));
+        searchList.add(new CrmSearchBO.Search("contractId","text",CrmSearchBO.FieldSearchEnum.ID,stringList));
         List<String> userIds = timeEntity.getUserIds().stream().map(Object::toString).collect(Collectors.toList());
-        searchList.add(new CrmSearchBO.Search("ownerUserId","single_user",CrmSearchBO.FieldSearchEnum.IS,userIds));
-        searchList.add(new CrmSearchBO.Search("orderDate", "date", CrmSearchBO.FieldSearchEnum.DATE, Arrays.asList(DateUtil.formatDate(timeEntity.getBeginDate()), DateUtil.formatDate(DateUtil.offsetDay(timeEntity.getEndDate(),1)))));
+        searchList.add(new CrmSearchBO.Search("ownerUserId","text",CrmSearchBO.FieldSearchEnum.IS,userIds));
+        searchList.add(new CrmSearchBO.Search("orderDate", "date", CrmSearchBO.FieldSearchEnum.RANGE, Arrays.asList(DateUtil.formatDate(timeEntity.getBeginDate()), DateUtil.formatDate(DateUtil.offsetDay(timeEntity.getEndDate(),1)))));
         return queryPageList(searchBo);
     }
 }

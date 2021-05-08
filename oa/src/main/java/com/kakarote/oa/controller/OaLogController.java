@@ -19,6 +19,7 @@ import com.kakarote.oa.entity.PO.OaLogRule;
 import com.kakarote.oa.service.IOaCommonService;
 import com.kakarote.oa.service.IOaLogRuleService;
 import com.kakarote.oa.service.IOaLogService;
+import com.kakarote.oa.service.IOaLogUserFavourService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +56,9 @@ public class OaLogController {
     @Autowired
     private IOaCommonService oaCommonService;
 
+    @Autowired
+    private IOaLogUserFavourService oaLogUserFavourService;
+
     @PostMapping("/initOaData")
     @ApiExplain("初始化日志数据")
     public Result<Boolean> initOaData() {
@@ -78,6 +82,12 @@ public class OaLogController {
     public Result<BasePage<JSONObject>> queryList(@RequestBody LogBO bo) {
         BasePage<JSONObject> basePage = oaLogService.queryList(bo);
         return R.ok(basePage);
+    }
+
+    @PostMapping("/favourOrCancel")
+    @ApiOperation("用户点赞或取消")
+    public Result<JSONObject> favourOrCancel(@RequestParam("isFavour") boolean isFavour,@RequestParam("logId") Integer logId) {
+        return R.ok(oaLogUserFavourService.userFavourOrCancel(isFavour,logId));
     }
 
     /**

@@ -51,13 +51,8 @@ public class CrmFieldSortServiceImpl extends BaseServiceImpl<CrmFieldSortMapper,
         return getBaseMapper().queryListHead(label, userId);
     }
 
-    /**
-     * 保存用户排序
-     *
-     * @param label  label
-     * @param userId 用户ID
-     */
-    private void saveUserFieldSort(Integer label, Long userId) {
+    @Override
+    public List<CrmFieldSort> queryAllFieldSortList(Integer label,Long userId) {
         List<CrmField> crmFieldList = crmFieldService.list(label, false);
         CrmEnum crmEnum = CrmEnum.parse(label);
         switch (crmEnum) {
@@ -70,12 +65,14 @@ public class CrmFieldSortServiceImpl extends BaseServiceImpl<CrmFieldSortMapper,
                 crmFieldList.add(new CrmField("address", "地区定位", FieldEnum.MAP_ADDRESS));
                 crmFieldList.add(new CrmField("poolDay", "距进入公海天数", FieldEnum.NUMBER));
                 crmFieldList.add(new CrmField("ownerUserName", "负责人", FieldEnum.TEXT));
+                crmFieldList.add(new CrmField("teamMemberIds", "相关团队", FieldEnum.USER));
                 break;
             case BUSINESS:
                 crmFieldList.add(new CrmField("typeName", "商机状态组", FieldEnum.SELECT));
                 crmFieldList.add(new CrmField("statusName", "商机阶段", FieldEnum.SELECT));
                 crmFieldList.add(new CrmField("lastTime", "最后跟进时间", FieldEnum.DATETIME));
                 crmFieldList.add(new CrmField("ownerUserName", "负责人", FieldEnum.TEXT));
+                crmFieldList.add(new CrmField("teamMemberIds", "相关团队", FieldEnum.USER));
                 break;
             case CONTRACT:
                 crmFieldList.add(new CrmField("checkStatus", "审核状态", FieldEnum.NUMBER));
@@ -83,11 +80,13 @@ public class CrmFieldSortServiceImpl extends BaseServiceImpl<CrmFieldSortMapper,
                 crmFieldList.add(new CrmField("unreceivedMoney", "未收款金额", FieldEnum.FLOATNUMBER));
                 crmFieldList.add(new CrmField("lastTime", "最后跟进时间", FieldEnum.DATETIME));
                 crmFieldList.add(new CrmField("ownerUserName", "负责人", FieldEnum.TEXT));
+                crmFieldList.add(new CrmField("teamMemberIds", "相关团队", FieldEnum.USER));
                 break;
             case RECEIVABLES:
                 crmFieldList.add(new CrmField("checkStatus", "审核状态", FieldEnum.NUMBER));
                 crmFieldList.add(new CrmField("contractMoney", "合同金额", FieldEnum.FLOATNUMBER));
                 crmFieldList.add(new CrmField("ownerUserName", "负责人", FieldEnum.TEXT));
+                crmFieldList.add(new CrmField("teamMemberIds", "相关团队", FieldEnum.USER));
                 break;
             case LEADS:
                 crmFieldList.add(new CrmField("lastTime", "最后跟进时间", FieldEnum.DATE));
@@ -101,12 +100,21 @@ public class CrmFieldSortServiceImpl extends BaseServiceImpl<CrmFieldSortMapper,
             case CONTACTS:
                 crmFieldList.add(new CrmField("lastTime", "最后跟进时间", FieldEnum.DATETIME));
                 crmFieldList.add(new CrmField("ownerUserName", "负责人", FieldEnum.TEXT));
+                crmFieldList.add(new CrmField("teamMemberIds", "相关团队", FieldEnum.USER));
                 break;
             case CUSTOMER_POOL:
                 crmFieldList.add(new CrmField("lastContent", "最后跟进记录", FieldEnum.TEXTAREA));
                 crmFieldList.add(new CrmField("ownerUserName", "负责人", FieldEnum.TEXT));
                 break;
             case RETURN_VISIT:
+                break;
+            case INVOICE:
+                crmFieldList.add(new CrmField("ownerUserName", "负责人", FieldEnum.TEXT));
+                crmFieldList.add(new CrmField("checkStatus", "审核状态", FieldEnum.NUMBER));
+                crmFieldList.add(new CrmField("invoiceStatus", "开票状态", FieldEnum.NUMBER));
+                crmFieldList.add(new CrmField("invoiceNumber", "发票号码", FieldEnum.TEXT));
+                crmFieldList.add(new CrmField("realInvoiceDate", "实际开票日期", FieldEnum.DATE));
+                crmFieldList.add(new CrmField("logisticsNumber", "物流单号", FieldEnum.TEXT));
             default:
                 break;
         }
@@ -128,6 +136,17 @@ public class CrmFieldSortServiceImpl extends BaseServiceImpl<CrmFieldSortMapper,
             fieldSort.setType(crmFieldList.get(i).getType());
             fieldSortList.add(fieldSort);
         }
+        return fieldSortList;
+    }
+
+    /**
+     * 保存用户排序
+     *
+     * @param label  label
+     * @param userId 用户ID
+     */
+    private void saveUserFieldSort(Integer label, Long userId) {
+        List<CrmFieldSort> fieldSortList = queryAllFieldSortList(label,userId);
         saveBatch(fieldSortList, Const.BATCH_SAVE_SIZE);
     }
 

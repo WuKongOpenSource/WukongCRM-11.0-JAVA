@@ -9,6 +9,7 @@ import com.kakarote.admin.entity.PO.AdminModelSort;
 import com.kakarote.admin.entity.PO.AdminRole;
 import com.kakarote.admin.entity.VO.AdminRoleVO;
 import com.kakarote.admin.service.IAdminModelSortService;
+import com.kakarote.admin.service.IAdminRoleAuthService;
 import com.kakarote.admin.service.IAdminRoleService;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
@@ -49,6 +50,9 @@ public class AdminRoleController {
     @Autowired
     private IAdminModelSortService adminModelSortService;
 
+    @Autowired
+    private IAdminRoleAuthService adminRoleAuthService;
+
     @PostMapping("/auth")
     @ApiOperation("角色权限")
     public Result<JSONObject> auth() {
@@ -62,6 +66,12 @@ public class AdminRoleController {
     @ApiOperation("获取未授权的菜单")
     public Result<List<String>> queryNoAuthMenu(@RequestParam("userId") @NotNull Long userId) {
         return R.ok(adminRoleService.queryNoAuthMenu(userId));
+    }
+
+    @PostMapping("/getRoleList")
+    @ApiOperation("查询新增员工时的可查询角色")
+    public Result<List<AdminRoleVO>> getRoleList(){
+        return R.ok(adminRoleService.getRoleList());
     }
 
     @PostMapping("/getAllRoleList")
@@ -85,7 +95,8 @@ public class AdminRoleController {
     @PostMapping("/getRoleByType/{type}")
     @ApiOperation("通过角色类型查询角色")
     public Result<List<AdminRole>> getRoleByType(@PathVariable("type") Integer type) {
-        List<AdminRole> roleByType = adminRoleService.getRoleByType(AdminRoleTypeEnum.parse(type));
+        AdminRoleTypeEnum roleTypeEnum = AdminRoleTypeEnum.parse(type);
+        List<AdminRole> roleByType = adminRoleService.getRoleByType(roleTypeEnum);
         return R.ok(roleByType);
     }
 
@@ -182,6 +193,22 @@ public class AdminRoleController {
     public Result updateRoleMenu(@RequestBody AdminRole adminRole) {
         adminRoleService.updateRoleMenu(adminRole);
         return R.ok();
+    }
+
+    @PostMapping("/updateAuthRole/{roleId}")
+    @ApiOperation("保存角色与能看到角色的关系关系")
+    public Result updateAuthRole(@PathVariable("roleId") Integer roleId,@RequestBody List<Integer> authRoleIds) {
+        if(authRoleIds.size() > 0) {
+            adminRoleAuthService.saveRoleAuth(roleId,authRoleIds);
+        }
+        return Result.ok();
+    }
+
+    @PostMapping("/queryAuthRole/{roleId}")
+    @ApiOperation("查询角色与能看到角色的关系关系")
+    public Result<List<Integer>> queryAuthRole(@PathVariable("roleId") Integer roleId){
+        List<Integer> roleIdList = adminRoleAuthService.queryByRoleId(roleId);
+        return Result.ok(roleIdList);
     }
 
     @PostMapping(value = "/queryWorkRole")

@@ -21,4 +21,4 @@ spring:
   datasource:
     url: jdbc:${DATASOURCE_DBTYPE:mysql}://${DATASOURCE_HOST:127.0.0.1}:${DATASOURCE_PORT:3306}/wk_crm_single?characterEncoding=utf8&useSSL=false&zeroDateTimeBehavior=convertToNull&tinyInt1isBit=false&serverTimezone=Asia/Shanghai&useAffectedRows=true
     username: ${DATASOURCE_USERNAME:root}
-    password: ${DATASOURCE_PASSWORD:Admin001m}
+    password: ${DATASOURCE_PASSWORD:password}

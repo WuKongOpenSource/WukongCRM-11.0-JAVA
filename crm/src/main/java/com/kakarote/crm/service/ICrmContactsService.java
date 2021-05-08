@@ -34,10 +34,11 @@ public interface ICrmContactsService extends BaseService<CrmContacts> {
     public List<CrmModelFiledVO> queryField(Integer id);
     public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id);
     /**
-     * 分页查询
+     * 查询所有数据
      *
-     * @param search search
-     * @return data
+     * @param search
+     * @param isExcel true:查询全部数据  false:查询分页数据
+     * @return
      */
     public BasePage<Map<String, Object>> queryPageList(@RequestBody CrmSearchBO search);
 
@@ -66,10 +67,9 @@ public interface ICrmContactsService extends BaseService<CrmContacts> {
     /**
      * 修改联系人负责人
      *
-     * @param ids       联系人id列表
-     * @param newOwnerUserId 新负责人ID
+     * @param crmChangeOwnerUserBO  负责人变更BO
      */
-    public void changeOwnerUser(List<Integer> ids, Long newOwnerUserId);
+    public void changeOwnerUser(CrmChangeOwnerUserBO crmChangeOwnerUserBO);
 
 
     /**

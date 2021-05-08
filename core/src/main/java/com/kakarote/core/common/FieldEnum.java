@@ -1,6 +1,5 @@
 package com.kakarote.core.common;
 
-import com.kakarote.core.exception.CrmException;
 import lombok.Getter;
 
 /**
@@ -63,7 +62,6 @@ public enum FieldEnum {
     CURRENT_POSITION(44,"location","定位"),
     DETAIL_TABLE(45,"detail_table","明细表格"),
     HANDWRITING_SIGN(46,"handwriting_sign","手写签名"),
-//   作废：  DECIMALS(47,"decimals","数字/小数-支持设置位数"),
     DATE_INTERVAL(48,"date_interval","日期区间"),
     OPTIONS_TYPE(49,"options_type","选项字段:逻辑表单、批量编辑、其他"),
     DESC_TEXT(50,"desc_text","描述文字"),
@@ -97,7 +95,7 @@ public enum FieldEnum {
                 return fieldTypeEnum;
             }
         }
-        throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
+        return TEXT;
     }
 
     public static FieldEnum parse(String formType) {

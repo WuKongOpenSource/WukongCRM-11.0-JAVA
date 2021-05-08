@@ -32,8 +32,8 @@ public class AdminUserConfigServiceImpl extends BaseServiceImpl<AdminUserConfigM
     @Override
     public AdminUserConfig queryUserConfigByName(String name) {
         QueryWrapper<AdminUserConfig> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("name", name).eq("user_id", UserUtil.getUserId()).last(" limit 0,1");
-        return query().getBaseMapper().selectOne(queryWrapper);
+        queryWrapper.eq("name", name).eq("user_id", UserUtil.getUserId()).last(" limit 1");
+        return getOne(queryWrapper);
     }
 
     /**
@@ -47,7 +47,7 @@ public class AdminUserConfigServiceImpl extends BaseServiceImpl<AdminUserConfigM
     public List<AdminUserConfig> queryUserConfigListByName(String name) {
         QueryWrapper<AdminUserConfig> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("name", name).eq("user_id", UserUtil.getUserId());
-        return query().getBaseMapper().selectList(queryWrapper);
+        return list(queryWrapper);
     }
 
     /**
@@ -86,7 +86,7 @@ public class AdminUserConfigServiceImpl extends BaseServiceImpl<AdminUserConfigM
     public List<AdminUserConfig> queryUserConfigByNameAndValue(String name, String value) {
         QueryWrapper<AdminUserConfig> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("name", name).eq("value", value);
-        return query().getBaseMapper().selectList(queryWrapper);
+        return list(queryWrapper);
     }
 
 }

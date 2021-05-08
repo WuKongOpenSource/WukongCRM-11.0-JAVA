@@ -5,10 +5,8 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.kakarote.core.common.FieldEnum;
-import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.Content;
-import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
@@ -17,10 +15,8 @@ import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserUtil;
-import com.kakarote.crm.common.AuthUtil;
-import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.entity.BO.CrmBusinessChangOwnerUserBO;
+import com.kakarote.crm.entity.BO.CrmChangeOwnerUserBO;
 import com.kakarote.crm.entity.BO.CrmContractSaveBO;
 import com.kakarote.crm.entity.BO.CrmMemberSaveBO;
 import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
@@ -58,7 +54,7 @@ public class CrmContractLog {
         return contentList;
     }
 
-    public List<Content> changeOwnerUser(CrmBusinessChangOwnerUserBO crmChangeOwnerUserBO) {
+    public List<Content> changeOwnerUser(CrmChangeOwnerUserBO crmChangeOwnerUserBO) {
         return crmChangeOwnerUserBO.getIds().stream().map(id -> {
             String name = crmContractService.getContractName(id);
             return sysLogUtil.addConversionRecord(CrmEnum.CONTRACT, crmChangeOwnerUserBO.getOwnerUserId(), name);
@@ -100,9 +96,6 @@ public class CrmContractLog {
     public List<Content> deleteMembers(CrmMemberSaveBO crmMemberSaveBO) {
         List<Content> contentList = new ArrayList<>();
         for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isRwAuth(id,CrmEnum.CUSTOMER,CrmAuthEnum.EDIT)) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
             String name = crmContractService.getContractName(id);
             for (Long memberId : crmMemberSaveBO.getMemberIds()) {
                 if (!memberId.equals(UserUtil.getUserId())) {
@@ -138,9 +131,12 @@ public class CrmContractLog {
                 CrmContract crmContract = BeanUtil.mapToBean(crmContractMap, CrmContract.class, true);
                 contentList.add(sysLogUtil.updateRecord(oldContractMap, crmContractMap, CrmEnum.CONTRACT, crmContract.getName()));
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
+                String formType = record.getString("formType");
+                if(formType == null){
+                    return;
+                }
                 String oldFieldValue = crmContractDataService.lambdaQuery().select(CrmContractData::getValue).eq(CrmContractData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmContractData::getBatchId, batchId).last("limit 1").one().getValue();
-                String formType = record.getString("formType");
                 String newValue = record.getString("value");
                 if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
                     oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));

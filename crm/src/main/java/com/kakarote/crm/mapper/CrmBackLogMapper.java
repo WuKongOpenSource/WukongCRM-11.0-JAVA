@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,13 @@ public interface CrmBackLogMapper {
     Integer todayLeadsNum(Map<String, Object> paras);
 
     Integer todayBusinessNum(Map<String, Object> paras);
+
+    /**
+     * 今日需联系中，已经逾期的数据数量
+     * @param paras 参数
+     * @return 数量
+     */
+    public Integer todayOvertimeNum(Map<String, Object> paras);
 
     public Integer followCustomerNum(Map<String, Object> map);
 
@@ -31,17 +39,11 @@ public interface CrmBackLogMapper {
 
     public Integer endContractNum(Map<String, Object> map);
 
-    public Integer checkContractNum(Map<String, Object> map);
-
     public Integer returnVisitRemindNum(Map<String, Object> map);
-
-    public Integer checkReceivablesNum(Map<String, Object> map);
 
     public Integer remindReceivablesPlanNum(Map<String, Object> map);
 
-    public Integer checkInvoiceNum(Map<String, Object> map);
-
-    public List<String> queryExamineTypeId(@Param("type") Integer type, @Param("crmType") Integer crmType, @Param("userId") Long userId);
+    public Integer remindReceivablesOvertimeNum(@Param("date")Date date,@Param("userId")Long userId);
 
     public BasePage<CrmReceivablesPlan> remindReceivables(BasePage<CrmReceivablesPlan> parse, @Param("type") Integer type, @Param("ids") List<String> ids, @Param("userId") Long userId);
 
@@ -56,18 +58,6 @@ public interface CrmBackLogMapper {
 
     @Select("select type_id from wk_crm_back_log_deal where create_user_id = #{userId} and crm_type = #{type} and model = #{model} and pool_id = #{poolId}")
     public List<Integer> queryDealIdByPoolId(@Param("userId") Long userId, @Param("type") Integer type, @Param("model") Integer model, @Param("poolId") Integer poolId);
-
-    @Select("select a.contract_id from wk_crm_contract as a inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id\n" +
-            " left join wk_crm_examine_log as c on b.record_id = c.record_id where c.examine_user = #{userId} and a.check_status in (0,3) and c.examine_status in (0,3) and ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and c.is_recheck != 1")
-    public List<Integer> queryCheckContractId(@Param("userId") Long userId);
-
-    @Select("select a.receivables_id from wk_crm_receivables as a inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id\n" +
-            "  left join wk_crm_examine_log as c on b.record_id = c.record_id where c.examine_user = #{userId} and a.check_status in (0,3) and ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and c.is_recheck != 1")
-    public List<Integer> queryCheckReceivablesId(@Param("userId") Long userId);
-
-    @Select("select a.invoice_id from wk_crm_invoice as a inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id\n" +
-            "  left join wk_crm_examine_log as c on b.record_id = c.record_id where c.examine_user = #{userId} and a.check_status in (0,3) and ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and c.is_recheck != 1")
-    public List<Integer> queryCheckInvoiceId(@Param("userId") Long userId);
     
     @Select("select a.plan_id from wk_crm_receivables_plan as a inner join wk_crm_customer as b on a.customer_id = b.customer_id\n" +
             "  inner join wk_crm_contract as c on a.contract_id = c.contract_id\n" +

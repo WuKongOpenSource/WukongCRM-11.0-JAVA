@@ -14,7 +14,7 @@ public class ExamineExportBO extends PageEntity {
 
     private Integer queryType;
 
-    private Integer stauts;
+    private Integer status;
 
     private Date startTime;
 
@@ -22,4 +22,10 @@ public class ExamineExportBO extends PageEntity {
 
     private Long createUserId;
 
+    private Integer checkStatus;
+
+    public void setStatus(Integer status) {
+        this.status = status;
+        this.checkStatus = status;
+    }
 }

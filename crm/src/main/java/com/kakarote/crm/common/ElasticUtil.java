@@ -1,5 +1,6 @@
 package com.kakarote.crm.common;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -7,23 +8,22 @@ import com.google.common.collect.Lists;
 import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.feign.crm.entity.BiParams;
+import com.kakarote.core.utils.BiTimeUtil;
 import com.kakarote.crm.constant.CrmEnum;
+import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.BO.EsUpdateFieldBO;
 import com.kakarote.crm.entity.BO.EsUpdatePropertiesBO;
 import com.kakarote.crm.entity.PO.CrmFieldConfig;
-import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.client.indices.CreateIndexRequest;
-import org.elasticsearch.client.indices.CreateIndexResponse;
-import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.client.indices.PutMappingRequest;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
@@ -38,39 +38,6 @@ import java.util.*;
  */
 @Slf4j
 public class ElasticUtil {
-    public static void init(List<CrmModelFiledVO> crmFieldList, RestHighLevelClient client, CrmEnum crmEnum) {
-        String index = crmEnum.getIndex();
-        GetIndexRequest indexRequest = new GetIndexRequest(index);
-        try {
-            boolean b = client.indices().exists(indexRequest, RequestOptions.DEFAULT);
-            if (b) {
-                log.info("索引存在:" + index);
-                return;
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        Map<String, Object> properties = new HashMap<>(crmFieldList.size());
-        crmFieldList.forEach(crmField -> {
-            properties.put(crmField.getFieldName(), parseType(crmField.getType()));
-        });
-        Map<String, Object> mapping = new HashMap<>();
-        mapping.put("properties", properties);
-        CreateIndexRequest request = new CreateIndexRequest(index);
-        try {
-            //设置mapping参数
-            request.mapping(mapping);
-            CreateIndexResponse createIndexResponse = client.indices().create(request, RequestOptions.DEFAULT);
-            boolean falg = createIndexResponse.isAcknowledged();
-            if (falg) {
-                log.info("创建索引库:" + index + "成功！");
-            }
-        } catch (IOException e) {
-            log.error("创建索引错误", e);
-        }
-    }
-
-
     public static void addField(RestHighLevelClient client, CrmFieldConfig crmField, Integer fieldType) {
         CrmEnum crmEnum = CrmEnum.parse(crmField.getLabel());
         try {
@@ -87,9 +54,10 @@ public class ElasticUtil {
         }
     }
 
-    public static void removeField(RestHighLevelClient client, String fieldName, Integer label) {
+    public static void removeField(RestHighLevelClient client,String fieldName, Integer label) {
         UpdateByQueryRequest request = new UpdateByQueryRequest(CrmEnum.parse(label).getIndex());
-        request.setScript(new Script(ScriptType.INLINE, "painless", "ctx._source." + fieldName + " = null", new HashMap<>()));
+        request.setQuery(QueryBuilders.matchAllQuery());
+        request.setScript(new Script(ScriptType.INLINE, "painless", "ctx._source." + StrUtil.toCamelCase(fieldName) + " = null", new HashMap<>()));
         request.setBatchSize(1000);
         request.setRefresh(true);
         try {
@@ -99,41 +67,6 @@ public class ElasticUtil {
             log.error("删除字段错误", e);
             throw new CrmException(SystemCodeEnum.SYSTEM_ERROR);
         }
-    }
-
-    public static void initData(RestHighLevelClient client, List<Map<String, Object>> mapList, CrmEnum crmEnum,String index) {
-        BulkRequest bulkRequest = new BulkRequest();
-        mapList.forEach(map -> {
-            IndexRequest request = new IndexRequest(index, "_doc");
-            request.id(map.get((crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable()) + "Id").toString());
-            try {
-                request.source(map);
-            } catch (Exception e) {
-                System.out.println(map.toString());
-            }
-
-            bulkRequest.add(request);
-        });
-        if (bulkRequest.requests() == null || bulkRequest.requests().size() == 0) {
-            return;
-        }
-        try {
-            BulkResponse bulk = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-            log.info("bulkHasFailures:{}",bulk.hasFailures());
-            boolean hasFailures = bulk.hasFailures();
-            if (bulk.hasFailures()){
-                log.info(JSON.toJSONString(bulk.buildFailureMessage()));
-                int count= 3;
-                while (count > 0 && hasFailures){
-                    count--;
-                    BulkResponse bulk1 = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-                    hasFailures = bulk1.hasFailures();
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
     }
 
     public static Map<String, Object> parseType(Integer type) {
@@ -199,11 +132,10 @@ public class ElasticUtil {
 
     public static void updateField(RestHighLevelClient client, EsUpdateFieldBO esUpdateFieldBO, List<String> indexs) {
         UpdateByQueryRequest request = new UpdateByQueryRequest(indexs.toArray(new String[0]));
-        request.setQuery(QueryBuilders.boolQuery().filter(QueryBuilders.termQuery(esUpdateFieldBO.getConditionField(), esUpdateFieldBO.getConditionValue())));
-        String script = "ctx._source.%s='%s'";
-        request.setScript(new Script(ScriptType.INLINE, "painless", String.format(script, esUpdateFieldBO.getUpdateField(), esUpdateFieldBO.getUpdateValue()), Collections.emptyMap()));
+        request.setQuery(QueryBuilders.termQuery(esUpdateFieldBO.getConditionField(), esUpdateFieldBO.getConditionValue()));
+        String script = "ctx._source.%s=params.value";
+        request.setScript(new Script(ScriptType.INLINE, "painless", String.format(script, esUpdateFieldBO.getUpdateField()), Collections.singletonMap("value", esUpdateFieldBO.getUpdateValue())));
         request.setBatchSize(1000);
-        //解决 version_conflict_engine_exception 异常
         request.setRefresh(true);
         try {
             client.updateByQuery(request, RequestOptions.DEFAULT);
@@ -221,15 +153,15 @@ public class ElasticUtil {
         List<EsUpdatePropertiesBO> userPropertiesList = new ArrayList<>();
         userPropertiesList.add(new EsUpdatePropertiesBO("ownerUserId", "ownerUserName", Lists.newArrayList(CrmEnum.LEADS.getIndex()
                 , CrmEnum.CUSTOMER.getIndex(), CrmEnum.CONTACTS.getIndex(), CrmEnum.CONTRACT.getIndex(), CrmEnum.BUSINESS.getIndex()
-                , CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.PRODUCT.getIndex())));
+                , CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.PRODUCT.getIndex(), CrmEnum.INVOICE.getIndex())));
         userPropertiesList.add(new EsUpdatePropertiesBO("createUserId", "createUserName", Lists.newArrayList(CrmEnum.LEADS.getIndex()
                 , CrmEnum.CUSTOMER.getIndex(), CrmEnum.CONTACTS.getIndex(), CrmEnum.CONTRACT.getIndex(), CrmEnum.BUSINESS.getIndex()
-                , CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.PRODUCT.getIndex())));
+                , CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.PRODUCT.getIndex(), CrmEnum.INVOICE.getIndex())));
         userPropertiesList.add(new EsUpdatePropertiesBO("companyUserId", "companyUserName", Lists.newArrayList(CrmEnum.CONTRACT.getIndex())));
         updateMap.put("user", userPropertiesList);
         List<EsUpdatePropertiesBO> customerPropertiesList = new ArrayList<>();
         customerPropertiesList.add(new EsUpdatePropertiesBO("customerId", "customerName", Lists.newArrayList(CrmEnum.CONTACTS.getIndex(),
-                CrmEnum.BUSINESS.getIndex(), CrmEnum.CONTRACT.getIndex(), CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex())));
+                CrmEnum.BUSINESS.getIndex(), CrmEnum.CONTRACT.getIndex(), CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.INVOICE.getIndex())));
         updateMap.put("customer", customerPropertiesList);
         List<EsUpdatePropertiesBO> contactsPropertiesList = new ArrayList<>();
         contactsPropertiesList.add(new EsUpdatePropertiesBO("contactsId", "contactsName", Lists.newArrayList(CrmEnum.CONTRACT.getIndex(),
@@ -239,7 +171,7 @@ public class ElasticUtil {
         businessPropertiesList.add(new EsUpdatePropertiesBO("businessId", "businessName", Lists.newArrayList(CrmEnum.CONTRACT.getIndex())));
         updateMap.put("business", businessPropertiesList);
         List<EsUpdatePropertiesBO> contractPropertiesList = new ArrayList<>();
-        contractPropertiesList.add(new EsUpdatePropertiesBO("contractId", "contractNum", Lists.newArrayList(CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex())));
+        contractPropertiesList.add(new EsUpdatePropertiesBO("contractId", "contractNum", Lists.newArrayList(CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.INVOICE.getIndex())));
         updateMap.put("contract", contractPropertiesList);
         List<EsUpdatePropertiesBO> productPropertiesList = new ArrayList<>();
         productPropertiesList.add(new EsUpdatePropertiesBO("categoryId", "categoryName", Lists.newArrayList(CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex())));
@@ -291,6 +223,298 @@ public class ElasticUtil {
             template.refresh(index);
         } catch (IOException e) {
             log.error("es修改失败", e);
+        }
+    }
+
+
+    /**
+     * 普通文本类型的es搜索
+     *
+     * @param search       搜索条件
+     * @param queryBuilder 查询器
+     */
+    public static void textSearch(CrmSearchBO.Search search, BoolQueryBuilder queryBuilder) {
+        if (search.getValues().size() == 0 && !Arrays.asList(5, 6).contains(search.getSearchEnum().getType())) {
+            return;
+        }
+        switch (search.getSearchEnum()) {
+            case IS:
+                queryBuilder.filter(QueryBuilders.termsQuery(search.getName(), search.getValues()));
+                break;
+            case IS_NOT:
+                queryBuilder.mustNot(QueryBuilders.termsQuery(search.getName(), search.getValues()));
+                break;
+            case PREFIX:
+                if (search.getValues().size() == 1) {
+                    queryBuilder.filter(QueryBuilders.prefixQuery(search.getName(), search.getValues().get(0)));
+                } else {
+                    BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+                    for (String value : search.getValues()) {
+                        boolQuery.should(QueryBuilders.prefixQuery(search.getName(), value));
+                    }
+                    queryBuilder.filter(boolQuery);
+                }
+                break;
+            case SUFFIX:
+            case CONTAINS:
+                String suffix = search.getSearchEnum() == CrmSearchBO.FieldSearchEnum.SUFFIX ? "" : "*";
+                if (search.getValues().size() == 1) {
+                    queryBuilder.filter(QueryBuilders.wildcardQuery(search.getName(), "*" + search.getValues().get(0) + suffix));
+                } else {
+                    BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+                    for (String value : search.getValues()) {
+                        boolQuery.should(QueryBuilders.wildcardQuery(search.getName(), "*" + value + suffix));
+                    }
+                    queryBuilder.filter(boolQuery);
+                }
+                break;
+            case NOT_CONTAINS:
+                if (search.getValues().size() == 1) {
+                    queryBuilder.mustNot(QueryBuilders.wildcardQuery(search.getName(), "*" + search.getValues().get(0) + "*"));
+                } else {
+                    BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+                    for (String value : search.getValues()) {
+                        boolQuery.should(QueryBuilders.wildcardQuery(search.getName(), "*" + value + "*"));
+                    }
+                    queryBuilder.mustNot(boolQuery);
+                }
+                break;
+            case IS_NULL:
+                isNullSearch(search, queryBuilder);
+                break;
+            case IS_NOT_NULL:
+                isNotNullSearch(search, queryBuilder);
+                break;
+        }
+    }
+
+    /**
+     * 多选类型的es搜索
+     *
+     * @param search       搜索条件
+     * @param queryBuilder 查询器
+     */
+    public static void checkboxSearch(CrmSearchBO.Search search, BoolQueryBuilder queryBuilder) {
+        if (search.getValues().size() == 0 && !Arrays.asList(5, 6).contains(search.getSearchEnum().getType())) {
+            return;
+        }
+        switch (search.getSearchEnum()) {
+            case IS_NOT: {
+                BoolQueryBuilder builder = QueryBuilders.boolQuery();
+                Map<String, Object> map = new HashMap<>();
+                map.put("key", search.getName());
+                map.put("size", search.getValues().size());
+                Script painless = new Script(ScriptType.INLINE, "painless", "doc[params.key].size() != params.size", map);
+                builder.should(QueryBuilders.scriptQuery(painless));
+                builder.should(QueryBuilders.boolQuery().mustNot(QueryBuilders.termsQuery(search.getName(), search.getValues())));
+                queryBuilder.filter(builder);
+                break;
+            }
+            case IS: {
+                Map<String, Object> map = new HashMap<>();
+                map.put("key", search.getName());
+                map.put("size", search.getValues().size());
+                Script painless = new Script(ScriptType.INLINE, "painless", "doc[params.key].size() == params.size", map);
+                queryBuilder.filter(QueryBuilders.scriptQuery(painless));
+                queryBuilder.filter(QueryBuilders.termsQuery(search.getName(), search.getValues()));
+                break;
+            }
+            case CONTAINS:
+                queryBuilder.filter(QueryBuilders.termsQuery(search.getName(), search.getValues()));
+                break;
+            case NOT_CONTAINS: {
+                queryBuilder.mustNot(QueryBuilders.termsQuery(search.getName(), search.getValues()));
+                break;
+            }
+            case IS_NULL:
+                isNullSearch(search, queryBuilder);
+                break;
+            case IS_NOT_NULL:
+                isNotNullSearch(search, queryBuilder);
+                break;
+        }
+    }
+
+    /**
+     * 数字类型的es搜索
+     *
+     * @param search       搜索条件
+     * @param queryBuilder 查询器
+     */
+    public static void numberSearch(CrmSearchBO.Search search, BoolQueryBuilder queryBuilder) {
+        if (search.getValues().size() == 0 && !Arrays.asList(5, 6).contains(search.getSearchEnum().getType())) {
+            return;
+        }
+        switch (search.getSearchEnum()) {
+            case IS:
+                queryBuilder.filter(QueryBuilders.termQuery(search.getName(), search.getValues().get(0)));
+                break;
+            case IS_NOT:
+                queryBuilder.mustNot(QueryBuilders.termQuery(search.getName(), search.getValues().get(0)));
+                break;
+            case GT: {
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
+                rangeQuery.gt(search.getValues().get(0));
+                queryBuilder.filter(rangeQuery);
+                break;
+            }
+            case EGT: {
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
+                rangeQuery.gte(search.getValues().get(0));
+                queryBuilder.filter(rangeQuery);
+                break;
+            }
+            case LT: {
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
+                rangeQuery.lt(search.getValues().get(0));
+                queryBuilder.filter(rangeQuery);
+                break;
+            }
+            case ELT: {
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
+                rangeQuery.lte(search.getValues().get(0));
+                queryBuilder.filter(rangeQuery);
+                break;
+            }
+            case RANGE: {
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
+                rangeQuery.gte(search.getValues().get(0));
+                rangeQuery.lte(search.getValues().get(1));
+                queryBuilder.filter(rangeQuery);
+                break;
+            }
+            case IS_NULL:
+                isNullSearch(search, queryBuilder);
+                break;
+            case IS_NOT_NULL:
+                isNotNullSearch(search, queryBuilder);
+                break;
+        }
+    }
+
+    /**
+     * 时间类型的es搜索
+     *
+     * @param search       搜索条件
+     * @param queryBuilder 查询器
+     */
+    public static void dateSearch(CrmSearchBO.Search search, BoolQueryBuilder queryBuilder, FieldEnum fieldEnum) {
+        List<String> values = search.getValues();
+        if (values.size() == 0) {
+            throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
+        }
+        switch (search.getSearchEnum()) {
+            case IS: {
+                queryBuilder.filter(QueryBuilders.termQuery(search.getName(), search.getValues().get(0)));
+                break;
+            }
+            case IS_NOT: {
+                queryBuilder.mustNot(QueryBuilders.termQuery(search.getName(), search.getValues().get(0)));
+                break;
+            }
+            case IS_NULL:
+                isNullSearch(search, queryBuilder);
+                break;
+            case IS_NOT_NULL:
+                isNotNullSearch(search, queryBuilder);
+                break;
+            case GT: {
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
+                rangeQuery.gt(search.getValues().get(0));
+                queryBuilder.filter(rangeQuery);
+                break;
+            }
+            case EGT: {
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
+                rangeQuery.gte(search.getValues().get(0));
+                queryBuilder.filter(rangeQuery);
+                break;
+            }
+            case LT: {
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
+                rangeQuery.lt(search.getValues().get(0));
+                queryBuilder.filter(rangeQuery);
+                break;
+            }
+            case ELT: {
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
+                rangeQuery.lte(search.getValues().get(0));
+                queryBuilder.filter(rangeQuery);
+                break;
+            }
+            case RANGE: {
+                BiParams biParams = new BiParams();
+                if (search.getValues().size() > 1) {
+                    biParams.setStartTime(values.get(0));
+                    biParams.setEndTime(values.get(1));
+                } else {
+                    biParams.setType(search.getValues().get(0));
+                }
+                BiTimeUtil.BiTimeEntity timeEntity = BiTimeUtil.analyzeTime(biParams);
+                Date beginDate = timeEntity.getBeginDate();
+                Date endDate = timeEntity.getEndDate();
+                RangeQueryBuilder builder = QueryBuilders.rangeQuery(search.getName());
+                builder.gte(fieldEnum == FieldEnum.DATETIME ? DateUtil.formatDateTime(beginDate) : DateUtil.formatDate(beginDate));
+                builder.lte(fieldEnum == FieldEnum.DATETIME ? DateUtil.formatDateTime(endDate) : DateUtil.formatDate(endDate));
+                queryBuilder.filter(builder);
+                break;
+            }
+        }
+    }
+
+
+    /**
+     * 搜索用户信息
+     *
+     * @param search       搜索条件
+     * @param queryBuilder 查询器
+     */
+    public static void userSearch(CrmSearchBO.Search search, BoolQueryBuilder queryBuilder) {
+        switch (search.getSearchEnum()) {
+            case CONTAINS:
+                queryBuilder.filter(QueryBuilders.termsQuery(search.getName(), search.getValues()));
+                break;
+            case NOT_CONTAINS:
+                queryBuilder.mustNot(QueryBuilders.termsQuery(search.getName(), search.getValues()));
+                break;
+            case IS_NULL:
+                isNullSearch(search, queryBuilder);
+                break;
+            case IS_NOT_NULL:
+                isNotNullSearch(search, queryBuilder);
+                break;
+        }
+    }
+
+    /**
+     * 为空搜索
+     *
+     * @param search       搜索条件
+     * @param queryBuilder 查询器
+     */
+    private static void isNullSearch(CrmSearchBO.Search search, BoolQueryBuilder queryBuilder) {
+        FieldEnum fieldEnum = FieldEnum.parse(search.getFormType());
+        if (Arrays.asList(FieldEnum.DATETIME, FieldEnum.DATE, FieldEnum.NUMBER, FieldEnum.FLOATNUMBER).contains(fieldEnum)) {
+            queryBuilder.mustNot(QueryBuilders.existsQuery(search.getName()));
+        } else {
+            BoolQueryBuilder builder = QueryBuilders.boolQuery();
+            builder.should(QueryBuilders.termQuery(search.getName(), ""));
+            builder.should(QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery(search.getName())));
+            queryBuilder.filter(builder);
+        }
+    }
+
+    /**
+     * 不为空搜索
+     *
+     * @param search       搜索条件
+     * @param queryBuilder 查询器
+     */
+    private static void isNotNullSearch(CrmSearchBO.Search search, BoolQueryBuilder queryBuilder) {
+        queryBuilder.filter(QueryBuilders.existsQuery(search.getName()));
+        FieldEnum fieldEnum = FieldEnum.parse(search.getFormType());
+        if (!Arrays.asList(FieldEnum.DATETIME, FieldEnum.DATE, FieldEnum.NUMBER, FieldEnum.FLOATNUMBER).contains(fieldEnum)) {
+            queryBuilder.mustNot(QueryBuilders.termQuery(search.getName(), ""));
         }
     }
 }

@@ -7,6 +7,7 @@ import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.crm.entity.ExamineField;
 import com.kakarote.core.feign.jxc.service.JxcExamineService;
 import com.kakarote.examine.constant.ExamineCodeEnum;
+import com.kakarote.examine.constant.ExamineConst;
 import com.kakarote.examine.entity.VO.ExamineFlowConditionDataVO;
 import com.kakarote.examine.service.ExamineModuleService;
 import com.kakarote.examine.service.IExamineService;
@@ -35,6 +36,7 @@ public class ExamineJxcServiceImpl implements ExamineModuleService {
 
     @Override
     public List<ExamineField> queryExamineField(Integer label, Integer categoryId) {
+        //进销存原有接口使用的标识不一致 部分需要转换
         if (ListUtil.toList(5,6,7,8).contains(label)){
             label = label - 2;
         }
@@ -72,7 +74,7 @@ public class ExamineJxcServiceImpl implements ExamineModuleService {
         }
         Map<String, Object> beanMap = jxcExamineService.examineFieldDataMap(label, typeId).getData();
         fieldList.forEach(field -> map.put(field,beanMap.get(field)));
-        map.put("createUserId",map.get("createUserId"));
+        map.put(ExamineConst.CREATE_USER_ID,beanMap.get(ExamineConst.CREATE_USER_ID));
         return map;
     }
 }

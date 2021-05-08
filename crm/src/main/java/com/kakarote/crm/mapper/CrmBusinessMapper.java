@@ -1,6 +1,7 @@
 package com.kakarote.crm.mapper;
 
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.servlet.BaseMapper;
@@ -46,13 +47,9 @@ public interface CrmBusinessMapper extends BaseMapper<CrmBusiness> {
 
     BasePage<JSONObject> queryContract(BasePage<Object> parse,@Param("businessId") Integer businessId,@Param("conditions") String conditions);
 
-    void deleteMember(@Param("memberId") String memberId,@Param("id") Integer id);
-
-
     List<String> eventDealBusiness(@Param("data") CrmEventBO crmEventBO);
 
     List<Integer> eventDealBusinessPageList(@Param("userId") Long userId, @Param("time") Date time);
-
     List<String> eventBusiness(@Param("data") CrmEventBO crmEventBO);
 
     List<Integer> eventBusinessPageList(@Param("userId") Long userId, @Param("time") Date time);

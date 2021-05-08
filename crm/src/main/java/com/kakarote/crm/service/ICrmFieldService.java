@@ -102,13 +102,6 @@ public interface ICrmFieldService extends BaseService<CrmField> {
     public List<CrmField> queryFileField();
 
     /**
-     * 初始化数据
-     * @param type type
-     * @return data
-     */
-    public Integer initData(Integer type);
-
-    /**
      * 格式化数据
      * @param record data
      * @param typeEnum type
@@ -132,8 +125,6 @@ public interface ICrmFieldService extends BaseService<CrmField> {
     Integer queryCustomerFieldDuplicateByFixed(String name, Object value);
 
     void setPoolFieldStyle(CrmFieldStyleBO fieldStyle);
-
-    void changeEsIndex(List<Integer> labels);
 
     public List<ExamineField> queryExamineField(Integer label);
 

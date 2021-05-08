@@ -53,7 +53,12 @@ public enum CrmEnum {
     /**
      * 发票
      */
-    INVOICE(18, "发票");
+    INVOICE(18, "发票"),
+
+    /**
+     * NULL
+     */
+    NULL(0,"");
 
     CrmEnum(Integer type, String remarks) {
         this.type = type;
@@ -77,7 +82,7 @@ public enum CrmEnum {
                 return crmEnum;
             }
         }
-        return null;
+        return NULL;
     }
 
     public static CrmEnum parse(String name) {
@@ -86,7 +91,7 @@ public enum CrmEnum {
                 return crmEnum;
             }
         }
-        return null;
+        return NULL;
     }
 
     public String getIndex() {

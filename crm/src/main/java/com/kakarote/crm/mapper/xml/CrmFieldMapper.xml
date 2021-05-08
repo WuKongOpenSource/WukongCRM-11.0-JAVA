@@ -20,49 +20,33 @@
             and batch_id!=#{batchId}
         </if>
     </select>
-    <update id="updateFieldName">
-        update wk_crm_${name}_data a INNER join
-        (select field_id,field_name from wk_crm_field where label = #{type} and  field_id > #{count} limit 200000) b
-        on a.field_id = b.field_id
-        set a.`name`=b.field_name;
-    </update>
-    <update id="dataCheck">
-        UPDATE `wk_crm_field`
-        SET `field_name`= #{name},tn='1' WHERE `field_id` IN (
-        SELECT id FROM (
-        SELECT max(field_id) AS id FROM wk_crm_field WHERE field_type='0' AND tn='0' and label=#{label} and type=#{type}
-        ) AS y)
-    </update>
     <select id="initData" resultType="java.util.HashMap">
-        SELECT * FROM wk_crm_${tableName} as a
-        JOIN (
-        SELECT b.${table}_id as tid
-        <foreach collection="fields" index="i" item="item" open="," separator="," close="">
-            max(CASE WHEN `a`.`name` = '${item.getFieldName}' THEN `a`.`value` END) AS '${item.getFieldName}'
-        </foreach>
-        FROM wk_crm_${tableName}_data as a
-        right JOIN wk_crm_${tableName} as b on a.batch_id = b.batch_id
-        where b.${table}_id in (
-        SELECT * FROM (
-        SELECT ${table}_id FROM wk_crm_${tableName} WHERE ${table}_id > '${lastId}'
+        SELECT * FROM wk_crm_${tableName} WHERE ${table}_id &gt; #{lastId}
         <if test="label==2||label==5||label==4">
             and status != 3
         </if>
         <if test="label==6||label==7">
             and check_status != 7
         </if>
-        ORDER BY ${table}_id asc
-        limit 1000
-        ) as a
-        )
-        GROUP BY b.batch_id
-        ORDER BY null
-        ) as b on a.${table}_id=b.tid
-        ORDER BY a.${table}_id asc
+        limit 2000
     </select>
-    <select id="queryFieldDuplicateByNoFixed" resultType="java.lang.Integer">
-        select count(*) from `wk_crm_field` a left join `wk_crm_customer_data` b on a.field_id = b.field_id
-        where label = 2 and field_name = #{name} and value = #{value};
+
+    <select id="initFieldData" resultType="com.kakarote.crm.entity.BO.CrmFieldDataBO">
+        SELECT
+        a.id,
+        a.batch_id,
+        a.field_id,
+        a.`name`,
+        a.`value`,
+        b.${table}_id as typeId,
+        c.type
+        FROM
+        wk_crm_${tableName}_data AS a
+        JOIN wk_crm_${tableName} AS b ON a.batch_id = b.batch_id
+        JOIN wk_crm_field as c on a.field_id = c.field_id
+        WHERE
+        a.id &gt; #{lastId}  and value is not null
+        LIMIT 10000
     </select>
     <select id="queryCustomerFieldDuplicateByFixed" resultType="java.lang.Integer">
         select count(1) from `wk_crm_customer` where ${name} = #{value} and status != 3

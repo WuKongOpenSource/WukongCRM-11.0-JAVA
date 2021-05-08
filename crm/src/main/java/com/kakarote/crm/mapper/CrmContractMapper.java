@@ -40,8 +40,6 @@ public interface CrmContractMapper extends BaseMapper<CrmContract> {
      */
     public CrmInfoNumVO queryNum(Map<String,Object> map);
 
-    void deleteMember(@Param("memberId") String memberId,@Param("id") Integer id);
-
     List<CrmReceivablesPlan> queryReceivablesPlansByContractId(Integer contractId);
 
     CrmReceivablesPlan queryReceivablesPlansByReceivablesId(Integer receivablesId);

@@ -2,16 +2,17 @@ package com.kakarote.crm.service;
 
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.entity.BasePage;
+import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.entity.BO.CrmChangeOwnerUserBO;
 import com.kakarote.crm.entity.BO.CrmContractSaveBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
 import com.kakarote.crm.entity.PO.CrmReceivables;
 import com.kakarote.crm.entity.VO.CrmInfoNumVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import javax.servlet.http.HttpServletResponse;
 import java.util.List;
@@ -37,13 +38,14 @@ public interface ICrmReceivablesService extends BaseService<CrmReceivables> {
     public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id);
 
     /**
-     * 分页查询
+     * 查询所有数据
      *
-     * @param search
-     * @return
+     * @param search 搜索对象
+     * @return data
      */
-    public BasePage<Map<String, Object>> queryPageList(@RequestBody CrmSearchBO search);
+    public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search);
 
+    public List<SimpleCrmEntity> querySimpleEntity(List<Integer> ids);
     /**
      * 查询字段配置
      *
@@ -69,10 +71,9 @@ public interface ICrmReceivablesService extends BaseService<CrmReceivables> {
     /**
      * 修改回款负责人
      *
-     * @param receivablesIds       回款id列表
-     * @param newOwnerUserId 新负责人ID
+     * @param changeOwnerUserBO   负责人变更BO
      */
-    public void changeOwnerUser(List<Integer> receivablesIds, Long newOwnerUserId);
+    public void changeOwnerUser(CrmChangeOwnerUserBO changeOwnerUserBO);
 
     /**
      * 全部导出

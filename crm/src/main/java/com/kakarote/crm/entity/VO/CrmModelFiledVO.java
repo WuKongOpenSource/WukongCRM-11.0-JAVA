@@ -2,6 +2,7 @@ package com.kakarote.crm.entity.VO;
 
 import cn.hutool.core.util.StrUtil;
 import com.kakarote.core.common.FieldEnum;
+import com.kakarote.crm.entity.PO.CrmFieldExtend;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -11,6 +12,7 @@ import lombok.experimental.Accessors;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author zhangzhiwei
@@ -121,11 +123,14 @@ public class CrmModelFiledVO implements Serializable {
     @ApiModelProperty(value = "限制的最小数值")
     private String minNumRestrict;
 
-    @ApiModelProperty(value = "精度，允许的最大小数位/地图精度")
+    @ApiModelProperty(value = "精度，允许的最大小数位/地图精度/明细表格、逻辑表单展示方式")
     private Integer precisions;
 
     @ApiModelProperty(value = "表单定位 坐标格式： 1,1")
     private String formPosition;
+
+    @ApiModelProperty(value = "表单辅助id，前端生成")
+    private Integer formAssistId;
 
     /**
      * 坐标
@@ -135,5 +140,14 @@ public class CrmModelFiledVO implements Serializable {
 
     @ApiModelProperty(value = "y轴")
     private Integer yAxis;
+
+    @ApiModelProperty(value = "逻辑表单数据")
+    private Map<String, Object> optionsData;
+
+    @ApiModelProperty(value = "扩展字段")
+    private List<CrmFieldExtend> fieldExtendList;
+
+    @ApiModelProperty(value = "字段说明  特别用途 - 明细表格：添加字段说明 | 单选/多选： 标识开启逻辑表单")
+    private String remark;
 
 }

@@ -28,9 +28,7 @@ public class BaseMetaObjectHandler implements MetaObjectHandler {
     public void insertFill(MetaObject metaObject) {
         Date date = new Date();
         this.strictInsertFill(metaObject, FIELD_CREATE_TIME, Date.class, date);
-        if (UserUtil.getUser() != null) {
-            this.strictInsertFill(metaObject, FIELD_CREATE_USER, Long.class, UserUtil.getUserId());
-        }
+        this.strictInsertFill(metaObject, FIELD_CREATE_USER, Long.class, UserUtil.getUserId());
     }
 
 
@@ -48,5 +46,6 @@ public class BaseMetaObjectHandler implements MetaObjectHandler {
     @Override
     public void updateFill(MetaObject metaObject) {
         this.strictUpdateFill(metaObject, FIELD_UPDATE_TIME, Date.class, new Date());
+        TableInfo tableInfo = findTableInfo(metaObject);
     }
 }

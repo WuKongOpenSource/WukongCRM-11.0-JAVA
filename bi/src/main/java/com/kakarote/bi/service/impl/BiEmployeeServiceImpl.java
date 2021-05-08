@@ -1,5 +1,8 @@
 package com.kakarote.bi.service.impl;
 
+import cn.hutool.core.date.DateField;
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.bi.common.BiPatch;
 import com.kakarote.bi.mapper.BiEmployeeMapper;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -104,19 +108,20 @@ public class BiEmployeeServiceImpl implements BiEmployeeService {
         biParams.setMenuId(menuId);
         Integer year = biParams.getYear();
         BiTimeUtil.BiTimeEntity record = BiTimeUtil.analyzeType(biParams);
-        int cycleNum = 12;
-        Integer beginTime = year * 100 + 1;
-        List<Integer> timeList = new ArrayList<>();
-        for (int i = 1; i <= cycleNum; i++) {
-            timeList.add(beginTime);
-            beginTime = BiTimeUtil.estimateTime(beginTime);
+        DateTime dateTime = DateUtil.beginOfYear(DateUtil.parse(year.toString(),"yyyy"));
+        JSONObject total = biEmployeeMapper.totalInvoice(dateTime,DateUtil.endOfYear(dateTime), record.getUserIds());
+        Map<String,Object> map = new HashMap<>();
+        map.put("userIds",record.getUserIds());
+        List<JSONObject > objectList = new ArrayList<>(12);
+        DateTime offset = DateUtil.beginOfMonth(dateTime);
+        for (int i = 1; i <= 12; i++) {
+            map.put("startTime",DateUtil.beginOfMonth(offset));
+            map.put("endTime",DateUtil.endOfMonth(offset));
+            JSONObject object = biEmployeeMapper.invoiceStatsTable(map);
+            object.put("type",offset.toString("yyyy-MM"));
+            objectList.add(object);
+            offset = offset.offset(DateField.MONTH, 1);
         }
-        JSONObject total = biEmployeeMapper.totalInvoice(year, record.getUserIds());
-        Map<String, Object> map = record.toMap();
-        map.put("timeList", timeList);
-        List<JSONObject> objectList = biEmployeeMapper.invoiceStatsTable(map);
-        BiPatch.supplementJsonList(objectList,"type",timeList,
-                "receivablesMoney","receivablesNoInvoice","invoiceMoney","invoiceNoReceivables");
         return total.fluentPut("list", objectList);
     }
 }

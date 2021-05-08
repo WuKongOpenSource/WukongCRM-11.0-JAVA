@@ -65,6 +65,9 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
     private IAdminRoleService adminRoleService;
 
     @Autowired
+    private IAdminRoleAuthService adminRoleAuthService;
+
+    @Autowired
     private CrmService crmService;
 
     @Autowired
@@ -297,6 +300,38 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
         return records;
     }
 
+    /**
+     * 查询新增员工时的可查询角色
+     *
+     * @return 角色列表
+     */
+    @Override
+    public List<AdminRoleVO> getRoleList() {
+        List<AdminRoleVO> records = new ArrayList<>();
+        boolean queryAllRole = adminRoleAuthService.isQueryAllRole();
+        if(queryAllRole) {
+            /* 可以查询全部直接走查询全部方法 */
+            return getAllRoleList();
+        }
+        Set<Integer> roleIds = adminRoleAuthService.queryAuthByUser();
+        for (AdminRoleTypeEnum typeEnum : AdminRoleTypeEnum.values()) {
+            if (Arrays.asList(0, 3, 4, 5).contains(typeEnum.getType())) {
+                continue;
+            }
+            AdminRoleVO record = new AdminRoleVO();
+            record.setName(roleTypeCaseName(typeEnum.getType()));
+            record.setPid(typeEnum.getType());
+            List<AdminRole> recordList = getRoleByType(typeEnum);
+            recordList.removeIf(adminRole -> !roleIds.contains(adminRole.getRoleId()));
+            if(recordList.size() == 0) {
+                continue;
+            }
+            record.setList(recordList);
+            records.add(record);
+        }
+        return records;
+    }
+
     @Override
     public Integer queryDataType(Long userId, Integer menuId) {
         Integer dataType = getBaseMapper().queryDataType(userId, menuId);
@@ -312,7 +347,7 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
      */
     @Override
     public Collection<Long> queryUserByAuth(Long userId, Integer menuId) {
-        if(UserUtil.isAdmin()){
+        if (UserUtil.isAdmin()) {
             List<AdminUser> adminUsers = adminUserService.lambdaQuery().select(AdminUser::getUserId).list();
             return adminUsers.stream().map(AdminUser::getUserId).collect(Collectors.toList());
         }
@@ -387,6 +422,7 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
     public void copy(Integer roleId) {
         AdminRole adminRole = getById(roleId);
         LambdaQueryWrapper<AdminRoleMenu> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(AdminRoleMenu::getMenuId);
         wrapper.eq(AdminRoleMenu::getRoleId, roleId);
         List<Integer> menuIdsList = adminRoleMenuService.listObjs(wrapper, obj -> Integer.valueOf(obj.toString()));
         String roleName = adminRole.getRoleName().trim();
@@ -412,8 +448,13 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
         }
         adminRole.setRoleName(pre + "(" + i + ")");
         adminRole.setRoleId(null);
+        adminRole.setRemark(null);
         save(adminRole);
         adminRoleMenuService.saveRoleMenu(adminRole.getRoleId(), menuIdsList);
+        if (adminRole.getRoleType().equals(AdminRoleTypeEnum.MANAGER.getType()) && menuIdsList.contains(935)) {
+            List<Integer> authRoleIds = adminRoleAuthService.queryByRoleId(adminRole.getRoleId());
+            adminRoleAuthService.saveRoleAuth(adminRole.getRoleId(),authRoleIds);
+        }
     }
 
     /**
@@ -471,6 +512,11 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
                 adminUserRoleList.add(userRole);
             }
         }
+        boolean queryAllRole = adminRoleAuthService.isQueryAllRole();
+        if(!queryAllRole){
+            Set<Integer> authByUser = adminRoleAuthService.queryAuthByUser();
+            adminUserRoleList.removeIf(userRole->!authByUser.contains(userRole.getRoleId()));
+        }
         adminUserRoleService.saveBatch(adminUserRoleList, Const.BATCH_SAVE_SIZE);
     }
 
@@ -498,8 +544,7 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
     @Override
     public void updateRoleMenu(AdminRole adminRole) {
         updateById(adminRole);
-        JSONObject object = new JSONObject().fluentPut("role_id", adminRole.getRoleId());
-        adminRoleMenuService.removeByMap(object);
+        adminRoleMenuService.removeByMap(Collections.singletonMap("role_id", adminRole.getRoleId()));
         adminRoleMenuService.saveRoleMenu(adminRole.getRoleId(), adminRole.getMenuIds());
     }
 

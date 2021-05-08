@@ -245,9 +245,39 @@
         </for>
     </select>
 
+    <select id="dataInfoCustomerPoolNum" resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM
+        wk_crm_owner_record as a
+        WHERE a.type='9' and
+        <choose>
+            <when test="time.cycleNum==1">
+               DATE_FORMAT(a.create_time,#{time.sqlDateFormat}) = #{time.beginTime}
+            </when>
+            <otherwise>
+                a.create_time BETWEEN #{time.beginDate} and #{time.endDate}
+            </otherwise>
+        </choose>
+        and
+        <choose>
+            <when test="type == 1">
+               a.pre_owner_user_id
+            </when>
+            <otherwise>
+                a.post_owner_user_id
+            </otherwise>
+        </choose>
+        in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
+
     <select id="dataInfoBusiness" resultType="java.util.HashMap">
         SELECT COUNT(*) as allBusiness,IFNULL(SUM(money),0) as businessMoney,
-        COUNT(CASE WHEN is_end='1' THEN 1 ELSE null END) as endBusiness
+        COUNT(CASE WHEN is_end='1' THEN 1 ELSE null END) as endBusiness,
+        COUNT(CASE WHEN is_end='2' THEN 1 ELSE null END) as loseBusiness
         FROM wk_crm_business as a
         where a.status = 1
         and
@@ -261,6 +291,17 @@
             </otherwise>
         </choose>
         AND owner_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
+
+    <select id="dataInfoEndContractNum" resultType="java.util.HashMap">
+        select
+        COUNT(CASE WHEN a.end_time BETWEEN #{startTime} and #{endTime} THEN 1 ELSE null END) as expireContract,
+        COUNT(CASE WHEN a.end_time &lt; #{startTime} THEN 1 ELSE null END) as endContract
+        from wk_crm_contract as a
+        where a.owner_user_id in
         <for collection="ids" index="i" item="id" open="(" separator="," close=")">
             #{id}
         </for>

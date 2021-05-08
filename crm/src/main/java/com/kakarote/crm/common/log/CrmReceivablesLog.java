@@ -14,7 +14,7 @@ import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.entity.BO.CrmBusinessChangOwnerUserBO;
+import com.kakarote.crm.entity.BO.CrmChangeOwnerUserBO;
 import com.kakarote.crm.entity.BO.CrmContractSaveBO;
 import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
 import com.kakarote.crm.entity.PO.CrmReceivables;
@@ -59,7 +59,7 @@ public class CrmReceivablesLog {
         return contentList;
     }
 
-    public List<Content> changeOwnerUser(CrmBusinessChangOwnerUserBO crmChangeOwnerUserBO) {
+    public List<Content> changeOwnerUser(CrmChangeOwnerUserBO crmChangeOwnerUserBO) {
         return crmChangeOwnerUserBO.getIds().stream().map(id -> {
             CrmReceivables receivables = crmReceivablesService.getById(id);
             return sysLogUtil.addConversionRecord(CrmEnum.RECEIVABLES, crmChangeOwnerUserBO.getOwnerUserId(), receivables.getNumber());
@@ -78,9 +78,12 @@ public class CrmReceivablesLog {
                 CrmReceivables crmReceivables = BeanUtil.mapToBean(crmReceivablesMap, CrmReceivables.class, true);
                 contentList.add(sysLogUtil.updateRecord(oldReceivablesMap, crmReceivablesMap, CrmEnum.RECEIVABLES, crmReceivables.getNumber()));
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
+                String formType = record.getString("formType");
+                if(formType == null){
+                    return;
+                }
                 String oldFieldValue = crmReceivablesDataService.lambdaQuery().select(CrmReceivablesData::getValue).eq(CrmReceivablesData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmReceivablesData::getBatchId, batchId).one().getValue();
-                String formType = record.getString("formType");
                 String newValue = record.getString("value");
                 if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
                     oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));

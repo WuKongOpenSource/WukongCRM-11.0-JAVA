@@ -3,6 +3,7 @@ package com.kakarote.crm.service;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.feign.crm.entity.QueryEventCrmPageBO;
+import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.CrmModel;
@@ -35,16 +36,20 @@ public interface ICrmLeadsService extends BaseService<CrmLeads> {
      * @return data
      */
     public  List<CrmModelFiledVO> queryField(Integer id);
+
+
     public  List<List<CrmModelFiledVO>> queryFormPositionField(Integer id);
 
     /**
-     * 分页查询
+     * 查询所有数据
      *
-     * @param search
+     * @param search 搜索条件
      * @return
      */
     public BasePage<Map<String, Object>> queryPageList(@RequestBody CrmSearchBO search);
 
+
+    public List<SimpleCrmEntity> querySimpleEntity(List<Integer> ids);
     /**
      * 查询字段配置
      *

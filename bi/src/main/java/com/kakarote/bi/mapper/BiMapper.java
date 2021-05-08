@@ -11,11 +11,9 @@ import java.util.List;
 @Repository
 public interface BiMapper {
 
-    @SqlParser(filter = true)
     public List<ProductStatisticsVO> queryProductSell(BiTimeUtil.BiTimeEntity entity);
 
     public JSONObject queryProductSellCount(BiTimeUtil.BiTimeEntity entity);
 
-    @SqlParser(filter = true)
     public List<JSONObject> taskCompleteStatistics(JSONObject entity);
 }

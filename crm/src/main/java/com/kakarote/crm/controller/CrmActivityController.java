@@ -5,13 +5,11 @@ import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
 import com.kakarote.core.common.Result;
-import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.SysLog;
 import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
-import com.kakarote.core.exception.CrmException;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.log.CrmActivityLog;
 import com.kakarote.crm.constant.CrmActivityEnum;
@@ -77,7 +75,7 @@ public class CrmActivityController {
      * @param activityId
      */
     @PostMapping("/deleteCrmActivityRecord/{activityId}")
-    @ApiOperation("添加跟进记录")
+    @ApiOperation("删除跟进记录")
     public Result deleteCrmActivityRecord(@PathVariable("activityId") Integer activityId) {
         crmActivityService.deleteCrmActivityRecord(activityId);
         return Result.ok();
@@ -89,10 +87,6 @@ public class CrmActivityController {
     @PostMapping("/updateActivityRecord")
     @ApiOperation("修改跟进记录")
     public Result<CrmActivity> updateActivityRecord(@RequestBody CrmActivity crmActivity) {
-        boolean auth = AuthUtil.isRwAuth(crmActivity.getActivityTypeId(), CrmEnum.parse(crmActivity.getActivityType()), CrmAuthEnum.EDIT);
-        if (auth) {
-            throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-        }
         CrmActivity data = crmActivityService.updateActivityRecord(crmActivity);
         return Result.ok(data);
     }

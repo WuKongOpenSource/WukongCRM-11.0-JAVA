@@ -17,6 +17,9 @@ public class UserBookVO implements Serializable {
     @ApiModelProperty("姓名")
     private String realname;
 
+    @ApiModelProperty("头像")
+    private String img;
+
     @ApiModelProperty("用户名")
     private String username;
 

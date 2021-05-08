@@ -5,7 +5,6 @@ import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.Cached;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
-import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.feign.crm.entity.QueryEventCrmPageBO;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
@@ -18,9 +17,7 @@ import com.kakarote.crm.entity.PO.CrmCustomer;
 import com.kakarote.crm.entity.PO.CrmCustomerSetting;
 import com.kakarote.crm.entity.VO.CrmDataCheckVO;
 import com.kakarote.crm.entity.VO.CrmInfoNumVO;
-import com.kakarote.crm.entity.VO.CrmMembersSelectVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -46,12 +43,12 @@ public interface ICrmCustomerService extends BaseService<CrmCustomer> {
 
     public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id) ;
     /**
-     * 分页查询
+     * 查询所有数据
      *
-     * @param search
-     * @return
+     * @param search 搜索数据
+     * @return data
      */
-    public BasePage<Map<String, Object>> queryPageList(@RequestBody CrmSearchBO search);
+    public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search);
 
     /**
      * 查询字段配置
@@ -88,7 +85,7 @@ public interface ICrmCustomerService extends BaseService<CrmCustomer> {
      *
      * @param changOwnerUserBO data
      */
-    public void changeOwnerUser(CrmBusinessChangOwnerUserBO changOwnerUserBO);
+    public void changeOwnerUser(CrmChangeOwnerUserBO changOwnerUserBO);
 
     /**
      * 全部导出
@@ -119,14 +116,6 @@ public interface ICrmCustomerService extends BaseService<CrmCustomer> {
     public void setContacts(CrmFirstContactsBO contactsBO);
 
     /**
-     * 获取团队成员
-     *
-     * @param customerId 客户ID
-     * @return data
-     */
-    public List<CrmMembersSelectVO> getMembers(Integer customerId);
-
-    /**
      * 领取或分配客户
      *
      * @param poolBO    bo
@@ -135,33 +124,12 @@ public interface ICrmCustomerService extends BaseService<CrmCustomer> {
     public void getCustomersByIds(CrmCustomerPoolBO poolBO, Integer isReceive);
 
     /**
-     * 添加团队成员
-     *
-     * @param crmMemberSaveBO data
-     */
-    public void addMember(CrmMemberSaveBO crmMemberSaveBO);
-
-    /**
-     * 删除团队成员
-     *
-     * @param crmMemberSaveBO data
-     */
-    public void deleteMember(CrmMemberSaveBO crmMemberSaveBO);
-
-    /**
-     * 退出团队
-     *
-     * @param customerId 客户ID
-     */
-    public void exitTeam(Integer customerId);
-
-    /**
      * 下载导入模板
-     *
+     * @param isPool 是否下载公海模板
      * @param response resp
      * @throws IOException ex
      */
-    public void downloadExcel(HttpServletResponse response) throws IOException;
+    public void downloadExcel(boolean isPool,HttpServletResponse response) throws IOException;
 
     /**
      * 保存客户规则设置
@@ -269,11 +237,6 @@ public interface ICrmCustomerService extends BaseService<CrmCustomer> {
      * @return data
      */
     public String getCustomerName(Integer customerId);
-
-    /**
-     * 团队成员相关消息
-     */
-    public void addTermMessage(AdminMessageEnum messageEnum, Integer typeId, String title, Long userId);
 
     boolean isMaxOwner(Long ownerUserId, List<Integer> ids);
 

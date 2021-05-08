@@ -26,6 +26,26 @@ public class CrmServiceImpl implements CrmService {
         return Result.ok(new ArrayList<>());
     }
 
+    @Override
+    public Result<List<SimpleCrmEntity>> queryLeadsInfo(Collection ids) {
+        return Result.ok(new ArrayList<>());
+    }
+
+    @Override
+    public Result<List<SimpleCrmEntity>> queryInvoiceInfo(Collection ids) {
+        return Result.ok(new ArrayList<>());
+    }
+
+    @Override
+    public Result<List<SimpleCrmEntity>> queryReceivablesInfo(Collection ids) {
+        return Result.ok(new ArrayList<>());
+    }
+
+    @Override
+    public Result<List<SimpleCrmEntity>> queryReturnVisitInfo(Collection ids) {
+        return Result.ok(new ArrayList<>());
+    }
+
     /**
      * 查询客户信息(like)
      *

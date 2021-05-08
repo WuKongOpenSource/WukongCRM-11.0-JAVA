@@ -8,14 +8,18 @@ import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminMessageService;
 import com.kakarote.core.feign.examine.service.ExamineService;
+import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserUtil;
+import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.PO.*;
 import com.kakarote.crm.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -37,73 +43,25 @@ import java.util.stream.Collectors;
 public class CrmCommonServiceImpl implements ICrmCommonService {
 
     @Autowired
-    private ICrmActivityService crmActivityService;
-
-    @Autowired
-    private ICrmActivityRelationService crmActivityRelationService;
-
-    @Autowired
     private ICrmBusinessService crmBusinessService;
-    @Autowired
-    private ICrmBusinessChangeService crmBusinessChangeService;
-    @Autowired
-    private ICrmBusinessDataService crmBusinessDataService;
-    @Autowired
-    private ICrmBusinessProductService crmBusinessProductService;
-    @Autowired
-    private ICrmBusinessUserStarService crmBusinessUserStarService;
 
     @Autowired
     private ICrmContactsService crmContactsService;
-    @Autowired
-    private ICrmContactsBusinessService crmContactsBusinessService;
-    @Autowired
-    private ICrmContactsDataService crmContactsDataService;
-    @Autowired
-    private ICrmContactsUserStarService crmContactsUserStarService;
 
     @Autowired
     private ICrmContractService crmContractService;
-    @Autowired
-    private ICrmContractDataService crmContractDataService;
-    @Autowired
-    private ICrmContractProductService crmContractProductService;
-
+   
     @Autowired
     private ICrmCustomerService crmCustomerService;
-    @Autowired
-    private ICrmCustomerDataService crmCustomerDataService;
-    @Autowired
-    private ICrmCustomerSettingService crmCustomerSettingService;
-    @Autowired
-    private ICrmCustomerSettingUserService crmCustomerSettingUserService;
-    @Autowired
-    private ICrmCustomerUserStarService crmCustomerUserStarService;
-
-    @Autowired
-    private ICrmExamineLogService crmExamineLogService;
-    @Autowired
-    private ICrmExamineRecordService crmExamineRecordService;
-    @Autowired
-    private ICrmExamineStepService crmExamineStepService;
 
     @Autowired
     private ICrmFieldSortService crmFieldSortService;
 
     @Autowired
     private ICrmInvoiceService crmInvoiceService;
-    @Autowired
-    private ICrmInvoiceInfoService crmInvoiceInfoService;
 
     @Autowired
     private ICrmLeadsService crmLeadsService;
-    @Autowired
-    private ICrmLeadsDataService crmLeadsDataService;
-    @Autowired
-    private ICrmLeadsUserStarService crmLeadsUserStarService;
-
-    @Autowired
-    private ICrmNumberSettingService crmNumberSettingService;
 
     @Autowired
     private ICrmOwnerRecordService crmOwnerRecordService;
@@ -113,29 +71,12 @@ public class CrmCommonServiceImpl implements ICrmCommonService {
 
     @Autowired
     private ICrmProductService crmProductService;
-    @Autowired
-    private ICrmProductDataService crmProductDataService;
-    @Autowired
-    private ICrmProductDetailImgService crmProductDetailImgService;
-    @Autowired
-    private ICrmProductUserService crmProductUserService;
 
     @Autowired
     private ICrmReceivablesService crmReceivablesService;
-    @Autowired
-    private ICrmReceivablesDataService crmReceivablesDataService;
-    @Autowired
-    private ICrmReceivablesPlanService crmReceivablesPlanService;
 
     @Autowired
     private ICrmReturnVisitService crmReturnVisitService;
-    @Autowired
-    private ICrmReturnVisitDataService crmReturnVisitDataService;
-
-    @Autowired
-    private ICrmActionRecordService crmActionRecordService;
-    @Autowired
-    private ICrmBackLogDealService crmBackLogDealService;
 
     @Autowired
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
@@ -144,34 +85,7 @@ public class CrmCommonServiceImpl implements ICrmCommonService {
     private AdminFileService adminFileService;
 
     @Autowired
-    private ICrmCustomerPoolRelationService crmCustomerPoolRelationService;
-
-    @Autowired
-    private ICrmCustomerPoolFieldSettingService crmCustomerPoolFieldSettingService;
-
-    @Autowired
-    private ICrmCustomerPoolFieldSortService crmCustomerPoolFieldSortService;
-
-    @Autowired
-    private ICrmCustomerPoolFieldStyleService crmCustomerPoolFieldStyleService;
-
-    @Autowired
-    private ICrmCustomerPoolRuleService crmCustomerPoolRuleService;
-
-    @Autowired
     private AdminMessageService adminMessageService;
-
-    @Autowired
-    private ICrmMarketingService crmMarketingService;
-
-    @Autowired
-    private ICrmMarketingInfoService crmMarketingInfoService;
-
-    @Autowired
-    private ICrmMarketingFieldService crmMarketingFieldService;
-
-    @Autowired
-    private ICrmMarketingFormService crmMarketingFormService;
 
     @Autowired
     private ExamineService examineService;
@@ -186,80 +100,77 @@ public class CrmCommonServiceImpl implements ICrmCommonService {
             }
         }
         log.info("开始初始化客户管理模块数据！");
-        crmActivityService.lambdaUpdate().remove();
-
+        ApplicationContextHolder.getBean(ICrmActivityService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmActivityRelationService.class).lambdaUpdate().remove();
         this.deleteFile(crmBusinessService,CrmBusiness::getBatchId,CrmBusiness::getBatchId);
         crmBusinessService.lambdaUpdate().remove();
-        crmBusinessChangeService.lambdaUpdate().remove();
-        crmBusinessDataService.lambdaUpdate().remove();
-        crmBusinessProductService.lambdaUpdate().remove();
-        crmBusinessUserStarService.lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmBusinessChangeService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmBusinessDataService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmBusinessProductService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmBusinessUserStarService.class).lambdaUpdate().remove();
 
         this.deleteFile(crmContactsService,CrmContacts::getBatchId,CrmContacts::getBatchId);
         crmContactsService.lambdaUpdate().remove();
-        crmContactsDataService.lambdaUpdate().remove();
-        crmContactsBusinessService.lambdaUpdate().remove();
-        crmContactsUserStarService.lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmContactsDataService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmContactsBusinessService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmContactsUserStarService.class).lambdaUpdate().remove();
 
         this.deleteFile(crmContractService,CrmContract::getBatchId,CrmContract::getBatchId);
         crmContractService.lambdaUpdate().remove();
-        crmContractDataService.lambdaUpdate().remove();
-        crmContractProductService.lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmContractDataService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmContractProductService.class).lambdaUpdate().remove();
 
         this.deleteFile(crmCustomerService,CrmCustomer::getBatchId,CrmCustomer::getBatchId);
         crmCustomerService.lambdaUpdate().remove();
-        crmCustomerDataService.lambdaUpdate().remove();
-        crmCustomerSettingService.lambdaUpdate().remove();
-        crmCustomerSettingUserService.lambdaUpdate().remove();
-        crmCustomerUserStarService.lambdaUpdate().remove();
-
-        crmExamineLogService.lambdaUpdate().remove();
-        crmExamineRecordService.lambdaUpdate().remove();
-        crmExamineStepService.lambdaUpdate().remove();
-
+        ApplicationContextHolder.getBean(ICrmCustomerDataService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmCustomerSettingService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmCustomerSettingUserService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmCustomerUserStarService.class).lambdaUpdate().remove();
+        
         crmFieldSortService.lambdaUpdate().remove();
 
         crmInvoiceService.lambdaUpdate().remove();
-        crmInvoiceInfoService.lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmInvoiceDataService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmInvoiceInfoService.class).lambdaUpdate().remove();
 
         this.deleteFile(crmLeadsService,CrmLeads::getBatchId,CrmLeads::getBatchId);
         crmLeadsService.lambdaUpdate().remove();
-        crmLeadsDataService.lambdaUpdate().remove();
-        crmLeadsUserStarService.lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmLeadsDataService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmLeadsUserStarService.class).lambdaUpdate().remove();
 
 
         crmOwnerRecordService.lambdaUpdate().remove();
-
         crmPrintRecordService.lambdaUpdate().remove();
 
         this.deleteFile(crmProductService,CrmProduct::getBatchId,CrmProduct::getBatchId);
         crmProductService.lambdaUpdate().remove();
-        crmProductDataService.lambdaUpdate().remove();
-        crmProductDetailImgService.lambdaUpdate().remove();
-        crmProductUserService.lambdaUpdate().remove();
+
+        ApplicationContextHolder.getBean(ICrmProductDataService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmProductDetailImgService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmProductUserService.class).lambdaUpdate().remove();
 
         crmReceivablesService.lambdaUpdate().remove();
-        crmReceivablesDataService.lambdaUpdate().remove();
-        crmReceivablesPlanService.lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmReceivablesDataService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmReceivablesPlanService.class).lambdaUpdate().remove();
 
         crmReturnVisitService.lambdaUpdate().remove();
-        crmReturnVisitDataService.lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmReturnVisitDataService.class).lambdaUpdate().remove();
 
-        crmCustomerPoolRelationService.lambdaUpdate().remove();
-        crmCustomerPoolFieldSettingService.lambdaUpdate().remove();
-        crmCustomerPoolFieldSortService.lambdaUpdate().remove();
-        crmCustomerPoolFieldStyleService.lambdaUpdate().remove();
-        crmCustomerPoolRuleService.lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmCustomerPoolRelationService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmCustomerPoolFieldSettingService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmCustomerPoolFieldSortService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmCustomerPoolFieldStyleService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmCustomerPoolRuleService.class).lambdaUpdate().remove();
 
-        crmMarketingService.lambdaUpdate().remove();
-        crmMarketingInfoService.lambdaUpdate().remove();
-        crmMarketingFieldService.lambdaUpdate().remove();
-        crmMarketingFormService.lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmMarketingService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmMarketingInfoService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmMarketingFieldService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmMarketingFormService.class).lambdaUpdate().remove();
 
         adminMessageService.deleteByLabel(6);
 
-        crmActionRecordService.lambdaUpdate().remove();
-        crmBackLogDealService.lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmActionRecordService.class).lambdaUpdate().remove();
+        ApplicationContextHolder.getBean(ICrmBackLogDealService.class).lambdaUpdate().remove();
 
         examineService.deleteExamineRecordAndLog(1);
         examineService.deleteExamineRecordAndLog(2);
@@ -279,7 +190,7 @@ public class CrmCommonServiceImpl implements ICrmCommonService {
      * @param mapper
      * @return void
      **/
-    private <T> void deleteFile(BaseService<T> baseService, SFunction<T,String> resultColumn,Function<T,String> mapper){
+    private <T> void deleteFile(BaseService<T> baseService, SFunction<T,String> resultColumn, Function<T,String> mapper){
         LambdaQueryWrapper<T> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         lambdaQueryWrapper.select(resultColumn);
         List<T> list = baseService.list(lambdaQueryWrapper);
@@ -298,11 +209,19 @@ public class CrmCommonServiceImpl implements ICrmCommonService {
      * @return long
      **/
     private long deleteByQuery(RestHighLevelClient client) {
+        List<String> indexList = new ArrayList<>();
+        for (CrmEnum value : CrmEnum.values()) {
+            if (!value.equals(CrmEnum.RECEIVABLES_PLAN) && !value.equals(CrmEnum.CUSTOMER_POOL) && !value.equals(CrmEnum.MARKETING)){
+                indexList.add(value.getIndex());
+            }
+        }
         //参数为索引名，可以不指定，可以一个，可以多个
-        DeleteByQueryRequest request = new DeleteByQueryRequest("_all");
+        DeleteByQueryRequest request = new DeleteByQueryRequest(indexList.toArray(new String[0]));
         // 更新时版本冲突
         request.setConflicts("proceed");
         request.setSize(1000);
+        // 设置查询条件，第一个参数是字段名，第二个参数是字段的值
+        request.setQuery(QueryBuilders.matchAllQuery());
         // 刷新索引
         request.setRefresh(true);
         try {

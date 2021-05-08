@@ -6,9 +6,8 @@
         a.create_time, a.is_read, a.read_time,b.realname,
         (CASE WHEN  DATE_SUB(CURDATE(), INTERVAL 7 DAY) >= date(a.create_time) THEN 0 ELSE 1 END) as valid
         from wk_admin_message as a
-        left join wk_admin_user as b on a.create_user=b.user_id
-        where
-        recipient_user = #{data.userId} and b.is_del = 0
+        left join wk_admin_user as b on a.create_user = b.user_id and b.is_del = 0
+        where a.recipient_user = #{data.userId}
         <if test="data.isRead != null">
             and is_read=#{data.isRead}
         </if>
@@ -36,6 +35,7 @@
         count(if(label = 6,1,null)) as crmCount,
         count(if(label = 5 and create_time &lt; now(),1,null)) as eventCount,
         count(if(label = 7,1,null)) as knowledgeCount,
+        count(if(label = 8,1,null)) as hrmCount,
         count(if(label = 9,1,null)) as jxcCount
         from wk_admin_message as a where is_read = 0 and recipient_user =  #{userId}  and create_time &lt; now()
     </select>

@@ -2,13 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.kakarote.admin.mapper.AdminUserMapper">
     <select id="findByUsername" resultType="java.util.HashMap" parameterType="java.lang.String">
-        select a.*,(SELECT name FROM wk_admin_dept WHERE dept_id = a.dept_id) as deptName,(SELECT realname FROM wk_admin_user WHERE user_id=a.parent_id) as parentName
+        select a.*,(SELECT name FROM wk_admin_dept WHERE dept_id = a.dept_id) as deptName,(SELECT realname FROM wk_admin_user WHERE user_id=a.parent_id and is_del = 0) as parentName
         FROM wk_admin_user as a
-        where a.username = #{username}
+        where a.username = #{username} and a.is_del = 0
     </select>
     <select id="queryUserList" resultType="com.kakarote.admin.entity.VO.AdminUserVO">
         select a.realname,a.username,a.user_id,a.sex,a.mobile,a.email,e.name as
-        deptName,a.status,a.create_time,a.dept_id,
+        deptName,a.status,a.create_time,a.dept_id,a.img,
         a.post,a.parent_id,
         (select b.realname from wk_admin_user as b where b.user_id = a.parent_id) as
         parentName
@@ -17,7 +17,7 @@
         <if test="data.roleId != null">
             left join wk_admin_user_role as g on a.user_id = g.user_id
         </if>
-        where 1 = 1
+        where 1 = 1 and a.is_del = 0
         <if test="data.realname != null and data.realname != ''">
             and (a.realname like concat('%', #{data.realname}, '%') or a.mobile like concat('%',#{data.realname}, '%'))
         </if>
@@ -64,7 +64,7 @@
         ELSE UPPER(tmp_char) end
         as initial
         from (
-        select au.realname,au.username,au.mobile,au.post,ad.name as deptName
+        select au.realname,au.username,au.img,au.mobile,au.post,ad.name as deptName
         ,au.dept_id,au.user_id,au.status as user_status,
         case
         when (select count(1) from wk_admin_attention where be_user_id = au.user_id and
@@ -75,6 +75,7 @@
         LEFT(realname,1) as tmp_char
         from wk_admin_user as au
         LEFT JOIN wk_admin_dept as ad on au.dept_id = ad.dept_id
+        where au.is_del = 0
         ) as a
         where user_status = 1
         <if test="data.deptId != null">
@@ -97,23 +98,16 @@
         </choose>
     </select>
     <select id="querySimpleUserByDeptId" resultType="com.kakarote.admin.entity.VO.HrmSimpleUserVO">
-        select user_id,realname,img,post from wk_admin_user where  dept_id = #{deptId} and status != 0
+        select user_id,realname,img,post from wk_admin_user where  dept_id = #{deptId} and status != 0 and is_del = 0
     </select>
     <select id="querySimpleUserByDeptIdAndExamine" resultType="com.kakarote.admin.entity.VO.HrmSimpleUserVO">
-        select user_id,realname,img,post from wk_admin_user where  dept_id = #{deptId} and status = 1
+        select user_id,realname,img,post from wk_admin_user where  dept_id = #{deptId} and status = 1 and is_del = 0
     </select>
     <select id="queryLoginUserInfo" resultType="com.kakarote.core.entity.UserInfo">
         select a.*,(SELECT name FROM wk_admin_dept WHERE dept_id = a.dept_id) as deptName,
         (SELECT realname FROM wk_admin_user WHERE user_id=a.parent_id) as parentName
         FROM wk_admin_user as a
-        where a.user_id = #{userId}
-    </select>
-    <select id="queryByUserName" resultType="com.kakarote.admin.entity.PO.AdminUser">
-        select a.*,
-        b.company_name as companyName
-        from wk_admin_user as a
-        LEFT JOIN wk_admin_company as b on a.username=b.phone
-        where a.username = #{username}
+        where a.user_id = #{userId} and a.is_del = 0
     </select>
     <select id="countUserByLabel" resultType="java.lang.Integer">
         select count(1)

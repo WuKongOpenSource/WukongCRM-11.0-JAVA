@@ -6,17 +6,15 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.UserInfo;
-import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
-import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
-import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserCacheUtil;
@@ -41,14 +39,11 @@ import java.util.stream.Collectors;
 @Component
 public class ActionRecordUtil {
 
-    private static final ExecutorService THREAD_POOL = new ThreadPoolExecutor(1, 20, 5L, TimeUnit.SECONDS, new LinkedBlockingDeque<>(2048), new ThreadPoolExecutor.AbortPolicy());
-
-    @Autowired
-    private AdminService adminService;
+    static final ExecutorService THREAD_POOL = new ThreadPoolExecutor(10, 20, 5L, TimeUnit.SECONDS, new LinkedBlockingDeque<>(2048), new ThreadPoolExecutor.AbortPolicy());
 
     @SuppressWarnings("unchecked")
     public static Object parseValue(Object value, Integer type,boolean isNeedStr) {
-        if (ObjectUtil.isEmpty(value)) {
+        if (ObjectUtil.isEmpty(value) && !type.equals(FieldEnum.DETAIL_TABLE.getType())) {
             return isNeedStr ? "空" : "";
         }
         FieldEnum fieldEnum = FieldEnum.parse(type);
@@ -76,11 +71,59 @@ public class ActionRecordUtil {
                 if (value instanceof Collection) {
                     value = StrUtil.join(Const.SEPARATOR,value);
                 }
+                return isNeedStr ? value.toString() : value;
+            }
+            case SINGLE_USER:
+            case USER:
+                List<String> ids = StrUtil.splitTrim(value.toString(),Const.SEPARATOR);
+                return ids.stream().map(id -> UserCacheUtil.getUserName(Long.valueOf(id))).collect(Collectors.joining(Const.SEPARATOR));
+            case STRUCTURE:
+                List<String> deptIds = StrUtil.splitTrim(value.toString(),Const.SEPARATOR);
+                return deptIds.stream().map(id -> UserCacheUtil.getDeptName(Integer.valueOf(id))).collect(Collectors.joining(Const.SEPARATOR));
+            case DETAIL_TABLE: {
+                if(value == null) {
+                    value = new ArrayList<>();
+                }
+                if(value instanceof String){
+                    if("".equals(value)) {
+                        value = new ArrayList<>();
+                    } else {
+                        value = JSON.parseArray((String) value);
+                    }
+                }
+                List<Map<String,Object>> list = new ArrayList<>();
+                JSONArray array = new JSONArray((List<Object>) value);
+                for (int i = 0; i < array.size(); i++) {
+                    JSONArray objects = array.getJSONArray(i);
+                    for (int j = 0; j < objects.size(); j++) {
+                        Map <String,Object> map = new HashMap<>();
+                        JSONObject data = objects.getJSONObject(j);
+                        map.put("name",data.get("name"));
+                        map.put("value",parseValue(data.get("value"),data.getInteger("type"),false));
+                        list.add(map);
+                    }
+                }
+                return list;
             }
             default:
                 return isNeedStr ? value.toString() : value;
         }
 
+    }
+
+    @SuppressWarnings("unchecked")
+    public static void parseDetailTable(Object oldFieldValue,Object newFieldValue,String name,Integer type,List<String> textList){
+        List<Map<String,Object>> oldFieldValues = (List<Map<String, Object>>) ActionRecordUtil.parseValue(oldFieldValue,type,false);
+        List<Map<String,Object>> newFieldValues = (List<Map<String, Object>>) ActionRecordUtil.parseValue(newFieldValue,type,false);
+        int size = oldFieldValues.size() >= newFieldValues.size() ? oldFieldValues.size() : newFieldValues.size();
+        for (int i = 0; i < size; i++) {
+            Object oldValue = oldFieldValues.size() > i ? oldFieldValues.get(i).get("value") :"";
+            Object newValue = newFieldValues.size() > i ? newFieldValues.get(i).get("value") :"";
+            if (!Objects.equals(oldValue,newValue)) {
+                Map<String,Object> map = oldFieldValues.size() >= newFieldValues.size() ? oldFieldValues.get(i) : newFieldValues.get(i);
+                textList.add("将" + name +" "+ map.get("name") + " 由" + oldValue + "修改为" + newValue + "。");
+            }
+        }
     }
 
     public static class ActionRecordTask implements Runnable {
@@ -114,41 +157,10 @@ public class ActionRecordUtil {
     }
 
 
-    public String getDetailByFormTypeAndValue(JSONObject record, String value) {
-        if (record == null) {
-            return "";
-        }
-        FieldEnum fieldEnum = FieldEnum.parse(record.getString("formType"));
-        String oldFieldValue = this.parseValueByFieldEnum(value, fieldEnum);
-        String newFieldValue = this.parseValueByFieldEnum(record.getString("value"), fieldEnum);
-        String oldValue = StrUtil.isEmpty(oldFieldValue) ? "空" : oldFieldValue;
-        String newValue = StrUtil.isEmpty(newFieldValue) ? "空" : newFieldValue;
-        return "将" + record.getString("name") + " 由" + oldValue + "修改为" + newValue + "。";
-    }
-
-
-    private String parseValueByFieldEnum(String value, FieldEnum fieldEnum) {
-        if (StrUtil.isEmpty(value)) {
-            return null;
-        }
-        if (Arrays.asList(FieldEnum.USER, FieldEnum.SINGLE_USER).contains(fieldEnum)) {
-            List<SimpleUser> simpleUsers = adminService.queryUserByIds(TagUtil.toLongSet(value)).getData();
-            value = simpleUsers.stream().map(SimpleUser::getRealname).collect(Collectors.joining(Const.SEPARATOR));
-        } else if (FieldEnum.STRUCTURE.equals(fieldEnum)) {
-            List<SimpleDept> simpleDepts = adminService.queryDeptByIds(TagUtil.toSet(value)).getData();
-            value = simpleDepts.stream().map(SimpleDept::getName).collect(Collectors.joining(Const.SEPARATOR));
-        } else if (FieldEnum.FILE.equals(fieldEnum)) {
-            AdminFileService adminFileService = ApplicationContextHolder.getBean(AdminFileService.class);
-            List<FileEntity> fileEntities = adminFileService.queryFileList(value).getData();
-            value = fileEntities.stream().map(FileEntity::getName).collect(Collectors.joining(Const.SEPARATOR));
-        }
-        return value;
-    }
-
     /**
      * 属性kv
      */
-    private static Map<Integer, Dict> propertiesMap = new HashMap<>();
+    public static Map<Integer, Dict> propertiesMap = new HashMap<>();
 
     static {
         propertiesMap.put(CrmEnum.LEADS.getType(), Dict.create().set("leadsName", "线索名称").set("address", "地址").set("mobile", "手机").set("nextTime", "下次联系时间").set("remark", "备注").set("email", "邮箱").set("telephone", "电话"));
@@ -214,6 +226,7 @@ public class ActionRecordUtil {
         THREAD_POOL.execute(actionRecordTask);
     }
 
+    @SuppressWarnings("unchecked")
     public void updateRecord(List<CrmModelFiledVO> newFieldList, Dict kv) {
         textList.clear();
         if (newFieldList == null) {
@@ -226,12 +239,14 @@ public class ActionRecordUtil {
                     if (ObjectUtil.isEmpty(oldField.getValue()) && ObjectUtil.isEmpty(newField.getValue())) {
                         continue;
                     }
-                    String oldFieldValue = (String) parseValue(oldField.getValue(), oldField.getType(),true);
-                    ;
-                    String newFieldValue = (String) parseValue(newField.getValue(), newField.getType(),true);
-                    ;
-                    if (!oldFieldValue.equals(newFieldValue)) {
-                        textList.add("将" + oldField.getName() + " 由" + oldFieldValue + "修改为" + newFieldValue + "。");
+                    if(Objects.equals(FieldEnum.parse(oldField.getType()),FieldEnum.DETAIL_TABLE)){
+                        parseDetailTable(oldField.getValue(),newField.getValue(),oldField.getName(),oldField.getType(),textList);
+                    }else{
+                        String oldFieldValue = (String) ActionRecordUtil.parseValue(oldField.getValue(),oldField.getType(),true);
+                        String newFieldValue = (String) ActionRecordUtil.parseValue(newField.getValue(),newField.getType(),true);
+                        if (!oldFieldValue.equals(newFieldValue)) {
+                            textList.add("将" + oldField.getName() + " 由" + oldFieldValue + "修改为" + newFieldValue + "。");
+                        }
                     }
                 }
             }
@@ -250,17 +265,17 @@ public class ActionRecordUtil {
                     if (newValue instanceof Date) {
                         newValue = DateUtil.formatDateTime((Date) newValue);
                     }
-                    if (ObjectUtil.isEmpty(oldValue) || ("address".equals(oldKey) && ",,".equals(oldValue))) {
+                    if (ObjectUtil.isEmpty(oldValue) || ("address".equals(oldKey))) {
                         oldValue = "空";
                     }
-                    if (ObjectUtil.isEmpty(newValue) || ("address".equals(newKey) && ",,".equals(newValue))) {
+                    if (ObjectUtil.isEmpty(newValue) || ("address".equals(newKey))) {
                         newValue = "空";
                     }
                     if (oldValue instanceof BigDecimal || newValue instanceof BigDecimal) {
                         oldValue = Convert.toBigDecimal(oldValue, new BigDecimal(0)).setScale(2, BigDecimal.ROUND_UP).toString();
                         newValue = Convert.toBigDecimal(newValue, new BigDecimal(0)).setScale(2, BigDecimal.ROUND_UP).toString();
                     }
-                    if (newKey.equals(oldKey) && !oldValue.equals(newValue)) {
+                    if (newKey.equals(oldKey) && !Objects.equals(oldValue,newValue)) {
                         switch (oldKey) {
                             case "companyUserId":
                                 if (!"空".equals(newValue)) {
@@ -369,7 +384,21 @@ public class ActionRecordUtil {
         }
     }
 
-    public void publicContentRecord(CrmEnum crmEnum, BehaviorEnum behaviorEnum, Integer actionId, String name, String detail) {
+    public void publicContentRecord(CrmEnum crmEnum, BehaviorEnum behaviorEnum, Integer actionId, String name, JSONObject record, String value) {
+        List<String> textList = new ArrayList<>();
+        FieldEnum fieldEnum = FieldEnum.parse(record.getInteger("type"));
+        if(fieldEnum == FieldEnum.DETAIL_TABLE){
+            parseDetailTable(value,record.get("value"),record.getString("name"),fieldEnum.getType(),textList);
+        } else {
+            String oldFieldValue = (String) ActionRecordUtil.parseValue(value,fieldEnum.getType(),true);
+            String newFieldValue = (String) ActionRecordUtil.parseValue(record.get("value"),fieldEnum.getType(),true);
+            if (!oldFieldValue.equals(newFieldValue)) {
+                textList.add("将" + record.getString("name") + " 由" + oldFieldValue + "修改为" + newFieldValue + "。");
+            }
+        }
+        if(textList.size() == 0){
+            return;
+        }
         CrmActionRecord actionRecord = new CrmActionRecord();
         actionRecord.setCreateUserId(UserUtil.getUserId());
         actionRecord.setCreateTime(new Date());
@@ -377,8 +406,8 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setBehavior(behaviorEnum.getType());
         actionRecord.setActionId(actionId);
-        actionRecord.setContent("[\"" + detail + "\"]");
-        actionRecord.setDetail(detail);
+        actionRecord.setContent(JSON.toJSONString(textList));
+        actionRecord.setDetail(StrUtil.join("", textList));
         actionRecord.setObject(name);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
         THREAD_POOL.execute(actionRecordTask);
@@ -401,7 +430,6 @@ public class ActionRecordUtil {
         strings.add("将" + crmEnum.getRemarks() + "转移给：" + userName);
         crmActionRecord.setContent(JSON.toJSONString(strings));
         crmActionRecord.setIpAddress(BaseUtil.getIp());
-//        String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         crmActionRecord.setDetail("将" + crmEnum.getRemarks() + "：" + name + "转移给：" + userName);
         crmActionRecord.setBehavior(BehaviorEnum.CHANGE_OWNER.getType());
         crmActionRecord.setObject(name);
@@ -432,7 +460,6 @@ public class ActionRecordUtil {
         crmActionRecord.setContent(JSON.toJSONString(strings));
         for (String actionId : ids) {
             String name = crmCustomerService.lambdaQuery().select(CrmCustomer::getCustomerName).eq(CrmCustomer::getCustomerId, actionId).one().getCustomerName();
-//            String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
             String detail;
             if (isLock == 2) {
                 detail = "将客户：" + name + "锁定";
@@ -558,7 +585,6 @@ public class ActionRecordUtil {
         actionRecord.setIpAddress(BaseUtil.getIp());
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setActionId(actionId);
-//        String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         if (isSelf) {
             actionRecord.setBehavior(BehaviorEnum.EXIT_MEMBER.getType());
             actionRecord.setDetail("退出了" + crmEnum.getRemarks() + "：" + name + "的团队成员");
@@ -593,7 +619,6 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setActionId(actionId);
         actionRecord.setBehavior(BehaviorEnum.FOLLOW_UP.getType());
-//        String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         actionRecord.setDetail("给" + crmEnum.getRemarks() + "：" + name + "新建了跟进记录");
         actionRecord.setObject(name);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
@@ -608,7 +633,6 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setBehavior(BehaviorEnum.CANCEL_EXAMINE.getType());
         actionRecord.setActionId(actionId);
-//        String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         actionRecord.setDetail("将" + crmEnum.getRemarks() + "：" + name + "作废");
         actionRecord.setObject(name);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
@@ -623,7 +647,6 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setBehavior(BehaviorEnum.SAVE.getType());
         actionRecord.setActionId(actionId);
-//        String name = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         actionRecord.setDetail("新建了" + crmEnum.getRemarks() + "：" + name);
         actionRecord.setObject(name);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
@@ -735,7 +758,6 @@ public class ActionRecordUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setBehavior(behaviorEnum.getType());
         actionRecord.setActionId(actionId);
-//        String number = Db.queryStr("select " + crmEnum.getTableNameField() + " from " + crmEnum.getTableName() + " where examine_record_id = ?", actionId);
         String prefix = "";
         switch (behaviorEnum) {
             case SUBMIT_EXAMINE:

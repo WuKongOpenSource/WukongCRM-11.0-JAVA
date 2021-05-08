@@ -50,14 +50,14 @@ public class ExamineRecordController {
     }
 
     @PostMapping("/queryExamineRecordLog")
-    @ApiOperation("获取审批历史记录")
+    @ApiOperation("获取完整审批历史记录")
     public Result<List<ExamineRecordLogVO>> queryExamineRecord(@RequestParam(value = "ownerUserId",required = false) String ownerUserId, @RequestParam("recordId") Integer recordId) {
         return Result.ok(examineRecordLogService.queryExamineRecordLog(recordId,ownerUserId));
     }
 
 
     @PostMapping("/queryExamineRecordInfo")
-    @ApiOperation("获取指定的审批历史记录")
+    @ApiOperation("获取未结束审批流程的待审核人")
     public Result<ExamineRecordReturnVO> queryExamineRecordInfo(@RequestParam("recordId") Integer recordId) {
         return Result.ok(examineRecordService.queryExamineRecordInfo(recordId));
     }

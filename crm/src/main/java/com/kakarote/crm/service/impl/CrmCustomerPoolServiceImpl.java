@@ -3,6 +3,7 @@ package com.kakarote.crm.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -17,10 +18,10 @@ import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.UserUtil;
-import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.constant.CrmActivityEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
@@ -95,7 +96,7 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
     private ICrmBackLogDealService backLogDealService;
 
     @Autowired
-    private ActionRecordUtil actionRecordUtil;
+    private FieldService fieldService;
 
     /**
      * 查询公海规则列表
@@ -489,8 +490,16 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
      */
     @Override
     public void poolFieldConfig(JSONObject object) {
-        List<Integer> hideIds = object.getJSONArray("hideIds").toJavaList(Integer.class);
-        List<Integer> noHideIds = object.getJSONArray("noHideIds").toJavaList(Integer.class);
+        JSONArray hideFields = object.getJSONArray("hideFields");
+        JSONArray noHideFields = object.getJSONArray("noHideFields");
+        List<Integer> hideIds =new ArrayList<>(hideFields.size());
+        List<Integer> noHideIds =new ArrayList<>(noHideFields.size());
+        for (int i = 0; i < hideFields.size(); i++) {
+            hideIds.add(hideFields.getJSONObject(i).getInteger("id"));
+        }
+        for (int i = 0; i < noHideFields.size(); i++) {
+            noHideIds.add(noHideFields.getJSONObject(i).getInteger("id"));
+        }
         if (noHideIds.size() < 2) {
             throw new CrmException(CrmCodeEnum.CRM_POOL_FIELD_HIDE_ERROR);
         }
@@ -541,7 +550,7 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
         search.setLabel(CrmEnum.CUSTOMER_POOL.getType());
-        BasePage<Map<String, Object>> basePage = queryList(search);
+        BasePage<Map<String, Object>> basePage = queryList(search,false);
         basePage.getList().forEach(map -> {
             map.put("poolId", search.getPoolId());
         });
@@ -608,6 +617,14 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
             }
             crmCustomerPoolFieldSortService.saveBatch(list);
         }
+        list.removeIf(fieldSort -> fieldService.equalsByType(fieldSort.getType(),FieldEnum.DESC_TEXT,FieldEnum.DETAIL_TABLE,FieldEnum.FILE));
+        list.forEach(fieldSort -> {
+            if ("website".equals(fieldSort.getFieldName())) {
+                fieldSort.setFormType(FieldEnum.WEBSITE.getFormType());
+            }else {
+                fieldSort.setFormType(FieldEnum.parse(fieldSort.getType()).getFormType());
+            }
+        });
         ICrmCustomerPoolFieldStyleService styleService = ApplicationContextHolder.getBean(ICrmCustomerPoolFieldStyleService.class);
         list.removeIf(sort -> !sort.getIsHidden().equals(0));
         List<CrmCustomerPoolFieldStyle> fieldStyles = styleService.lambdaQuery().eq(CrmCustomerPoolFieldStyle::getPoolId, poolId).eq(CrmCustomerPoolFieldStyle::getUserId, userId).list();
@@ -701,6 +718,11 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
     @Override
     public void setOtherField(Map<String, Object> map) {
 
+    }
+
+    @Override
+    public Dict getSearchTransferMap() {
+        return Dict.create().set("createUserId", "createUserName").set("preOwnerUserId","preOwnerUserName");
     }
 
     /**

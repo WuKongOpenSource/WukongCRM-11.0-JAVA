@@ -108,7 +108,7 @@
             from wk_crm_receivables as b
             where b.contract_id = a.contract_id and b.check_status = 1) as receivablesMoney
             from wk_crm_contract as a
-            where (DATE_FORMAT(a.order_date,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
+            where DATE_FORMAT(a.order_date,#{sqlDateFormat} between #{beginTime} and #{finalTime})
             and a.check_status = 1 and a.owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
@@ -135,54 +135,49 @@
     </select>
 
     <select id="totalInvoice" resultType="com.alibaba.fastjson.JSONObject">
-        select IFNULL(sum(money),0) as receivablesMoney,
-        (select IFNULL(sum(invoice_money),0) from wk_crm_invoice
-        where year(real_invoice_date) = #{year} and check_status = 1
-        <if test="userIds.size()>0">
-            and owner_user_id in
+        SELECT
+            (
+            SELECT IFNULL(sum(b.invoice_money),0) FROM wk_crm_invoice as b WHERE b.check_status = '1' and b.real_invoice_date BETWEEN #{startTime} and #{endTime}
+            and b.owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>
-        </if>
-        ) as invoiceMoney
-        from wk_crm_receivables
-        where year(return_time) = #{year} and check_status = 1
-        <if test="userIds.size()>0">
-            and owner_user_id in
+             ) as invoiceMoney,
+            (
+            SELECT IFNULL(sum(c.money),0) FROM wk_crm_receivables as c WHERE c.check_status = '1' and c.return_time BETWEEN #{startTime} and #{endTime}
+            and c.owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>
-        </if>
+            ) as receivablesMoney
     </select>
-
     <select id="invoiceStatsTable" resultType="com.alibaba.fastjson.JSONObject">
-        select x.type,x.receivablesMoney,x.receivablesNoInvoice,y.invoiceMoney,y.invoiceNoReceivables
-        from (SELECT t1.type, IFNULL( sum( t1.money ), 0 ) AS receivablesMoney,
-                (IFNULL( sum( t1.b_money ), 0 ) - IFNULL( sum( t1.invoice_money ), 0 )) AS receivablesNoInvoice
-            FROM( SELECT DATE_FORMAT( a.return_time, #{sqlDateFormat}) AS type, a.money, b.money AS b_money, c.invoice_money
-            from wk_crm_receivables as a
-            left join wk_crm_contract as b on a.contract_id = b.contract_id
-            left join wk_crm_invoice as c on b.contract_id = c.contract_id
-            where (DATE_FORMAT(a.return_time,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
-            and a.check_status = 1 and a.owner_user_id in
-            <for collection="userIds" item="item">
-                #{item}
-            </for>
-            ) t1 GROUP BY t1.type
-        ) as x left join
-        (SELECT t2.type, IFNULL( sum( t2.invoice_money ), 0 ) AS invoiceMoney,
-        ( IFNULL( sum( CASE WHEN t2.check_status = 1 THEN t2.money ELSE 0 END ), 0 ) - IFNULL( sum( CASE WHEN t2.c_status = 1 THEN t2.c_money ELSE 0 END ), 0 )) AS invoiceNoReceivables
-         FROM ( SELECT DATE_FORMAT( a.real_invoice_date, #{sqlDateFormat} ) AS type, a.invoice_money, b.check_status,
-            c.check_status AS c_status, b.money, c.money AS c_money
-            from wk_crm_invoice as a
-            left join wk_crm_contract as b on a.contract_id = b.contract_id
-            left join wk_crm_receivables as c on b.contract_id = c.contract_id
-            where (DATE_FORMAT(a.real_invoice_date,#{sqlDateFormat}) between #{beginTime} and #{finalTime})
-            and a.owner_user_id in
-            <for collection="userIds" item="item">
-                #{item}
-            </for>
-            ) t2 GROUP BY t2.type
-        ) as y on x.type = y.type
+        SELECT invoice.invoiceMoney as invoiceMoney,invoice.invoiceMoney - invoice.receivablesMoney as invoiceNoReceivables,
+        receivables.receivablesMoney as receivablesMoney,receivables.receivablesMoney - receivables.invoiceMoney as receivablesNoInvoice
+        FROM (
+        SELECT
+        ifnull(sum(a.invoice_money),0)  as invoiceMoney,
+        ifnull(sum(b.money),0)  as receivablesMoney
+        FROM
+        wk_crm_invoice as a
+        LEFT JOIN wk_crm_receivables as b on a.contract_id = b.contract_id and b.check_status = '1'
+        WHERE a.check_status = '1' and a.real_invoice_date BETWEEN #{startTime} and #{endTime}
+        and a.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        ) as invoice,(
+        SELECT
+        ifnull(sum(a.money),0)  as receivablesMoney,
+        ifnull(sum(b.invoice_money),0)  as invoiceMoney
+        FROM
+        wk_crm_receivables as a
+        LEFT JOIN wk_crm_invoice as b on a.contract_id = b.contract_id
+        WHERE a.check_status = '1' and a.return_time BETWEEN #{startTime} and #{endTime}
+        and a.owner_user_id in
+        <for collection="userIds" item="item">
+            #{item}
+        </for>
+        ) as receivables
     </select>
 </mapper>

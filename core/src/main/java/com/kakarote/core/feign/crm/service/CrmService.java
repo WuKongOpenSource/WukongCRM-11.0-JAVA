@@ -28,6 +28,17 @@ public interface CrmService {
     @PostMapping("/crmCustomer/querySimpleEntity")
     public Result<List<SimpleCrmEntity>> queryCustomerInfo(@RequestBody Collection ids);
 
+    @PostMapping("/crmLeads/querySimpleEntity")
+    public Result<List<SimpleCrmEntity>> queryLeadsInfo(@RequestBody Collection ids);
+
+    @PostMapping("/crmInvoice/querySimpleEntity")
+    public Result<List<SimpleCrmEntity>> queryInvoiceInfo(@RequestBody Collection ids);
+
+    @PostMapping("/crmReceivables/querySimpleEntity")
+    public Result<List<SimpleCrmEntity>> queryReceivablesInfo(@RequestBody Collection ids);
+
+    @PostMapping("/crmReturnVisit/querySimpleEntity")
+    public Result<List<SimpleCrmEntity>> queryReturnVisitInfo(@RequestBody Collection ids);
 
     /**
      * 查询客户信息(like)

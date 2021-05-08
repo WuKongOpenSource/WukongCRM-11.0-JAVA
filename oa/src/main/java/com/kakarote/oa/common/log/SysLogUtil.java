@@ -52,7 +52,7 @@ public class SysLogUtil {
                         oldValue = Convert.toBigDecimal(oldValue, new BigDecimal(0)).setScale(2, BigDecimal.ROUND_UP).toString();
                         newValue = Convert.toBigDecimal(newValue, new BigDecimal(0)).setScale(2, BigDecimal.ROUND_UP).toString();
                     }
-                    if (newKey.equals(oldKey) && !oldValue.equals(newValue)) {
+                    if (newKey.equals(oldKey) && !Objects.equals(oldValue,newValue)) {
                         if (ObjectUtil.isEmpty(oldValue)) {
                             oldValue = "空";
                         }

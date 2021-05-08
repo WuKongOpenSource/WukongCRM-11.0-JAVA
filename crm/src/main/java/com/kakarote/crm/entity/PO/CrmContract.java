@@ -92,12 +92,6 @@ public class CrmContract implements Serializable {
     @ApiModelProperty(value = "批次 比如附件批次")
     private String batchId;
 
-    @ApiModelProperty(value = "只读权限")
-    private String roUserId;
-
-    @ApiModelProperty(value = "读写权限")
-    private String rwUserId;
-
     @ApiModelProperty(value = "客户签约人（联系人id）")
     private Integer contactsId;
 

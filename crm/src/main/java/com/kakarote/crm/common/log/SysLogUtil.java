@@ -5,6 +5,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.Content;
 import com.kakarote.core.entity.UserInfo;
@@ -32,10 +33,7 @@ import java.util.stream.Collectors;
 @Component
 public class SysLogUtil {
 
-    private static final ExecutorService THREAD_POOL = new ThreadPoolExecutor(1, 20, 5L, TimeUnit.SECONDS, new LinkedBlockingDeque<>(2048), new ThreadPoolExecutor.AbortPolicy());
-
-    @Autowired
-    private AdminService adminService;
+    private static final ExecutorService THREAD_POOL = new ThreadPoolExecutor(10, 20, 5L, TimeUnit.SECONDS, new LinkedBlockingDeque<>(2048), new ThreadPoolExecutor.AbortPolicy());
 
 
     public static class ActionRecordTask implements Runnable {
@@ -68,24 +66,6 @@ public class SysLogUtil {
         }
     }
 
-    /**
-     * 属性kv
-     */
-    private static Map<Integer, Dict> propertiesMap = new HashMap<>();
-
-    static {
-        propertiesMap.put(CrmEnum.LEADS.getType(), Dict.create().set("leadsName", "线索名称").set("address", "地址").set("mobile", "手机").set("nextTime", "下次联系时间").set("remark", "备注").set("email", "邮箱").set("telephone", "电话"));
-        propertiesMap.put(CrmEnum.CUSTOMER.getType(), Dict.create().set("customerName", "客户名称").set("address", "省市区").set("location", "详细地址").set("mobile", "手机").set("nextTime", "下次联系时间").set("remark", "备注").set("telephone", "电话").set("website", "网址"));
-        propertiesMap.put(CrmEnum.CONTACTS.getType(), Dict.create().set("name", "姓名").set("customerId", "客户姓名").set("mobile", "手机").set("nextTime", "下次联系时间").set("remark", "备注").set("telephone", "电话").set("email", "电子邮箱").set("post", "职务").set("address", "地址"));
-        propertiesMap.put(CrmEnum.BUSINESS.getType(), Dict.create().set("businessName", "商机名称").set("customerId", "客户姓名").set("money", "商机金额").set("dealDate", "预计成交日期").set("remark", "备注").set("typeId", "商机状态组").set("statusId", "商机阶段").set("totalPrice", "总金额").set("discountRate", "整单折扣（%）"));
-        propertiesMap.put(CrmEnum.CONTRACT.getType(), Dict.create().set("num", "合同编号").set("name", "合同名称").set("customerId", "客户名称").set("contactsId", "客户签约人").set("businessId", "商机名称").set("orderDate", "下单时间").set("money", "合同金额").set("startTime", "合同开始时间").set("endTime", "合同结束时间").set("companyUserId", "公司签约人").set("remark", "备注").set("totalPrice", "总金额").set("discountRate", "整单折扣（%）"));
-        propertiesMap.put(CrmEnum.RECEIVABLES.getType(), Dict.create().set("number", "回款编号").set("customerId", "客户姓名").set("contractId", "合同编号").set("returnTime", "回款日期").set("money", "回款金额").set("planId", "期数").set("remark", "备注"));
-        propertiesMap.put(CrmEnum.PRODUCT.getType(), Dict.create().set("name", "产品名称").set("categoryId", "产品类型").set("num", "产品编码").set("price", "价格").set("description", "产品描述"));
-        propertiesMap.put(CrmEnum.MARKETING.getType(), Dict.create().set("marketingName", "活动名称").set("crmType", "关联对象").set("relationUserId", "参与人员").set("marketingType", "活动类型").set("startTime", "开始时间").set("endTime", "截止时间").set("browse", "浏览数").set("submitNum", "提交数").set("marketingMoney", "活动预算").set("address", "活动地址").set("synopsis", "活动简介"));
-        propertiesMap.put(CrmEnum.RETURN_VISIT.getType(), Dict.create().set("visitNumber", "回访编号").set("visitTime", "回访时间").set("ownerUserId", "回访人").set("customerId", "客户名称").set("contractId", "合同编号").set("contactsId", "联系人"));
-        propertiesMap.put(CrmEnum.INVOICE.getType(), Dict.create().set("invoiceApplyNumber", "发票申请编号").set("customerId", "客户名称").set("contractId", "合同编号").set("invoiceMoney", "开票金额").set("invoiceDate", "开票日期").set("invoiceType", "开票类型").set("remark", "备注").set("titleType", "抬头类型").set("invoiceTitle", "开票抬头").set("taxNumber", "纳税识别号").set("depositBank", "开户银行").set("depositAccount", "开户账户").set("depositAddress", "开票地址").set("contactsName", "联系人名称").set("contactsTelephone", "联系方式").set("contactsAddress", "邮寄地址"));
-    }
-
 
     private List<String> textList = new ArrayList<>();
 
@@ -111,6 +91,7 @@ public class SysLogUtil {
         return new Content(name,"新建了" + crmEnum.getRemarks() + "：" + name,BehaviorEnum.SAVE);
     }
 
+    @SuppressWarnings("unchecked")
     public void updateRecord(List<CrmModelFiledVO> newFieldList, Dict kv) {
         textList.clear();
         if (newFieldList == null) {
@@ -123,10 +104,14 @@ public class SysLogUtil {
                     if (ObjectUtil.isEmpty(oldField.getValue()) && ObjectUtil.isEmpty(newField.getValue())) {
                         continue;
                     }
-                    String oldFieldValue = (String) ActionRecordUtil.parseValue(oldField.getValue(),oldField.getType(),true);;
-                    String newFieldValue = (String) ActionRecordUtil.parseValue(newField.getValue(),newField.getType(),true);;
-                    if (!oldFieldValue.equals(newFieldValue)) {
-                        textList.add("将" + oldField.getName() + " 由" + oldFieldValue + "修改为" + newFieldValue + "。");
+                    if(Objects.equals(FieldEnum.parse(oldField.getType()),FieldEnum.DETAIL_TABLE)){
+                        ActionRecordUtil.parseDetailTable(oldField.getValue(),newField.getValue(),oldField.getName(),oldField.getType(),textList);
+                    }else{
+                        String oldFieldValue = (String) ActionRecordUtil.parseValue(oldField.getValue(),oldField.getType(),true);
+                        String newFieldValue = (String) ActionRecordUtil.parseValue(newField.getValue(),newField.getType(),true);
+                        if (!oldFieldValue.equals(newFieldValue)) {
+                            textList.add("将" + oldField.getName() + " 由" + oldFieldValue + "修改为" + newFieldValue + "。");
+                        }
                     }
                 }
             }
@@ -136,7 +121,7 @@ public class SysLogUtil {
     private void searchChange(List<String> textList, Map<String, Object> oldObj, Map<String, Object> newObj, Integer crmTypes) {
         for (String oldKey : oldObj.keySet()) {
             for (String newKey : newObj.keySet()) {
-                if (propertiesMap.get(crmTypes).containsKey(oldKey)) {
+                if (ActionRecordUtil.propertiesMap.get(crmTypes).containsKey(oldKey)) {
                     Object oldValue = oldObj.get(oldKey);
                     Object newValue = newObj.get(newKey);
                     if (oldValue instanceof Date) {
@@ -155,7 +140,7 @@ public class SysLogUtil {
                         oldValue = Convert.toBigDecimal(oldValue, new BigDecimal(0)).setScale(2, BigDecimal.ROUND_UP).toString();
                         newValue = Convert.toBigDecimal(newValue, new BigDecimal(0)).setScale(2, BigDecimal.ROUND_UP).toString();
                     }
-                    if (newKey.equals(oldKey) && !oldValue.equals(newValue)) {
+                    if (newKey.equals(oldKey) && !Objects.equals(oldValue,newValue)) {
                         switch (oldKey) {
                             case "companyUserId":
                                 if (!"空".equals(newValue)) {
@@ -257,7 +242,7 @@ public class SysLogUtil {
                         if (ObjectUtil.isEmpty(newValue)) {
                             newValue = "空";
                         }
-                        textList.add("将" + propertiesMap.get(crmTypes).get(oldKey) + " 由" + oldValue + "修改为" + newValue + "。");
+                        textList.add("将" + ActionRecordUtil.propertiesMap.get(crmTypes).get(oldKey) + " 由" + oldValue + "修改为" + newValue + "。");
                     }
                 }
             }
@@ -351,7 +336,6 @@ public class SysLogUtil {
         actionRecord.setTypes(crmEnum.getType());
         actionRecord.setBehavior(behaviorEnum.getType());
         actionRecord.setActionId(actionId);
-//        String content = Db.queryStr("select content from " + crmEnum.getTableName() + " where " + crmEnum.getTableId() + " = ?", actionId);
         if (content.length() > 20) {
             content = content.substring(0, 20) + "...";
         }

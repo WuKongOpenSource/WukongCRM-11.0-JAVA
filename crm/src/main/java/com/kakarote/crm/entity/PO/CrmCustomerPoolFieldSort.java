@@ -54,6 +54,10 @@ public class CrmCustomerPoolFieldSort implements Serializable {
     @ApiModelProperty(value = "字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划")
     private Integer type;
 
+    @ApiModelProperty(value = "字段类型")
+    @TableField(exist = false)
+    private String formType;
+
     @ApiModelProperty(value = "字段排序")
     private Integer sort;
 

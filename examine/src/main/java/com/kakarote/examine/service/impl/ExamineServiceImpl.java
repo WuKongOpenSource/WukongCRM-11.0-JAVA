@@ -198,12 +198,12 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
      * @return 审批ID
      */
     private Examine saveExamine(ExamineSaveBO examineSaveBO, String batchId) {
-        Integer oldStatus = -1;
+        Examine oldExamine = null;
         if (examineSaveBO.getExamineId() != null) {
             /*
               如果是修改审批直接将原来停用
              */
-            oldStatus = updateStatus(examineSaveBO.getExamineId(), 3,false);
+            oldExamine = updateStatus(examineSaveBO.getExamineId(), 3,false);
         }
         String examineName = examineSaveBO.getExamineName();
         Integer count;
@@ -216,12 +216,16 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
             throw new CrmException(ExamineCodeEnum.EXAMINE_NAME_NO_USER_ERROR);
         }
         Examine examine = new Examine();
+        //修改启用的审批或者创建新的直接置为启用
         if (examineSaveBO.getLabel() == 0){
-            examine.setStatus(oldStatus == 2 ? 2 : 1);
+            examine.setStatus(oldExamine!=null && oldExamine.getStatus() == 2 ? 2 : 1);
         }else {
-            examine.setStatus(oldStatus == 1 ? 1 : 2);
+            examine.setStatus(oldExamine!=null && oldExamine.getStatus() == 1 ? 1 : 2);
         }
         examine.setExamineName(examineName);
+        if(oldExamine != null) {
+            examine.setExamineInitId(oldExamine.getExamineInitId());
+        }
         examine.setLabel(examineSaveBO.getLabel());
         examine.setExamineIcon(examineSaveBO.getExamineIcon());
         examine.setRecheckType(examineSaveBO.getRecheckType());
@@ -247,6 +251,12 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
             }else {
                 oaService.saveDefaultField(examine.getExamineId());
             }
+        }
+        if(oldExamine == null) {
+            lambdaUpdate()
+                    .set(Examine::getExamineInitId,examine.getExamineId())
+                    .eq(Examine::getExamineId,examine.getExamineId())
+                    .update();
         }
         return examine;
     }
@@ -282,16 +292,16 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
      * @param status    1 正常 2 停用 3 删除
      */
     @Override
-    public Integer updateStatus(Long examineId, Integer status,boolean isRequest) {
+    public Examine updateStatus(Long examineId, Integer status,boolean isRequest) {
         if (!ObjectUtil.isAllNotEmpty(examineId, status)) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
         }
         if (!Arrays.asList(1, 2, 3).contains(status)) {
-            return -1;
+            return null;
         }
         Examine examine = getById(examineId);
         if (examine == null) {
-            return -1;
+            return null;
         }
         //默认办公审批禁止删除
         if (isRequest && Objects.equals(3, status) && ListUtil.toList(1,2,3,4,5,6).contains(examine.getOaType())){
@@ -302,14 +312,14 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
          */
         Integer oldStatus = examine.getStatus();
         if (oldStatus.equals(status)) {
-            return oldStatus;
+            return examine;
         }
 
         /*
           已删除审批不允许进行其他操作
          */
         if (Objects.equals(3, oldStatus)) {
-            return oldStatus;
+            return examine;
         }
         /*
           每个类型只允许一个启用的审批
@@ -327,7 +337,7 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
         examine.setStatus(status);
         examine.setUpdateUserId(UserUtil.getUserId());
         updateById(examine);
-        return oldStatus;
+        return examine;
     }
 
     /**
@@ -354,11 +364,13 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
             if (recordId == null) {
                 examine = lambdaQuery().eq(Examine::getLabel, label).eq(Examine::getStatus, 1).last(" limit 1").one();
             } else {
+                //针对历史审批数据查看
                 ExamineRecord record = examineRecordService.getById(recordId);
                 Long exId = Optional.ofNullable(record).orElse(new ExamineRecord()).getExamineId();
                 examine = this.getById(exId);
             }
         }else {
+            //OA办公审批专用
             examine = this.getById(examineId);
         }
         if (examine == null){
@@ -387,6 +399,7 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
                     if (CollUtil.isNotEmpty(conditionDataList)) {
                         for (ExamineFlowConditionDataVO examineFlowConditionDataVO : conditionDataList) {
                             examineFlowConditionDataVO.setValues(null);
+                            //ExamineFlowConditionDataVO的equals方法已重写，故直接判断
                             if (!conditionDataVoS.contains(examineFlowConditionDataVO)){
                                 conditionDataVoS.add(examineFlowConditionDataVO);
                             }
@@ -427,6 +440,7 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
         List<ExamineFlowVO> examineFlowVoS = new ArrayList<>();
         this.getAllConformExamineFlow(examineFlowVOList,dataMap,examineFlowVoS);
         if (Objects.equals(examinePreviewBO.getStatus(),1)){
+            //非初始审批 - 新建数据之后预览流程时补充自选用户信息
             this.supplementOptionalUserInfo(examineFlowVoS,examinePreviewBO.getRecordId(),examine.getExamineId());
         }
         examinePreviewVO.setExamineFlowList(examineFlowVoS);
@@ -491,10 +505,11 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
                             ExamineConditionData examineConditionData = new ExamineConditionData();
                             BeanUtil.copyProperties(examineFlowConditionDataVO,examineConditionData);
                             examineConditionData.setValue(JSON.toJSONString(examineFlowConditionDataVO.getValues()));
+                            //此处备份一下json字符串值 留作后面判断使用
                             examineConditionData.setBackupValue(JSON.toJSONString(examineFlowConditionDataVO.getBackupValue()));
                             conditions.add(examineConditionData);
                         });
-                        Object createUserId = dataMap.get("createUserId");
+                        Object createUserId = dataMap.get(ExamineConst.CREATE_USER_ID);
                         UserInfo userInfo;
                         if (createUserId != null){
                             userInfo = UserCacheUtil.getUserInfo(TypeUtils.castToLong(createUserId));
@@ -566,6 +581,10 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
     @Override
     public BasePage<com.kakarote.core.feign.oa.entity.ExamineVO> queryOaExamineList(ExaminePageBO examinePageBo) {
         UserInfo user = UserUtil.getUser();
+        if(examinePageBo.getCategoryId() != null){
+            Examine examine = getById(examinePageBo.getCategoryId());
+            examinePageBo.setCategoryId(examine!=null?examine.getExamineInitId().intValue():null);
+        }
         examinePageBo.setLabel(0);
         BasePage<ExamineRecord> basePage = examineRecordLogMapper.selectRecordLogListByUser(examinePageBo.parse(),examinePageBo, user.getUserId(), user.getRoles());
         BasePage<com.kakarote.core.feign.oa.entity.ExamineVO> page = new BasePage<>(basePage.getCurrent(), basePage.getSize(), basePage.getTotal(), basePage.isSearchCount());
@@ -598,6 +617,7 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
             examineConditionDataBO.setLabel(examinePageBo.getLabel());
             examineConditionDataBO.setTypeId(typeId);
             SimpleCrmInfo simpleCrmInfo = crmExamineService.getCrmSimpleInfo(examineConditionDataBO).getData();
+            //忽略历史错误数据
             if (simpleCrmInfo == null){
                 continue;
             }

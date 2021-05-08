@@ -141,7 +141,7 @@ public class SysLogController {
             return map;
         }).collect(Collectors.toList());
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            writer.addHeaderAlias("realName", "用户");
+            writer.addHeaderAlias("realname", "用户");
             writer.addHeaderAlias("loginTime", "登陆时间");
             writer.addHeaderAlias("ipAddress", "ip地址");
             writer.addHeaderAlias("loginAddress", "登陆地点");

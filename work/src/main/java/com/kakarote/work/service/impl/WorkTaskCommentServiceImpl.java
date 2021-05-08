@@ -46,7 +46,7 @@ public class WorkTaskCommentServiceImpl extends BaseServiceImpl<WorkTaskCommentM
         LambdaQueryChainWrapper<WorkTaskComment> chainWrapper = lambdaQuery();
         chainWrapper.eq(WorkTaskComment::getType, type);
         chainWrapper.eq(WorkTaskComment::getTypeId, typeId);
-        chainWrapper.orderByDesc(WorkTaskComment::getCreateTime);
+        chainWrapper.orderByAsc(WorkTaskComment::getCreateTime);
         List<WorkTaskComment> taskCommentList = chainWrapper.list();
         if (taskCommentList == null || taskCommentList.size() == 0) {
             return new ArrayList<>();

@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.Date;
+import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -30,6 +31,9 @@ public class LogBO extends PageEntity {
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private Date endTime;
+
+    @ApiModelProperty("部门列表")
+    private List<Integer> deptIds;
 
     private Integer categoryId;
 

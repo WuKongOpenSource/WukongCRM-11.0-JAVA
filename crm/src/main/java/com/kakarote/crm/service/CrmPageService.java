@@ -9,47 +9,55 @@ import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.JSONToken;
 import com.alibaba.fastjson.util.TypeUtils;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kakarote.core.common.Const;
 import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
-import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.examine.entity.ExamineRecordSaveBO;
+import com.kakarote.core.field.FieldService;
 import com.kakarote.core.redis.Redis;
+import com.kakarote.core.servlet.ApplicationContextHolder;
+import com.kakarote.core.servlet.BaseService;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.common.ElasticUtil;
 import com.kakarote.crm.constant.CrmAuthEnum;
+import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.constant.CrmSceneEnum;
 import com.kakarote.crm.entity.BO.CrmCustomerPoolBO;
+import com.kakarote.crm.entity.BO.CrmFieldVerifyBO;
 import com.kakarote.crm.entity.BO.CrmModelSaveBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
-import com.kakarote.crm.entity.PO.*;
+import com.kakarote.crm.entity.PO.CrmField;
+import com.kakarote.crm.entity.PO.CrmScene;
+import com.kakarote.crm.entity.PO.CrmTeamMembers;
 import com.kakarote.crm.entity.VO.CrmFieldSortVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
+import org.apache.commons.lang3.ArrayUtils;
 import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.PrefixQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.RangeQueryBuilder;
-import org.elasticsearch.script.Script;
-import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
@@ -81,7 +89,7 @@ public interface CrmPageService {
      * @param crmSearchBO 业务查询对象
      * @return data
      */
-    default BasePage<Map<String, Object>> queryList(CrmSearchBO crmSearchBO) {
+    default BasePage<Map<String, Object>> queryList(CrmSearchBO crmSearchBO, boolean isExcel) {
         SearchRequest searchRequest = new SearchRequest(getIndex());
         searchRequest.types(getDocType());
         searchRequest.source(createSourceBuilder(crmSearchBO));
@@ -107,6 +115,11 @@ public interface CrmPageService {
                     redis.expire(searchAfterKey, 3600);
                 }
             }
+            if (isExcel) {
+                while (hits.length % 10000 == 0) {
+                    hits = getAllData(searchRequest, hits);
+                }
+            }
             for (SearchHit hit : hits) {
                 Map<String, Object> sourceAsMap = hit.getSourceAsMap();
                 sourceAsMap.put(getLabel().getTable() + "Id", Integer.valueOf(hit.getId()));
@@ -122,6 +135,20 @@ public interface CrmPageService {
         }
     }
 
+    default SearchHit[] getAllData(SearchRequest searchRequest, SearchHit[] hits) {
+        try {
+            //处理searchAfter
+            SearchHit searchHit = hits[hits.length - 1];
+            searchRequest.source().searchAfter(searchHit.getSortValues());
+            SearchResponse afterResult = getRestTemplate().getClient().search(searchRequest, RequestOptions.DEFAULT);
+            SearchHit[] afterHits = afterResult.getHits().getHits();
+            hits = ArrayUtils.addAll(hits, afterHits);
+        } catch (IOException e) {
+            throw new CrmException(SystemCodeEnum.SYSTEM_ERROR);
+        }
+        return hits;
+    }
+
     default Map<String, Object> parseMap(Map<String, Object> objectMap, List<CrmModelFiledVO> fieldList) {
         fieldList.forEach(field -> {
             if (!objectMap.containsKey(field.getFieldName())) {
@@ -129,16 +156,16 @@ public interface CrmPageService {
             }
             if (field.getFieldType() == 0 && field.getType().equals(FieldEnum.USER.getType())) {
                 if (ObjectUtil.isNotEmpty(objectMap.get(field.getFieldName()))) {
-                    List<SimpleUser> userList = getBean(AdminService.class).queryUserByIds(Convert.toList(Long.class, objectMap.get(field.getFieldName()))).getData();
-                    objectMap.put(field.getFieldName(), userList.stream().map(SimpleUser::getRealname).collect(Collectors.joining(",")));
+                    List<Long> ids = Convert.toList(Long.class, objectMap.get(field.getFieldName()));
+                    objectMap.put(field.getFieldName(), ids.stream().map(UserCacheUtil::getUserName).collect(Collectors.joining(Const.SEPARATOR)));
                 } else {
                     objectMap.put(field.getFieldName(), "");
                 }
             }
             if (field.getFieldType() == 0 && field.getType().equals(FieldEnum.STRUCTURE.getType())) {
                 if (ObjectUtil.isNotEmpty(objectMap.get(field.getFieldName()))) {
-                    List<SimpleDept> deptList = getBean(AdminService.class).queryDeptByIds(Convert.toList(Integer.class, objectMap.get(field.getFieldName()))).getData();
-                    objectMap.put(field.getFieldName(), deptList.stream().map(SimpleDept::getName).collect(Collectors.joining(",")));
+                    List<Integer> ids = Convert.toList(Integer.class, objectMap.get(field.getFieldName()));
+                    objectMap.put(field.getFieldName(), ids.stream().map(UserCacheUtil::getDeptName).collect(Collectors.joining(",")));
                 } else {
                     objectMap.put(field.getFieldName(), "");
                 }
@@ -151,9 +178,7 @@ public interface CrmPageService {
                     objectMap.put(field.getFieldName(), "");
                 }
             }
-            if (FieldEnum.AREA.getType().equals(field.getType())
-                    || FieldEnum.AREA_POSITION.getType().equals(field.getType())
-                    || FieldEnum.CURRENT_POSITION.getType().equals(field.getType())) {
+            if (getBean(FieldService.class).equalsByType(field.getType())) {
                 Object value = objectMap.get(field.getFieldName());
                 if (ObjectUtil.isNotEmpty(value)) {
                     // TODO: 2021/1/29  临时逻辑
@@ -162,7 +187,7 @@ public interface CrmPageService {
                     } catch (JSONException e) {
                         objectMap.put(field.getFieldName(), value.toString());
                     }
-                }else {
+                } else {
                     objectMap.put(field.getFieldName(), "");
                 }
             }
@@ -224,127 +249,37 @@ public interface CrmPageService {
             for (String search : appendSearch()) {
                 searchBoolQuery.should(QueryBuilders.wildcardQuery(search, "*" + crmSearchBO.getSearch().trim() + "*"));
             }
-            queryBuilder.must(searchBoolQuery);
+            queryBuilder.filter(searchBoolQuery);
         }
-        boolean isTransform = false;
+
         if (crmSearchBO.getSceneId() != null) {
-            Long userId = UserUtil.getUserId();
-            CrmScene crmScene = getBean(ICrmSceneService.class).getById(crmSearchBO.getSceneId());
-            if (crmScene != null) {
-                if (StrUtil.isNotEmpty(crmScene.getBydata())) {
-                    if (CrmSceneEnum.CHILD.getName().equals(crmScene.getBydata())) {
-                        List<Long> longList = getBean(AdminService.class).queryChildUserId(userId).getData();
-                        queryBuilder.filter(QueryBuilders.termsQuery("ownerUserId", longList));
-                    } else if (CrmSceneEnum.SELF.getName().equals(crmScene.getBydata())) {
-                        queryBuilder.filter(QueryBuilders.termQuery("ownerUserId", userId));
-                    } else if (CrmSceneEnum.STAR.getName().equals(crmScene.getBydata())) {
-                        List<String> ids = new ArrayList<>();
-                        switch (getLabel()) {
-                            case LEADS: {
-                                List<CrmLeadsUserStar> userStars = getBean(ICrmLeadsUserStarService.class)
-                                        .query()
-                                        .select(getLabel().getTable() + "_id")
-                                        .eq("user_id", userId).list();
-                                ids.addAll(userStars.stream().map(entity -> entity.getLeadsId().toString()).collect(Collectors.toList()));
-                                break;
-                            }
-                            case CUSTOMER: {
-                                List<CrmCustomerUserStar> userStars = getBean(ICrmCustomerUserStarService.class)
-                                        .query()
-                                        .select(getLabel().getTable() + "_id")
-                                        .eq("user_id", userId).list();
-                                ids.addAll(userStars.stream().map(entity -> entity.getCustomerId().toString()).collect(Collectors.toList()));
-                                break;
-                            }
-                            case CONTACTS: {
-                                List<CrmContactsUserStar> userStars = getBean(ICrmContactsUserStarService.class)
-                                        .query()
-                                        .select(getLabel().getTable() + "_id")
-                                        .eq("user_id", userId).list();
-                                ids.addAll(userStars.stream().map(entity -> entity.getContactsId().toString()).collect(Collectors.toList()));
-                                break;
-                            }
-                            case BUSINESS: {
-                                List<CrmBusinessUserStar> userStars = getBean(ICrmBusinessUserStarService.class)
-                                        .query()
-                                        .select(getLabel().getTable() + "_id")
-                                        .eq("user_id", userId).list();
-                                ids.addAll(userStars.stream().map(entity -> entity.getBusinessId().toString()).collect(Collectors.toList()));
-                                break;
-                            }
-                            default:
-                                break;
-                        }
-                        queryBuilder.filter(QueryBuilders.idsQuery().addIds(ids.toArray(new String[0])));
-                    }
-                    if (getLabel().equals(CrmEnum.LEADS)) {
-                        if (CrmSceneEnum.TRANSFORM.getName().equals(crmScene.getBydata())) {
-                            isTransform = true;
-                        }
-                    }
-                } else {
-                    try {
-                        ObjectMapper mapper = new ObjectMapper();
-                        crmSearchBO.getSearchList().addAll(mapper.readValue(crmScene.getData(), new TypeReference<List<CrmSearchBO.Search>>() {
-                        }));
-                    } catch (Exception e) {
-                        log.error("json序列化错误{}", crmScene.getData());
-                        getBean(ICrmSceneService.class).removeById(crmScene.getSceneId());
-                    }
-                }
-            }
-        }
-        if (getLabel().equals(CrmEnum.LEADS)) {
-            boolean isIdSearch = crmSearchBO.getSearchList().stream().anyMatch(search -> search.getSearchEnum().equals(CrmSearchBO.FieldSearchEnum.ID));
-            if (!isIdSearch) {
-                queryBuilder.filter(QueryBuilders.termQuery("isTransform", isTransform ? 1 : 0));
+            sceneQuery(crmSearchBO, queryBuilder);
+        } else {
+            if (getLabel().equals(CrmEnum.LEADS)) {
+                queryBuilder.filter(QueryBuilders.termQuery("isTransform", 0));
             }
         }
         //开始搜索相关
         crmSearchBO.getSearchList().forEach(search -> {
-            if (crmSearchBO.getLabel() != null && crmSearchBO.getLabel().equals(CrmEnum.CUSTOMER_POOL.getType())){
-                if ("createUserName".equals(search.getName())){
-                    search.setName("createUserId");
-                }else if ("preOwnerUserName".equals(search.getName())){
-                    search.setName("preOwnerUserId");
-                }
-            }
             Dict searchTransferMap = getSearchTransferMap();
             if (searchTransferMap.containsKey(search.getName())) {
                 search.setName(searchTransferMap.getStr(search.getName()));
             }
-            if ("textarea".equals(search.getFormType())) {
-                search.setName(search.getName() + ".keyword");
-            }
             if ("business_type".equals(search.getFormType())) {
                 List<String> values = search.getValues();
-                CrmSearchBO.Search typeSearch = new CrmSearchBO.Search();
-                typeSearch.setName("typeId");
-                typeSearch.setSearchEnum(CrmSearchBO.FieldSearchEnum.IS);
-                typeSearch.setValues(Collections.singletonList(values.get(0)));
-                BoolQueryBuilder must = QueryBuilders.boolQuery()
-                        .must(QueryBuilders.termQuery(typeSearch.getName(), typeSearch.getValues().get(0)));
                 if (values.size() > 1) {
-                    Integer status;
-                    if ("-1".equals(values.get(1))) {
-                        search.setName("isEnd");
-                        status = 1;
-                    } else if ("-2".equals(values.get(1))) {
-                        search.setName("isEnd");
-                        status = 2;
-                        search.setValues(Collections.singletonList("2"));
-                    } else if ("-3".equals(values.get(1))) {
-                        search.setName("isEnd");
-                        status = 3;
+                    Integer status = Integer.valueOf(values.get(1));
+                    if (status < 0) {
+                        queryBuilder.filter(QueryBuilders.termQuery("isEnd", Math.abs(status)));
                     } else {
-                        status = Integer.valueOf(values.get(1));
+                        queryBuilder.filter(QueryBuilders.termQuery(search.getName(), status));
+                        queryBuilder.filter(QueryBuilders.termQuery("isEnd", 0));
                     }
-                    queryBuilder.filter(QueryBuilders.termQuery(search.getName(), status));
                 }
-                queryBuilder.filter(must);
-            } else {
-                search(search, queryBuilder);
+                queryBuilder.filter(QueryBuilders.termQuery("typeId", values.get(0)));
+                return;
             }
+            search(search, queryBuilder);
         });
         if (crmSearchBO.getPoolId() != null) {
             queryBuilder.filter(QueryBuilders.termQuery("poolId", crmSearchBO.getPoolId()));
@@ -358,117 +293,155 @@ public interface CrmPageService {
         return queryBuilder;
     }
 
+
+    /**
+     * 场景查询操作
+     *
+     * @param crmSearchBO  场景BO
+     * @param queryBuilder 查询条件
+     */
+    @SuppressWarnings("unchecked")
+    default void sceneQuery(CrmSearchBO crmSearchBO, BoolQueryBuilder queryBuilder) {
+        Long userId = UserUtil.getUserId();
+        CrmScene crmScene = getBean(ICrmSceneService.class).getById(crmSearchBO.getSceneId());
+        if (crmScene != null) {
+            if (StrUtil.isNotEmpty(crmScene.getBydata())) {
+                if (CrmSceneEnum.CHILD.getName().equals(crmScene.getBydata())) {
+                    List<Long> longList = getBean(AdminService.class).queryChildUserId(userId).getData();
+                    queryBuilder.filter(QueryBuilders.termsQuery("ownerUserId", longList));
+                } else if (CrmSceneEnum.SELF.getName().equals(crmScene.getBydata())) {
+                    queryBuilder.filter(QueryBuilders.termQuery("ownerUserId", userId));
+                } else if (CrmSceneEnum.STAR.getName().equals(crmScene.getBydata())) {
+                    BaseService baseService;
+                    switch (getLabel()) {
+                        case LEADS: {
+                            baseService = getBean(ICrmLeadsUserStarService.class);
+                            break;
+                        }
+                        case CUSTOMER: {
+                            baseService = getBean(ICrmCustomerUserStarService.class);
+                            break;
+                        }
+                        case CONTACTS: {
+                            baseService = getBean(ICrmContactsUserStarService.class);
+                            break;
+                        }
+                        case BUSINESS: {
+                            baseService = getBean(ICrmBusinessUserStarService.class);
+                            break;
+                        }
+                        default:
+                            return;
+                    }
+                    QueryWrapper queryWrapper = new QueryWrapper();
+                    queryWrapper.select(getLabel().getTable() + "_id");
+                    queryWrapper.eq("user_id", userId);
+                    List<Map<String, Object>> listMaps = baseService.listMaps(queryWrapper);
+                    if (listMaps.size() > 0) {
+                        queryBuilder.filter(QueryBuilders.idsQuery().addIds(listMaps.stream().map(map -> map.get(getLabel().getTable() + "Id").toString()).toArray(String[]::new)));
+                    }
+                }
+                if (getLabel().equals(CrmEnum.LEADS)) {
+                    if (CrmSceneEnum.TRANSFORM.getName().equals(crmScene.getBydata())) {
+                        if (getLabel().equals(CrmEnum.LEADS)) {
+                            queryBuilder.filter(QueryBuilders.termQuery("isTransform", 1));
+                        }
+                    } else {
+                        queryBuilder.filter(QueryBuilders.termQuery("isTransform", 0));
+                    }
+                }
+            } else {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    crmSearchBO.getSearchList().addAll(mapper.readValue(crmScene.getData(), new TypeReference<List<CrmSearchBO.Search>>() {
+                    }));
+                    if (getLabel().equals(CrmEnum.LEADS)) {
+                        boolean isIdSearch = crmSearchBO.getSearchList().stream().anyMatch(search -> search.getSearchEnum().equals(CrmSearchBO.FieldSearchEnum.ID));
+                        if (!isIdSearch) {
+                            queryBuilder.filter(QueryBuilders.termQuery("isTransform", 0));
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("json序列化错误{}", crmScene.getData());
+                    getBean(ICrmSceneService.class).removeById(crmScene.getSceneId());
+                }
+            }
+        }
+    }
+
     default void search(CrmSearchBO.Search search, BoolQueryBuilder queryBuilder) {
+        if(search.getSearchEnum() == CrmSearchBO.FieldSearchEnum.SCRIPT) {
+            queryBuilder.filter(QueryBuilders.scriptQuery(search.getScript()));
+            return;
+        }
+        if(search.getSearchEnum() == CrmSearchBO.FieldSearchEnum.ID) {
+            queryBuilder.filter(QueryBuilders.idsQuery().addIds(search.getValues().toArray(new String[0])));
+            return;
+        }
         String formType = search.getFormType();
         FieldEnum fieldEnum = FieldEnum.parse(formType);
-        switch (search.getSearchEnum()) {
-            case IS:
-                if (Arrays.asList(3, 8, 9, 10, 11, 12).contains(fieldEnum.getType())) {
-                    String key = fieldEnum.getType().equals(9) ? (search.getName()+".keyword") : search.getName();
-                    //处理数字字段筛选
-                    queryBuilder.filter(QueryBuilders.termsQuery(key, search.getValues()));
-                    Script painless = new Script(ScriptType.INLINE, "painless", "doc['" + key + "'].size() ==" + search.getValues().size(), new HashMap<>());
-                    queryBuilder.filter(QueryBuilders.scriptQuery(painless));
-                } else if (search.getValues().size() > 1) {
-                    queryBuilder.filter(QueryBuilders.termsQuery(search.getName(), search.getValues()));
-                } else if (search.getValues().size() > 0) {
-                    queryBuilder.filter(QueryBuilders.termQuery(search.getName(), search.getValues().get(0)));
+        switch (fieldEnum) {
+            case TEXTAREA:
+                search.setName(search.getName() + ".keyword");
+            case TEXT:
+            case MOBILE:
+            case EMAIL:
+            case SELECT:
+            case WEBSITE: {
+                ElasticUtil.textSearch(search, queryBuilder);
+                break;
+            }
+            case BOOLEAN_VALUE: {
+                boolean value = TypeUtils.castToBoolean(search.getValues().get(0));
+                value = (search.getSearchEnum() == CrmSearchBO.FieldSearchEnum.IS) == value;
+                if (value) {
+                    queryBuilder.filter(QueryBuilders.termQuery(search.getName(),"1"));
+                } else {
+                    BoolQueryBuilder builder = QueryBuilders.boolQuery();
+                    builder.should(QueryBuilders.termQuery(search.getName(), "0"));
+                    builder.should(QueryBuilders.termQuery(search.getName(), ""));
+                    builder.should(QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery(search.getName())));
+                    queryBuilder.filter(builder);
                 }
                 break;
-            case IS_NOT:
-                if (Arrays.asList(3, 8, 9, 10, 11, 12).contains(fieldEnum.getType())) {
-                    //处理数字字段筛选
-                    queryBuilder.mustNot(QueryBuilders.termsQuery(search.getName(), search.getValues()));
-                    Script painless = new Script(ScriptType.INLINE, "painless", "doc['" + search.getName() + "'].size() ==" + search.getValues().size(), new HashMap<>());
-                    queryBuilder.filter(QueryBuilders.scriptQuery(painless));
-                } else if (search.getValues().size() > 1) {
-                    queryBuilder.mustNot(QueryBuilders.termsQuery(search.getName(), search.getValues()));
-                } else if (search.getValues().size() > 0) {
-                    queryBuilder.mustNot(QueryBuilders.termQuery(search.getName(), search.getValues().get(0)));
-                }
+            }
+            case CHECKBOX:{
+                search.setName(search.getName());
+                ElasticUtil.checkboxSearch(search, queryBuilder);
                 break;
-            case IS_NULL:
-                queryBuilder.filter(QueryBuilders.boolQuery().should(QueryBuilders.termQuery(search.getName(),"")).should(QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery(search.getName()))));
+            }
+            case NUMBER:
+            case FLOATNUMBER:
+            case PERCENT:
+                ElasticUtil.numberSearch(search, queryBuilder);
                 break;
-            case IS_NOT_NULL:
-                queryBuilder.filter(QueryBuilders.existsQuery(search.getName()));
-                queryBuilder.filter(QueryBuilders.boolQuery().mustNot(QueryBuilders.termQuery(search.getName(),"")));
-                break;
-            case GT:
-                if (search.getValues().size() > 0) {
-                    RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
-                    rangeQuery.gt(search.getValues().get(0));
-                    queryBuilder.filter(rangeQuery);
-                }
-                break;
-            case EGT:
-                if (search.getValues().size() > 0) {
-                    RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
-                    rangeQuery.gte(search.getValues().get(0));
-                    queryBuilder.filter(rangeQuery);
-                }
-                break;
-            case LT:
-                if (search.getValues().size() > 0) {
-                    RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
-                    rangeQuery.lt(search.getValues().get(0));
-                    queryBuilder.filter(rangeQuery);
-                }
-                break;
-            case ELT:
-                if (search.getValues().size() > 0) {
-                    RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
-                    rangeQuery.lte(search.getValues().get(0));
-                    queryBuilder.filter(rangeQuery);
-                }
-                break;
-            case ID:
-                if (search.getValues().size() > 0) {
-                    queryBuilder.filter(QueryBuilders.idsQuery().addIds(search.getValues().toArray(new String[0])));
-                }
-                break;
-            case CONTAINS:
-                if (search.getValues().size() > 0) {
-                    if (fieldEnum.equals(FieldEnum.SINGLE_USER)){
-                        queryBuilder.filter(QueryBuilders.termsQuery(search.getName(),  search.getValues().get(0)));
-                    }else {
-                        queryBuilder.filter(QueryBuilders.wildcardQuery(search.getName(), "*" + search.getValues().get(0) + "*"));
-                    }
-                }
-                break;
-            case NOT_CONTAINS:
-                if (search.getValues().size() > 0) {
-                    if (fieldEnum.equals(FieldEnum.SINGLE_USER)){
-                        queryBuilder.mustNot(QueryBuilders.termsQuery(search.getName(),  search.getValues().get(0)));
-                    }else {
-                        queryBuilder.mustNot(QueryBuilders.wildcardQuery(search.getName(), "*" + search.getValues().get(0) + "*"));
-                    }
-                }
+            case DATE_INTERVAL:
                 break;
             case DATE:
-                if (search.getValues().size() > 1) {
-                    String start = search.getValues().get(0);
-                    String end = search.getValues().get(1);
-                    RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
-                    rangeQuery.gte(start);
-                    rangeQuery.lte(end);
-                    queryBuilder.filter(rangeQuery);
+            case DATETIME:
+                ElasticUtil.dateSearch(search, queryBuilder,fieldEnum);
+                break;
+            case AREA_POSITION:
+                PrefixQueryBuilder prefixQuery = QueryBuilders.prefixQuery(search.getName(), JSONToken.name(JSONToken.LBRACKET) + CollUtil.join(search.getValues(), Const.SEPARATOR));
+                queryBuilder.filter(prefixQuery);
+                break;
+            case CURRENT_POSITION:
+                if(search.getSearchEnum() == CrmSearchBO.FieldSearchEnum.IS) {
+                    search.setValues(Collections.singletonList("\"" + search.getValues().get(0) + "\""));
+                    search.setSearchEnum(CrmSearchBO.FieldSearchEnum.CONTAINS);
                 }
-                break;
-            case DATE_TIME:
-                if (search.getValues().size() > 1) {
-                    String start = search.getValues().get(0);
-                    String end = search.getValues().get(1);
-                    RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(search.getName());
-                    rangeQuery.gte(start);
-                    rangeQuery.lte(end);
-                    queryBuilder.filter(rangeQuery);
+                if(search.getSearchEnum() == CrmSearchBO.FieldSearchEnum.IS_NOT) {
+                    search.setValues(Collections.singletonList("\"" + search.getValues().get(0) + "\""));
+                    search.setSearchEnum(CrmSearchBO.FieldSearchEnum.NOT_CONTAINS);
                 }
+                ElasticUtil.textSearch(search, queryBuilder);
                 break;
-            case SCRIPT:
-                queryBuilder.filter(QueryBuilders.scriptQuery(search.getScript()));
-                break;
+            case USER:
+            case SINGLE_USER:
+            case STRUCTURE:
+                ElasticUtil.userSearch(search, queryBuilder);
             default:
+                ElasticUtil.textSearch(search, queryBuilder);
                 break;
         }
     }
@@ -493,9 +466,8 @@ public interface CrmPageService {
                 }
             } else {
                 authBoolQuery.should(QueryBuilders.termsQuery("ownerUserId", dataAuthUserIds));
-                if (crmEnum.equals(CrmEnum.CUSTOMER) || crmEnum.equals(CrmEnum.BUSINESS) || crmEnum.equals(CrmEnum.CONTRACT)) {
-                    authBoolQuery.should(QueryBuilders.wildcardQuery("roUserId", "*," + userId + ",*"))
-                            .should(QueryBuilders.wildcardQuery("rwUserId", "*," + userId + ",*"));
+                if (Arrays.asList(CrmEnum.CUSTOMER,CrmEnum.CONTACTS,CrmEnum.BUSINESS,CrmEnum.RECEIVABLES,CrmEnum.CONTRACT).contains(crmEnum)) {
+                    authBoolQuery.should(QueryBuilders.termQuery("teamMemberIds",userId));
                 }
             }
         }
@@ -656,36 +628,34 @@ public interface CrmPageService {
                     map.put(modelField.getFieldName(), data.stream().map(FileEntity::getName).collect(Collectors.toList()));
                 }
             }
-            if (FieldEnum.AREA.getType().equals(modelField.getType())
-                    || FieldEnum.AREA_POSITION.getType().equals(modelField.getType())
-                    || FieldEnum.CURRENT_POSITION.getType().equals(modelField.getType())) {
+            if (getBean(FieldService.class).equalsByType(modelField.getType())) {
                 Object value = map.remove(modelField.getFieldName());
                 if (!ObjectUtil.isEmpty(value)) {
                     if (value instanceof String) {
                         map.put(modelField.getFieldName(), value.toString());
-                    }else {
+                    } else {
                         map.put(modelField.getFieldName(), JSON.toJSONString(value));
                     }
                 }
             }
-            if (FieldEnum.DATE_INTERVAL.getType().equals(modelField.getType())){
+            if (FieldEnum.DATE_INTERVAL.getType().equals(modelField.getType())) {
                 Object value = map.remove(modelField.getFieldName());
                 if (!ObjectUtil.isEmpty(value)) {
                     if (value instanceof String) {
                         map.put(modelField.getFieldName(), StrUtil.splitTrim(value.toString(), ","));
-                    }else if (value instanceof Collection){
-                        map.put(modelField.getFieldName(), (Collection)value);
+                    } else if (value instanceof Collection) {
+                        map.put(modelField.getFieldName(), (Collection) value);
                     }
                 }
             }
 
         });
         setOtherField(map);
-        IndexRequest request = new IndexRequest(getIndex(), getDocType());
-        request.id(id.toString());
-        request.source(map);
+        UpdateRequest request = new UpdateRequest(getIndex(), getDocType(),id.toString());
+        request.doc(map);
+        request.docAsUpsert(true);
         try {
-            getRestTemplate().getClient().index(request, RequestOptions.DEFAULT);
+            getRestTemplate().getClient().update(request, RequestOptions.DEFAULT);
         } catch (IOException e) {
             throw new CrmException(SystemCodeEnum.SYSTEM_ERROR);
         }
@@ -760,14 +730,12 @@ public interface CrmPageService {
                 Object value = jsonObject.get("value");
                 List<FileEntity> data = getBean(AdminFileService.class).queryFileList((String) value).getData();
                 map.put(fieldName, data.stream().map(FileEntity::getName).collect(Collectors.joining(",")));
-            }else if (FieldEnum.AREA.getType().equals(jsonObject.getInteger("type"))
-                    || FieldEnum.AREA_POSITION.getType().equals(jsonObject.getInteger("type"))
-                    || FieldEnum.CURRENT_POSITION.getType().equals(jsonObject.getInteger("type"))) {
+            } else if (getBean(FieldService.class).equalsByType(jsonObject.getInteger("type"))) {
                 Object value = jsonObject.get("value");
                 if (!ObjectUtil.isEmpty(value)) {
                     map.put(fieldName, JSON.toJSONString(value));
                 }
-            }else if (jsonObject.getInteger("fieldType") == 0 && Arrays.asList(3, 8, 9, 10, 11, 12).contains(jsonObject.getInteger("type"))) {
+            } else if (jsonObject.getInteger("fieldType") == 0 && Arrays.asList(3, 8, 9, 10, 11, 12).contains(jsonObject.getInteger("type"))) {
                 Object value = jsonObject.get("value");
                 if (value != null) {
                     map.put(fieldName, StrUtil.splitTrim(value.toString(), ","));
@@ -880,8 +848,6 @@ public interface CrmPageService {
                     map.put("preOwnerUserId", TypeUtils.castToLong(ownerUserId));
                 }
                 map.put("ownerUserId", null);
-                map.put("roUserId", ",");
-                map.put("rwUserId", ",");
                 map.put("poolTime", DateUtil.formatDateTime(new Date()));
                 request.doc(map);
                 bulkRequest.add(request);
@@ -957,19 +923,10 @@ public interface CrmPageService {
      * 查询详情信息
      *
      * @param crmModel model
-     * @param fieldKey key
      */
-    default
-    public List<CrmModelFiledVO> queryInformation(CrmModel crmModel, List<String> fieldKey) {
-        ICrmFieldService crmFieldService = getBean(ICrmFieldService.class);
+    default public List<CrmModelFiledVO> appendInformation(CrmModel crmModel) {
         AdminService adminService = getBean(AdminService.class);
-        List<CrmModelFiledVO> filedVOS = crmFieldService.queryField(crmModel);
-        filedVOS.removeIf(field -> !fieldKey.contains(field.getFieldName()) && field.getFieldType() == 1);
-        filedVOS.forEach(field -> {
-            if ("website".equals(field.getFieldName())){
-                field.setFormType(FieldEnum.WEBSITE.getFormType());
-            }
-        });
+        List<CrmModelFiledVO> filedVOS = new ArrayList<>();
         if (!getLabel().equals(CrmEnum.RETURN_VISIT)) {
             CrmModelFiledVO filedVO = new CrmModelFiledVO("owner_user_name", FieldEnum.USER);
             filedVO.setName("负责人");
@@ -978,18 +935,6 @@ public interface CrmPageService {
             filedVO.setFieldType(1);
             filedVOS.add(filedVO);
         }
-        if (getLabel().equals(CrmEnum.CUSTOMER)) {
-            CrmModelFiledVO filedVO = new CrmModelFiledVO("owner_user_name", FieldEnum.SINGLE_USER, "前负责人", 1);
-            if (crmModel.get("preOwnerUserId") != null) {
-                List<SimpleUser> data = adminService.queryUserByIds(Collections.singleton((Long) crmModel.get("preOwnerUserId"))).getData();
-                filedVO.setValue(data.get(0));
-            } else {
-                filedVO.setValue(null);
-            }
-
-            filedVOS.add(filedVO);
-            filedVOS.add(new CrmModelFiledVO("receive_time", FieldEnum.DATETIME, "负责人获取客户时间", 1).setValue(crmModel.get("receiveTime")));
-        }
         if (getLabel().equals(CrmEnum.CUSTOMER) || getLabel().equals(CrmEnum.LEADS)) {
             filedVOS.add(new CrmModelFiledVO("last_content", FieldEnum.TEXTAREA, "最后跟进记录", 1).setValue(crmModel.get("lastContent")));
         }
@@ -997,8 +942,19 @@ public interface CrmPageService {
         filedVOS.add(new CrmModelFiledVO("create_user_name", FieldEnum.USER, "创建人", 1).setValue(value));
         filedVOS.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1).setValue(crmModel.get("createTime")));
         filedVOS.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1).setValue(crmModel.get("updateTime")));
-        if (!getLabel().equals(CrmEnum.PRODUCT) && !getLabel().equals(CrmEnum.RECEIVABLES) && !getLabel().equals(CrmEnum.RETURN_VISIT)) {
+        if (!getLabel().equals(CrmEnum.PRODUCT) && !getLabel().equals(CrmEnum.RECEIVABLES) && !getLabel().equals(CrmEnum.RETURN_VISIT) && !getLabel().equals(CrmEnum.INVOICE)) {
             filedVOS.add(new CrmModelFiledVO("last_time", FieldEnum.DATETIME, "最后跟进时间", 1).setValue(crmModel.get("lastTime")));
+        }
+        if (Arrays.asList(CrmEnum.CUSTOMER,CrmEnum.CONTACTS,CrmEnum.BUSINESS,CrmEnum.RECEIVABLES,CrmEnum.CONTRACT).contains(getLabel())) {
+            List<CrmTeamMembers> teamMembers = ApplicationContextHolder.getBean(ICrmTeamMembersService.class)
+                    .lambdaQuery().select(CrmTeamMembers::getUserId)
+                    .eq(CrmTeamMembers::getType, getLabel().getType())
+                    .eq(CrmTeamMembers::getTypeId, crmModel.get(getLabel().getTable()+"Id"))
+                    .list();
+            filedVOS.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.TEXT, "相关团队", 1).setValue(teamMembers.stream().map(teamMember->UserCacheUtil.getUserName(teamMember.getUserId())).collect(Collectors.joining(Const.SEPARATOR))));
+        }
+        for (CrmModelFiledVO filedVO : filedVOS) {
+            filedVO.setSysInformation(1);
         }
         return filedVOS;
     }
@@ -1006,36 +962,65 @@ public interface CrmPageService {
 
     /**
      * 补充审批字段信息
-     * @date 2020/12/18 13:44
+     *
      * @param label
      * @param typeId
      * @param recordId
      * @param examineRecordSaveBO
      * @return void
+     * @date 2020/12/18 13:44
      **/
-    default void supplementFieldInfo(Integer label,Integer typeId ,Integer recordId ,ExamineRecordSaveBO examineRecordSaveBO){
+    default void supplementFieldInfo(Integer label, Integer typeId, Integer recordId, ExamineRecordSaveBO examineRecordSaveBO) {
         examineRecordSaveBO.setLabel(label);
         examineRecordSaveBO.setTypeId(typeId);
         examineRecordSaveBO.setRecordId(recordId);
-        if(examineRecordSaveBO.getDataMap() != null){
-            examineRecordSaveBO.getDataMap().put("createUserId" ,UserUtil.getUserId());
-        }else {
+        if (examineRecordSaveBO.getDataMap() != null) {
+            examineRecordSaveBO.getDataMap().put("createUserId", UserUtil.getUserId());
+        } else {
             Map<String, Object> entityMap = new HashMap<>(1);
-            entityMap.put("createUserId" ,UserUtil.getUserId());
+            entityMap.put("createUserId", UserUtil.getUserId());
             examineRecordSaveBO.setDataMap(entityMap);
         }
     }
 
     /**
-    * 去除不支持导入的字段
-    * @date 2021/1/30 15:12
-    * @param crmModelFiledList
-    * @return
-    **/
-    default void removeFieldByType(List<CrmModelFiledVO> crmModelFiledList){
+     * 去除不支持导入的字段
+     *
+     * @param crmModelFiledList
+     * @return
+     * @date 2021/1/30 15:12
+     **/
+    default void removeFieldByType(List<CrmModelFiledVO> crmModelFiledList) {
         List<FieldEnum> fieldEnums = Arrays.asList(FieldEnum.FILE, FieldEnum.CHECKBOX, FieldEnum.USER, FieldEnum.STRUCTURE,
-                FieldEnum.AREA,FieldEnum.AREA_POSITION,FieldEnum.CURRENT_POSITION,FieldEnum.DATE_INTERVAL,FieldEnum.BOOLEAN_VALUE,
-                FieldEnum.HANDWRITING_SIGN,FieldEnum.DESC_TEXT,FieldEnum.DETAIL_TABLE,FieldEnum.CALCULATION_FUNCTION);
+                FieldEnum.AREA, FieldEnum.AREA_POSITION, FieldEnum.CURRENT_POSITION, FieldEnum.DATE_INTERVAL, FieldEnum.BOOLEAN_VALUE,
+                FieldEnum.HANDWRITING_SIGN, FieldEnum.DESC_TEXT, FieldEnum.DETAIL_TABLE, FieldEnum.CALCULATION_FUNCTION);
         crmModelFiledList.removeIf(model -> fieldEnums.contains(FieldEnum.parse(model.getType())));
+    }
+
+    /**
+     * 验证唯一字段是否重复
+     *
+     * @param fieldId
+     * @param value
+     * @param batchId
+     * @return boolean
+     * @date 2021/2/18 14:31
+     **/
+    default void uniqueFieldIsAbnormal(String name, Integer fieldId, String value, String batchId) {
+        if (fieldId == null) {
+            return;
+        }
+        CrmField field = getBean(ICrmFieldService.class).getById(fieldId);
+        if (field == null || Objects.equals(field.getIsUnique(), 0)) {
+            return;
+        }
+        CrmFieldVerifyBO crmFieldVerifyBO = new CrmFieldVerifyBO();
+        crmFieldVerifyBO.setFieldId(fieldId);
+        crmFieldVerifyBO.setValue(value);
+        crmFieldVerifyBO.setBatchId(batchId);
+        CrmFieldVerifyBO fieldVerifyBO = getBean(ICrmFieldService.class).verify(crmFieldVerifyBO);
+        if (Objects.equals(fieldVerifyBO.getStatus(), 0)) {
+            throw new CrmException(CrmCodeEnum.CRM_FIELD_ALREADY_EXISTS, name);
+        }
     }
 }

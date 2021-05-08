@@ -260,8 +260,8 @@ public class AdminConfigServiceImpl extends BaseServiceImpl<AdminConfigMapper, A
     public String verifyPassword(AdminInitDataBO adminInitDataBO) {
         Long userId = UserUtil.getUserId();
         AdminUser user = adminUserService.getById(userId);
-        String userName = UserUtil.getUser().getUsername();
-        boolean isPass = AuthPasswordUtil.verify(userName + adminInitDataBO.getPassword(), user.getSalt(), user.getPassword());
+         String userName = user.getUsername();
+         boolean isPass = AuthPasswordUtil.verify(userName + adminInitDataBO.getPassword(), user.getSalt(), user.getPassword());
         if (isPass) {
             String cacheName = AdminCacheKey.TEMPORARY_ACCESS_CODE_CACHE_KEY + userId;
             String value = String.valueOf(RandomUtil.randomInt(100000, 999999));

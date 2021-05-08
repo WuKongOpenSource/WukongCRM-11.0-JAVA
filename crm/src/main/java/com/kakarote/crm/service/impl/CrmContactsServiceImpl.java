@@ -17,7 +17,6 @@ import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
-import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
@@ -93,12 +92,6 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
     private ActionRecordUtil actionRecordUtil;
 
     @Autowired
-    private AdminService adminService;
-
-    @Autowired
-    private AdminFileService adminFileService;
-
-    @Autowired
     private ICrmBusinessService crmBusinessService;
 
     @Autowired
@@ -115,6 +108,10 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
      */
     @Override
     public List<CrmModelFiledVO> queryField(Integer id) {
+        return queryField(id,false);
+    }
+
+    private List<CrmModelFiledVO> queryField(Integer id,boolean appendInformation) {
         CrmModel crmModel = queryById(id);
         if (id != null){
             List<JSONObject> customerList = new ArrayList<>();
@@ -124,7 +121,12 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
             }
             crmModel.put("customerId", customerList);
         }
-        return crmFieldService.queryField(crmModel);
+        List<CrmModelFiledVO> filedVOS = crmFieldService.queryField(crmModel);
+        if(appendInformation){
+            List<CrmModelFiledVO> modelFiledVOS = appendInformation(crmModel);
+            filedVOS.addAll(modelFiledVOS);
+        }
+        return filedVOS;
     }
 
     @Override
@@ -149,7 +151,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
      */
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
-        BasePage<Map<String, Object>> basePage = queryList(search);
+        BasePage<Map<String, Object>> basePage = queryList(search,false);
         Long userId = UserUtil.getUserId();
         List<Integer> starIds = crmContactsUserStarService.starList(userId);
         basePage.getList().forEach(map -> {
@@ -283,19 +285,25 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
     /**
      * 修改联系人负责人
      *
-     * @param ids            联系人id列表
-     * @param newOwnerUserId 新负责人ID
+     * @param changeOwnerUserBO  负责人变更BO
      */
     @Override
-    public void changeOwnerUser(List<Integer> ids, Long newOwnerUserId) {
+    public void changeOwnerUser(CrmChangeOwnerUserBO changeOwnerUserBO) {
+        Long newOwnerUserId = changeOwnerUserBO.getOwnerUserId();
+        List<Integer> ids = changeOwnerUserBO.getIds();
         if (ids.size() == 0) {
             return;
         }
         for (Integer id : ids) {
-            if (AuthUtil.isRwAuth(id, CrmEnum.CONTACTS,CrmAuthEnum.EDIT)) {
+            if (AuthUtil.isChangeOwnerUserAuth(id, CrmEnum.CONTACTS,CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
-            actionRecordUtil.addConversionRecord(id,CrmEnum.CONTACTS,newOwnerUserId,getById(id).getName());
+            CrmContacts contacts = getById(id);
+            actionRecordUtil.addConversionRecord(id,CrmEnum.CONTACTS,newOwnerUserId,contacts.getName());
+            if (2 == changeOwnerUserBO.getTransferType() && !changeOwnerUserBO.getOwnerUserId().equals(contacts.getOwnerUserId())) {
+                ApplicationContextHolder.getBean(ICrmTeamMembersService.class).addSingleMember(getLabel(),contacts.getContactsId(),contacts.getOwnerUserId(),changeOwnerUserBO.getPower(),changeOwnerUserBO.getExpiresTime(),contacts.getName());
+            }
+            ApplicationContextHolder.getBean(ICrmTeamMembersService.class).deleteMember(getLabel(),new CrmMemberSaveBO(id,newOwnerUserId));
         }
         LambdaUpdateWrapper<CrmContacts> wrapper = new LambdaUpdateWrapper<>();
         wrapper.in(CrmContacts::getContactsId, ids);
@@ -412,7 +420,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
      */
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
-        List<Map<String, Object>> dataList = queryPageList(search).getList();
+        List<Map<String, Object>> dataList = queryList(search,true).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
             headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
@@ -425,7 +433,9 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
             }
             for (Map<String, Object> record : dataList) {
                 headList.forEach(field ->{
-                    record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                    if (fieldService.equalsByType(field.getType())) {
+                        record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                    }
                 });
             }
             writer.setOnlyAlias(true);
@@ -480,30 +490,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
 
     @Override
     public List<CrmModelFiledVO> information(Integer contactsId) {
-        CrmModel crmModel = queryById(contactsId);
-        List<String> keyList = Arrays.asList("name", "telephone", "mobile", "email", "post", "address", "nextTime", "remark");
-        List<String> systemFieldList = Arrays.asList("创建人", "创建时间", "更新时间", "最后跟进时间");
-        List<CrmModelFiledVO> crmModelFiledVOS = queryInformation(crmModel, keyList);
-        JSONObject object = new JSONObject().fluentPut("customerId", crmModel.get("customerId")).fluentPut("customerName", crmModel.get("customerName"));
-        crmModelFiledVOS.add(new CrmModelFiledVO("customerName", FieldEnum.CUSTOMER, "客户名称", 1).setValue(object));
-        List<CrmModelFiledVO> filedVOS = crmModelFiledVOS.stream().sorted(Comparator.comparingInt(r -> -r.getFieldType())).peek(r -> {
-            r.setFieldType(null);
-            r.setSetting(null);
-            r.setType(null);
-            if (systemFieldList.contains(r.getName())) {
-                r.setSysInformation(1);
-            } else {
-                r.setSysInformation(0);
-            }
-        }).collect(Collectors.toList());
-        ICrmRoleFieldService crmRoleFieldService = ApplicationContextHolder.getBean(ICrmRoleFieldService.class);
-        List<CrmRoleField> roleFieldList = crmRoleFieldService.queryUserFieldAuth(crmModel.getLabel(), 1);
-        Map<String, Integer> levelMap = new HashMap<>();
-        roleFieldList.forEach(crmRoleField -> {
-            levelMap.put(StrUtil.toCamelCase(crmRoleField.getFieldName()), crmRoleField.getAuthLevel());
-        });
-        filedVOS.removeIf(field -> (!UserUtil.isAdmin() && Objects.equals(1, levelMap.get(field.getFieldName()))));
-        return filedVOS;
+        return queryField(contactsId,true);
     }
 
     /**
@@ -531,6 +518,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
         map.put("contactsId", contactsId);
         CrmInfoNumVO infoNumVO = getBaseMapper().queryNum(map);
         infoNumVO.setFileCount(fileService.queryNum(batchIdList).getData());
+        infoNumVO.setMemberCount(ApplicationContextHolder.getBean(ICrmTeamMembersService.class).queryMemberCount(getLabel(),crmContacts.getContactsId(),crmContacts.getOwnerUserId()));
         return infoNumVO;
     }
 
@@ -580,7 +568,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
         if (ids.size() == 0) {
             return new ArrayList<>();
         }
-        List<CrmContacts> list = query().in("contacts_id", ids).list();
+        List<CrmContacts> list = lambdaQuery().select(CrmContacts::getContactsId,CrmContacts::getName).in(CrmContacts::getContactsId, ids).list();
         return list.stream().map(crmContacts -> {
             SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
             simpleCrmEntity.setId(crmContacts.getContactsId());
@@ -622,6 +610,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
         filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME,1));
         filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER,1));
         filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER,1));
+        filedList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, 0));
         return filedList;
     }
 
@@ -640,6 +629,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
         Integer contactsId = updateInformationBO.getId();
         updateInformationBO.getList().forEach(record -> {
             CrmContacts oldContacts = getById(updateInformationBO.getId());
+            uniqueFieldIsAbnormal(record.getString("name"),record.getInteger("fieldId"),record.getString("value"),batchId);
             Map<String, Object> oldContactsMap = BeanUtil.beanToMap(oldContacts);
             if (record.getInteger("fieldType") == 1){
                 Map<String,Object> crmContactsMap = new HashMap<>(oldContactsMap);
@@ -651,27 +641,21 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
                     ElasticUtil.batchUpdateEsData(elasticsearchRestTemplate.getClient(),"contacts",crmContacts.getContactsId().toString(),crmContacts.getName());
                 }
             }else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2){
-
-                CrmContactsData contactsData  = crmContactsDataService.lambdaQuery().select(CrmContactsData::getValue).eq(CrmContactsData::getFieldId, record.getInteger("fieldId"))
+                CrmContactsData contactsData  = crmContactsDataService.lambdaQuery()
+                        .select(CrmContactsData::getValue,CrmContactsData::getId).eq(CrmContactsData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmContactsData::getBatchId, batchId).one();
                 String value = contactsData != null ? contactsData.getValue() : null;
-                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
-                actionRecordUtil.publicContentRecord(CrmEnum.CONTACTS, BehaviorEnum.UPDATE,contactsId,oldContacts.getName(),detail);
+                actionRecordUtil.publicContentRecord(CrmEnum.CONTACTS, BehaviorEnum.UPDATE,contactsId,oldContacts.getName(),record,value);
                 String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
-                boolean bol = crmContactsDataService.lambdaUpdate()
-                        .set(CrmContactsData::getName,record.getString("fieldName"))
-                        .set(CrmContactsData::getValue,newValue)
-                        .eq(CrmContactsData::getFieldId,record.getInteger("fieldId"))
-                        .eq(CrmContactsData::getBatchId,batchId).update();
-                if (!bol){
-                    CrmContactsData crmContactsData = new CrmContactsData();
-                    crmContactsData.setFieldId(record.getInteger("fieldId"));
-                    crmContactsData.setName(record.getString("fieldName"));
-                    crmContactsData.setValue(newValue);
-                    crmContactsData.setCreateTime(new Date());
-                    crmContactsData.setBatchId(batchId);
-                    crmContactsDataService.save(crmContactsData);
-                }
+                CrmContactsData crmContactsData = new CrmContactsData();
+                crmContactsData.setId(contactsData != null ? contactsData.getId() : null);
+                crmContactsData.setFieldId(record.getInteger("fieldId"));
+                crmContactsData.setName(record.getString("fieldName"));
+                crmContactsData.setValue(newValue);
+                crmContactsData.setCreateTime(new Date());
+                crmContactsData.setBatchId(batchId);
+                crmContactsDataService.saveOrUpdate(crmContactsData);
+
             }
             updateField(record,contactsId);
         });
@@ -680,8 +664,7 @@ public class CrmContactsServiceImpl extends BaseServiceImpl<CrmContactsMapper, C
 
     @Override
     public BasePage<Map<String,Object>> queryBusiness(CrmBusinessPageBO businessPageBO) {
-        BasePage<Map<String,Object>> page = getBaseMapper().queryBusiness(businessPageBO.parse(),businessPageBO.getContactsId());
-        return page;
+        return getBaseMapper().queryBusiness(businessPageBO.parse(),businessPageBO.getContactsId());
     }
 
     @Override

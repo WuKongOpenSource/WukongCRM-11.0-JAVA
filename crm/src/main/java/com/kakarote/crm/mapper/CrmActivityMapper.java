@@ -2,7 +2,6 @@ package com.kakarote.crm.mapper;
 
 import cn.hutool.core.lang.Dict;
 import com.alibaba.fastjson.JSONObject;
-import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.servlet.BaseMapper;
 import com.kakarote.crm.entity.PO.CrmActivity;

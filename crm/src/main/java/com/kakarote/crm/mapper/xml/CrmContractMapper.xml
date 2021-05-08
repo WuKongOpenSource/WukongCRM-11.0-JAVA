@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
 <mapper namespace="com.kakarote.crm.mapper.CrmContractMapper">
-    <update id="deleteMember">
-        update wk_crm_contract set rw_user_id = replace(rw_user_id,#{memberId},','),ro_user_id = replace(ro_user_id,#{memberId},',') where contract_id = #{id}
-    </update>
     <select id="queryById" resultType="com.kakarote.crm.common.CrmModel">
         select crt.*,ccc.customer_id,ccc.customer_name,ccb.business_name,a.name as contacts_name,
                ( select count(1) from wk_crm_receivables where contract_id =  crt.contract_id ) as receivablesCount,

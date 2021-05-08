@@ -14,6 +14,7 @@ import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
 import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
+import com.kakarote.core.common.Const;
 import com.kakarote.core.utils.UserUtil;
 import org.apache.ibatis.reflection.ExceptionUtil;
 import org.apache.ibatis.session.ExecutorType;
@@ -40,7 +41,7 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M, 
     @Override
     @Transactional(rollbackFor = Exception.class,isolation = Isolation.READ_COMMITTED)
     public boolean saveBatch(Collection<T> entityList) {
-        return saveBatch(entityList, 1000);
+        return saveBatch(entityList, Const.BATCH_SAVE_SIZE);
     }
 
     @Override
@@ -60,7 +61,7 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M, 
                             return tableId == null || !Objects.equals(tableId.type(),IdType.AUTO);
                         })
                 .map(field -> StrUtil.toUnderlineCase(field.getName())).collect(Collectors.toSet());
-        Map<String, Object> attrs = BeanUtil.beanToMap(model, true, true);
+        Map<String, Object> attrs = BeanUtil.beanToMap(model, true, false);
         int index = 0;
         StringBuilder columns = new StringBuilder();
         for (Map.Entry<String, Object> e : attrs.entrySet()) {
@@ -188,7 +189,7 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M, 
         int[] result = new int[size];
         PreparedStatement pst = conn.prepareStatement(sql);
         for (int i = 0; i < size; i++) {
-            Map map = BeanUtil.beanToMap(list.get(i), true, true);
+            Map map = BeanUtil.beanToMap(list.get(i), true, false);
             for (int j = 0; j < columnArray.length; j++) {
                 Object value = map.get(columnArray[j]);
                 if (value instanceof Date) {

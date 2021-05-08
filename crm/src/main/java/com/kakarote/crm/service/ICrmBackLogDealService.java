@@ -27,6 +27,16 @@ public interface ICrmBackLogDealService extends BaseService<CrmBackLogDeal> {
     public void deleteByType(Long userId, CrmEnum crmEnum, CrmBackLogEnum crmBackLogEnum, Integer typeId);
 
     /**
+     * 更新对应的待办事项提醒
+     *
+     * @param userId         用户ID
+     * @param crmEnum        类型
+     * @param crmBackLogEnum 模块
+     * @param typeId         类型ID
+     */
+    public void deleteByTypes(Long userId, CrmEnum crmEnum,Integer typeId, CrmBackLogEnum... crmBackLogEnum);
+
+    /**
      * 查询对应的主键ID
      * @param model model
      * @param crmType 类型

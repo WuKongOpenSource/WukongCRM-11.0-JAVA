@@ -85,12 +85,6 @@ public class CrmBusiness implements Serializable {
     @ApiModelProperty(value = "批次 比如附件批次")
     private String batchId;
 
-    @ApiModelProperty(value = "只读权限")
-    private String roUserId;
-
-    @ApiModelProperty(value = "读写权限")
-    private String rwUserId;
-
     @ApiModelProperty(value = "1赢单2输单3无效")
     private Integer isEnd;
 

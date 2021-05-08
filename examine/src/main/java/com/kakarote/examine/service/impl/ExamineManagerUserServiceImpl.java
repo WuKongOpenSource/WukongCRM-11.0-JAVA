@@ -44,6 +44,7 @@ public class ExamineManagerUserServiceImpl extends BaseServiceImpl<ExamineManage
         List<ExamineManagerUser> managerUsers = lambdaQuery().eq(ExamineManagerUser::getExamineId, examineId).orderByAsc(ExamineManagerUser::getSort).list();
         List<Long> userIds = managerUsers.stream().map(ExamineManagerUser::getUserId).collect(Collectors.toList());
         List<Long> userIdList = adminService.queryNormalUserByIds(userIds).getData();
+        //流程管理员被禁用时 转交给超管
         if (userIdList.size() == 0) {
             userIdList.add(UserUtil.getSuperUser());
         }

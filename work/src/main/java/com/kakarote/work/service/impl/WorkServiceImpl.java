@@ -244,7 +244,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
                 work.setOwnerUserId(null);
                 workUserService.remove(new QueryWrapper<WorkUser>().eq("work_id", workId));
             } else if (work.getIsOpen() == 0) {
-                List<Long> userList = adminService.queryUserList().getData();
+                List<Long> userList = adminService.queryUserList(1).getData();
                 userList.remove(userId);
                 List<WorkUser> workUserList = new ArrayList<>();
                 WorkUser nowWorkUser = new WorkUser();
@@ -672,7 +672,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
     public List<WorkOwnerRoleBO> queryOwnerRoleList(Integer workId) {
         Work byId = getById(workId);
         if (workId == null || byId.getIsOpen() == 1) {
-            List<Long> userList = adminService.queryUserList().getData();
+            List<Long> userList = adminService.queryUserList(1).getData();
             List<SimpleUser> data = adminService.queryUserByIds(userList).getData();
             List<WorkOwnerRoleBO> collect = data.stream().map(obj -> BeanUtil.copyProperties(obj, WorkOwnerRoleBO.class)).collect(Collectors.toList());
             if (byId != null && byId.getOwnerRole() != null) {

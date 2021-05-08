@@ -3,7 +3,6 @@ package com.kakarote.crm.common;
 import cn.hutool.core.util.StrUtil;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.cache.CrmCacheKey;
-import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.redis.Redis;
 import com.kakarote.core.servlet.ApplicationContextHolder;
@@ -17,9 +16,7 @@ import com.kakarote.crm.mapper.CrmAuthMapper;
 import com.kakarote.crm.service.ICrmCustomerPoolService;
 import com.kakarote.crm.service.ICrmCustomerService;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 权限相关封装
@@ -41,6 +38,16 @@ public class AuthUtil {
     public static boolean isRwAuth(Integer id, CrmEnum crmEnum,CrmAuthEnum crmAuthEnum) {
         String name = crmEnum.getTable();
         String conditions = name + "_id" + " = " + id + getCrmAuthSql(crmEnum, 0,crmAuthEnum);
+        Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + name, conditions);
+        return integer == 0;
+    }
+
+    /**
+     * 是否具有转移客户负责人权限
+     */
+    public static boolean isChangeOwnerUserAuth(Integer id, CrmEnum crmEnum,CrmAuthEnum crmAuthEnum) {
+        String name = crmEnum.getTable();
+        String conditions = name + "_id" + " = " + id + getCrmAuthSql(crmEnum, 3,crmAuthEnum);
         Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + name, conditions);
         return integer == 0;
     }
@@ -99,11 +106,10 @@ public class AuthUtil {
      * 拼客户管理数据权限sql
      *
      * @param crmEnum 类型
+     * @param readOnly 团队成员参数 0 要求读写权限 1 属于团队成员即可 3 禁止团队成员访问
      * @return sql
      */
     public static String getCrmAuthSql(CrmEnum crmEnum, String alias, Integer readOnly,CrmAuthEnum crmAuthEnum) {
-        UserInfo user = UserUtil.getUser();
-        Long userId = user.getUserId();
         if (UserUtil.isAdmin() || crmEnum.equals(CrmEnum.PRODUCT) || crmEnum.equals(CrmEnum.CUSTOMER_POOL)) {
             return "";
         }
@@ -116,12 +122,18 @@ public class AuthUtil {
                 conditions.delete(conditions.length() - 2, conditions.length());
             } else {
                 conditions.append(" and ({alias}owner_user_id in (").append(StrUtil.join(",", longs)).append(")");
-                if (crmEnum.equals(CrmEnum.CUSTOMER) || crmEnum.equals(CrmEnum.BUSINESS) || crmEnum.equals(CrmEnum.CONTRACT)) {
-                    if (readOnly != null && 0 == readOnly) {
-                        conditions.append(" or {alias}rw_user_id like CONCAT('%,','").append(userId).append("',',%')");
-                    } else {
-                        conditions.append(" or {alias}ro_user_id like CONCAT('%,','").append(userId).append("',',%')").append(" or {alias}rw_user_id like CONCAT('%,','").append(userId).append("',',%')");
+                /* 坚持对应团队负责人权限 */
+                boolean contains = Arrays.asList(CrmEnum.CUSTOMER, CrmEnum.CONTACTS, CrmEnum.BUSINESS, CrmEnum.RECEIVABLES, CrmEnum.CONTRACT).contains(crmEnum);
+                if (contains && CrmAuthEnum.DELETE != crmAuthEnum && !Objects.equals(3,readOnly)) {
+                    conditions.append("or {alias}").append(crmEnum.getTable()).append("_id");
+                    conditions.append(" in (");
+                    conditions.append("SELECT type_id FROM wk_crm_team_members where type = '")
+                            .append(crmEnum.getType())
+                            .append("' and user_id = '").append(UserUtil.getUserId()).append("'");
+                    if(Objects.equals(0,readOnly)){
+                        conditions.append(" and power ='2'");
                     }
+                    conditions.append(")");
                 }
             }
             conditions.append(")");

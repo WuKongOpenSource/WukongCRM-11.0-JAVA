@@ -25,10 +25,7 @@ import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserUtil;
-import com.kakarote.examine.constant.ExamineCodeEnum;
-import com.kakarote.examine.constant.ExamineEnum;
-import com.kakarote.examine.constant.ExamineStatusEnum;
-import com.kakarote.examine.constant.ExamineTypeEnum;
+import com.kakarote.examine.constant.*;
 import com.kakarote.examine.entity.BO.ExamineBO;
 import com.kakarote.examine.entity.BO.ExaminePreviewBO;
 import com.kakarote.examine.entity.BO.ExamineUserBO;
@@ -228,11 +225,13 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
     @Override
     @GlobalTransactional(rollbackFor = Exception.class)
     public void auditExamine(ExamineBO examineBO) {
-        examineBO.setExamineUserId(UserUtil.getUserId());
         UserInfo userInfo = UserUtil.getUser();
+        examineBO.setExamineUserId(userInfo.getUserId());
+        BaseUtil.getRedis().del(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + userInfo.getUserId().toString());
         //查询当前审批日志
         ExamineRecordLog recordLog;
         if (ExamineStatusEnum.RECHECK.getStatus().equals(examineBO.getStatus())) {
+            //撤回
             recordLog = examineRecordLogService.lambdaQuery()
                     .eq(ExamineRecordLog::getExamineStatus, ExamineStatusEnum.UNDERWAY.getStatus())
                     .eq(ExamineRecordLog::getRecordId, examineBO.getRecordId())
@@ -480,6 +479,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
         if (examine != null) {
             if (ListUtil.toList(1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12).contains(examine.getLabel())) {
                 if (examineType == 1 && !isUnusual){
+                    //正常通过
                     this.addMessageForNewExamine(examine.getLabel(),examineType,title,typeId,examineLog,userId);
                 }else if (examineType == 2 || examineType ==3 || isUnusual) {
                     ExamineMessageBO examineMessageBO = new ExamineMessageBO();
@@ -539,14 +539,14 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
         if(examineType == 1){
 
             adminMessageBO.setUserId(userId);
-            adminMessageBO.setTitle(salaryMonthRecord.getYear() + "," + salaryMonthRecord.getMonth());
+            adminMessageBO.setTitle(salaryMonthRecord.getYear() + "年" + salaryMonthRecord.getMonth()+"月");
             adminMessageBO.setTypeId(examineRecord.getTypeId());
             adminMessageBO.setMessageType(AdminMessageEnum.HRM_EMPLOYEE_SALARY_EXAMINE.getType());
             adminMessageBO.setIds(Collections.singletonList(examineLog.getExamineUserId()));
         }else if (examineType == 2 || examineType ==3) {
             adminMessageBO.setTypeId(examineRecord.getTypeId());
             adminMessageBO.setUserId(examineLog.getExamineUserId());
-            adminMessageBO.setTitle(salaryMonthRecord.getYear() + "," + salaryMonthRecord.getMonth());
+            adminMessageBO.setTitle(salaryMonthRecord.getYear() + "年" + salaryMonthRecord.getMonth()+"月");
             adminMessageBO.setContent(examineLog.getRemarks());
             adminMessageBO.setMessageType(examineType == 2 ? AdminMessageEnum.HRM_EMPLOYEE_SALARY_PASS.getType() : AdminMessageEnum.HRM_EMPLOYEE_SALARY_REJECT.getType());
             adminMessageBO.setIds(Collections.singletonList(examineRecord.getCreateUserId()));
@@ -677,7 +677,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
 
         ExamineTypeService examineTypeService = ApplicationContextHolder.getBean(examineTypeEnum.getServerName());
 
-        Long userId = TypeUtils.castToLong(examineRecordSaveBO.getDataMap().get("createUserId"));
+        Long userId = TypeUtils.castToLong(examineRecordSaveBO.getDataMap().get(ExamineConst.CREATE_USER_ID));
         ExamineUserBO examineUserBO = examineTypeService.queryFlowUser(userId, null, examineFlow);
 
         /*
@@ -737,6 +737,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
         examinePreviewBO.setLabel(label);
         Map<String, Object> dataMap = new HashMap<>(8);
         List<ExamineFlowConditionDataVO> conditionDataVoS = examineService.previewFiledName(examineRecord.getLabel(), null, examineRecord.getExamineId());
+        //判断有无条件审核，如果有获取相应数据
         if (conditionDataVoS != null) {
             List<String> fieldList = conditionDataVoS.stream().map(ExamineFlowConditionDataVO::getFieldName).collect(Collectors.toList());
             fieldList.removeIf(StrUtil::isEmpty);
@@ -744,7 +745,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
                 ExamineModuleService moduleService = ApplicationContextHolder.getBean(ExamineEnum.parseModule(examineRecord.getLabel()).getServerName());
                 dataMap = moduleService.getConditionMap(label, examineRecord.getTypeId(), recordId);
             }else {
-                dataMap.put("createUserId", examineRecord.getCreateUserId());
+                dataMap.put(ExamineConst.CREATE_USER_ID, examineRecord.getCreateUserId());
             }
         }
         examinePreviewBO.setDataMap(dataMap);
@@ -762,7 +763,9 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
             examineFlowDataVO.setExamineStatus(examineRecord.getExamineStatus());
             List<ExamineRecordLog> recordLogList = examineRecordLogService.lambdaQuery().eq(ExamineRecordLog::getRecordId, recordId)
                     .eq(ExamineRecordLog::getFlowId, examineFlowDataVO.getFlowId()).list();
+            //判断审批流程是否已通过
             boolean isPass = true;
+            //审核通过  记录状态
             Integer status = null;
             if (recordLogList.size() > 0) {
                 for (ExamineRecordLog recordLog : recordLogList) {
@@ -795,12 +798,15 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
                         Integer examineStatus = examineRecordLogList.get(0).getExamineStatus();
                         map.put("examineStatus", examineStatus);
                         map.put("examineTime", examineRecordLogList.get(0).getUpdateTime());
+                        //跳过作废的
                         if (examineStatus == 8){
                             continue;
                         }
+                        //审核进行中或已结束 记录状态
                         if (examineStatus != 0 && examineStatus != 1) {
                             isEnd = examineStatus;
                         }
+                        //审核结束  记录状态
                         if (ListUtil.toList(2, 4, 5, 7).contains(examineStatus)) {
                             if (examineStatus == 4){
                                 //使用发起人信息填充
@@ -818,12 +824,14 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
                         }
                     }
                     mapList.add(map);
+                    //审核结束 终止循环人员信息(对于或签拒绝时会产生无用审核人记录，终止循环可以去除多余信息)
                     if (breakStatus != null){
                         map.put("examineStatus", breakStatus);
                         break;
                     }
                 }
             }
+            //审核进行中或已结束 填充当前流程审核状态
             if (isEnd != null) {
                 examineFlowDataVO.setExamineStatus(isEnd);
             } else {
@@ -834,6 +842,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
                 examineFlowDataVO.setExamineStatus(status);
             }
             examineFlowDataVoS.add(examineFlowDataVO);
+            //审核结束 终止循环剩下的流程
             if (breakStatus != null){
                 break;
             }
@@ -841,6 +850,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
 
 
         examineRecordVO.setCreateUser(createUser);
+        //补充创建人节点
         ExamineFlowDataVO examineFlowDataVO = this.supplementExamineFlowDataVO(createUser,examineRecord.getCreateTime());
         examineFlowDataVoS.add(0, examineFlowDataVO);
         examineRecordVO.setExamineFlowList(examineFlowDataVoS);
@@ -851,6 +861,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
         if (CollUtil.isNotEmpty(recordLogs)) {
             examineUserIds = recordLogs.stream().map(ExamineRecordLog::getExamineUserId).collect(Collectors.toList());
         }
+        //当前登录人是否有审核权限
         if (examineUserIds.contains(auditUserId)) {
             examineRecordVO.setIsCheck(1);
         } else {

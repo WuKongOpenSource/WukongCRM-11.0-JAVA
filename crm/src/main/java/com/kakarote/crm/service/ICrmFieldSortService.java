@@ -22,4 +22,12 @@ public interface ICrmFieldSortService extends BaseService<CrmFieldSort> {
      * @return data
      */
     public List<CrmFieldSortVO> queryListHead(Integer label);
+
+    /**
+     * 查询模块全部字段排序
+     * @param label label
+     * @param userId 用户ID
+     * @return data
+     */
+    public List<CrmFieldSort> queryAllFieldSortList(Integer label,Long userId);
 }

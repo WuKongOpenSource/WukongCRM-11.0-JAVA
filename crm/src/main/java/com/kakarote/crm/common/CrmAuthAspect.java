@@ -45,14 +45,14 @@ public class CrmAuthAspect {
         Long userId = UserUtil.getUserId();
         boolean flag = false;
         CrmEnum crmEnum = CrmEnum.parse(split[1].substring(3).toUpperCase());
-        if (crmEnum  != null && !userId.equals(UserUtil.getSuperUser())) {
+        if (crmEnum  != CrmEnum.NULL && !userId.equals(UserUtil.getSuperUser())) {
             if ("add".equals(split[2]) || "update".equals(split[2])) {
                 JSONObject jsonObject = JSON.parseObject(ServletUtil.getBody(request));
                 String idKey = crmEnum.getTable() + "Id";
                 Integer id = Optional.ofNullable(jsonObject.getJSONObject("entity")).orElse(new JSONObject()).getInteger(idKey);
                 if(id != null){
                     BaseUtil.getRedis().del(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + UserUtil.getUserId().toString());
-                    flag = AuthUtil.isCrmAuth(crmEnum, id, CrmAuthEnum.EDIT);
+                    flag = AuthUtil.isRwAuth(id,crmEnum, CrmAuthEnum.EDIT);
                 }
 
             } else if ("deleteByIds".equals(split[2])) {

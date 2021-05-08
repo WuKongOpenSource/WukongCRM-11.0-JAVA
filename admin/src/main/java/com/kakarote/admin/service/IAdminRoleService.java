@@ -65,6 +65,12 @@ public interface IAdminRoleService extends BaseService<AdminRole> {
     public List<AdminRoleVO> getAllRoleList();
 
     /**
+     * 查询新增员工时的可查询角色
+     * @return 角色列表
+     */
+    public List<AdminRoleVO> getRoleList();
+
+    /**
      * 查询数据权限
      * @param userId 用户ID
      * @param menuId 菜单ID

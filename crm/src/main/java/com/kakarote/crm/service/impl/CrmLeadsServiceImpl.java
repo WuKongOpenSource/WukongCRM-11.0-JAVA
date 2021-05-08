@@ -20,6 +20,7 @@ import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.feign.crm.entity.QueryEventCrmPageBO;
+import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
@@ -163,8 +164,17 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
      */
     @Override
     public List<CrmModelFiledVO> queryField(Integer id) {
+        return queryField(id,false);
+    }
+
+    private List<CrmModelFiledVO> queryField(Integer id,boolean appendInformation) {
         CrmModel crmModel = queryById(id);
-        return crmFieldService.queryField(crmModel);
+        List<CrmModelFiledVO> filedVOS = crmFieldService.queryField(crmModel);
+        if(appendInformation){
+            List<CrmModelFiledVO> modelFiledVOS = appendInformation(crmModel);
+            filedVOS.addAll(modelFiledVOS);
+        }
+        return filedVOS;
     }
 
     @Override
@@ -181,13 +191,27 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
      */
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
-        BasePage<Map<String, Object>> basePage = queryList(search);
+        BasePage<Map<String, Object>> basePage = queryList(search,false);
         Long userId = UserUtil.getUserId();
         List<Integer> starIds = crmLeadsUserStarService.starList(userId);
         basePage.getList().forEach(map -> {
             map.put("star", starIds.contains((Integer) map.get("leadsId"))?1:0);
         });
         return basePage;
+    }
+
+    @Override
+    public List<SimpleCrmEntity> querySimpleEntity(List<Integer> ids) {
+        if (ids.size() == 0) {
+            return new ArrayList<>();
+        }
+        List<CrmLeads> list = lambdaQuery().select(CrmLeads::getLeadsId,CrmLeads::getLeadsName).in(CrmLeads::getLeadsId, ids).list();
+        return list.stream().map(crmLeads -> {
+            SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
+            simpleCrmEntity.setId(crmLeads.getLeadsId());
+            simpleCrmEntity.setName(crmLeads.getLeadsName());
+            return simpleCrmEntity;
+        }).collect(Collectors.toList());
     }
 
     /**
@@ -348,8 +372,6 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
             crmCustomer.setCreateTime(new Date());
             crmCustomer.setUpdateTime(new Date());
             crmCustomer.setReceiveTime(new Date());
-            crmCustomer.setRoUserId(",");
-            crmCustomer.setRwUserId(",");
             crmCustomer.setDetailAddress(crmLeads.getAddress());
             crmCustomer.setLocation("");
             crmCustomer.setAddress("");
@@ -513,7 +535,7 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
         List<CrmModelFiledVO> crmModelFiledList = queryField(null);
         int k = 0;
         for (int i = 0; i < crmModelFiledList.size(); i++) {
-            if(crmModelFiledList.get(i).getFieldName().equals("leadsName")){
+            if("leadsName".equals(crmModelFiledList.get(i).getFieldName())){
                 k=i;break;
             }
         }
@@ -604,7 +626,7 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
      */
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
-        List<Map<String, Object>> dataList = queryPageList(search).getList();
+        List<Map<String, Object>> dataList = queryList(search,true).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
             headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
@@ -617,7 +639,9 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
             }
             for (Map<String, Object> record : dataList) {
                 headList.forEach(field ->{
-                    record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                    if (fieldService.equalsByType(field.getType())) {
+                        record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                    }
                 });
             }
             writer.setOnlyAlias(true);
@@ -672,28 +696,7 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
 
     @Override
     public List<CrmModelFiledVO> information(Integer leadsId) {
-        CrmModel crmModel = queryById(leadsId);
-        List<String> keyList = Arrays.asList("leadsName", "mobile", "email", "address", "telephone", "remark", "nextTime");
-        List<String> systemFieldList = Arrays.asList("创建人", "创建时间", "更新时间", "最后跟进时间","最后跟进记录");
-        List<CrmModelFiledVO> crmModelFiledVOS = queryInformation(crmModel, keyList);
-        List<CrmModelFiledVO> filedVOS = crmModelFiledVOS.stream().sorted(Comparator.comparingInt(r -> -r.getFieldType())).peek(r -> {
-            r.setFieldType(null);
-            r.setSetting(null);
-            r.setType(null);
-            if (systemFieldList.contains(r.getName())) {
-                r.setSysInformation(1);
-            } else {
-                r.setSysInformation(0);
-            }
-        }).collect(Collectors.toList());
-        ICrmRoleFieldService crmRoleFieldService = ApplicationContextHolder.getBean(ICrmRoleFieldService.class);
-        List<CrmRoleField> roleFieldList = crmRoleFieldService.queryUserFieldAuth(crmModel.getLabel(), 1);
-        Map<String, Integer> levelMap = new HashMap<>();
-        roleFieldList.forEach(crmRoleField -> {
-            levelMap.put(StrUtil.toCamelCase(crmRoleField.getFieldName()), crmRoleField.getAuthLevel());
-        });
-        filedVOS.removeIf(field -> (!UserUtil.isAdmin() && Objects.equals(1, levelMap.get(field.getFieldName()))));
-        return filedVOS;
+        return queryField(leadsId,true);
     }
 
     /**
@@ -770,6 +773,7 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
         Integer leadsId = updateInformationBO.getId();
         updateInformationBO.getList().forEach(record -> {
             CrmLeads oldLeads = getById(updateInformationBO.getId());
+            uniqueFieldIsAbnormal(record.getString("name"),record.getInteger("fieldId"),record.getString("value"),batchId);
             Map<String, Object> oldLeadsMap = BeanUtil.beanToMap(oldLeads);
             if (record.getInteger("fieldType") == 1){
                 Map<String,Object> crmLeadsMap = new HashMap<>(oldLeadsMap);
@@ -778,26 +782,20 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
                 actionRecordUtil.updateRecord(oldLeadsMap, crmLeadsMap, CrmEnum.LEADS,crmLeads.getLeadsName(),crmLeads.getLeadsId());
                 update().set(StrUtil.toUnderlineCase(record.getString("fieldName")), record.get("value")).eq("leads_id",updateInformationBO.getId()).update();
             }else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2){
-                CrmLeadsData leadsData = crmLeadsDataService.lambdaQuery().select(CrmLeadsData::getValue).eq(CrmLeadsData::getFieldId, record.getInteger("fieldId"))
+                CrmLeadsData leadsData = crmLeadsDataService.lambdaQuery().select(CrmLeadsData::getValue,CrmLeadsData::getId).eq(CrmLeadsData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmLeadsData::getBatchId, batchId).one();
                 String value = leadsData != null ? leadsData.getValue() : null;
-                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
-                actionRecordUtil.publicContentRecord(CrmEnum.LEADS, BehaviorEnum.UPDATE,leadsId,oldLeads.getLeadsName(),detail);
+                actionRecordUtil.publicContentRecord(CrmEnum.LEADS, BehaviorEnum.UPDATE,leadsId,oldLeads.getLeadsName(),record,value);
                 String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
-                boolean bol = crmLeadsDataService.lambdaUpdate()
-                        .set(CrmLeadsData::getName,record.getString("fieldName"))
-                        .set(CrmLeadsData::getValue,newValue)
-                        .eq(CrmLeadsData::getFieldId,record.getInteger("fieldId"))
-                        .eq(CrmLeadsData::getBatchId,batchId).update();
-                if (!bol){
-                    CrmLeadsData crmLeadsData = new CrmLeadsData();
-                    crmLeadsData.setFieldId(record.getInteger("fieldId"));
-                    crmLeadsData.setName(record.getString("fieldName"));
-                    crmLeadsData.setValue(newValue);
-                    crmLeadsData.setCreateTime(new Date());
-                    crmLeadsData.setBatchId(batchId);
-                    crmLeadsDataService.save(crmLeadsData);
-                }
+                CrmLeadsData crmLeadsData = new CrmLeadsData();
+                crmLeadsData.setId(leadsData != null ? leadsData.getId() : null);
+                crmLeadsData.setFieldId(record.getInteger("fieldId"));
+                crmLeadsData.setName(record.getString("fieldName"));
+                crmLeadsData.setValue(newValue);
+                crmLeadsData.setCreateTime(new Date());
+                crmLeadsData.setBatchId(batchId);
+                crmLeadsDataService.saveOrUpdate(crmLeadsData);
+
             }
             updateField(record,leadsId);
         });
@@ -822,11 +820,10 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
         }
         List<String> collect = leadsIds.stream().map(Object::toString).collect(Collectors.toList());
         CrmSearchBO crmSearchBO = new CrmSearchBO();
-        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect)));
+        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, collect)));
         crmSearchBO.setLabel(CrmEnum.LEADS.getType());
         crmSearchBO.setPage(eventCrmPageBO.getPage());
         crmSearchBO.setLimit(eventCrmPageBO.getLimit());
-        BasePage<Map<String, Object>> page = queryPageList(crmSearchBO);
-        return page;
+        return queryPageList(crmSearchBO);
     }
 }

@@ -17,8 +17,10 @@ import com.kakarote.oa.common.OaCodeEnum;
 import com.kakarote.oa.entity.BO.ExamineFieldBO;
 import com.kakarote.oa.entity.PO.OaExamineData;
 import com.kakarote.oa.entity.PO.OaExamineField;
+import com.kakarote.oa.entity.PO.OaExamineFieldExtend;
 import com.kakarote.oa.mapper.OaExamineFieldMapper;
 import com.kakarote.oa.service.IOaExamineDataService;
+import com.kakarote.oa.service.IOaExamineFieldExtendService;
 import com.kakarote.oa.service.IOaExamineFieldService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,9 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
 
     @Autowired
     private ExamineService examineService;
+
+    @Autowired
+    private IOaExamineFieldExtendService oaExamineFieldExtendService;
 
     @Override
     public List<OaExamineField> queryField(Integer id) {
@@ -80,7 +85,13 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
                 case CHECKBOX:
                     record.setDefaultValue(StrUtil.splitTrim((CharSequence) record.getDefaultValue(), Const.SEPARATOR));
                 case SELECT:
-                    record.setSetting(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR));
+                    if(Objects.equals(record.getRemark(),FieldEnum.OPTIONS_TYPE.getFormType())) {
+                        LinkedHashMap<String, Object> optionsData = JSON.parseObject(record.getOptions(), LinkedHashMap.class);
+                        record.setOptionsData(optionsData);
+                        record.setSetting(new ArrayList<>(optionsData.keySet()));
+                    }else {
+                        record.setSetting(new ArrayList<>(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR)));
+                    }
                     break;
                 case DATE_INTERVAL:
                     String dataValueStr = Optional.ofNullable(record.getDefaultValue()).orElse("").toString();
@@ -95,6 +106,9 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
                 case CURRENT_POSITION:
                     String defaultValue = Optional.ofNullable(record.getDefaultValue()).orElse("").toString();
                     record.setDefaultValue(JSON.parse(defaultValue));
+                    break;
+                case DETAIL_TABLE:
+                    record.setFieldExtendList(oaExamineFieldExtendService.queryOaExamineFieldExtend(record.getFieldId()));
                     break;
                 default:
                     record.setSetting(new ArrayList<>());
@@ -111,7 +125,8 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
                 oaExamineField.setFieldId(null);
                 oaExamineField.setExamineCategoryId(newCategoryId.intValue());
             }
-            return this.saveBatch(oaExamineFields,Const.BATCH_SAVE_SIZE);
+            saveBatch(oaExamineFields,Const.BATCH_SAVE_SIZE);
+            return true;
         }
         return false;
     }
@@ -170,6 +185,7 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
         if (arr.size() > 0) {
             getBaseMapper().deleteByChooseId(arr, categoryId);
             getBaseMapper().deleteByFieldValue(arr, categoryId);
+            oaExamineFieldExtendService.lambdaUpdate().in(OaExamineFieldExtend::getParentFieldId,arr).remove();
         }
         for (int i = 0; i < data.size(); i++) {
             OaExamineField entity = data.get(i);
@@ -179,9 +195,7 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
             if (ObjectUtil.isEmpty(entity.getDefaultValue())) {
                 entity.setDefaultValue("");
             }else {
-                boolean isNeedHandle = FieldEnum.AREA.getType().equals(entity.getType())
-                        || FieldEnum.AREA_POSITION.getType().equals(entity.getType())
-                        || FieldEnum.CURRENT_POSITION.getType().equals(entity.getType());
+                boolean isNeedHandle = fieldService.equalsByType(entity.getType(),FieldEnum.AREA,FieldEnum.AREA_POSITION,FieldEnum.CURRENT_POSITION);
                 if (isNeedHandle) {
                     entity.setDefaultValue(JSON.toJSONString(entity.getDefaultValue()));
                 }
@@ -190,11 +204,17 @@ public class OaExamineFieldServiceImpl extends BaseServiceImpl<OaExamineFieldMap
                 }
             }
             if (entity.getFieldId() != null) {
+                if (FieldEnum.DETAIL_TABLE.getType().equals(entity.getType())){
+                    oaExamineFieldExtendService.saveOrUpdateOaExamineFieldExtend(entity.getFieldExtendList(),entity.getFieldId(),true);
+                }
                 updateById(entity);
                 examineDataService.lambdaUpdate().set(OaExamineData::getName,entity.getName()).eq(OaExamineData::getFieldId,entity.getFieldId()).update();
             } else {
                 entity.setFieldName(getFieldName(entity.getExamineCategoryId()));
                 save(entity);
+                if (FieldEnum.DETAIL_TABLE.getType().equals(entity.getType())){
+                    oaExamineFieldExtendService.saveOrUpdateOaExamineFieldExtend(entity.getFieldExtendList(),entity.getFieldId(),false);
+                }
             }
         }
     }

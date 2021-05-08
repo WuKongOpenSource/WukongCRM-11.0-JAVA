@@ -57,6 +57,13 @@ public class CrmProductController {
         return R.ok(model);
     }
 
+    @PostMapping("/selectSimpleEntity")
+    @ApiExplain("查询简单的客户对象")
+    public Result<List<SimpleCrmEntity>> selectSimpleEntity(@RequestBody List<Integer> ids) {
+        List<SimpleCrmEntity> crmEntities = crmProductService.querySimpleEntity(ids);
+        return R.ok(crmEntities);
+    }
+
     @PostMapping("/deleteByIds")
     @ApiOperation("根据ID删除数据")
     @SysLogHandler(behavior = BehaviorEnum.DELETE)

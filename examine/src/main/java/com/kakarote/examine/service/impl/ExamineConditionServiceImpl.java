@@ -273,7 +273,7 @@ public class ExamineConditionServiceImpl extends BaseServiceImpl<ExamineConditio
         List<ExamineCondition> conditionList = lambdaQuery().eq(ExamineCondition::getFlowId, examineFlow.getFlowId()).orderByAsc(ExamineCondition::getPriority).list();
         Map<Integer, List<ExamineConditionData>> conditionDataMap = examineConditionDataService.lambdaQuery().eq(ExamineConditionData::getFlowId, examineFlow.getFlowId()).list().stream().collect(Collectors.groupingBy(ExamineConditionData::getConditionId));
         Integer conditionId = null;
-        UserInfo userInfo = UserCacheUtil.getUserInfo(TypeUtils.castToLong(conditionMap.get("createUserId")));
+        UserInfo userInfo = UserCacheUtil.getUserInfo(TypeUtils.castToLong(conditionMap.get(ExamineConst.CREATE_USER_ID)));
         for (ExamineCondition examineCondition : conditionList) {
             List<ExamineConditionData> conditionDataList = conditionDataMap.get(examineCondition.getConditionId());
             /*

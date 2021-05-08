@@ -119,6 +119,10 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
 
     @Override
     public BasePage<ExamineVO> myInitiate(ExaminePageBO examinePageBO) {
+        if(examinePageBO.getCategoryId() != null){
+            ExamineInfoVo infoVo = examineService.queryExamineById(examinePageBO.getCategoryId().longValue()).getData();
+            examinePageBO.setCategoryId(infoVo != null ? infoVo.getExamineInitId().intValue() : null);
+        }
 //        BasePage<ExamineVO> page = examineMapper.myInitiate(examinePageBO.parse().setOptimizeCountSql(false), examinePageBO, UserUtil.getUserId(), UserUtil.isAdmin(), null);
         BasePage<ExamineVO> page = examineMapper.myInitiateOaExamine(examinePageBO.parse().setOptimizeCountSql(false), examinePageBO, UserUtil.getUserId(), UserUtil.isAdmin());
         transfer(page.getList());
@@ -1063,7 +1067,7 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             examineList = examineMapper.myInitiateOaExcel(examineExportBO, userId, UserUtil.isAdmin());
             //待我审批的
         } else if (queryType == 2) {
-            List<Integer> ids = examineService.queryOaExamineIdList(examineExportBO.getStauts(), examineExportBO.getCategoryId()).getData();
+            List<Integer> ids = examineService.queryOaExamineIdList(examineExportBO.getStatus(), examineExportBO.getCategoryId()).getData();
             if (CollUtil.isNotEmpty(ids)){
                 List<OaExamine> oaExamineList = oaExamineService.lambdaQuery().select(OaExamine::getExamineId, OaExamine::getBatchId,OaExamine::getStartTime,OaExamine::getEndTime).in(OaExamine::getExamineId, ids).list();
                 for (OaExamine oaExamine : oaExamineList) {

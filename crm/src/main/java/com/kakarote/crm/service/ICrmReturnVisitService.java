@@ -2,6 +2,7 @@ package com.kakarote.crm.service;
 
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.admin.entity.AdminConfig;
+import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.CrmModel;
@@ -25,6 +26,8 @@ import java.util.Map;
 public interface ICrmReturnVisitService extends BaseService<CrmReturnVisit> {
 
     BasePage<Map<String, Object>> queryPageList(CrmSearchBO search);
+
+    List<SimpleCrmEntity> querySimpleEntity(List<Integer> ids);
 
     void addOrUpdate(CrmBusinessSaveBO crmModel);
 

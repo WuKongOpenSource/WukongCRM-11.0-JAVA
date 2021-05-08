@@ -24,7 +24,10 @@ import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
-import com.kakarote.core.utils.*;
+import com.kakarote.core.utils.BaseUtil;
+import com.kakarote.core.utils.TagUtil;
+import com.kakarote.core.utils.UserCacheUtil;
+import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.constant.CrmCodeEnum;
@@ -109,6 +112,10 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
      */
     @Override
     public List<CrmModelFiledVO> queryField(Integer id) {
+        return queryField(id,false);
+    }
+
+    private List<CrmModelFiledVO> queryField(Integer id,boolean appendInformation) {
         CrmModel crmModel = queryById(id);
         crmModel.setLabel(getLabel().getType());
         List<CrmModelFiledVO> crmModelFiledVoS = crmFieldService.queryField(crmModel);
@@ -120,7 +127,6 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
                 }else {
                     crmModelFiledVO.setValue(null);
                 }
-
             }
         }
 
@@ -135,6 +141,10 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
         statusList.add(new JSONObject().fluentPut("name", "上架").fluentPut("value", 1));
         statusList.add(new JSONObject().fluentPut("name", "下架").fluentPut("value", 0));
         crmModelFiledVoS.add(new CrmModelFiledVO("status", FieldEnum.SELECT, "是否上下架", 1).setIsNull(1).setSetting(statusList).setValue(crmModel.get("status")).setAuthLevel(authLevel));
+        if(appendInformation){
+            List<CrmModelFiledVO> modelFiledVOS = appendInformation(crmModel);
+            crmModelFiledVoS.addAll(modelFiledVOS);
+        }
         return crmModelFiledVoS;
     }
 
@@ -180,7 +190,7 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
      */
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
-        BasePage<Map<String, Object>> basePage = queryList(search);
+        BasePage<Map<String, Object>> basePage = queryList(search,false);
         basePage.getList().forEach(map -> {
             String status = map.get("status").toString();
             map.put("status", Objects.equals("1", status) ? "上架" : "下架");
@@ -188,6 +198,19 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
         return basePage;
     }
 
+    @Override
+    public List<SimpleCrmEntity> querySimpleEntity(List<Integer> ids) {
+        if (ids.size() == 0) {
+            return new ArrayList<>();
+        }
+        List<CrmProduct> list = lambdaQuery().select(CrmProduct::getProductId,CrmProduct::getName).in(CrmProduct::getProductId, ids).list();
+        return list.stream().map(crmProduct -> {
+            SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
+            simpleCrmEntity.setId(crmProduct.getProductId());
+            simpleCrmEntity.setName(crmProduct.getName());
+            return simpleCrmEntity;
+        }).collect(Collectors.toList());
+    }
 
     /**
      * 查询字段配置
@@ -450,7 +473,7 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
      */
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
-        List<Map<String, Object>> dataList = queryPageList(search).getList();
+        List<Map<String, Object>> dataList = queryList(search,true).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
             headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
@@ -463,7 +486,9 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
             }
             for (Map<String, Object> record : dataList) {
                 headList.forEach(field ->{
-                    record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                    if (fieldService.equalsByType(field.getType())) {
+                        record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                    }
                 });
             }
             writer.setOnlyAlias(true);
@@ -512,42 +537,7 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
 
     @Override
     public List<CrmModelFiledVO> information(Integer productId) {
-        CrmModel crmModel = queryById(productId);
-        List<String> keyList = Arrays.asList("name", "num", "price", "description");
-        List<String> systemFieldList = Arrays.asList("创建人", "创建时间", "更新时间");
-        List<CrmModelFiledVO> crmModelFiledVOS = queryInformation(crmModel, keyList);
-        int authLevel = 3;
-        Long userId = UserUtil.getUserId();
-        String key = userId.toString();
-        List<String> noAuthMenuUrls = BaseUtil.getRedis().get(key);
-        if (noAuthMenuUrls != null && noAuthMenuUrls.contains(PRODUCT_STATUS_URL)) {
-            authLevel = 2;
-        }
-        String status = Objects.equals(1, crmModel.get("status")) ? "上架" : "下架";
-        crmModelFiledVOS.add(new CrmModelFiledVO("status", FieldEnum.SELECT, "是否上下架", 1).setValue(status).setAuthLevel(authLevel));
-        List<CrmProductCategory> categoryList = crmProductCategoryService.list();
-        List<Integer> list = RecursionUtil.getChildList(categoryList, "pid", (Integer) crmModel.get("categoryId"), "categoryId", "categoryId");
-        List<CrmModelFiledVO> filedVOS = crmModelFiledVOS.stream().sorted(Comparator.comparingInt(r -> -r.getFieldType())).peek(r -> {
-            if ("categoryId".equals(r.getFieldName())) {
-                r.setValue(new JSONObject().fluentPut("categoryId", list).fluentPut("categoryName", crmModel.get("categoryName")));
-            }
-            r.setFieldType(null);
-            r.setSetting(null);
-            r.setType(null);
-            if (systemFieldList.contains(r.getName())) {
-                r.setSysInformation(1);
-            } else {
-                r.setSysInformation(0);
-            }
-        }).collect(Collectors.toList());
-        ICrmRoleFieldService crmRoleFieldService = ApplicationContextHolder.getBean(ICrmRoleFieldService.class);
-        List<CrmRoleField> roleFieldList = crmRoleFieldService.queryUserFieldAuth(crmModel.getLabel(), 1);
-        Map<String, Integer> levelMap = new HashMap<>();
-        roleFieldList.forEach(crmRoleField -> {
-            levelMap.put(StrUtil.toCamelCase(crmRoleField.getFieldName()), crmRoleField.getAuthLevel());
-        });
-        filedVOS.removeIf(field -> (!UserUtil.isAdmin() && Objects.equals(1, levelMap.get(field.getFieldName()))));
-        return filedVOS;
+        return queryField(productId,true);
     }
 
     /**
@@ -667,6 +657,7 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
         Integer productId = updateInformationBO.getId();
         updateInformationBO.getList().forEach(record -> {
             CrmProduct oldProduct = getById(updateInformationBO.getId());
+            uniqueFieldIsAbnormal(record.getString("name"),record.getInteger("fieldId"),record.getString("value"),batchId);
             Map<String, Object> oldProductMap = BeanUtil.beanToMap(oldProduct);
             if (record.getInteger("fieldType") == 1) {
                 Map<String, Object> crmProductMap = new HashMap<>(oldProductMap);
@@ -675,26 +666,19 @@ public class CrmProductServiceImpl extends BaseServiceImpl<CrmProductMapper, Crm
                 actionRecordUtil.updateRecord(oldProductMap, crmProductMap, CrmEnum.PRODUCT, crmProduct.getName(), crmProduct.getProductId());
                 update().set(StrUtil.toUnderlineCase(record.getString("fieldName")), record.get("value")).eq("product_id",updateInformationBO.getId()).update();
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
-                CrmProductData productData = crmProductDataService.lambdaQuery().select(CrmProductData::getValue).eq(CrmProductData::getFieldId, record.getInteger("fieldId"))
+                CrmProductData productData = crmProductDataService.lambdaQuery().select(CrmProductData::getValue,CrmProductData::getId).eq(CrmProductData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmProductData::getBatchId, batchId).one();
                 String value = productData != null ? productData.getValue() : null;
-                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
-                actionRecordUtil.publicContentRecord(CrmEnum.PRODUCT, BehaviorEnum.UPDATE, productId, oldProduct.getName(), detail);
+                actionRecordUtil.publicContentRecord(CrmEnum.PRODUCT, BehaviorEnum.UPDATE, productId, oldProduct.getName(), record,value);
                 String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
-                boolean bol = crmProductDataService.lambdaUpdate()
-                        .set(CrmProductData::getName,record.getString("fieldName"))
-                        .set(CrmProductData::getValue, newValue)
-                        .eq(CrmProductData::getFieldId, record.getInteger("fieldId"))
-                        .eq(CrmProductData::getBatchId, batchId).update();
-                if (!bol) {
-                    CrmProductData crmProductData = new CrmProductData();
-                    crmProductData.setFieldId(record.getInteger("fieldId"));
-                    crmProductData.setName(record.getString("fieldName"));
-                    crmProductData.setValue(newValue);
-                    crmProductData.setCreateTime(new Date());
-                    crmProductData.setBatchId(batchId);
-                    crmProductDataService.save(crmProductData);
-                }
+                CrmProductData crmProductData = new CrmProductData();
+                crmProductData.setId(productData != null ? productData.getId() : null);
+                crmProductData.setFieldId(record.getInteger("fieldId"));
+                crmProductData.setName(record.getString("fieldName"));
+                crmProductData.setValue(newValue);
+                crmProductData.setCreateTime(new Date());
+                crmProductData.setBatchId(batchId);
+                crmProductDataService.saveOrUpdate(crmProductData);
             }
             updateField(record,productId);
         });

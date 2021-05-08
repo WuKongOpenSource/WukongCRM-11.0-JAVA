@@ -2,28 +2,25 @@ package com.kakarote.crm.controller;
 
 
 import cn.hutool.core.util.StrUtil;
-import com.kakarote.core.common.FieldEnum;
-import com.kakarote.core.common.R;
-import com.kakarote.core.common.Result;
-import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.*;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.SysLog;
 import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.crm.common.CrmModel;
 import com.kakarote.crm.common.log.CrmReceivablesLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.entity.BO.CrmChangeOwnerUserBO;
-import com.kakarote.crm.entity.BO.CrmContractSaveBO;
-import com.kakarote.crm.entity.BO.CrmSearchBO;
-import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
+import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmReceivables;
 import com.kakarote.crm.entity.VO.CrmInfoNumVO;
+import com.kakarote.crm.entity.VO.CrmMembersSelectVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.service.ICrmReceivablesService;
+import com.kakarote.crm.service.ICrmTeamMembersService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -52,12 +49,22 @@ public class CrmReceivablesController {
     @Autowired
     private ICrmReceivablesService crmReceivablesService;
 
+    @Autowired
+    private ICrmTeamMembersService teamMembersService;
+
     @PostMapping("/queryPageList")
     @ApiOperation("查询列表页数据")
     public Result<BasePage<Map<String, Object>>> queryPageList(@RequestBody CrmSearchBO search) {
         search.setPageType(1);
         BasePage<Map<String, Object>> mapBasePage = crmReceivablesService.queryPageList(search);
         return R.ok(mapBasePage);
+    }
+
+    @PostMapping("/querySimpleEntity")
+    @ApiExplain("查询简单的客户对象")
+    public Result<List<SimpleCrmEntity>> querySimpleEntity(@RequestBody List<Integer> ids) {
+        List<SimpleCrmEntity> crmEntities = crmReceivablesService.querySimpleEntity(ids);
+        return R.ok(crmEntities);
     }
 
     @PostMapping("/add")
@@ -117,8 +124,8 @@ public class CrmReceivablesController {
     @PostMapping("/changeOwnerUser")
     @ApiOperation("修改回款负责人")
     @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
-    public Result changeOwnerUser(@RequestBody CrmChangeOwnerUserBO crmChangeOwnerUserBO){
-        crmReceivablesService.changeOwnerUser(crmChangeOwnerUserBO.getIds(),crmChangeOwnerUserBO.getOwnerUserId());
+    public Result changeOwnerUser(@RequestBody CrmChangeOwnerUserBO changeOwnerUserBO){
+        crmReceivablesService.changeOwnerUser(changeOwnerUserBO);
         return R.ok();
     }
 
@@ -174,7 +181,49 @@ public class CrmReceivablesController {
         crmReceivablesService.updateInformation(updateInformationBO);
         return R.ok();
     }
+    @PostMapping("/getMembers/{receivablesId}")
+    @ApiOperation("获取团队成员")
+    public Result<List<CrmMembersSelectVO>> getMembers(@PathVariable("receivablesId") @ApiParam("回款ID") Integer receivablesId) {
+        CrmEnum crmEnum = CrmEnum.RECEIVABLES;
+        CrmReceivables receivables = crmReceivablesService.getById(receivablesId);
+        if (receivables == null) {
+            throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED, crmEnum.getRemarks());
+        }
+        List<CrmMembersSelectVO> members = teamMembersService.getMembers(crmEnum,receivablesId,receivables.getOwnerUserId());
+        return R.ok(members);
+    }
 
+    @PostMapping("/addMembers")
+    @ApiOperation("新增团队成员")
+    @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
+    public Result addMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
+        teamMembersService.addMember(CrmEnum.RECEIVABLES,crmMemberSaveBO);
+        return R.ok();
+    }
+
+    @PostMapping("/updateMembers")
+    @ApiOperation("新增团队成员")
+    @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
+    public Result updateMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
+        teamMembersService.addMember(CrmEnum.RECEIVABLES,crmMemberSaveBO);
+        return R.ok();
+    }
+
+    @PostMapping("/deleteMembers")
+    @ApiOperation("删除团队成员")
+    @SysLogHandler
+    public Result deleteMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
+        teamMembersService.deleteMember(CrmEnum.RECEIVABLES,crmMemberSaveBO);
+        return R.ok();
+    }
+
+    @PostMapping("/exitTeam/{receivablesId}")
+    @ApiOperation("退出团队")
+    @SysLogHandler
+    public Result exitTeam(@PathVariable("receivablesId") @ApiParam("回款ID") Integer receivablesId) {
+        teamMembersService.exitTeam(CrmEnum.RECEIVABLES,receivablesId);
+        return R.ok();
+    }
 
 }
 

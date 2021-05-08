@@ -24,12 +24,9 @@ public class CrmMembersSelectVO {
     @ApiModelProperty("部门名称")
     private String deptName;
 
-    @ApiModelProperty("岗位")
-    private String post;
-
     @ApiModelProperty("权限")
-    private String power;
+    private Integer power;
 
-    @ApiModelProperty("分组")
-    private String groupRole;
+    @ApiModelProperty("过期时间")
+    private String expiresTime;
 }

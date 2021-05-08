@@ -47,7 +47,7 @@ public class MyExamineController {
 
     @PostMapping("/queryCrmExamineIdList")
     @ApiExplain("查询CRM审批流联业务主键列表")
-    public Result<List<Integer>> queryCrmExamineIdList(@RequestParam("label")Integer label,@RequestParam("status")Integer status) {
+    public Result<List<Integer>> queryCrmExamineIdList(@RequestParam("label")Integer label,@RequestParam(value = "status",required = false)Integer status) {
         return Result.ok(examineService.queryCrmExamineIdList(label,status));
     }
 

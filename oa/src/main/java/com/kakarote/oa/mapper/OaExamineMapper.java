@@ -37,13 +37,10 @@ public interface OaExamineMapper extends BaseMapper<OaExamine> {
 
     List<JSONObject> myOaExamineExcel(@Param("data") ExamineExportBO examineExportBO, @Param("userId") Long userId, @Param("isAdmin") boolean isAdmin);
 
-    @SqlParser(filter = true)
     List<JSONObject> queryTravelExamineList(@Param("examineIdList") List<Integer> examineIdList);
 
-    @SqlParser(filter = true)
     List<JSONObject> queryCustomExamineList(@Param("examineIdList") List<Integer> examineIdList,@Param("batchIds") List<String> batchIdList, @Param("fieldMap") List<OaExamineField> fields);
 
-    @SqlParser(filter = true)
     List<JSONObject> queryExamineList(@Param("examineIdList") List<Integer> examineIdList);
 
 

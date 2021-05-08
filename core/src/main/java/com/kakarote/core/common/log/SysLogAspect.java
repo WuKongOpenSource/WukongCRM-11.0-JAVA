@@ -256,7 +256,8 @@ public class SysLogAspect {
             for (int i = 0; i < args.length; i++) {
                 context.setVariable(paramNames[i], args[i]);
             }
-            return expression.getValue(context).toString();
+            Object value = expression.getValue(context);
+            return value!=null?value.toString():null;
         }
         return null;
     }

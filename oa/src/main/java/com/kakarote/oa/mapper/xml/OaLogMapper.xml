@@ -91,11 +91,11 @@
     <select id="queryLogBulletin" resultType="com.alibaba.fastjson.JSONObject">
         SELECT
             COUNT(*) allNum,
-            COUNT(CASE WHEN create_user_id=#{userId} and to_days(create_time) = to_days(now()) THEN 1 ELSE null END) as nowNum
+            COUNT(CASE WHEN to_days(create_time) = to_days(now()) THEN 1 ELSE null END) as nowNum
         FROM
             wk_oa_log
         WHERE
-            date_format( create_time, '%Y-%m-%d' ) between #{beginTime} and #{endTime}
+            create_time between #{beginTime} and #{endTime}
             AND create_user_id = #{userId}
     </select>
     

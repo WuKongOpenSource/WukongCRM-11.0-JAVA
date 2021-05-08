@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.conditions.update.LambdaUpdateChainWrapper;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.entity.BasePage;
@@ -591,12 +592,17 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
 
     @Override
     public void setWorkTaskTime(WorkTask workTask) {
+        if(workTask.getStartTime() == null && workTask.getStopTime() == null){
+            throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
+        }
+        LambdaUpdateChainWrapper<WorkTask> lambdaUpdate = lambdaUpdate();
         if (workTask.getStartTime() != null) {
             WorkTaskLog workTaskLog = new WorkTaskLog();
             workTaskLog.setUserId(UserUtil.getUserId());
             workTaskLog.setTaskId(workTask.getTaskId());
             workTaskLog.setContent("把任务开始时间修改为:" + DateUtil.formatDate(workTask.getStartTime()));
             workTaskLogService.saveWorkTaskLog(workTaskLog);
+            lambdaUpdate.set(WorkTask::getStartTime,workTask.getStartTime());
         }
         if (workTask.getStopTime() != null) {
             WorkTaskLog workTaskLog = new WorkTaskLog();
@@ -604,8 +610,15 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
             workTaskLog.setTaskId(workTask.getTaskId());
             workTaskLog.setContent("把任务结束时间修改为:" + DateUtil.formatDate(workTask.getStopTime()));
             workTaskLogService.saveWorkTaskLog(workTaskLog);
+            lambdaUpdate.set(WorkTask::getStopTime,workTask.getStopTime());
+            if(workTask.getStopTime().getTime() < System.currentTimeMillis()){
+                lambdaUpdate.set(WorkTask::getStatus,2);
+            } else if(workTask.getStopTime().getTime() > System.currentTimeMillis()) {
+                lambdaUpdate.set(WorkTask::getStatus,1);
+            }
         }
-        updateById(new WorkTask().setStartTime(workTask.getStartTime()).setStopTime(workTask.getStopTime()).setTaskId(workTask.getTaskId()));
+        lambdaUpdate.eq(WorkTask::getTaskId,workTask.getTaskId());
+        lambdaUpdate.update();
     }
 
     @Override
@@ -938,7 +951,7 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
             }
         }
         if (UserUtil.isAdmin() && oaTaskListBO.getType() == 0 && mold == null) {
-            userIds = adminService.queryUserList().getData();
+            userIds = adminService.queryUserList(1).getData();
         }
         if (userIds.size() == 0) {
             return new OaTaskListVO(0, 0, new BasePage<>(), null);

@@ -46,8 +46,10 @@ public class CrmSearchBO extends PageEntity {
     @ApiModel(value = "高级筛选子查询")
     @Accessors(chain = true)
     public static class Search {
+
         @ApiModelProperty(value = "名字")
         private String name;
+
         @ApiModelProperty(value = "格式")
         private String formType;
 
@@ -56,7 +58,7 @@ public class CrmSearchBO extends PageEntity {
         private FieldSearchEnum searchEnum;
 
         @ApiModelProperty(value = "脚本查询需要")
-        private Script script;
+        private transient Script script;
 
         @ApiModelProperty(value = "值列表")
         private List<String> values = new ArrayList<>();
@@ -66,6 +68,12 @@ public class CrmSearchBO extends PageEntity {
             this.formType = formType;
             this.searchEnum = searchEnum;
             this.values = values;
+        }
+
+        public Search(String name, String formType, FieldSearchEnum searchEnum) {
+            this.name = name;
+            this.formType = formType;
+            this.searchEnum = searchEnum;
         }
 
         public Search() {
@@ -82,14 +90,6 @@ public class CrmSearchBO extends PageEntity {
          * 不为空
          */
         IS_NOT_NULL(6),
-        /**
-         * 日期时间筛选
-         */
-        DATE_TIME(12),
-        /**
-         * 日期筛选
-         */
-        DATE(11),
         /**
          * 包含
          */
@@ -127,6 +127,18 @@ public class CrmSearchBO extends PageEntity {
          */
         ID(11),
         /**
+         * 前缀匹配
+         */
+        PREFIX(12),
+        /**
+         * 后缀匹配
+         */
+        SUFFIX(13),
+        /**
+         * 数字区间
+         */
+        RANGE(14),
+        /**
          * 不存在
          */
         NULL(0),
@@ -163,4 +175,5 @@ public class CrmSearchBO extends PageEntity {
             return type.toString() + ":" + name();
         }
     }
+
 }

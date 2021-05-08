@@ -80,9 +80,12 @@ public class CrmLeadsLog {
                 CrmLeads crmLeads = BeanUtil.mapToBean(crmLeadsMap, CrmLeads.class, true);
                 contentList.add(sysLogUtil.updateRecord(oldLeadsMap, crmLeadsMap, CrmEnum.LEADS, crmLeads.getLeadsName()));
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
+                String formType = record.getString("formType");
+                if(formType == null){
+                    return;
+                }
                 String oldFieldValue = crmLeadsDataService.lambdaQuery().select(CrmLeadsData::getValue).eq(CrmLeadsData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmLeadsData::getBatchId, batchId).one().getValue();
-                String formType = record.getString("formType");
                 String newValue = record.getString("value");
                 if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
                     oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));

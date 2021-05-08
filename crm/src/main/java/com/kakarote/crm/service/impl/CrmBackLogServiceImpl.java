@@ -6,6 +6,7 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.SystemCodeEnum;
@@ -95,19 +96,19 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
     @Override
     public JSONObject num() {
         Long userId = UserUtil.getUserId();
-        List<String> authList = UserUtil.getUser().getAuthoritiesUrlList();
         JSONObject kv = redis.get(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + userId.toString());
+        if (kv != null) {
+            return kv;
+        } else {
+            kv = new JSONObject();
+        }
+        List<String> authList = UserUtil.getUser().getAuthoritiesUrlList();
         authList.add("crm:customer:index");
         authList.add("crm:leads:index");
         authList.add("crm:contract:index");
         authList.add("crm:receivables:index");
         authList.add("crm:receivables:index");
         authList.add("crm:invoice:index");
-        if (kv != null) {
-            return kv;
-        } else {
-            kv = new JSONObject();
-        }
         Map<String, Object> paras = new HashMap<>();
         paras.put("userId", userId);
         if (authList.contains("crm:customer:index")) {
@@ -165,16 +166,26 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
                 kv.put("endContract", endContract);
             }
             List<Integer> ids = examineService.queryCrmExamineIdList(1, 1).getData();
-            Integer checkContract;
-            if (CollUtil.isNotEmpty(ids)){
-                checkContract = crmContractService.lambdaQuery().in(CrmContract::getContractId, ids).in(CrmContract::getCheckStatus, 0, 3).count();
-            }else {
+            Integer checkContract = null;
+            if (CollUtil.isNotEmpty(ids)) {
+                LambdaQueryWrapper<CrmBackLogDeal> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(CrmBackLogDeal::getModel, 5);
+                wrapper.eq(CrmBackLogDeal::getCrmType, CrmEnum.CONTRACT.getType());
+                wrapper.eq(CrmBackLogDeal::getCreateUserId, userId);
+                wrapper.select(CrmBackLogDeal::getTypeId);
+                List<Integer> dealIdList = backLogDealService.listObjs(wrapper, TypeUtils::castToInt);
+                ids.removeAll(dealIdList);
+                if (ids.size()>0) {
+                    checkContract = crmContractService.lambdaQuery().in(CrmContract::getContractId, ids).in(CrmContract::getCheckStatus, 0, 3).count();
+                }
+            }
+            if (checkContract == null) {
                 checkContract = 0;
             }
             kv.put("checkContract", checkContract);
 
             AdminConfig returnVisitRemindConfig = adminService.queryFirstConfigByName("returnVisitRemindConfig").getData();
-            if (Objects.equals(1,returnVisitRemindConfig.getStatus())) {
+            if (Objects.equals(1, returnVisitRemindConfig.getStatus())) {
                 paras.put("remindDay", returnVisitRemindConfig.getValue());
                 Integer returnVisitRemind = mapper.returnVisitRemindNum(paras);
                 kv.put("returnVisitRemind", returnVisitRemind);
@@ -184,10 +195,20 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
         if (authList.contains("crm:receivables:index")) {
             Integer remindReceivablesPlan = mapper.remindReceivablesPlanNum(paras);
             List<Integer> ids = examineService.queryCrmExamineIdList(2, 1).getData();
-            Integer checkReceivables;
+            Integer checkReceivables = null;
             if (CollUtil.isNotEmpty(ids)) {
-                checkReceivables = crmReceivablesService.lambdaQuery().in(CrmReceivables::getReceivablesId, ids).in(CrmReceivables::getCheckStatus, 0, 3).count();
-            }else {
+                LambdaQueryWrapper<CrmBackLogDeal> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(CrmBackLogDeal::getModel, 6);
+                wrapper.eq(CrmBackLogDeal::getCrmType, CrmEnum.RECEIVABLES.getType());
+                wrapper.eq(CrmBackLogDeal::getCreateUserId, userId);
+                wrapper.select(CrmBackLogDeal::getTypeId);
+                List<Integer> dealIdList = backLogDealService.listObjs(wrapper, TypeUtils::castToInt);
+                ids.removeAll(dealIdList);
+                if (ids.size() > 0) {
+                    checkReceivables = crmReceivablesService.lambdaQuery().in(CrmReceivables::getReceivablesId, ids).in(CrmReceivables::getCheckStatus, 0, 3).count();
+                }
+            }
+            if (checkReceivables == null) {
                 checkReceivables = 0;
             }
             kv.put("checkReceivables", checkReceivables);
@@ -196,10 +217,20 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
 
         if (authList.contains("crm:invoice:index")) {
             List<Integer> ids = examineService.queryCrmExamineIdList(3, 1).getData();
-            Integer checkInvoice;
+            Integer checkInvoice = null;
             if (CollUtil.isNotEmpty(ids)) {
-                checkInvoice = crmInvoiceService.lambdaQuery().in(CrmInvoice::getInvoiceId, ids).in(CrmInvoice::getCheckStatus, 0, 3).count();
-            }else {
+                LambdaQueryWrapper<CrmBackLogDeal> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(CrmBackLogDeal::getModel, 10);
+                wrapper.eq(CrmBackLogDeal::getCrmType, CrmEnum.INVOICE.getType());
+                wrapper.eq(CrmBackLogDeal::getCreateUserId, userId);
+                wrapper.select(CrmBackLogDeal::getTypeId);
+                List<Integer> dealIdList = backLogDealService.listObjs(wrapper, TypeUtils::castToInt);
+                ids.removeAll(dealIdList);
+                if(ids.size() > 0){
+                    checkInvoice = crmInvoiceService.lambdaQuery().in(CrmInvoice::getInvoiceId, ids).in(CrmInvoice::getCheckStatus, 0, 3).count();
+                }
+            }
+            if (checkInvoice == null) {
                 checkInvoice = 0;
             }
             kv.put("checkInvoice", checkInvoice);
@@ -209,16 +240,18 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
     }
 
 
-
     @Override
     public BasePage<Map<String, Object>> todayLeads(CrmBackLogBO crmBackLogBO) {
-        setCrmBackLogBO(crmBackLogBO,CrmEnum.LEADS);
+        setCrmBackLogBO(crmBackLogBO, CrmEnum.LEADS);
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setLabel(CrmEnum.LEADS.getType());
         searchBO.setPage(crmBackLogBO.getPage());
         searchBO.setLimit(crmBackLogBO.getLimit());
         searchBO.setSearchList(crmBackLogBO.getData());
-        return crmLeadsService.queryPageList(searchBO);
+        BasePage<Map<String, Object>> basePage = crmLeadsService.queryPageList(searchBO);
+        Integer overtimeNum = mapper.todayOvertimeNum(getOvertimeQueryData(CrmEnum.LEADS));
+        basePage.setExtraData(Collections.singletonMap("overtime",overtimeNum));
+        return basePage;
     }
 
     /**
@@ -228,50 +261,50 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
      */
     @Override
     public BasePage<Map<String, Object>> todayCustomer(CrmBackLogBO crmBackLogBO) {
-        setCrmBackLogBO(crmBackLogBO,CrmEnum.CUSTOMER);
+        setCrmBackLogBO(crmBackLogBO, CrmEnum.CUSTOMER);
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setLabel(CrmEnum.CUSTOMER.getType());
         searchBO.setPage(crmBackLogBO.getPage());
         searchBO.setLimit(crmBackLogBO.getLimit());
         searchBO.setSearchList(crmBackLogBO.getData());
-        return crmCustomerService.queryPageList(searchBO);
+        BasePage<Map<String, Object>> basePage = crmCustomerService.queryPageList(searchBO);
+        Integer overtimeNum = mapper.todayOvertimeNum(getOvertimeQueryData(CrmEnum.CUSTOMER));
+        basePage.setExtraData(Collections.singletonMap("overtime",overtimeNum));
+        return basePage;
     }
 
     @Override
     public BasePage<Map<String, Object>> todayBusiness(CrmBackLogBO crmBackLogBO) {
-        setCrmBackLogBO(crmBackLogBO,CrmEnum.BUSINESS);
+        setCrmBackLogBO(crmBackLogBO, CrmEnum.BUSINESS);
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setLabel(CrmEnum.BUSINESS.getType());
         searchBO.setPage(crmBackLogBO.getPage());
         searchBO.setLimit(crmBackLogBO.getLimit());
         searchBO.setSearchList(crmBackLogBO.getData());
-        return crmBusinessService.queryPageList(searchBO);
+        BasePage<Map<String, Object>> basePage = crmBusinessService.queryPageList(searchBO);
+        if(basePage.getExtraData() != null && basePage.getExtraData() instanceof JSONObject){
+            Integer overtimeNum = mapper.todayOvertimeNum(getOvertimeQueryData(CrmEnum.BUSINESS));
+            ((JSONObject) basePage.getExtraData()).put("overtime",overtimeNum);
+        }
+        return basePage;
     }
 
-    private void setCrmBackLogBO(CrmBackLogBO crmBackLogBO,CrmEnum crmEnum){
+    private void setCrmBackLogBO(CrmBackLogBO crmBackLogBO, CrmEnum crmEnum) {
         Integer type = crmBackLogBO.getType();
         Integer isSub = crmBackLogBO.getIsSub();
         if (type == 1) {
-            CrmSearchBO.Search search = new CrmSearchBO.Search();
-            search.setName("nextTime");
-            search.setFormType("datetime");
-            search.setSearchEnum(CrmSearchBO.FieldSearchEnum.DATE_TIME);
-            Date date = new Date();
-            search.setValues(Arrays.asList(DateUtil.formatDateTime(DateUtil.beginOfDay(date)), DateUtil.formatDateTime(DateUtil.endOfDay(date))));
+            CrmSearchBO.Search search = new CrmSearchBO.Search("nextTime", "datetime", CrmSearchBO.FieldSearchEnum.RANGE);
+            search.setValues(Collections.singletonList("today"));
             crmBackLogBO.getData().add(search);
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("lastTime", "datetime", CrmSearchBO.FieldSearchEnum.SCRIPT, null).setScript(new Script(ScriptType.INLINE, "painless", "if (doc['lastTime'].size()==0) {return false} else {return doc['lastTime'].value.toInstant().toEpochMilli() < doc['nextTime'].value.toInstant().toEpochMilli()}", new HashMap<>())));
+            crmBackLogBO.getData().add(new CrmSearchBO.Search("lastTime", "datetime", CrmSearchBO.FieldSearchEnum.SCRIPT).setScript(new Script(ScriptType.INLINE, "painless", "if (doc['lastTime'].size()==0) {return false} else {return doc['lastTime'].value.toInstant().toEpochMilli() < doc['nextTime'].value.toInstant().toEpochMilli()}", new HashMap<>())));
         } else if (type == 2) {
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("nextTime", "datetime", CrmSearchBO.FieldSearchEnum.LT, Collections.singletonList(DateUtil.formatDateTime(DateUtil.beginOfDay(new Date())))));
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("lastTime", "datetime", CrmSearchBO.FieldSearchEnum.SCRIPT, null).setScript(new Script(ScriptType.INLINE, "painless", "if (doc['lastTime'].size()==0) {return false} else {return doc['lastTime'].value.toInstant().toEpochMilli() < doc['nextTime'].value.toInstant().toEpochMilli()}", new HashMap<>())));
+            crmBackLogBO.getData().add(new CrmSearchBO.Search("nextTime", "datetime", CrmSearchBO.FieldSearchEnum.LT, Collections.singletonList(DateUtil.date().toString())));
+            crmBackLogBO.getData().add(new CrmSearchBO.Search("lastTime", "datetime", CrmSearchBO.FieldSearchEnum.SCRIPT).setScript(new Script(ScriptType.INLINE, "painless", "if (doc['lastTime'].size()==0) {return false} else {return doc['lastTime'].value.toInstant().toEpochMilli() < doc['nextTime'].value.toInstant().toEpochMilli()}", new HashMap<>())));
         } else if (type == 3) {
-            CrmSearchBO.Search search = new CrmSearchBO.Search();
-            search.setName("lastTime");
-            search.setFormType("datetime");
-            search.setSearchEnum(CrmSearchBO.FieldSearchEnum.DATE_TIME);
-            Date date = new Date();
-            search.setValues(Arrays.asList(DateUtil.formatDateTime(DateUtil.beginOfDay(date)), DateUtil.formatDateTime(DateUtil.endOfDay(date))));
+            CrmSearchBO.Search search = new CrmSearchBO.Search("lastTime", "datetime", CrmSearchBO.FieldSearchEnum.RANGE);
+            search.setValues(Collections.singletonList("today"));
             crmBackLogBO.getData().add(search);
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("lastTime", "datetime", CrmSearchBO.FieldSearchEnum.SCRIPT, null).setScript(new Script(ScriptType.INLINE, "painless", "if (doc['lastTime'].size()==0) {return false} else {return doc['lastTime'].value.toInstant().toEpochMilli() <= doc['nextTime'].value.toInstant().toEpochMilli()}", new HashMap<>())));
+            crmBackLogBO.getData().add(new CrmSearchBO.Search("lastTime", "datetime", CrmSearchBO.FieldSearchEnum.SCRIPT).setScript(new Script(ScriptType.INLINE, "painless", "if (doc['lastTime'].size()==0) {return false} else {return doc['lastTime'].value.toInstant().toEpochMilli() <= doc['nextTime'].value.toInstant().toEpochMilli()}", new HashMap<>())));
         } else {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
         }
@@ -285,18 +318,28 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
         }
         if (type == 1 && isSub == 1) {
             CrmBackLogEnum model = CrmBackLogEnum.TODAY_CUSTOMER;
-            if (crmEnum.equals(CrmEnum.LEADS)){
+            if (crmEnum.equals(CrmEnum.LEADS)) {
                 model = CrmBackLogEnum.TODAY_LEADS;
-            }else if (crmEnum.equals(CrmEnum.BUSINESS)){
+            } else if (crmEnum.equals(CrmEnum.BUSINESS)) {
                 model = CrmBackLogEnum.TODAY_BUSINESS;
             }
             List<String> dealIdList = backLogDealService.queryTypeId(model.getType(), crmEnum.getType(), UserUtil.getUserId());
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.IS_NOT, dealIdList));
+            crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.IS_NOT, dealIdList));
         }
+    }
+
+    private Map<String, Object> getOvertimeQueryData(CrmEnum crmEnum) {
+        Map<String, Object> map = new HashMap<>(6);
+        map.put("table", crmEnum.getTable());
+        map.put("type", crmEnum.getType());
+        map.put("userId", UserUtil.getUserId());
+        map.put("model", CrmBackLogEnum.valueOf("TODAY_"+crmEnum.name()).getType());
+        return map;
     }
 
     /**
      * 待回访合同
+     *
      * @param crmBackLogBO bo
      * @return data
      */
@@ -339,19 +382,19 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
     public BasePage<Map<String, Object>> followLeads(CrmBackLogBO crmBackLogBO) {
         ICrmLeadsService crmLeadsService = ApplicationContextHolder.getBean(ICrmLeadsService.class);
         Integer type = crmBackLogBO.getType();
-
-        if (type == 1) {
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("followup", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("0")));
-        } else if (type == 2) {
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("followup", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
+        crmBackLogBO.getData().add(new CrmSearchBO.Search("followup", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList(Objects.equals(2,type)?"1":"0")));
+        List<String> ids;
+        if(Objects.equals(2,crmBackLogBO.getIsSub())) {
+            List<Long> data = adminService.queryChildUserId(UserUtil.getUserId()).getData();
+            ids = data.stream().map(Objects::toString).collect(Collectors.toList());
         } else {
-            throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
+            ids = Collections.singletonList(UserUtil.getUserId().toString());
         }
-        crmBackLogBO.getData().add(new CrmSearchBO.Search("ownerUserId", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList(UserUtil.getUserId().toString())));
+        crmBackLogBO.getData().add(new CrmSearchBO.Search("ownerUserId", "text", CrmSearchBO.FieldSearchEnum.IS, ids));
         crmBackLogBO.getData().add(new CrmSearchBO.Search("isReceive", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
         if (type == 1) {
             List<String> dealIdList = backLogDealService.queryTypeId(2, CrmEnum.LEADS.getType(), UserUtil.getUserId());
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.IS_NOT, dealIdList));
+            crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.IS_NOT, dealIdList));
         }
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setLabel(CrmEnum.LEADS.getType());
@@ -370,19 +413,20 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
     @Override
     public BasePage<Map<String, Object>> followCustomer(CrmBackLogBO crmBackLogBO) {
         Integer type = crmBackLogBO.getType();
-        if (type == 1) {
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("followup", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("0")));
-        } else if (type == 2) {
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("followup", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
+        crmBackLogBO.getData().add(new CrmSearchBO.Search("followup", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList(Objects.equals(2,type)?"1":"0")));
+        List<String> ids;
+        if(Objects.equals(2,crmBackLogBO.getIsSub())) {
+            List<Long> data = adminService.queryChildUserId(UserUtil.getUserId()).getData();
+            ids = data.stream().map(Objects::toString).collect(Collectors.toList());
         } else {
-            throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
+            ids = Collections.singletonList(UserUtil.getUserId().toString());
         }
-        crmBackLogBO.getData().add(new CrmSearchBO.Search("ownerUserId", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList(UserUtil.getUserId().toString())));
+        crmBackLogBO.getData().add(new CrmSearchBO.Search("ownerUserId", "text", CrmSearchBO.FieldSearchEnum.IS, ids));
         crmBackLogBO.getData().add(new CrmSearchBO.Search("isReceive", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
         crmBackLogBO.getData().add(new CrmSearchBO.Search("status", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
         if (type == 1) {
             List<String> dealIdList = backLogDealService.queryTypeId(2, CrmEnum.CUSTOMER.getType(), UserUtil.getUserId());
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.IS_NOT, dealIdList));
+            crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.IS_NOT, dealIdList));
         }
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setLabel(CrmEnum.CUSTOMER.getType());
@@ -433,11 +477,15 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
         List<Integer> idList = examineService.queryCrmExamineIdList(1, type).getData();
         if (CollUtil.isNotEmpty(idList)) {
             ids = idList.stream().map(String::valueOf).collect(Collectors.toList());
+            if (type == 1) {
+                List<String> dealIdList = backLogDealService.queryTypeId(5, crmEnum.getType(), UserUtil.getUserId());
+                ids.removeIf(dealIdList::contains);
+            }
         }
         if (ids.size() == 0) {
             return new BasePage<>();
         }
-        crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, ids));
+        crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, ids));
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setLabel(crmEnum.getType());
         searchBO.setPage(crmBackLogBO.getPage());
@@ -457,11 +505,15 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
         List<Integer> idList = examineService.queryCrmExamineIdList(2, type).getData();
         if (CollUtil.isNotEmpty(idList)) {
             ids = idList.stream().map(String::valueOf).collect(Collectors.toList());
+            if (type == 1) {
+                List<String> dealIdList = backLogDealService.queryTypeId(6, crmEnum.getType(), UserUtil.getUserId());
+                ids.removeIf(dealIdList::contains);
+            }
         }
         if (ids.size() == 0) {
             return new BasePage<>();
         }
-        crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, ids));
+        crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, ids));
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setLabel(crmEnum.getType());
         searchBO.setPage(crmBackLogBO.getPage());
@@ -481,11 +533,15 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
         List<Integer> idList = examineService.queryCrmExamineIdList(3, type).getData();
         if (CollUtil.isNotEmpty(idList)) {
             ids = idList.stream().map(String::valueOf).collect(Collectors.toList());
+            if (type == 1) {
+                List<String> dealIdList = backLogDealService.queryTypeId(10, crmEnum.getType(), UserUtil.getUserId());
+                ids.removeIf(dealIdList::contains);
+            }
         }
         if (ids.size() == 0) {
             return new BasePage<>();
         }
-        crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, ids));
+        crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, ids));
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setLabel(crmEnum.getType());
         searchBO.setPage(crmBackLogBO.getPage());
@@ -509,6 +565,8 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
         basePage.getList().forEach(record -> {
             record.setCustomerName(crmCustomerService.getCustomerName(record.getCustomerId()));
         });
+        Integer overtimeNum = mapper.remindReceivablesOvertimeNum(DateUtil.beginOfDay(new Date()), userId);
+        basePage.setExtraData(Collections.singletonMap("overtime",overtimeNum));
         return basePage;
     }
 
@@ -536,7 +594,7 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
         crmBackLogBO.getData().add(new CrmSearchBO.Search("checkStatus", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
         if (type == 1) {
             List<String> dealIdList = backLogDealService.queryTypeId(8, crmEnum.getType(), UserUtil.getUserId());
-            crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.IS_NOT, dealIdList));
+            crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.IS_NOT, dealIdList));
         }
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setLabel(crmEnum.getType());
@@ -624,17 +682,17 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
             case CHECK_CONTRACT:
                 crmType = 6;
                 dealIdList = backLogDealService.queryTypeId(model, crmType, userId);
-                idList = mapper.queryCheckContractId(userId);
+                idList = examineService.queryCrmExamineIdList(1, 1).getData();
                 break;
             case CHECK_RECEIVABLES:
                 crmType = 7;
                 dealIdList = backLogDealService.queryTypeId(model, crmType, userId);
-                idList = mapper.queryCheckReceivablesId(userId);
+                idList = examineService.queryCrmExamineIdList(2, 1).getData();
                 break;
             case CHECK_INVOICE:
                 crmType = 18;
                 dealIdList = backLogDealService.queryTypeId(model, crmType, userId);
-                idList = mapper.queryCheckInvoiceId(userId);
+                idList = examineService.queryCrmExamineIdList(3, 1).getData();
                 break;
             case REMIND_RECEIVABLES_PLAN:
                 crmType = 8;
@@ -801,10 +859,10 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
                     customerMap.put(customerId, r.getInteger("poolDay"));
                 });
             }
-            if (isSub == 1){
+            if (isSub == 1) {
                 List<CrmBackLogDeal> list = backLogDealService.lambdaQuery().select(CrmBackLogDeal::getTypeId)
                         .eq(CrmBackLogDeal::getModel, 4).eq(CrmBackLogDeal::getCrmType, 9).eq(CrmBackLogDeal::getCreateUserId, userId)
-                        .eq(CrmBackLogDeal::getPoolId,pool.getPoolId()).list();
+                        .eq(CrmBackLogDeal::getPoolId, pool.getPoolId()).list();
                 List<Integer> dealIdList = list.stream().map(CrmBackLogDeal::getTypeId).collect(Collectors.toList());
                 customerIdList.removeAll(dealIdList);
             }
@@ -825,7 +883,7 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
             return new BasePage<>();
         }
         List<String> collect = customerIdSet.stream().map(Objects::toString).collect(Collectors.toList());
-        crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect));
+        crmBackLogBO.getData().add(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, collect));
         CrmSearchBO searchBO = new CrmSearchBO();
         searchBO.setPage(crmBackLogBO.getPage());
         searchBO.setLimit(crmBackLogBO.getLimit());

@@ -32,7 +32,7 @@
                 t.record_id
         )
         <if test="data.categoryId != null">
-            AND r.examine_id = #{data.categoryId}
+            AND r.examine_id in (SELECT examine_id FROM wk_examine WHERE examine_init_id=#{data.categoryId})
         </if>
         GROUP BY
             r.type_id
@@ -79,7 +79,7 @@
                 t.record_id
         )
         <if test="data.categoryId != null">
-            AND r.examine_id = #{data.categoryId}
+            AND r.examine_id in (SELECT examine_id FROM wk_examine WHERE examine_init_id=#{data.categoryId})
         </if>
         <choose>
             <when test="data.status == 1">

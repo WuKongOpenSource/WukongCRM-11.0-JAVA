@@ -15,6 +15,7 @@ import lombok.experimental.Accessors;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -47,10 +48,11 @@ public class CrmField implements Serializable {
     @ApiModelProperty(value = "字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划")
     private Integer type;
 
-    @ApiModelProperty(value = "标签 1 线索 2 客户 3 联系人 4 产品 5 商机 6 合同 7回款8.回款计划")
+    @ApiModelProperty(value = "标签 1 线索 2 客户 3 联系人 4 产品 5 商机 6 合同 7回款8.回款计划 18 发票")
     private Integer label;
 
-    @ApiModelProperty(value = "字段说明")
+    @ApiModelProperty(value = "字段说明  特别用途 - 明细表格：添加字段说明 | 单选/多选： 标识开启逻辑表单")
+    @TableField(fill = FieldFill.UPDATE)
     private String remark;
 
     @ApiModelProperty(value = "输入提示")
@@ -94,7 +96,7 @@ public class CrmField implements Serializable {
     @ApiModelProperty(value = "样式百分比  1 100%  2 75%  3 50%  4 25%")
     private Integer stylePercent;
 
-    @ApiModelProperty(value = "精度，允许的最大小数位/地图精度")
+    @ApiModelProperty(value = "精度，允许的最大小数位/地图精度/明细表格、逻辑表单展示方式")
     @TableField(fill = FieldFill.UPDATE)
     private Integer precisions;
 
@@ -108,6 +110,9 @@ public class CrmField implements Serializable {
     @ApiModelProperty(value = "限制的最小数值")
     @TableField(fill = FieldFill.UPDATE)
     private String minNumRestrict;
+
+    @ApiModelProperty(value = "表单辅助id，前端生成")
+    private Integer formAssistId;
 
     @TableField(exist = false)
     @ApiModelProperty(value = "类型")
@@ -137,6 +142,13 @@ public class CrmField implements Serializable {
     @JsonIgnore
     private Integer yAxis;
 
+    @TableField(exist = false)
+    @ApiModelProperty(value = "逻辑表单数据")
+    private Map<String, Object> optionsData;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "扩展字段")
+    private List<CrmFieldExtend> fieldExtendList;
 
     public void setFormPosition(String formPosition) {
         this.formPosition = formPosition;

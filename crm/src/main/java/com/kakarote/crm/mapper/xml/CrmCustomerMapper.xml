@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
 <mapper namespace="com.kakarote.crm.mapper.CrmCustomerMapper">
-    <update id="deleteMember">
-        update wk_crm_customer set rw_user_id = replace(rw_user_id,#{memberId},','),ro_user_id = replace(ro_user_id,#{memberId},',') where customer_id = #{id}
-    </update>
     <select id="queryById" resultType="com.kakarote.crm.common.CrmModel">
         select a.*,(if(a.owner_user_id is null,1,0)) as is_pool,
                (select count(1) from wk_crm_customer_user_star where customer_id = a.customer_id and user_id = #{userId}) as star
@@ -12,7 +9,7 @@
     </select>
 
     <select id="queryIsRoUser" resultType="java.lang.Integer">
-        select count(*) from wk_crm_customer where find_in_set(#{userId},ro_user_id) and customer_id =#{id} and owner_user_id is not null
+        select count(*) from wk_crm_team_members where type='2' and power='1' and type_id =#{id} and user_id = #{userId}
     </select>
 
     <select id="queryOutDays" resultType="java.lang.Integer">

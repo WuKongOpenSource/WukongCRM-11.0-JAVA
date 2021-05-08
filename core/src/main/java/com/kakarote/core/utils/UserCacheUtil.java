@@ -146,15 +146,6 @@ public class UserCacheUtil {
     }
 
     /**
-     * 查询企业所有用户
-     *
-     * @return data
-     */
-    public static List<Long> queryUserIdList() {
-        return ME.adminService.queryUserList().getData();
-    }
-
-    /**
      * 查询部门下属部门
      *
      * @param deptId 上级ID

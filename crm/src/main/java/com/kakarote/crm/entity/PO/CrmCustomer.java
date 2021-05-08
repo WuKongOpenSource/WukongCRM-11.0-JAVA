@@ -73,12 +73,6 @@ public class CrmCustomer implements Serializable {
     @ApiModelProperty(value = "负责人ID")
     private Long ownerUserId;
 
-    @ApiModelProperty(value = "只读权限")
-    private String roUserId;
-
-    @ApiModelProperty(value = "读写权限")
-    private String rwUserId;
-
     @ApiModelProperty(value = "省市区")
     private String address;
 

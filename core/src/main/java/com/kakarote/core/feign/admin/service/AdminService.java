@@ -67,11 +67,11 @@ public interface AdminService {
 
     /**
      * 查询企业所有用户
-     *
+     * @param type 1或者不传为全部，2代表只查询状态为正常的员工
      * @return data
      */
     @PostMapping(value = "/adminUser/queryAllUserList")
-    public Result<List<Long>> queryUserList();
+    public Result<List<Long>> queryUserList(@RequestParam(value = "type",required = false) Integer type);
 
     /**
      * 根据名称查询系统配置

@@ -164,6 +164,7 @@ public class OaExamineController {
     public void export(@RequestBody ExamineExportBO examineExportBO,HttpServletResponse response) {
         Integer categoryId = examineExportBO.getCategoryId();
         ExamineInfoVo examineInfoVo = examineService.queryExamineById(Long.valueOf(categoryId)).getData();
+        examineExportBO.setCategoryId(examineInfoVo.getExamineInitId().intValue());
         Integer type = examineInfoVo.getOaType();
         List<OaExamineField> fieldList = new ArrayList<>();
         if (type == 0) {

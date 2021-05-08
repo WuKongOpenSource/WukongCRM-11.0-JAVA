@@ -305,7 +305,7 @@ public class EsSysLogServiceImpl implements ISysLogService {
             }
         }
         if (querySysLogBO.getStartTime() != null && querySysLogBO.getEndTime() != null) {
-            RangeQueryBuilder createTimeQuery = QueryBuilders.rangeQuery("createTime")
+            RangeQueryBuilder createTimeQuery = QueryBuilders.rangeQuery(querySysLogBO.getType() == null ? "loginTime" : "createTime")
                     .gte(querySysLogBO.getStartTime())
                     .lte(querySysLogBO.getEndTime());
             boolQueryBuilder.filter(createTimeQuery);

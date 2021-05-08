@@ -8,6 +8,8 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.extra.servlet.ServletUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.util.TypeUtils;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.admin.common.AdminCodeEnum;
 import com.kakarote.admin.common.log.AdminUserLog;
 import com.kakarote.admin.entity.BO.*;
@@ -93,9 +95,14 @@ public class AdminUserController {
 
     @ApiExplain("通过条件分页查询员工列表")
     @PostMapping("/queryAllUserList")
-    public Result<List<Long>> queryAllUserList() {
-        List<AdminUserVO> adminUserBOList = adminUserService.queryUserList(null).getList();
-        return R.ok(adminUserBOList.stream().map(AdminUserVO::getUserId).collect(Collectors.toList()));
+    public Result<List<Long>> queryAllUserList(@RequestParam(value = "type",required = false) Integer type) {
+        LambdaQueryWrapper<AdminUser> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(AdminUser::getUserId);
+        /* type=2代表不查询禁用员工 */
+        if (Objects.equals(2,type)) {
+            queryWrapper.ne(AdminUser::getStatus,0);
+        }
+        return R.ok(adminUserService.listObjs(queryWrapper, TypeUtils::castToLong));
     }
 
     @ApiExplain("通过条件分页查询员工列表")

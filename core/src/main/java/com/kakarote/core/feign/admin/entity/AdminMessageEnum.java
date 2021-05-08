@@ -59,6 +59,19 @@ public enum AdminMessageEnum {
     HRM_EMPLOYEE_SALARY_PASS(84, 8, "人资薪资通过通知"),
     HRM_EMPLOYEE_SALARY_REJECT(85, 8, "人资薪资拒绝通知"),
     HRM_EMPLOYEE_SALARY_EXAMINE(86, 8, "人资薪资待审核提醒"),
+    HRM_EMPLOYEE_APPRAISAL_WRITE(87,8,"人资员工绩效目标待填写通知"),
+    HRM_EMPLOYEE_APPRAISAL_CONFIRMATION(88,8,"人资员工绩效目标待确认通知"),
+    HRM_EMPLOYEE_APPRAISAL_ASSESSED(89,8,"人资员工绩效目标结果待评定通知"),
+    HRM_EMPLOYEE_APPRAISAL_CONFIRMED(90,8,"人资员工绩效目标结果待确认通知"),
+    HRM_EMPLOYEE_APPRAISAL_COMPLETE(91,8,"人资员工绩效考核已完成通知"),
+    HRM_EMPLOYEE_APPRAISAL_WRITE_REJECT(92,8,"人资员工绩效目标驳回通知"),
+    HRM_EMPLOYEE_APPRAISAL_ASSESSED_REJECT(93,8,"人资员工绩效评定驳回通知"),
+    HRM_APPRAISAL_WRITE_COMPLETE(94,8,"人资员工绩效已全部完成填写通知"),
+    HRM_APPRAISAL_ASSESSED_COMPLETE(95,8,"人资员工绩效已全部完成评定通知"),
+    HRM_APPRAISAL_ARCHIVE(96,8,"人资员工绩效及时归档通知"),
+    HRM_EMPLOYEE_OPEN(97,8,"人力资源员工端开通通知"),
+    HRM_EMPLOYEE_INSURANCE(98,8,"人力资源员工社保通知"),
+    HRM_INTERVIEW_ARRANGEMENTS(99,8,"人力资源面试官面试安排通知"),
     //JXC
     JXC_PURCHASE_EXAMINE(53,9,"采购订单待审核审批提醒"),
     JXC_PURCHASE_REJECT(54,9,"采购订单拒绝通知"),
@@ -83,7 +96,14 @@ public enum AdminMessageEnum {
     JXC_INVENTORY_PASS(73,9,"盘点通过通知"),
     JXC_ALLOCATION_EXAMINE(74,9,"调拨待审核审批提醒"),
     JXC_ALLOCATION_REJECT(75,9,"调拨拒绝通知"),
-    JXC_ALLOCATION_PASS(76,9,"调拨通过通知")
+    JXC_ALLOCATION_PASS(76,9,"调拨通过通知"),
+    OA_LOG_FAVOUR(77,2,"日志点赞通知"),
+    CRM_CONTACTS_USER(120,6,"联系人团队成员通知"),
+    CRM_RECEIVABLES_USER(121,6,"回款团队成员通知"),
+    CRM_CONTACTS_TEAM_EXIT(122, 6, "联系人团队成员退出提醒"),
+    CRM_RECEIVABLES_TEAM_EXIT(123, 6, "回款团队成员退出提醒"),
+    CRM_CONTACTS_REMOVE_TEAM(124, 6, "移除联系人团队成员提醒"),
+    CRM_RECEIVABLES_REMOVE_TEAM(125, 6, "移除回款团队成员提醒"),
     ;
 
     AdminMessageEnum(Integer type, Integer label, String remarks){

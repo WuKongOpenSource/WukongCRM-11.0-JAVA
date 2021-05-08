@@ -1,6 +1,7 @@
 package com.kakarote.admin.controller;
 
 
+import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.StrUtil;
 import com.kakarote.admin.entity.BO.AdminDeleteByBatchIdBO;
 import com.kakarote.admin.entity.BO.RenameFileBO;
@@ -100,17 +101,13 @@ public class AdminFileController {
 
     @RequestMapping(value = "/deleteById/{fileId}", method = RequestMethod.POST)
     @ApiOperation(value = "通过ID删除文件", httpMethod = "POST")
-    public Result deleteById(@NotNull @PathVariable @ApiParam("文件ID") Object fileId) {
-        if (fileId instanceof Number) {
-            adminFileService.deleteById(((Number) fileId).longValue());
-        } else if (fileId instanceof String) {
-            if(((String) fileId).length() == 19){
-                adminFileService.deleteById(Long.valueOf(fileId.toString()));
-            }else {
-                AdminDeleteByBatchIdBO bo = new AdminDeleteByBatchIdBO();
-                bo.setBatchId((String) fileId);
-                adminFileService.deleteByBatchId(bo);
-            }
+    public Result deleteById(@NotNull @PathVariable @ApiParam("文件ID") String fileId) {
+        if (NumberUtil.isLong(fileId)) {
+            adminFileService.deleteById(Long.parseLong(fileId));
+        } else {
+            AdminDeleteByBatchIdBO bo = new AdminDeleteByBatchIdBO();
+            bo.setBatchId(fileId);
+            adminFileService.deleteByBatchId(bo);
         }
 
         return Result.ok();

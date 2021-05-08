@@ -138,13 +138,6 @@ public class CrmFieldController {
         return R.ok();
     }
 
-    @PostMapping(value = "/changeEsIndex")
-    @ApiExplain("更新es索引")
-    public Result changeEsIndex(@RequestParam("labels") List<Integer> labels) {
-        crmFieldService.changeEsIndex(labels);
-        return Result.ok();
-    }
-
     @PostMapping("/queryExamineField")
     @ApiExplain("查询审批模块可设置字段")
     public Result<List<ExamineField>> queryExamineField(@RequestParam("label") Integer label) {

@@ -1,10 +1,12 @@
 package com.kakarote.bi.mapper;
 
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.utils.BiTimeUtil;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +23,7 @@ public interface BiEmployeeMapper {
 
     public JSONObject totalContract(BiTimeUtil.BiTimeEntity entity);
 
-    public JSONObject totalInvoice(@Param("year") Integer year, @Param("userIds") List<Long> userIds);
+    public JSONObject totalInvoice(@Param("startTime") Date startTime,@Param("endTime") Date endTime, @Param("userIds") List<Long> userIds);
 
-    public List<JSONObject> invoiceStatsTable(Map<String, Object> map);
+    public JSONObject invoiceStatsTable(Map<String, Object> map);
 }

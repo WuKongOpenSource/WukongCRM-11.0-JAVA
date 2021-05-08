@@ -16,6 +16,7 @@ import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.crm.entity.SimpleCrmEntity;
 import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
@@ -29,7 +30,10 @@ import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.CrmBusinessSaveBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
-import com.kakarote.crm.entity.PO.*;
+import com.kakarote.crm.entity.PO.CrmContract;
+import com.kakarote.crm.entity.PO.CrmField;
+import com.kakarote.crm.entity.PO.CrmReturnVisit;
+import com.kakarote.crm.entity.PO.CrmReturnVisitData;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmReturnVisitMapper;
 import com.kakarote.crm.service.*;
@@ -90,11 +94,25 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
 
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
-        BasePage<Map<String, Object>> basePage = queryList(search);
+        BasePage<Map<String, Object>> basePage = queryList(search,false);
         for (Map<String, Object> map : basePage.getList()) {
             map.put("visitId",map.remove("return_visitId"));
         }
         return basePage;
+    }
+
+    @Override
+    public List<SimpleCrmEntity> querySimpleEntity(List<Integer> ids) {
+        if (ids.size() == 0) {
+            return new ArrayList<>();
+        }
+        List<CrmReturnVisit> list = lambdaQuery().select(CrmReturnVisit::getVisitId,CrmReturnVisit::getVisitNumber).in(CrmReturnVisit::getVisitId, ids).list();
+        return list.stream().map(crmReturnVisit -> {
+            SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
+            simpleCrmEntity.setId(crmReturnVisit.getVisitId());
+            simpleCrmEntity.setName(crmReturnVisit.getVisitNumber());
+            return simpleCrmEntity;
+        }).collect(Collectors.toList());
     }
 
     @Override
@@ -175,6 +193,10 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
 
     @Override
     public List<CrmModelFiledVO> queryField(Integer id) {
+        return queryField(id,false);
+    }
+
+    private List<CrmModelFiledVO> queryField(Integer id,boolean appendInformation) {
         CrmModel crmModel = this.supplementCrmModel(id);
         List<CrmModelFiledVO> crmModelFiledVOS = crmFieldService.queryField(crmModel);
         if (id == null) {
@@ -187,7 +209,10 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
                 }
             });
         }
-
+        if(appendInformation){
+            List<CrmModelFiledVO> modelFiledVOS = appendInformation(crmModel);
+            crmModelFiledVOS.addAll(modelFiledVOS);
+        }
         return crmModelFiledVOS;
     }
 
@@ -237,32 +262,7 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
 
     @Override
     public List<CrmModelFiledVO> information(Integer visitId) {
-        CrmModel crmModel = queryById(visitId);
-        List<String> keyList = Arrays.asList("visitNumber", "visitTime");
-        List<String> systemFieldList = Arrays.asList("创建人", "创建时间", "更新时间");
-        List<CrmModelFiledVO> crmModelFiledVOS = queryInformation(crmModel, keyList);
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("ownerUserId").setName("回访人").setFieldType(1).setFormType("single_user").setValue(new JSONObject().fluentPut("userId", crmModel.get("userId")).fluentPut("realname", crmModel.get("ownerUserName"))));
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("customerId").setName("客户名称").setFieldType(1).setFormType("customer").setValue(new JSONObject().fluentPut("customerId", crmModel.get("customerId")).fluentPut("customerName", crmModel.get("customerName"))));
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("contactsId").setName("联系人").setFieldType(1).setFormType("contacts").setValue(new JSONObject().fluentPut("contactsId", crmModel.get("contactsId")).fluentPut("contactsName", crmModel.get("contactsName"))));
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("contractId").setName("合同编号").setFieldType(1).setFormType("contract").setValue(new JSONObject().fluentPut("contractId", crmModel.get("contractId")).fluentPut("contractNum", crmModel.get("contractNum"))));
-        List<CrmModelFiledVO> collect = crmModelFiledVOS.stream().sorted(Comparator.comparingInt(r -> -r.getFieldType())).peek(r -> {
-            r.setFieldType(null);
-            r.setSetting(null);
-            r.setType(null);
-            if (systemFieldList.contains(r.getName())) {
-                r.setSysInformation(1);
-            } else {
-                r.setSysInformation(0);
-            }
-        }).collect(Collectors.toList());
-        ICrmRoleFieldService crmRoleFieldService = ApplicationContextHolder.getBean(ICrmRoleFieldService.class);
-        List<CrmRoleField> roleFieldList = crmRoleFieldService.queryUserFieldAuth(crmModel.getLabel(), 1);
-        Map<String, Integer> levelMap = new HashMap<>();
-        roleFieldList.forEach(crmRoleField -> {
-            levelMap.put(StrUtil.toCamelCase(crmRoleField.getFieldName()), crmRoleField.getAuthLevel());
-        });
-        collect.removeIf(field -> (!UserUtil.isAdmin() && Objects.equals(1, levelMap.get(field.getFieldName()))));
-        return collect;
+        return queryField(visitId,true);
     }
 
     @Override
@@ -365,6 +365,7 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
         Integer visitId = updateInformationBO.getId();
         updateInformationBO.getList().forEach(record -> {
             CrmReturnVisit oldReturnVisit = getById(updateInformationBO.getId());
+            uniqueFieldIsAbnormal(record.getString("name"),record.getInteger("fieldId"),record.getString("value"),batchId);
             Map<String, Object> oldReturnVisitMap = BeanUtil.beanToMap(oldReturnVisit);
             if (record.getInteger("fieldType") == 1) {
                 Map<String, Object> crmRetuenVisitMap = new HashMap<>(oldReturnVisitMap);
@@ -373,26 +374,20 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
                 actionRecordUtil.updateRecord(oldReturnVisitMap, crmRetuenVisitMap, CrmEnum.RETURN_VISIT, crmReturnVisit.getVisitNumber(), crmReturnVisit.getVisitId());
                 update().set(StrUtil.toUnderlineCase(record.getString("fieldName")), record.get("value")).eq("visit_id", updateInformationBO.getId()).update();
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
-                CrmReturnVisitData returnVisitData = crmReturnVisitDataService.lambdaQuery().select(CrmReturnVisitData::getValue).eq(CrmReturnVisitData::getFieldId, record.getInteger("fieldId"))
+                CrmReturnVisitData returnVisitData = crmReturnVisitDataService.lambdaQuery().select(CrmReturnVisitData::getValue,CrmReturnVisitData::getId).eq(CrmReturnVisitData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmReturnVisitData::getBatchId, batchId).one();
                 String value = returnVisitData != null ? returnVisitData.getValue() : null;
-                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
-                actionRecordUtil.publicContentRecord(CrmEnum.RETURN_VISIT, BehaviorEnum.UPDATE, visitId, oldReturnVisit.getVisitNumber(), detail);
+                actionRecordUtil.publicContentRecord(CrmEnum.RETURN_VISIT, BehaviorEnum.UPDATE, visitId, oldReturnVisit.getVisitNumber(), record,value);
                 String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
-                boolean bol = crmReturnVisitDataService.lambdaUpdate()
-                        .set(CrmReturnVisitData::getName, record.getString("fieldName"))
-                        .set(CrmReturnVisitData::getValue, newValue)
-                        .eq(CrmReturnVisitData::getFieldId, record.getInteger("fieldId"))
-                        .eq(CrmReturnVisitData::getBatchId, batchId).update();
-                if (!bol) {
-                    CrmReturnVisitData crmReturnVisitData = new CrmReturnVisitData();
-                    crmReturnVisitData.setFieldId(record.getInteger("fieldId"));
-                    crmReturnVisitData.setName(record.getString("fieldName"));
-                    crmReturnVisitData.setValue(newValue);
-                    crmReturnVisitData.setCreateTime(new Date());
-                    crmReturnVisitData.setBatchId(batchId);
-                    crmReturnVisitDataService.save(crmReturnVisitData);
-                }
+                CrmReturnVisitData crmReturnVisitData = new CrmReturnVisitData();
+                crmReturnVisitData.setId(returnVisitData != null ? returnVisitData.getId() : null);
+                crmReturnVisitData.setFieldId(record.getInteger("fieldId"));
+                crmReturnVisitData.setName(record.getString("fieldName"));
+                crmReturnVisitData.setValue(newValue);
+                crmReturnVisitData.setCreateTime(new Date());
+                crmReturnVisitData.setBatchId(batchId);
+                crmReturnVisitDataService.saveOrUpdate(crmReturnVisitData);
+
             }
             updateField(record, visitId);
         });

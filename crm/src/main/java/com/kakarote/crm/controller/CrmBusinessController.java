@@ -27,6 +27,7 @@ import com.kakarote.crm.entity.VO.CrmMembersSelectVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.service.ICrmBusinessService;
 import com.kakarote.crm.service.ICrmBusinessTypeService;
+import com.kakarote.crm.service.ICrmTeamMembersService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -58,6 +59,9 @@ public class CrmBusinessController {
     @Autowired
     private ICrmBusinessTypeService crmBusinessTypeService;
 
+    @Autowired
+    private ICrmTeamMembersService teamMembersService;
+
     @PostMapping("/queryPageList")
     @ApiOperation("查询列表页数据")
     public Result<BasePage<Map<String, Object>>> queryPageList(@RequestBody CrmSearchBO search) {
@@ -68,7 +72,7 @@ public class CrmBusinessController {
 
     @PostMapping("/add")
     @ApiOperation("保存数据")
-    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity[businessName]",detail = "'新增了线索:' + #crmModel.entity[businessName]")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity[ businessName]",detail = "'新增了线索:' + #crmModel.entity[businessName]")
     public Result add(@RequestBody CrmBusinessSaveBO crmModel) {
         crmBusinessService.addOrUpdate(crmModel);
         return R.ok();
@@ -156,7 +160,7 @@ public class CrmBusinessController {
     @PostMapping("/changeOwnerUser")
     @ApiOperation("修改商机负责人")
     @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
-    public Result changeOwnerUser(@RequestBody CrmBusinessChangOwnerUserBO crmChangeOwnerUserBO) {
+    public Result changeOwnerUser(@RequestBody CrmChangeOwnerUserBO crmChangeOwnerUserBO) {
         crmBusinessService.changeOwnerUser(crmChangeOwnerUserBO);
         return R.ok();
     }
@@ -183,11 +187,12 @@ public class CrmBusinessController {
     @PostMapping("/getMembers/{businessId}")
     @ApiOperation("获取团队成员")
     public Result<List<CrmMembersSelectVO>> getMembers(@PathVariable("businessId") @ApiParam("商机ID") Integer businessId) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.BUSINESS, businessId,CrmAuthEnum.READ);
-        if (auth) {
-            throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+        CrmEnum crmEnum = CrmEnum.BUSINESS;
+        CrmBusiness business = crmBusinessService.getById(businessId);
+        if (business == null) {
+            throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED, crmEnum.getRemarks());
         }
-        List<CrmMembersSelectVO> members = crmBusinessService.getMembers(businessId);
+        List<CrmMembersSelectVO> members = teamMembersService.getMembers(crmEnum,businessId,business.getOwnerUserId());
         return R.ok(members);
     }
 
@@ -195,7 +200,7 @@ public class CrmBusinessController {
     @ApiOperation("新增团队成员")
     @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result addMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
-        crmBusinessService.addMember(crmMemberSaveBO);
+        teamMembersService.addMember(CrmEnum.BUSINESS,crmMemberSaveBO);
         return R.ok();
     }
 
@@ -203,7 +208,7 @@ public class CrmBusinessController {
     @ApiOperation("新增团队成员")
     @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result updateMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
-        crmBusinessService.addMember(crmMemberSaveBO);
+        teamMembersService.addMember(CrmEnum.BUSINESS,crmMemberSaveBO);
         return R.ok();
     }
 
@@ -211,7 +216,7 @@ public class CrmBusinessController {
     @ApiOperation("删除团队成员")
     @SysLogHandler
     public Result deleteMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
-        crmBusinessService.deleteMember(crmMemberSaveBO);
+        teamMembersService.deleteMember(CrmEnum.BUSINESS,crmMemberSaveBO);
         return R.ok();
     }
 
@@ -219,7 +224,7 @@ public class CrmBusinessController {
     @ApiOperation("删除团队成员")
     @SysLogHandler
     public Result exitTeam(@PathVariable("businessId") @ApiParam("商机ID") Integer businessId) {
-        crmBusinessService.exitTeam(businessId);
+        teamMembersService.exitTeam(CrmEnum.BUSINESS,businessId);
         return R.ok();
     }
 

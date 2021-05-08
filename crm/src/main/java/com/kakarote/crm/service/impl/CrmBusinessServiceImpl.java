@@ -12,14 +12,11 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.kakarote.core.common.Const;
 import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
-import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
-import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.feign.crm.entity.QueryEventCrmPageBO;
@@ -40,7 +37,10 @@ import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.*;
-import com.kakarote.crm.entity.VO.*;
+import com.kakarote.crm.entity.VO.CrmFieldSortVO;
+import com.kakarote.crm.entity.VO.CrmInfoNumVO;
+import com.kakarote.crm.entity.VO.CrmListBusinessStatusVO;
+import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmBusinessMapper;
 import com.kakarote.crm.service.*;
 import lombok.extern.slf4j.Slf4j;
@@ -150,11 +150,10 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         filedList.add(new CrmModelFiledVO("receiveTime", FieldEnum.DATETIME, 1));
         filedList.add(new CrmModelFiledVO("nextTime", FieldEnum.DATETIME, 1));
         filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-        filedList.add(new CrmModelFiledVO("roUserId", FieldEnum.CHECKBOX, 1));
-        filedList.add(new CrmModelFiledVO("rwUserId", FieldEnum.CHECKBOX, 1));
         filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
         filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
         filedList.add(new CrmModelFiledVO("status", FieldEnum.TEXT, 1));
+        filedList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, 0));
         return filedList;
     }
 
@@ -166,6 +165,10 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
      */
     @Override
     public List<CrmModelFiledVO> queryField(Integer id) {
+        return queryField(id,false);
+    }
+
+    private List<CrmModelFiledVO> queryField(Integer id,boolean appendInformation){
         CrmModel crmModel = queryById(id);
         if (id != null) {
             List<JSONObject> customerList = new ArrayList<>();
@@ -188,6 +191,10 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         JSONObject object = new JSONObject();
         object.fluentPut("discountRate", crmModel.get("discountRate")).fluentPut("product", crmBusinessProductService.queryList(id)).fluentPut("totalPrice", crmModel.get("totalPrice"));
         crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("product").setName("产品").setValue(object).setFormType("product").setSetting(new ArrayList<>()).setIsNull(0).setFieldType(1));
+        if(appendInformation){
+            List<CrmModelFiledVO> modelFiledVOS = appendInformation(crmModel);
+            crmModelFiledVOS.addAll(modelFiledVOS);
+        }
         return crmModelFiledVOS;
     }
 
@@ -214,7 +221,6 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
             }
         }
         CrmModelFiledVO modelFiledVO = new CrmModelFiledVO().setFieldName("type_id").setName("商机状态组").setValue(crmModel.get("type_id")).setFormType("business_type").setSetting(new ArrayList<>()).setIsNull(1).setFieldType(1).setValue(crmModel.get("typeId")).setAuthLevel(3);
-//        crmModelFiledVOS.add(ListUtil.toList(modelFiledVO));
         Object statusId = crmModel.get("statusId");
         if(!Objects.equals(0,crmModel.get("isEnd"))){
             statusId = crmModel.get("isEnd");
@@ -248,13 +254,21 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
      */
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
-        BasePage<Map<String, Object>> basePage = queryList(search);
+        BasePage<Map<String, Object>> basePage = queryList(search,false);
         Long userId = UserUtil.getUserId();
         List<Integer> starIds = crmBusinessUserStarService.starList(userId);
         basePage.getList().forEach(map -> {
             map.put("star", starIds.contains((Integer)map.get("businessId"))?1:0);
-            CrmListBusinessStatusVO crmListBusinessStatusVO = businessTypeService.queryListBusinessStatus(TypeUtils.castToInt(map.get("typeId")), TypeUtils.castToInt(map.get("statusId")), (Integer) map.get("isEnd"));
+            Integer isEnd = TypeUtils.castToInt(map.get("isEnd"));
+            CrmListBusinessStatusVO crmListBusinessStatusVO = businessTypeService.queryListBusinessStatus(TypeUtils.castToInt(map.get("typeId")), TypeUtils.castToInt(map.get("statusId")), isEnd);
             map.put("businessStatusCount",crmListBusinessStatusVO);
+            if(Objects.equals(1,isEnd)) {
+                map.put("statusName","赢单");
+            } else if(Objects.equals(2,isEnd)) {
+                map.put("statusName","输单");
+            } else if(Objects.equals(3,isEnd)) {
+                map.put("statusName","无效");
+            }
         });
         SearchRequest searchRequest = new SearchRequest(getIndex());
         searchRequest.types(getDocType());
@@ -315,11 +329,14 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         crmBusinessDataService.saveData(crmModel.getField(), batchId);
         if (crmBusiness.getBusinessId() != null) {
             crmBusiness.setUpdateTime(DateUtil.date());
-            /*
+            CrmBusiness oldBusiness = getById(crmBusiness.getBusinessId());
+            if(Objects.equals(crmBusiness.getTypeId(),oldBusiness.getTypeId())){
+               /*
                 不修改商机阶段
-             */
-            crmBusiness.setStatusId(null);
-            actionRecordUtil.updateRecord(BeanUtil.beanToMap(getById(crmBusiness.getBusinessId())), BeanUtil.beanToMap(crmBusiness), CrmEnum.BUSINESS, crmBusiness.getBusinessName(), crmBusiness.getBusinessId());
+                */
+                crmBusiness.setStatusId(null);
+            }
+            actionRecordUtil.updateRecord(BeanUtil.beanToMap(oldBusiness), BeanUtil.beanToMap(crmBusiness), CrmEnum.BUSINESS, crmBusiness.getBusinessName(), crmBusiness.getBusinessId());
             updateById(crmBusiness);
             crmBusinessProductService.deleteByBusinessId(crmBusiness.getBusinessId());
             crmBusiness = getById(crmBusiness.getBusinessId());
@@ -329,9 +346,8 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
             crmBusiness.setUpdateTime(DateUtil.date());
             crmBusiness.setCreateUserId(UserUtil.getUserId());
             crmBusiness.setOwnerUserId(UserUtil.getUserId());
+            crmBusiness.setIsEnd(0);
             crmBusiness.setBatchId(batchId);
-            crmBusiness.setRwUserId(Const.SEPARATOR);
-            crmBusiness.setRoUserId(Const.SEPARATOR);
             save(crmBusiness);
             if (crmModel.getContactsId() != null) {
                 crmContactsBusinessService.save(crmBusiness.getBusinessId(), crmModel.getContactsId());
@@ -425,46 +441,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
      */
     @Override
     public List<CrmModelFiledVO> information(Integer businessId) {
-        CrmModel crmModel = queryById(businessId);
-        List<String> keyList = Arrays.asList("businessName", "dealDate", "money", "remark");
-        List<String> systemFieldList = Arrays.asList("创建人", "创建时间", "更新时间", "下次联系时间", "最后跟进时间", "已收款金额", "未收款金额");
-        List<CrmModelFiledVO> crmModelFiledVOS = queryInformation(crmModel, keyList);
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("statusName").setName("商机阶段").setValue(new JSONObject().fluentPut("statusId", crmModel.get("statusId")).fluentPut("statusName", crmModel.get("statusName"))).setFormType("statusName").setFieldType(1));
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("typeName").setName("商机状态组").setValue(new JSONObject().fluentPut("typeId", crmModel.get("typeId")).fluentPut("typeName", crmModel.get("typeName"))).setFormType("typeName").setFieldType(1));
-        crmModelFiledVOS.add(new CrmModelFiledVO().setFieldName("customerId").setName("客户名称").setValue(new JSONObject().fluentPut("customerId", crmModel.get("customerId")).fluentPut("customerName", crmModel.get("customerName"))).setFormType("customer").setFieldType(1));
-        List<CrmModelFiledVO> filedVOS = crmModelFiledVOS.stream().sorted(Comparator.comparingInt(r -> -r.getFieldType())).peek(r -> {
-            r.setFieldType(null);
-            r.setSetting(null);
-            r.setType(null);
-            if("statusName".equals(r.getFieldName()) && !Objects.equals(0,crmModel.get("isEnd"))){
-                JSONObject value = (JSONObject) r.getValue();
-                value.put("statusId",crmModel.get("isEnd"));
-                String statusName;
-                if(Objects.equals(1,crmModel.get("isEnd"))){
-                    statusName = "赢单";
-                } else if(Objects.equals(2,crmModel.get("isEnd"))){
-                    statusName = "输单";
-                } else if(Objects.equals(3,crmModel.get("isEnd"))){
-                    statusName = "无效";
-                } else {
-                    statusName = "其他";
-                }
-                value.put("statusName",statusName);
-            }
-            if (systemFieldList.contains(r.getName())) {
-                r.setSysInformation(1);
-            } else {
-                r.setSysInformation(0);
-            }
-        }).collect(Collectors.toList());
-        ICrmRoleFieldService crmRoleFieldService = ApplicationContextHolder.getBean(ICrmRoleFieldService.class);
-        List<CrmRoleField> roleFieldList = crmRoleFieldService.queryUserFieldAuth(crmModel.getLabel(), 1);
-        Map<String, Integer> levelMap = new HashMap<>();
-        roleFieldList.forEach(crmRoleField -> {
-            levelMap.put(StrUtil.toCamelCase(crmRoleField.getFieldName()), crmRoleField.getAuthLevel());
-        });
-        filedVOS.removeIf(field -> (!UserUtil.isAdmin() && Objects.equals(1, levelMap.get(field.getFieldName()))));
-        return filedVOS;
+        return queryField(businessId,true);
     }
 
     /**
@@ -473,41 +450,29 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
      * @param changOwnerUserBO data
      */
     @Override
-    public void changeOwnerUser(CrmBusinessChangOwnerUserBO changOwnerUserBO) {
+    public void changeOwnerUser(CrmChangeOwnerUserBO changOwnerUserBO) {
         if (changOwnerUserBO.getIds().size() == 0) {
             return;
         }
         String ownerUserName = UserCacheUtil.getUserName(changOwnerUserBO.getOwnerUserId());
-
         changOwnerUserBO.getIds().forEach(id -> {
-            if (AuthUtil.isRwAuth(id, CrmEnum.BUSINESS,CrmAuthEnum.EDIT)) {
+            if (AuthUtil.isChangeOwnerUserAuth(id, CrmEnum.BUSINESS,CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
-
-            String memberId = "," + changOwnerUserBO.getOwnerUserId() + ",";
-            getBaseMapper().deleteMember(memberId, id);
             CrmBusiness business = getById(id);
             if (Objects.equals(2, changOwnerUserBO.getTransferType()) && !Objects.equals(business.getOwnerUserId(), changOwnerUserBO.getOwnerUserId())) {
-                if (1 == changOwnerUserBO.getPower()) {
-                    business.setRoUserId(business.getRoUserId() + business.getOwnerUserId() + Const.SEPARATOR);
-                }
-                if (2 == changOwnerUserBO.getPower()) {
-                    business.setRwUserId(business.getRwUserId() + business.getOwnerUserId() + Const.SEPARATOR);
-                }
-                crmCustomerService.addTermMessage(AdminMessageEnum.CRM_BUSINESS_USER, business.getBusinessId(), business.getBusinessName(), business.getOwnerUserId());
+                ApplicationContextHolder.getBean(ICrmTeamMembersService.class).addSingleMember(getLabel(),business.getBusinessId(),business.getOwnerUserId(),changOwnerUserBO.getPower(),changOwnerUserBO.getExpiresTime(),business.getBusinessName());
             }
+            ApplicationContextHolder.getBean(ICrmTeamMembersService.class).deleteMember(getLabel(),new CrmMemberSaveBO(id,changOwnerUserBO.getOwnerUserId()));
             business.setOwnerUserId(changOwnerUserBO.getOwnerUserId());
             updateById(business);
             actionRecordUtil.addConversionRecord(id, CrmEnum.BUSINESS, changOwnerUserBO.getOwnerUserId(), business.getBusinessName());
-            //修改es
-            Map<String, Object> map = new HashMap<>();
-            map.put("ownerUserId", changOwnerUserBO.getOwnerUserId());
-            map.put("ownerUserName", ownerUserName);
-            map.put("rwUserId", business.getRwUserId());
-            map.put("roUserId", business.getRoUserId());
-            updateField(map, Collections.singletonList(id));
         });
-
+        //修改es
+        Map<String, Object> map = new HashMap<>();
+        map.put("ownerUserId", changOwnerUserBO.getOwnerUserId());
+        map.put("ownerUserName", ownerUserName);
+        updateField(map, changOwnerUserBO.getIds());
     }
 
 
@@ -519,7 +484,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
      */
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
-        List<Map<String, Object>> dataList = queryPageList(search).getList();
+        List<Map<String, Object>> dataList = queryList(search,true).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
             headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
@@ -532,7 +497,9 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
             }
             for (Map<String, Object> record : dataList) {
                 headList.forEach(field ->{
-                    record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                    if (fieldService.equalsByType(field.getType())) {
+                        record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                    }
                 });
             }
             writer.setOnlyAlias(true);
@@ -601,7 +568,6 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         map.put("conditions", conditions);
         map.put("contactsConditions", contactsConditions);
         CrmInfoNumVO infoNumVO = getBaseMapper().queryNum(map);
-        AdminFileService fileService = ApplicationContextHolder.getBean(AdminFileService.class);
         List<CrmField> crmFields = crmFieldService.queryFileField();
         List<String> batchIdList = new ArrayList<>();
         if (crmFields.size() > 0) {
@@ -613,14 +579,8 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         }
         batchIdList.add(crmBusiness.getBatchId());
         batchIdList.addAll(crmActivityService.queryFileBatchId(crmBusiness.getBusinessId(), getLabel().getType()));
-        infoNumVO.setFileCount(fileService.queryNum(batchIdList).getData());
-        Set<String> member = new HashSet<>();
-        member.addAll(StrUtil.splitTrim(crmBusiness.getRoUserId(), Const.SEPARATOR));
-        member.addAll(StrUtil.splitTrim(crmBusiness.getRwUserId(), Const.SEPARATOR));
-        if (crmBusiness.getOwnerUserId() != null) {
-            member.add(crmBusiness.getOwnerUserId().toString());
-        }
-        infoNumVO.setMemberCount(member.size());
+        infoNumVO.setFileCount(adminFileService.queryNum(batchIdList).getData());
+        infoNumVO.setMemberCount(ApplicationContextHolder.getBean(ICrmTeamMembersService.class).queryMemberCount(getLabel(),crmBusiness.getBusinessId(),crmBusiness.getOwnerUserId()));
         Integer productCount = crmBusinessProductService.lambdaQuery().eq(CrmBusinessProduct::getBusinessId, businessId).count();
         infoNumVO.setProductCount(productCount);
         return infoNumVO;
@@ -636,8 +596,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
     public List<FileEntity> queryFileList(Integer businessId) {
         List<FileEntity> fileEntityList = new ArrayList<>();
         CrmBusiness crmBusiness = getById(businessId);
-        AdminFileService fileService = ApplicationContextHolder.getBean(AdminFileService.class);
-        fileService.queryFileList(crmBusiness.getBatchId()).getData().forEach(fileEntity -> {
+        adminFileService.queryFileList(crmBusiness.getBatchId()).getData().forEach(fileEntity -> {
             fileEntity.setSource("附件上传");
             fileEntity.setReadOnly(0);
             fileEntityList.add(fileEntity);
@@ -648,7 +607,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
             wrapper.select(CrmBusinessData::getValue);
             wrapper.eq(CrmBusinessData::getBatchId, crmBusiness.getBatchId());
             wrapper.in(CrmBusinessData::getFieldId, crmFields.stream().map(CrmField::getFieldId).collect(Collectors.toList()));
-            List<FileEntity> data = fileService.queryFileList(crmBusinessDataService.listObjs(wrapper, Object::toString)).getData();
+            List<FileEntity> data = adminFileService.queryFileList(crmBusinessDataService.listObjs(wrapper, Object::toString)).getData();
             data.forEach(fileEntity -> {
                 fileEntity.setSource("商机详情");
                 fileEntity.setReadOnly(1);
@@ -657,7 +616,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         }
         List<String> stringList = crmActivityService.queryFileBatchId(crmBusiness.getBusinessId(), getLabel().getType());
         if (stringList.size() > 0) {
-            List<FileEntity> data = fileService.queryFileList(stringList).getData();
+            List<FileEntity> data = adminFileService.queryFileList(stringList).getData();
             data.forEach(fileEntity -> {
                 fileEntity.setSource("跟进记录");
                 fileEntity.setReadOnly(1);
@@ -677,144 +636,6 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         CrmBusiness crmBusiness = getById(contactsBO.getBusinessId());
         crmBusiness.setContactsId(contactsBO.getContactsId());
         updateById(crmBusiness);
-    }
-
-    /**
-     * 获取团队成员
-     *
-     * @param businessId 商机ID
-     * @return data
-     */
-    @Override
-    public List<CrmMembersSelectVO> getMembers(Integer businessId) {
-        CrmBusiness crmBusiness = getById(businessId);
-        List<CrmMembersSelectVO> recordList = new ArrayList<>();
-        if (crmBusiness.getOwnerUserId() != null) {
-            UserInfo userInfo = UserCacheUtil.getUserInfo(crmBusiness.getOwnerUserId());
-            CrmMembersSelectVO crmMembersVO = new CrmMembersSelectVO();
-            crmMembersVO.setUserId(userInfo.getUserId());
-            crmMembersVO.setRealname(UserCacheUtil.getUserName(userInfo.getUserId()));
-            crmMembersVO.setDeptName(UserCacheUtil.getDeptName(userInfo.getDeptId()));
-            crmMembersVO.setPower("负责人权限");
-            crmMembersVO.setGroupRole("负责人");
-            crmMembersVO.setPost(userInfo.getPost());
-            recordList.add(crmMembersVO);
-        }
-        String roUserId = crmBusiness.getRoUserId();
-        String rwUserId = crmBusiness.getRwUserId();
-        String memberIds = roUserId + rwUserId.substring(1);
-        if (Const.SEPARATOR.equals(memberIds)) {
-            return recordList;
-        }
-        String[] memberIdsArr = memberIds.substring(1, memberIds.length() - 1).split(",");
-        Set<String> memberIdsSet = new HashSet<>(Arrays.asList(memberIdsArr));
-        for (String memberId : memberIdsSet) {
-            UserInfo userInfo = UserCacheUtil.getUserInfo(Long.valueOf(memberId));
-            CrmMembersSelectVO crmMembersVO = new CrmMembersSelectVO();
-            crmMembersVO.setUserId(userInfo.getUserId());
-            crmMembersVO.setRealname(UserCacheUtil.getUserName(userInfo.getUserId()));
-            crmMembersVO.setDeptName(UserCacheUtil.getDeptName(userInfo.getDeptId()));
-            crmMembersVO.setGroupRole("普通成员");
-            crmMembersVO.setPost(userInfo.getPost());
-            if (roUserId.contains(memberId)) {
-                crmMembersVO.setPower("只读");
-            } else if (rwUserId.contains(memberId)) {
-                crmMembersVO.setPower("读写");
-            }
-            recordList.add(crmMembersVO);
-        }
-        return recordList;
-    }
-
-    /**
-     * 添加团队成员
-     *
-     * @param crmMemberSaveBO data
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void addMember(CrmMemberSaveBO crmMemberSaveBO) {
-        for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isRwAuth(id,CrmEnum.BUSINESS,CrmAuthEnum.EDIT)) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
-            CrmBusiness oldBusiness = lambdaQuery().eq(CrmBusiness::getBusinessId,id).ne(CrmBusiness::getStatus,3).one();
-            if (oldBusiness == null){
-                continue;
-            }
-            Long ownerUserId = oldBusiness.getOwnerUserId();
-            for (Long memberId : crmMemberSaveBO.getMemberIds()) {
-                if (ownerUserId.equals(memberId)) {
-                    throw new CrmException(CrmCodeEnum.CRM_MEMBER_ADD_ERROR);
-                }
-                oldBusiness.setRoUserId(oldBusiness.getRoUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-                oldBusiness.setRwUserId(oldBusiness.getRwUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-                String name = lambdaQuery().select(CrmBusiness::getBusinessName).eq(CrmBusiness::getBusinessId, id).one().getBusinessName();
-                crmCustomerService.addTermMessage(AdminMessageEnum.CRM_BUSINESS_USER, oldBusiness.getBusinessId(), oldBusiness.getBusinessName(), memberId);
-                actionRecordUtil.addMemberActionRecord(CrmEnum.BUSINESS, id, memberId, name);
-            }
-            if (1 == crmMemberSaveBO.getPower()) {
-                oldBusiness.setRoUserId(oldBusiness.getRoUserId() + StrUtil.join(Const.SEPARATOR, crmMemberSaveBO.getMemberIds()) + Const.SEPARATOR);
-            } else if (2 == crmMemberSaveBO.getPower()) {
-                oldBusiness.setRwUserId(oldBusiness.getRwUserId() + StrUtil.join(Const.SEPARATOR, crmMemberSaveBO.getMemberIds()) + Const.SEPARATOR);
-            }
-            updateById(oldBusiness);
-            Map<String, Object> map = new HashMap<>();
-            map.put("roUserId", oldBusiness.getRoUserId());
-            map.put("rwUserId", oldBusiness.getRwUserId());
-            updateField(map, Collections.singletonList(id));
-        }
-
-    }
-
-    /**
-     * 删除团队成员
-     *
-     * @param crmMemberSaveBO data
-     */
-    @Override
-    public void deleteMember(CrmMemberSaveBO crmMemberSaveBO) {
-        for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isRwAuth(id,CrmEnum.BUSINESS,CrmAuthEnum.EDIT)) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
-            deleteMembers(id, crmMemberSaveBO.getMemberIds());
-        }
-
-    }
-
-    private void deleteMembers(Integer id, List<Long> memberIds) {
-        CrmBusiness oldBusiness = getById(id);
-        Long ownerUserId = oldBusiness.getOwnerUserId();
-        for (Long memberId : memberIds) {
-            if (ownerUserId.equals(memberId)) {
-                throw new CrmException(CrmCodeEnum.CRM_MEMBER_DELETE_ERROR);
-            }
-            oldBusiness.setRoUserId(oldBusiness.getRoUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-            oldBusiness.setRwUserId(oldBusiness.getRwUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-            if (!memberId.equals(UserUtil.getUserId())) {
-                crmCustomerService.addTermMessage(AdminMessageEnum.CRM_BUSINESS_REMOVE_TEAM, oldBusiness.getBusinessId(), oldBusiness.getBusinessName(), memberId);
-                actionRecordUtil.addDeleteMemberActionRecord(CrmEnum.BUSINESS, id, memberId, false, oldBusiness.getBusinessName());
-            } else {
-                crmCustomerService.addTermMessage(AdminMessageEnum.CRM_BUSINESS_TEAM_EXIT, oldBusiness.getBusinessId(), oldBusiness.getBusinessName(), oldBusiness.getOwnerUserId());
-                actionRecordUtil.addDeleteMemberActionRecord(CrmEnum.BUSINESS, id, memberId, true, oldBusiness.getBusinessName());
-            }
-        }
-        updateById(oldBusiness);
-        Map<String, Object> map = new HashMap<>();
-        map.put("roUserId", oldBusiness.getRoUserId());
-        map.put("rwUserId", oldBusiness.getRwUserId());
-        updateField(map, Collections.singletonList(id));
-    }
-
-    /**
-     * 退出团队
-     *
-     * @param businessId 商机ID
-     */
-    @Override
-    public void exitTeam(Integer businessId) {
-        deleteMembers(businessId, Collections.singletonList(UserUtil.getUserId()));
     }
 
     /**
@@ -853,7 +674,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         if (ids.size() == 0) {
             return new ArrayList<>();
         }
-        List<CrmBusiness> list = query().in("business_id", ids).list();
+        List<CrmBusiness> list = lambdaQuery().select(CrmBusiness::getBusinessId,CrmBusiness::getBusinessName).in(CrmBusiness::getBusinessId, ids).list();
         return list.stream().map(crmBusiness -> {
             SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
             simpleCrmEntity.setId(crmBusiness.getBusinessId());
@@ -875,6 +696,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         Integer businessId = updateInformationBO.getId();
         updateInformationBO.getList().forEach(record -> {
             CrmBusiness oldBusiness = getById(updateInformationBO.getId());
+            uniqueFieldIsAbnormal(record.getString("name"),record.getInteger("fieldId"),record.getString("value"),batchId);
             Map<String, Object> oldBusinessMap = BeanUtil.beanToMap(oldBusiness);
             if (record.getInteger("fieldType") == 1) {
                 Map<String, Object> crmBusinessMap = new HashMap<>(oldBusinessMap);
@@ -887,26 +709,21 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
                 }
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
 
-                CrmBusinessData businessData = crmBusinessDataService.lambdaQuery().select(CrmBusinessData::getValue).eq(CrmBusinessData::getFieldId, record.getInteger("fieldId"))
+                CrmBusinessData businessData = crmBusinessDataService.lambdaQuery().select(CrmBusinessData::getValue,CrmBusinessData::getId).eq(CrmBusinessData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmBusinessData::getBatchId, batchId).one();
                 String value = businessData != null ? businessData.getValue() : null;
-                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
-                actionRecordUtil.publicContentRecord(CrmEnum.BUSINESS, BehaviorEnum.UPDATE, businessId, oldBusiness.getBusinessName(), detail);
+                actionRecordUtil.publicContentRecord(CrmEnum.BUSINESS, BehaviorEnum.UPDATE, businessId, oldBusiness.getBusinessName(), record,value);
                 String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
-                boolean bol = crmBusinessDataService.lambdaUpdate()
-                        .set(CrmBusinessData::getName,record.getString("fieldName"))
-                        .set(CrmBusinessData::getValue, newValue)
-                        .eq(CrmBusinessData::getFieldId, record.getInteger("fieldId"))
-                        .eq(CrmBusinessData::getBatchId, batchId).update();
-                if (!bol) {
-                    CrmBusinessData crmBusinessData = new CrmBusinessData();
-                    crmBusinessData.setFieldId(record.getInteger("fieldId"));
-                    crmBusinessData.setName(record.getString("fieldName"));
-                    crmBusinessData.setValue(newValue);
-                    crmBusinessData.setCreateTime(new Date());
-                    crmBusinessData.setBatchId(batchId);
-                    crmBusinessDataService.save(crmBusinessData);
-                }
+
+                CrmBusinessData crmBusinessData = new CrmBusinessData();
+                crmBusinessData.setId(businessData != null ? businessData.getId() : null);
+                crmBusinessData.setFieldId(record.getInteger("fieldId"));
+                crmBusinessData.setName(record.getString("fieldName"));
+                crmBusinessData.setValue(newValue);
+                crmBusinessData.setCreateTime(new Date());
+                crmBusinessData.setBatchId(batchId);
+                crmBusinessDataService.saveOrUpdate(crmBusinessData);
+
             }
             updateField(record, businessId);
         });
@@ -950,7 +767,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         }
         List<String> collect = businessIds.stream().map(Object::toString).collect(Collectors.toList());
         CrmSearchBO crmSearchBO = new CrmSearchBO();
-        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect)));
+        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, collect)));
         crmSearchBO.setLabel(CrmEnum.CUSTOMER.getType());
         crmSearchBO.setPage(eventCrmPageBO.getPage());
         crmSearchBO.setLimit(eventCrmPageBO.getLimit());
@@ -976,7 +793,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         }
         List<String> collect = businessIds.stream().map(Object::toString).collect(Collectors.toList());
         CrmSearchBO crmSearchBO = new CrmSearchBO();
-        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect)));
+        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, collect)));
         crmSearchBO.setLabel(CrmEnum.CUSTOMER.getType());
         crmSearchBO.setPage(eventCrmPageBO.getPage());
         crmSearchBO.setLimit(eventCrmPageBO.getLimit());

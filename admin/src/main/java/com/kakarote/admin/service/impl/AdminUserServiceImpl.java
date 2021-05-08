@@ -41,6 +41,7 @@ import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.crm.service.CrmService;
 import com.kakarote.core.feign.hrm.entity.HrmEmployee;
 import com.kakarote.core.feign.hrm.service.HrmService;
+import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.RecursionUtil;
 import com.kakarote.core.utils.TransferUtil;
@@ -154,7 +155,14 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                 }
             }
         }
+        LambdaQueryWrapper<AdminUserHisTable> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(AdminUserHisTable::getUserId);
+        queryWrapper.eq(AdminUserHisTable::getHisTable,1);
+        List<Long> longs = ApplicationContextHolder.getBean(IAdminUserHisTableService.class).listObjs(queryWrapper, user -> Long.valueOf(user.toString()));
         basePage.getRecords().forEach(adminUserVO -> {
+            if(longs.contains(adminUserVO.getUserId())){
+                adminUserVO.setHisTable(1);
+            }
             List<AdminRole> adminRoleList = adminRoleService.queryRoleListByUserId(adminUserVO.getUserId());
             adminUserVO.setRoleId(adminRoleList.stream().map(adminRole -> adminRole.getRoleId().toString()).collect(Collectors.joining(",")));
             adminUserVO.setRoleName(adminRoleList.stream().map(AdminRole::getRoleName).collect(Collectors.joining(",")));

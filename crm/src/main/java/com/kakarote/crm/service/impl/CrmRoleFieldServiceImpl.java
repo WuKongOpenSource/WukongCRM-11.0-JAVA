@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.UserUtil;
@@ -101,6 +102,8 @@ public class CrmRoleFieldServiceImpl extends BaseServiceImpl<CrmRoleFieldMapper,
             LambdaQueryWrapper<CrmField> fieldQueryWrapper = new LambdaQueryWrapper<>();
             fieldQueryWrapper.select(CrmField::getFieldId,CrmField::getFieldName,CrmField::getName,CrmField::getFieldType);
             fieldQueryWrapper.eq(CrmField::getLabel,label);
+            //不展示描述文字类型的字段
+            fieldQueryWrapper.ne(CrmField::getType, FieldEnum.DESC_TEXT.getType());
             List<CrmField> list = crmFieldService.list(fieldQueryWrapper);
             list.forEach(crmField -> {
                 CrmRoleField roleField = new CrmRoleField();
@@ -173,6 +176,14 @@ public class CrmRoleFieldServiceImpl extends BaseServiceImpl<CrmRoleFieldMapper,
                         if (Arrays.asList("owner_user_id", "customer_id", "contract_id").contains(crmField.getFieldName())) {
                             roleField.setOperateType(4);
                         } else {
+                            roleField.setOperateType(1);
+                        }
+                        break;
+                    }
+                    case 18: {
+                        if (Arrays.asList("contract_money", "contract_id","customer_id").contains(crmField.getFieldName())) {
+                            roleField.setOperateType(4);
+                        }else {
                             roleField.setOperateType(1);
                         }
                         break;

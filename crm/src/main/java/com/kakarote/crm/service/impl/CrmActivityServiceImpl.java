@@ -400,11 +400,12 @@ public class CrmActivityServiceImpl extends BaseServiceImpl<CrmActivityMapper, C
     @Override
     public void deleteCrmActivityRecord(Integer activityId) {
         CrmActivity crmActivity = getById(activityId);
-        if (!crmActivity.getCreateUserId().equals(UserUtil.getUserId())){
-            boolean auth = AuthUtil.isRwAuth(crmActivity.getActivityTypeId(), CrmEnum.parse(crmActivity.getActivityType()), CrmAuthEnum.READ);
-            if (auth) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
+        if(crmActivity == null) {
+            return;
+        }
+        List<Long> longs = AuthUtil.queryAuthUserList(null, CrmAuthEnum.DELETE);
+        if (!longs.contains(crmActivity.getCreateUserId())){
+            throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }
         if (crmActivity.getType() != 1) {
             throw new CrmException(CrmCodeEnum.CRM_CAN_ONLY_DELETE_FOLLOW_UP_RECORDS);
@@ -427,6 +428,14 @@ public class CrmActivityServiceImpl extends BaseServiceImpl<CrmActivityMapper, C
 
     @Override
     public CrmActivity updateActivityRecord(CrmActivity crmActivity) {
+        CrmActivity activity = getById(crmActivity.getActivityId());
+        if(activity == null){
+            throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED,"跟进记录");
+        }
+        List<Long> longs = AuthUtil.queryAuthUserList(null, CrmAuthEnum.EDIT);
+        if (!longs.contains(activity.getCreateUserId())){
+            throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+        }
         updateById(crmActivity);
         CrmActivity record = getBaseMapper().queryActivityById(crmActivity.getActivityId());
         SimpleUser user = adminService.queryUserById(record.getCreateUserId()).getData();

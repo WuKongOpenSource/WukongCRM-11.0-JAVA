@@ -31,6 +31,7 @@ import com.kakarote.crm.entity.VO.CrmMembersSelectVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.service.CrmUploadExcelService;
 import com.kakarote.crm.service.ICrmCustomerService;
+import com.kakarote.crm.service.ICrmTeamMembersService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -66,6 +67,9 @@ public class CrmCustomerController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private ICrmTeamMembersService teamMembersService;
 
     @PostMapping("/queryPageList")
     @ApiOperation("查询列表页数据")
@@ -260,7 +264,7 @@ public class CrmCustomerController {
     @PostMapping("/changeOwnerUser")
     @ApiOperation("修改客户负责人")
     @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
-    public Result changeOwnerUser(@RequestBody CrmBusinessChangOwnerUserBO crmChangeOwnerUserBO) {
+    public Result changeOwnerUser(@RequestBody CrmChangeOwnerUserBO crmChangeOwnerUserBO) {
         crmCustomerService.changeOwnerUser(crmChangeOwnerUserBO);
         return R.ok();
     }
@@ -268,11 +272,12 @@ public class CrmCustomerController {
     @PostMapping("/getMembers/{customerId}")
     @ApiOperation("获取团队成员")
     public Result<List<CrmMembersSelectVO>> getMembers(@PathVariable("customerId") @ApiParam("客户ID") Integer customerId) {
-        boolean auth = AuthUtil.isPoolAuth(customerId,CrmAuthEnum.READ);
-        if (auth) {
-            throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+        CrmEnum crmEnum = CrmEnum.CUSTOMER;
+        CrmCustomer customer = crmCustomerService.getById(customerId);
+        if (customer == null) {
+            throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED, crmEnum.getRemarks());
         }
-        List<CrmMembersSelectVO> members = crmCustomerService.getMembers(customerId);
+        List<CrmMembersSelectVO> members = teamMembersService.getMembers(crmEnum,customerId,customer.getOwnerUserId());
         return R.ok(members);
     }
 
@@ -280,7 +285,7 @@ public class CrmCustomerController {
     @ApiOperation("新增团队成员")
     @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result addMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
-        crmCustomerService.addMember(crmMemberSaveBO);
+        teamMembersService.addMember(CrmEnum.CUSTOMER,crmMemberSaveBO);
         return R.ok();
     }
 
@@ -288,7 +293,7 @@ public class CrmCustomerController {
     @ApiOperation("新增团队成员")
     @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result updateMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
-        crmCustomerService.addMember(crmMemberSaveBO);
+        teamMembersService.addMember(CrmEnum.CUSTOMER,crmMemberSaveBO);
         return R.ok();
     }
 
@@ -296,7 +301,7 @@ public class CrmCustomerController {
     @ApiOperation("删除团队成员")
     @SysLogHandler
     public Result deleteMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
-        crmCustomerService.deleteMember(crmMemberSaveBO);
+        teamMembersService.deleteMember(CrmEnum.CUSTOMER,crmMemberSaveBO);
         return R.ok();
     }
 
@@ -304,7 +309,7 @@ public class CrmCustomerController {
     @ApiOperation("删除团队成员")
     @SysLogHandler
     public Result exitTeam(@PathVariable("customerId") @ApiParam("客户ID") Integer customerId) {
-        crmCustomerService.exitTeam(customerId);
+        teamMembersService.exitTeam(CrmEnum.CUSTOMER,customerId);
         return R.ok();
     }
 
@@ -412,7 +417,7 @@ public class CrmCustomerController {
     @PostMapping("/downloadExcel")
     @ApiOperation("下载导入模板")
     public void downloadExcel(HttpServletResponse response) throws IOException {
-        crmCustomerService.downloadExcel(response);
+        crmCustomerService.downloadExcel(false,response);
     }
 
     @PostMapping("/uploadExcel")

@@ -21,9 +21,11 @@ import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmContacts;
 import com.kakarote.crm.entity.VO.CrmInfoNumVO;
+import com.kakarote.crm.entity.VO.CrmMembersSelectVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.service.CrmUploadExcelService;
 import com.kakarote.crm.service.ICrmContactsService;
+import com.kakarote.crm.service.ICrmTeamMembersService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -53,6 +55,9 @@ public class CrmContactsController {
 
     @Autowired
     private ICrmContactsService crmContactsService;
+
+    @Autowired
+    private ICrmTeamMembersService teamMembersService;
 
     @PostMapping("/queryById/{contactsId}")
     @ApiOperation("根据ID查询")
@@ -129,7 +134,7 @@ public class CrmContactsController {
     @ApiOperation("修改负责人")
     @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
     public Result changeOwnerUser(@RequestBody CrmChangeOwnerUserBO crmChangeOwnerUserBO){
-        crmContactsService.changeOwnerUser(crmChangeOwnerUserBO.getIds(),crmChangeOwnerUserBO.getOwnerUserId());
+        crmContactsService.changeOwnerUser(crmChangeOwnerUserBO);
         return R.ok();
     }
 
@@ -231,6 +236,50 @@ public class CrmContactsController {
     @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result updateInformation(@RequestBody CrmUpdateInformationBO updateInformationBO) {
         crmContactsService.updateInformation(updateInformationBO);
+        return R.ok();
+    }
+
+    @PostMapping("/getMembers/{contactsId}")
+    @ApiOperation("获取团队成员")
+    public Result<List<CrmMembersSelectVO>> getMembers(@PathVariable("contactsId") @ApiParam("联系人ID") Integer contractId) {
+        CrmEnum crmEnum = CrmEnum.CONTACTS;
+        CrmContacts contacts = crmContactsService.getById(contractId);
+        if (contacts == null) {
+            throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED, crmEnum.getRemarks());
+        }
+        List<CrmMembersSelectVO> members = teamMembersService.getMembers(crmEnum,contractId,contacts.getOwnerUserId());
+        return R.ok(members);
+    }
+
+    @PostMapping("/addMembers")
+    @ApiOperation("新增团队成员")
+    @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
+    public Result addMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
+        teamMembersService.addMember(CrmEnum.CONTACTS,crmMemberSaveBO);
+        return R.ok();
+    }
+
+    @PostMapping("/updateMembers")
+    @ApiOperation("新增团队成员")
+    @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
+    public Result updateMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
+        teamMembersService.addMember(CrmEnum.CONTACTS,crmMemberSaveBO);
+        return R.ok();
+    }
+
+    @PostMapping("/deleteMembers")
+    @ApiOperation("删除团队成员")
+    @SysLogHandler
+    public Result deleteMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
+        teamMembersService.deleteMember(CrmEnum.CONTACTS,crmMemberSaveBO);
+        return R.ok();
+    }
+
+    @PostMapping("/exitTeam/{contactsId}")
+    @ApiOperation("退出团队")
+    @SysLogHandler
+    public Result exitTeam(@PathVariable("contactsId") @ApiParam("联系人ID") Integer contactsId) {
+        teamMembersService.exitTeam(CrmEnum.CONTACTS,contactsId);
         return R.ok();
     }
 }

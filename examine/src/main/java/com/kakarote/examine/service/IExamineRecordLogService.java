@@ -25,7 +25,18 @@ public interface IExamineRecordLogService extends BaseService<ExamineRecordLog> 
     public ExamineRecordLog queryNextExamineRecordLog(String batchId,Integer sort,Integer logId);
 
 
+    /**
+     * 查询指定的审批历史数据
+     * @param examineLogId
+     * @return log
+     */
     public ExamineRecordLog queryExamineLogById(Integer examineLogId);
 
+    /**
+     * 获取完整审批历史记录
+     * @param recordId
+     * @param ownerUserId
+     * @return log
+     */
     List<ExamineRecordLogVO> queryExamineRecordLog(Integer recordId, String ownerUserId);
 }

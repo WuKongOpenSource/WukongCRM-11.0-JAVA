@@ -2,8 +2,6 @@ package com.kakarote.authorization.service;
 
 import com.kakarote.authorization.entity.AuthorizationUser;
 import com.kakarote.core.common.Result;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;

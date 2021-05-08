@@ -44,7 +44,7 @@ public class AuthorizationUser extends UserInfo implements UserDetails {
     private String salt;
 
     /**
-     * 登录类型 1 密码登录 2 验证码登录
+     * 登录类型 1 密码登录 2 验证码登录 3 企业微信登录 4 企业微信扫码登录
      */
     @ApiModelProperty(value = "登录类型", allowableValues = "1,2,3,4")
     private Integer loginType = 1;

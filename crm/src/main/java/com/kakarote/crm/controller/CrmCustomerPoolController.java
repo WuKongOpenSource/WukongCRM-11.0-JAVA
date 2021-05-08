@@ -25,6 +25,7 @@ import com.kakarote.crm.entity.VO.CrmCustomerPoolVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.service.CrmUploadExcelService;
 import com.kakarote.crm.service.ICrmCustomerPoolService;
+import com.kakarote.crm.service.ICrmCustomerService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +59,9 @@ public class CrmCustomerPoolController {
 
     @Autowired
     private ICrmCustomerPoolService crmCustomerPoolService;
+
+    @Autowired
+    private ICrmCustomerService customerService;
 
     @Autowired
     private CrmUploadExcelService uploadExcelService;
@@ -103,6 +107,12 @@ public class CrmCustomerPoolController {
     public Result<List<CrmModelFiledVO>> queryPoolField() {
         List<CrmModelFiledVO> filedVOS = crmCustomerPoolService.queryPoolField();
         return Result.ok(filedVOS);
+    }
+
+    @PostMapping("/downloadExcel")
+    @ApiOperation("下载导入模板")
+    public void downloadExcel(HttpServletResponse response) throws IOException {
+        customerService.downloadExcel(true,response);
     }
 
     @PostMapping("/uploadExcel")

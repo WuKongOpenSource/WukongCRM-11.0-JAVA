@@ -3,6 +3,7 @@ package com.kakarote.crm.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Dict;
@@ -18,6 +19,7 @@ import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.feign.admin.entity.AdminConfig;
 import com.kakarote.core.feign.admin.entity.DataTypeEnum;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminService;
@@ -41,7 +43,6 @@ import com.kakarote.crm.service.*;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -109,12 +110,14 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         record.put("leadsUserIds", AuthUtil.filterUserIdList(CrmEnum.LEADS, CrmAuthEnum.LIST,biAuthority.getUserIds()));
         record.put("recordUserIds", AuthUtil.filterUserIdList(null, CrmAuthEnum.LIST,biAuthority.getUserIds()));
         Map<String, Object> info = crmInstrumentMapper.queryBulletin(biTimeEntity, record);
+        this.handleMapValue(info);
         boolean isCustom = !StrUtil.isAllEmpty(biParams.getStartTime(), biParams.getEndTime());
         Map<String, Object> prevRecord = new HashMap<>();
         BigDecimal bigDecimal = new BigDecimal("0");
         if (!isCustom) {
             BiTimeUtil.BiTimeEntity timeEntity = BiTimeUtil.prevAnalyzeType(biParams);
             prevRecord = crmInstrumentMapper.queryBulletin(timeEntity, record);
+            this.handleMapValue(prevRecord);
             for (String columnName : info.keySet()) {
                 BigDecimal decimal = new BigDecimal(prevRecord.get(columnName).toString());
                 BigDecimal newdecimal = new BigDecimal(info.get(columnName).toString());
@@ -135,6 +138,15 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         }
         return new JSONObject().fluentPut("data", info).fluentPut("prev", prevRecord);
 
+    }
+
+    /**
+     * 销售简报去小数 - 四舍五入
+     * */
+    private void handleMapValue(Map<String, Object> map){
+         map.forEach((key,value) ->{
+            map.put(key,new BigDecimal(value.toString()).setScale(0,BigDecimal.ROUND_HALF_DOWN));
+         });
     }
 
     /**
@@ -162,12 +174,12 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         searchBO.getSearchList().add(new CrmSearchBO.Search("ownerUserId", "text", CrmSearchBO.FieldSearchEnum.IS, userIds.stream().map(Object::toString).collect(Collectors.toList())));
         if (biParams.getMoneyType() != null) {
             if (biParams.getMoneyType() == 1) {
-                searchBO.getSearchList().add(new CrmSearchBO.Search("orderDate", "date", CrmSearchBO.FieldSearchEnum.DATE, Arrays.asList(DateUtil.formatDate(biTimeEntity.getBeginDate()), DateUtil.formatDate(DateUtil.offsetDay(biTimeEntity.getEndDate(),1)))));
+                searchBO.getSearchList().add(new CrmSearchBO.Search("orderDate", "date", CrmSearchBO.FieldSearchEnum.RANGE, Arrays.asList(DateUtil.formatDate(biTimeEntity.getBeginDate()), DateUtil.formatDate(DateUtil.offsetDay(biTimeEntity.getEndDate(),1)))));
             } else if (biParams.getMoneyType() == 2) {
-                searchBO.getSearchList().add(new CrmSearchBO.Search("returnTime", "date", CrmSearchBO.FieldSearchEnum.DATE, Arrays.asList(DateUtil.formatDate(biTimeEntity.getBeginDate()), DateUtil.formatDate(DateUtil.offsetDay(biTimeEntity.getEndDate(),1)))));
+                searchBO.getSearchList().add(new CrmSearchBO.Search("returnTime", "date", CrmSearchBO.FieldSearchEnum.RANGE, Arrays.asList(DateUtil.formatDate(biTimeEntity.getBeginDate()), DateUtil.formatDate(DateUtil.offsetDay(biTimeEntity.getEndDate(),1)))));
             }
         } else {
-            searchBO.getSearchList().add(new CrmSearchBO.Search("createTime", "date", CrmSearchBO.FieldSearchEnum.DATE_TIME, Arrays.asList(DateUtil.formatDateTime(biTimeEntity.getBeginDate()), DateUtil.formatDateTime(DateUtil.endOfDay(biTimeEntity.getEndDate())))));
+            searchBO.getSearchList().add(new CrmSearchBO.Search("createTime", "datetime", CrmSearchBO.FieldSearchEnum.RANGE, Arrays.asList(DateUtil.formatDateTime(biTimeEntity.getBeginDate()), DateUtil.formatDateTime(DateUtil.endOfDay(biTimeEntity.getEndDate())))));
         }
         if (biParams.getCheckStatus() != null && biParams.getCheckStatus() == 1) {
             searchBO.getSearchList().add(new CrmSearchBO.Search("checkStatus", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
@@ -214,7 +226,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         Integer menuId = 103;
         biParams.setMenuId(menuId);
         BiTimeUtil.BiTimeEntity record = BiTimeUtil.analyzeType(biParams);
-        List<Long> userIds = record.getUserIds();
+        List<Long> userIds = handleDataType(biParams).getUserIds();
         if (userIds.size() == 0) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("list", new ArrayList<>());
@@ -224,6 +236,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             return jsonObject;
         }
         Map<String, Object> map = record.toMap();
+        map.put("userIds",userIds);
         map.put("typeId", biParams.getTypeId());
         List<JSONObject> list = crmInstrumentMapper.sellFunnel(map);
         JSONObject jsonObject = new JSONObject();
@@ -268,9 +281,8 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         List<String> businessIdList = crmInstrumentMapper.sellFunnelBusinessList(map);
 
         CrmSearchBO.Search entity2 = new CrmSearchBO.Search();
-        entity2.setName("businessId");
         entity2.setFormType(FieldEnum.TEXT.getFormType());
-        entity2.setSearchEnum(CrmSearchBO.FieldSearchEnum.IS);
+        entity2.setSearchEnum(CrmSearchBO.FieldSearchEnum.ID);
         entity2.setValues(businessIdList);
         searchList.add(entity2);
 
@@ -323,7 +335,17 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             object.put("label", biParams.getLabel());
             object.put("userIds", userIds);
             object.put("deptIds", AuthUtil.filterDeptId(biAuthority.getDeptIds()));
-            recordList.add(crmInstrumentMapper.salesTrend(record, object));
+            Map<String, Object> objectMap = crmInstrumentMapper.salesTrend(record, object);
+            if(StrUtil.isNotEmpty(biParams.getType())) {
+                if("yyyyMMdd".equals(record.getDateFormat())) {
+                    objectMap.put("type",DateUtil.parse(beginTime.toString(),record.getDateFormat()).toDateStr().substring(5));
+                }else if("yyyyMM".equals(record.getDateFormat())) {
+                    objectMap.put("type",DateUtil.parse(beginTime.toString(),record.getDateFormat()).monthStartFromOne()+"月");
+                }
+            } else {
+                objectMap.put("type",DateUtil.parse(beginTime.toString(),"yyyyMM").toString("yyyy-MM"));
+            }
+            recordList.add(objectMap);
             beginTime = BiTimeUtil.estimateTime(beginTime);
             record.setBeginTime(beginTime);
         }
@@ -341,6 +363,15 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         Map<String, Object> business = crmInstrumentMapper.dataInfoBusiness(timeEntity, AuthUtil.filterUserIdList(CrmEnum.BUSINESS,CrmAuthEnum.LIST, biAuthority.getUserIds()));
         Map<String, Object> contract = crmInstrumentMapper.dataInfoContract(timeEntity, AuthUtil.filterUserIdList(CrmEnum.CONTRACT,CrmAuthEnum.LIST, biAuthority.getUserIds()));
         Map<String, Object> receivables = crmInstrumentMapper.dataInfoReceivables(timeEntity, AuthUtil.filterUserIdList(CrmEnum.RECEIVABLES,CrmAuthEnum.LIST, biAuthority.getUserIds()));
+        timeEntity.setEndDate(DateUtil.endOfDay(timeEntity.getEndDate()));
+        costumer.put("receiveNum",crmInstrumentMapper.dataInfoCustomerPoolNum(timeEntity,AuthUtil.filterUserIdList(CrmEnum.CUSTOMER,CrmAuthEnum.LIST, biAuthority.getUserIds()),2));
+        costumer.put("putInPoolNum",crmInstrumentMapper.dataInfoCustomerPoolNum(timeEntity,AuthUtil.filterUserIdList(CrmEnum.CUSTOMER,CrmAuthEnum.LIST, biAuthority.getUserIds()),1));
+        AdminConfig adminConfig = adminService.queryFirstConfigByName("expiringContractDays").getData();
+        if (adminConfig != null && Objects.equals(1, adminConfig.getStatus())) {
+            Date startTime = new Date();
+            DateTime dateTime = DateUtil.offsetDay(startTime, Integer.valueOf(adminConfig.getValue()));
+            contract.putAll(crmInstrumentMapper.dataInfoEndContractNum(startTime,DateUtil.endOfDay(dateTime),AuthUtil.filterUserIdList(CrmEnum.CONTRACT,CrmAuthEnum.LIST, biAuthority.getUserIds())));
+        }
         JSONObject object = new JSONObject();
         object.putAll(costumer);
         object.putAll(activity);
@@ -369,14 +400,14 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
                 deptIdList.add(UserUtil.getUser().getDeptId());
                 userIdList.addAll(adminService.queryUserByDeptIds(deptIdList).getData());
             } else {
-                userIdList.addAll(adminService.queryUserList().getData());
+                userIdList.addAll(adminService.queryUserList(1).getData());
                 deptIdList.addAll(adminService.queryChildDeptId(0).getData());
             }
         } else {
             if (1 == biParams.getIsUser()) {
                 if (biParams.getUserId() == null) {
                     if (UserUtil.isAdmin()) {
-                        userIdList.addAll(adminService.queryUserList().getData());
+                        userIdList.addAll(adminService.queryUserList(1).getData());
                     } else {
                         userIdList.addAll(adminService.queryChildUserId(UserUtil.getUserId()).getData());
                         userIdList.add(UserUtil.getUserId());
@@ -527,7 +558,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             }
         }
         if (UserUtil.isAdmin() && ObjectUtil.isAllEmpty(userId, deptId) && subUser == null && dataType == null) {
-            userIds = adminService.queryUserList().getData();
+            userIds = adminService.queryUserList(1).getData();
         }
         if (!UserUtil.isAdmin()) {
             Integer followRecordReadMenuId = adminService.queryMenuId("crm", "followRecord", "read").getData();
@@ -600,7 +631,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         searchBO.setLimit(biParams.getLimit());
         searchBO.setLabel(CrmEnum.CUSTOMER.getType());
         List<String> collect = customerIds.stream().map(Object::toString).collect(Collectors.toList());
-        searchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect)));
+        searchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, collect)));
         return crmCustomerService.queryPageList(searchBO);
     }
 
@@ -623,12 +654,11 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         searchBO.setLimit(biParams.getLimit());
         searchBO.setLabel(CrmEnum.CUSTOMER.getType());
         List<String> collect = customerIds.stream().map(Object::toString).collect(Collectors.toList());
-        searchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect)));
+        searchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, collect)));
         return crmCustomerService.queryPageList(searchBO);
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public JSONObject importRecordList(MultipartFile file, Integer crmType) {
         List<List<Object>> errList = new ArrayList<>();
         if (!Arrays.asList(1,2,3,5,6).contains(crmType)){
@@ -703,12 +733,14 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
                             }else {
                                 names = ListUtil.toList(contactsNames);
                             }
-                            List<CrmContacts> list = crmContactsService.lambdaQuery().select(CrmContacts::getContactsId)
-                                    .in(CrmContacts::getName, names).list();
-                            if (CollUtil.isNotEmpty(list)){
-                                List<Integer> contactsIdList = list.stream().map(CrmContacts::getContactsId).collect(Collectors.toList());
-                                contactsNames = StrUtil.join(Const.SEPARATOR, contactsIdList);
+                            names.removeIf(StrUtil::isEmpty);
+                            List<Integer> contactsList = new ArrayList<>(names.size());
+                            for (String name : names) {
+                                Optional<CrmContacts> crmContacts = crmContactsService.lambdaQuery().select(CrmContacts::getContactsId)
+                                        .eq(CrmContacts::getName, name).last(" limit 1").oneOpt();
+                                crmContacts.ifPresent(crmContacts1 -> contactsList.add(crmContacts1.getContactsId()));
                             }
+                            contactsNames = StrUtil.join(Const.SEPARATOR, contactsList);
                         }
 
                         if (StrUtil.isNotEmpty(businessNames)){
@@ -718,6 +750,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
                             }else {
                                 names = ListUtil.toList(businessNames);
                             }
+                            names.removeIf(StrUtil::isEmpty);
                             List<CrmBusiness> list = crmBusinessService.lambdaQuery().select(CrmBusiness::getBusinessId)
                                     .in(CrmBusiness::getBusinessName, names).ne(CrmBusiness::getStatus,3).list();
                             if (CollUtil.isNotEmpty(list)){
@@ -772,7 +805,6 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
                     default:
                         break;
                 }
-
                 UserInfo user = UserUtil.getUser();
                 CrmActivity crmActivity = new CrmActivity();
                 crmActivity.setContent(content);

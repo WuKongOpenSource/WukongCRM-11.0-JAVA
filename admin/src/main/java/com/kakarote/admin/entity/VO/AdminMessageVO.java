@@ -35,7 +35,8 @@ public class AdminMessageVO {
 
     @ApiModelProperty("知识库通知数量")
     private Integer knowledgeCount;
-
+    @ApiModelProperty("HRM通知数量")
+    private Integer hrmCount;
     @ApiModelProperty("进销存通知数量")
     private Integer jxcCount;
 }

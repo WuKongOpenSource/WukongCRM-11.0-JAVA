@@ -16,7 +16,6 @@ public interface FieldService {
      * */
     Object convertValueByFormType(Object value, FieldEnum typeEnum);
 
-
     /**
      * 转换字段列表根据表单定位
      * */
@@ -28,16 +27,22 @@ public interface FieldService {
     /**
      * 验证表单字段限制的数值是否正确
      * */
-    public boolean verifyStrForNumRestrict(String maxNumRestrict,String minNumRestrict);
-
-    /**
-     * 验证字符串是否符合规则
-     * */
-    public boolean verifyStrIsConformRegex(List<String> values,boolean isNonNull,String regex);
+    boolean verifyStrForNumRestrict(String maxNumRestrict,String minNumRestrict);
 
 
     /**
      * 将符合条件的字段值转换成str
      * */
-    public String convertObjectValueToString(Integer type,Object value,String defaultValue);
+    String convertObjectValueToString(Integer type,Object value,String defaultValue);
+
+
+    /**
+     * 判断自定义字段类型是否符合
+     * */
+    boolean equalsByType(Object type);
+
+    /**
+     * 判断自定义字段类型是否符合
+     * */
+    boolean equalsByType(Object type, FieldEnum... fieldEnums);
 }

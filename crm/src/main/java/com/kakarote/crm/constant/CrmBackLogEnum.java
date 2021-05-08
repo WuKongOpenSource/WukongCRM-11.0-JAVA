@@ -11,7 +11,7 @@ import com.kakarote.core.exception.CrmException;
 public enum CrmBackLogEnum {
     /**
      * 待办事项模块 1今日需联系客户 2分配给我的线索 3分配给我的客户 4待进入公海的客户
-     * 5待审核合同 6待审核回款 7待回款提醒 8即将到期的合同 9待回访合同 10待审核发票
+     * 5待审核合同 6待审核回款 7待回款提醒 8即将到期的合同 9待回访合同 10待审核发票 11 今日需联系线索 12 今日需联系商机
      */
     TODAY_CUSTOMER(1),
     FOLLOW_LEADS(2),

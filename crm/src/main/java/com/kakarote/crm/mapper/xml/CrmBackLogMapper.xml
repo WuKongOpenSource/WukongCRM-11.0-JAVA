@@ -16,7 +16,16 @@
     <select id="todayBusinessNum" resultType="java.lang.Integer">
         select count(*) from wk_crm_business
         where to_days(next_time) = to_days(now()) and last_time &lt; next_time and owner_user_id = #{userId}
-        and business_name not in (select type_id from wk_crm_back_log_deal where model = 12 and crm_type = 5 and create_user_id = #{userId})
+        and business_id not in (select type_id from wk_crm_back_log_deal where model = 12 and crm_type = 5 and create_user_id = #{userId})
+    </select>
+
+    <select id="todayOvertimeNum" resultType="java.lang.Integer">
+        select count(*) from wk_crm_${table}
+        where next_time &lt; now() and last_time &lt; next_time and owner_user_id = #{userId}
+        <if test="type == 2">
+            and status != 3
+        </if>
+        and ${table}_id not in (select type_id from wk_crm_back_log_deal where model = #{model} and crm_type = #{type} and create_user_id = #{userId})
     </select>
 
     <select id="followCustomerNum" resultType="java.lang.Integer">
@@ -102,26 +111,10 @@
         and contract_id not in (select type_id from wk_crm_back_log_deal where model = 8 and crm_type = 6 and create_user_id = #{userId})
     </select>
 
-    <select id="checkContractNum" resultType="java.lang.Integer">
-        select count(*)
-        from wk_crm_contract as a inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id
-        left join wk_crm_examine_log as c on b.record_id = c.record_id
-        where c.examine_user = #{userId} and a.check_status in (0,3) and c.examine_status in (0,3) and ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and c.is_recheck != 1
-        and contract_id not in (select type_id from wk_crm_back_log_deal where model = 5 and crm_type = 6 and create_user_id = #{userId})
-    </select>
-
     <select id="returnVisitRemindNum" resultType="java.lang.Integer">
         select count(1) from wk_crm_contract
         where check_status = 1 and owner_user_id = #{userId} and to_days(now()) - to_days(start_time) &gt;= #{remindDay}
         and contract_id not in (select type_id from wk_crm_back_log_deal where model = 9 and crm_type = 6 and create_user_id = #{userId})
-    </select>
-
-    <select id="checkReceivablesNum" resultType="java.lang.Integer">
-        select count(*)
-        from wk_crm_receivables as a inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id
-        left join wk_crm_examine_log as c on b.record_id = c.record_id
-        where c.examine_user = #{userId} and a.check_status in (0,3) and ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and c.is_recheck != 1
-        and receivables_id not in (select type_id from wk_crm_back_log_deal where model = 6 and crm_type = 7 and create_user_id = #{userId})
     </select>
 
     <select id="remindReceivablesPlanNum" resultType="java.lang.Integer">
@@ -132,36 +125,6 @@
         where to_days(a.return_date) &gt;= to_days(now()) and to_days(a.return_date) &lt;= to_days(now())+a.remind
         and (a.receivables_id is null or d.check_status != 1) and c.owner_user_id = #{userId}
         and a.plan_id not in (select type_id from wk_crm_back_log_deal where model = 7 and crm_type = 8 and create_user_id = #{userId})
-    </select>
-
-    <select id="checkInvoiceNum" resultType="java.lang.Integer">
-        select count(*)
-        from wk_crm_invoice as a inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id
-        left join wk_crm_examine_log as c on b.record_id = c.record_id
-        where c.examine_user = #{userId} and a.check_status in (0,3) and ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and c.is_recheck != 1
-        and invoice_id not in (select type_id from wk_crm_back_log_deal where model = 10 and crm_type = 18 and create_user_id = #{userId})
-    </select>
-
-    <select id="queryExamineTypeId" resultType="java.lang.String">
-        <choose>
-            <when test="crmType == 6">
-                select contract_id from wk_crm_contract as a
-            </when>
-            <when test="crmType == 7">
-                select receivables_id from wk_crm_receivables as a
-            </when>
-            <when test="crmType == 18">
-                select invoice_id from wk_crm_invoice as a
-            </when>
-        </choose>
-        inner join wk_crm_examine_record as b on a.examine_record_id = b.record_id left join wk_crm_examine_log as c on b.record_id = c.record_id where c.is_recheck != 1
-        <if test="type == 1">
-            and  ifnull(b.examine_step_id, 1) = ifnull(c.examine_step_id, 1) and a.check_status in (0,3) and c.examine_status in (0,3)
-        </if>
-        <if test="type == 2">
-            and  a.check_status in (1,2)
-        </if>
-        and c.examine_user =#{userId}
     </select>
 
     <select id="remindReceivables" resultType="com.kakarote.crm.entity.PO.CrmReceivablesPlan">
@@ -188,6 +151,15 @@
         <for collection="ids" item="item">
             #{item}
         </for>
+    </select>
+
+    <select id="remindReceivablesOvertimeNum" resultType="java.lang.Integer">
+        select count(1)
+        from wk_crm_receivables_plan as a
+        inner join wk_crm_contract as c on a.contract_id = c.contract_id
+        left join wk_crm_receivables d on a.receivables_id = d.receivables_id
+        where a.return_date &lt; #{date} and (a.receivables_id is null or d.check_status != 1)
+        and c.owner_user_id = #{userId}
     </select>
 
 </mapper>

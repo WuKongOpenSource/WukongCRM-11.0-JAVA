@@ -175,7 +175,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
 
         private void setUploadExcelBO(UploadExcelBO uploadExcelBO){
             this.uploadExcelBO = uploadExcelBO;
-            List<Long> longs = adminService.queryUserList().getData();
+            List<Long> longs = adminService.queryUserList(1).getData();
             List<SimpleUser> simpleUsers = adminService.queryUserByIds(longs).getData();
             userCacheMap = new HashMap<>(simpleUsers.size(),1.0f);
             for (SimpleUser simpleUser : simpleUsers) {
@@ -290,7 +290,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                     isNullMap.put(filed.getName() + (isNull ? "(*)" : ""), filed.getIsNull());
                 }
             });
-            nameMap.put("负责人(*)", "ownerUserName");
+            nameMap.put("负责人" + (getUploadExcelBO().getPoolId() != null ? "":"(*)"), "ownerUserName");
             List<String> nameList = new ArrayList<>(nameMap.keySet());
             if (nameList.size() != rowList.size() || !nameList.containsAll(rowList)) {
                 templateErr = true;

@@ -81,8 +81,8 @@ public class AdminServiceImpl implements AdminService {
      * @return data
      */
     @Override
-    public Result<List<Long>> queryUserList() {
-        return R.ok(new ArrayList<>());
+    public Result<List<Long>> queryUserList(Integer type) {
+        return R.ok(Collections.emptyList());
     }
 
     /**

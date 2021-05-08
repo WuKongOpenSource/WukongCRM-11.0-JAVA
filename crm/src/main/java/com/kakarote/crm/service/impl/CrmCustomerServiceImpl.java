@@ -23,14 +23,10 @@ import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
-import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
-import com.kakarote.core.feign.admin.entity.AdminMessageBO;
-import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
 import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
-import com.kakarote.core.feign.admin.service.AdminMessageService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.feign.crm.entity.QueryEventCrmPageBO;
@@ -142,6 +138,10 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
      */
     @Override
     public List<CrmModelFiledVO> queryField(Integer id) {
+        return queryField(id,false);
+    }
+
+    private List<CrmModelFiledVO> queryField(Integer id,boolean appendInformation) {
         CrmModel crmModel = queryById(id, null);
         List<CrmModelFiledVO> vos = crmFieldService.queryField(crmModel);
         JSONObject value = new JSONObject();
@@ -151,6 +151,17 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         value.put("lng", crmModel.get("lng"));
         value.put("lat", crmModel.get("lat"));
         vos.add(new CrmModelFiledVO("map_address", FieldEnum.MAP_ADDRESS, "地区定位", 1).setIsNull(0).setValue(value));
+        if(appendInformation){
+            List<CrmModelFiledVO> modelFiledVOS = appendInformation(crmModel);
+            if (crmModel.get("preOwnerUserId") != null) {
+                CrmModelFiledVO filedVO = new CrmModelFiledVO("preOwnerUserName", FieldEnum.SINGLE_USER, "前负责人", 1);
+                List<SimpleUser> data = adminService.queryUserByIds(Collections.singleton((Long) crmModel.get("preOwnerUserId"))).getData();
+                filedVO.setValue(data.get(0));
+                modelFiledVOS.add(filedVO.setSysInformation(1));
+            }
+            modelFiledVOS.add(new CrmModelFiledVO("receive_time", FieldEnum.DATETIME, "负责人获取客户时间", 1).setValue(crmModel.get("receiveTime")).setSysInformation(1));
+            vos.addAll(modelFiledVOS);
+        }
         return vos;
     }
 
@@ -171,14 +182,14 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
     }
 
     /**
-     * 分页查询
+     * 导出时查询所有数据
      *
-     * @param search
-     * @return
+     * @param search 业务查询对象
+     * @return data
      */
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
-        BasePage<Map<String, Object>> basePage = queryList(search);
+        BasePage<Map<String, Object>> basePage = queryList(search,false);
         Long userId = UserUtil.getUserId();
         List<Integer> starIds = crmCustomerUserStarService.starList(userId);
         basePage.getList().forEach(map -> {
@@ -241,7 +252,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                     //商机个数
                     Integer businessCount = (Integer) map.get("businessCount");
                     Long ownerUserId = TypeUtils.castToLong(map.get("ownerUserId"));
-                    String customerLevel = (String) map.get("level");
+                    String customerLevel = TypeUtils.castToString(map.get("level"));
                     //判断负责人
                     if (!userIdsList.contains(ownerUserId)) {
                         continue;
@@ -400,9 +411,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                 crmCustomer.setOwnerUserId(UserUtil.getUserId());
             }
             crmCustomer.setBatchId(batchId);
-            crmCustomer.setRwUserId(",");
             crmCustomer.setLastTime(new Date());
-            crmCustomer.setRoUserId(",");
             crmCustomer.setStatus(1);
             crmCustomer.setDealStatus(0);
             if (crmCustomer.getOwnerUserId() != null) {
@@ -450,11 +459,6 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
      */
     @Override
     public void deleteByIds(List<Integer> ids) {
-        for (Integer id : ids) {
-            if (!UserUtil.isAdmin() && getBaseMapper().queryIsRoUser(id, UserUtil.getUserId()) > 0) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
-        }
         Integer contactsNum = crmContactsService.lambdaQuery().in(CrmContacts::getCustomerId, ids).count();
         Integer businessNum = crmBusinessService.lambdaQuery().in(CrmBusiness::getCustomerId, ids).eq(CrmBusiness::getStatus, 1).count();
         if (contactsNum > 0 || businessNum > 0) {
@@ -493,14 +497,14 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void changeOwnerUser(CrmBusinessChangOwnerUserBO changOwnerUserBO) {
+    public void changeOwnerUser(CrmChangeOwnerUserBO changOwnerUserBO) {
         if (!isMaxOwner(changOwnerUserBO.getOwnerUserId(), changOwnerUserBO.getIds())) {
             throw new CrmException(CrmCodeEnum.THE_NUMBER_OF_CUSTOMERS_HAS_REACHED_THE_LIMIT);
         }
         String ownerUserName = UserCacheUtil.getUserName(changOwnerUserBO.getOwnerUserId());
         List<Long> userList = new ArrayList<>();
         if (UserUtil.isAdmin()){
-            userList = adminService.queryUserList().getData();
+            userList = adminService.queryUserList(1).getData();
         }else {
             userList.add(UserUtil.getUserId());
             userList.addAll(adminService.queryChildUserId(UserUtil.getUserId()).getData());
@@ -508,21 +512,14 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         List<Long> finalUserList = userList;
         BaseUtil.getRedis().del(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + changOwnerUserBO.getOwnerUserId().toString());
         changOwnerUserBO.getIds().forEach(id -> {
-            if (AuthUtil.isRwAuth(id, CrmEnum.CUSTOMER,CrmAuthEnum.EDIT)) {
+            if (AuthUtil.isChangeOwnerUserAuth(id, CrmEnum.CUSTOMER,CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
-            String memberId = "," + changOwnerUserBO.getOwnerUserId() + ",";
-            getBaseMapper().deleteMember(memberId, id);
             CrmCustomer customer = getById(id);
             if (2 == changOwnerUserBO.getTransferType() && !changOwnerUserBO.getOwnerUserId().equals(customer.getOwnerUserId())) {
-                if (1 == changOwnerUserBO.getPower()) {
-                    customer.setRoUserId(customer.getRoUserId() + customer.getOwnerUserId() + Const.SEPARATOR);
-                }
-                if (2 == changOwnerUserBO.getPower()) {
-                    customer.setRwUserId(customer.getRwUserId() + customer.getOwnerUserId() + Const.SEPARATOR);
-                }
-                addTermMessage(AdminMessageEnum.CRM_CUSTOMER_USER, customer.getCustomerId(), customer.getCustomerName(), customer.getOwnerUserId());
+                ApplicationContextHolder.getBean(ICrmTeamMembersService.class).addSingleMember(getLabel(),customer.getCustomerId(),customer.getOwnerUserId(),changOwnerUserBO.getPower(),changOwnerUserBO.getExpiresTime(),customer.getCustomerName());
             }
+            ApplicationContextHolder.getBean(ICrmTeamMembersService.class).deleteMember(getLabel(),new CrmMemberSaveBO(id,changOwnerUserBO.getOwnerUserId()));
             customer.setOwnerUserId(changOwnerUserBO.getOwnerUserId());
             customer.setFollowup(0);
             customer.setIsReceive(1);
@@ -538,7 +535,8 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                                 .eq(CrmContacts::getCustomerId, id)
                                 .in(CrmContacts::getOwnerUserId, finalUserList)
                                 .list().stream().map(CrmContacts::getContactsId).collect(Collectors.toList());
-                        crmContactsService.changeOwnerUser(ids, changOwnerUserBO.getOwnerUserId());
+                        changOwnerUserBO.setIds(ids);
+                        crmContactsService.changeOwnerUser(changOwnerUserBO);
                         break;
                     }
                     case 2: {
@@ -547,7 +545,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                                 .eq(CrmBusiness::getCustomerId, id)
                                 .in(CrmBusiness::getOwnerUserId,finalUserList)
                                 .list().stream().map(CrmBusiness::getBusinessId).collect(Collectors.toList());
-                        CrmBusinessChangOwnerUserBO changOwnerUser = new CrmBusinessChangOwnerUserBO();
+                        CrmChangeOwnerUserBO changOwnerUser = new CrmChangeOwnerUserBO();
                         changOwnerUser.setPower(changOwnerUserBO.getPower());
                         changOwnerUser.setTransferType(changOwnerUserBO.getTransferType());
                         changOwnerUser.setIds(ids);
@@ -561,7 +559,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                                 .eq(CrmContract::getCustomerId, id)
                                 .in(CrmContract::getOwnerUserId,finalUserList)
                                 .list().stream().map(CrmContract::getContractId).collect(Collectors.toList());
-                        CrmBusinessChangOwnerUserBO changOwnerUser = new CrmBusinessChangOwnerUserBO();
+                        CrmChangeOwnerUserBO changOwnerUser = new CrmChangeOwnerUserBO();
                         changOwnerUser.setTransferType(changOwnerUserBO.getTransferType());
                         changOwnerUser.setPower(changOwnerUserBO.getPower());
                         changOwnerUser.setIds(ids);
@@ -577,8 +575,6 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             Map<String, Object> map = new HashMap<>();
             map.put("ownerUserId", changOwnerUserBO.getOwnerUserId());
             map.put("ownerUserName", ownerUserName);
-            map.put("rwUserId", customer.getRwUserId());
-            map.put("roUserId", customer.getRoUserId());
             map.put("followup", 0);
             map.put("isReceive", 1);
             map.put("receiveTime", DateUtil.formatDateTime(new Date()));
@@ -594,7 +590,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
      */
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
-        List<Map<String, Object>> dataList = queryPageList(search).getList();
+        List<Map<String, Object>> dataList = queryList(search,true).getList();
         try (ExcelWriter writer = ExcelUtil.getWriter()) {
             List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
             headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
@@ -607,7 +603,9 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             }
             for (Map<String, Object> record : dataList) {
                 headList.forEach(field ->{
-                    record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                    if (fieldService.equalsByType(field.getType())) {
+                        record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
+                    }
                 });
                 record.put("dealStatus", Objects.equals(1, record.get("dealStatus")) ? "已成交" : "未成交");
                 record.put("status", Objects.equals(1, record.get("status")) ? "未锁定" : "已锁定");
@@ -660,8 +658,8 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             if (crmCustomer.getOwnerUserId() == null) {
                 continue;
             }
-            boolean isUser = StrUtil.splitTrim(crmCustomer.getRoUserId(), Const.SEPARATOR).contains(userId.toString());
-            if (isUser) {
+            /* 放入公海和修改负责人所需的权限相同 */
+            if (AuthUtil.isChangeOwnerUserAuth(id,getLabel(),CrmAuthEnum.EDIT)) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
             }
             CrmOwnerRecord crmOwnerRecord = new CrmOwnerRecord();
@@ -675,8 +673,6 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                     .set(CrmCustomer::getPreOwnerUserId, userId)
                     .set(CrmCustomer::getPoolTime, new Date())
                     .set(CrmCustomer::getIsReceive, null)
-                    .set(CrmCustomer::getRoUserId, ",")
-                    .set(CrmCustomer::getRwUserId, ",")
                     .eq(CrmCustomer::getCustomerId, crmCustomer.getCustomerId()).update();
             CrmCustomerPoolRelation relation = new CrmCustomerPoolRelation();
             relation.setCustomerId(id);
@@ -727,53 +723,6 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
     public void setContacts(CrmFirstContactsBO contactsBO) {
         lambdaUpdate().set(CrmCustomer::getContactsId, contactsBO.getContactsId())
                 .eq(CrmCustomer::getCustomerId, contactsBO.getCustomerId()).update();
-    }
-
-    /**
-     * 获取团队成员
-     *
-     * @param customerId 客户ID
-     * @return data
-     */
-    @Override
-    public List<CrmMembersSelectVO> getMembers(Integer customerId) {
-        CrmCustomer crmCustomer = getById(customerId);
-        List<CrmMembersSelectVO> recordList = new ArrayList<>();
-        if (crmCustomer.getOwnerUserId() != null) {
-            UserInfo userInfo = UserCacheUtil.getUserInfo(crmCustomer.getOwnerUserId());
-            CrmMembersSelectVO crmMembersVO = new CrmMembersSelectVO();
-            crmMembersVO.setUserId(userInfo.getUserId());
-            crmMembersVO.setDeptName(UserCacheUtil.getDeptName(userInfo.getDeptId()));
-            crmMembersVO.setRealname(UserCacheUtil.getUserName(userInfo.getUserId()));
-            crmMembersVO.setPost(userInfo.getPost());
-            crmMembersVO.setPower("负责人权限");
-            crmMembersVO.setGroupRole("负责人");
-            recordList.add(crmMembersVO);
-        }
-        String roUserId = crmCustomer.getRoUserId();
-        String rwUserId = crmCustomer.getRwUserId();
-        String memberIds = roUserId + rwUserId.substring(1);
-        if (Const.SEPARATOR.equals(memberIds)) {
-            return recordList;
-        }
-        String[] memberIdsArr = memberIds.substring(1, memberIds.length() - 1).split(",");
-        Set<String> memberIdsSet = new HashSet<>(Arrays.asList(memberIdsArr));
-        for (String memberId : memberIdsSet) {
-            UserInfo userInfo = UserCacheUtil.getUserInfo(Long.valueOf(memberId));
-            CrmMembersSelectVO crmMembersVO = new CrmMembersSelectVO();
-            crmMembersVO.setUserId(userInfo.getUserId());
-            crmMembersVO.setDeptName(UserCacheUtil.getDeptName(userInfo.getDeptId()));
-            crmMembersVO.setRealname(UserCacheUtil.getUserName(userInfo.getUserId()));
-            crmMembersVO.setGroupRole("普通成员");
-            if (roUserId.contains(memberId)) {
-                crmMembersVO.setPower("只读");
-            } else if (rwUserId.contains(memberId)) {
-                crmMembersVO.setPower("读写");
-            }
-            crmMembersVO.setPost(userInfo.getPost());
-            recordList.add(crmMembersVO);
-        }
-        return recordList;
     }
 
     /**
@@ -852,122 +801,13 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
     }
 
     /**
-     * 添加团队成员
-     *
-     * @param crmMemberSaveBO data
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void addMember(CrmMemberSaveBO crmMemberSaveBO) {
-        for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isRwAuth(id,CrmEnum.CUSTOMER,CrmAuthEnum.EDIT)) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
-            CrmCustomer oldCustomer = lambdaQuery().eq(CrmCustomer::getCustomerId,id).ne(CrmCustomer::getStatus,3).one();
-            if (oldCustomer == null){
-                continue;
-            }
-            Long ownerUserId = oldCustomer.getOwnerUserId();
-            for (Long memberId : crmMemberSaveBO.getMemberIds()) {
-                if (ownerUserId.equals(memberId)) {
-                    throw new CrmException(CrmCodeEnum.CRM_MEMBER_ADD_ERROR);
-                }
-                oldCustomer.setRoUserId(oldCustomer.getRoUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-                oldCustomer.setRwUserId(oldCustomer.getRwUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-                String name = lambdaQuery().select(CrmCustomer::getCustomerName).eq(CrmCustomer::getCustomerId, id).one().getCustomerName();
-                addTermMessage(AdminMessageEnum.CRM_CUSTOMER_USER, oldCustomer.getCustomerId(), oldCustomer.getCustomerName(), memberId);
-                actionRecordUtil.addMemberActionRecord(CrmEnum.CUSTOMER, id, memberId, name);
-            }
-            if (1 == crmMemberSaveBO.getPower()) {
-                oldCustomer.setRoUserId(oldCustomer.getRoUserId() + StrUtil.join(Const.SEPARATOR, crmMemberSaveBO.getMemberIds()) + Const.SEPARATOR);
-            } else if (2 == crmMemberSaveBO.getPower()) {
-                oldCustomer.setRwUserId(oldCustomer.getRwUserId() + StrUtil.join(Const.SEPARATOR, crmMemberSaveBO.getMemberIds()) + Const.SEPARATOR);
-            }
-            updateById(oldCustomer);
-            Map<String, Object> map = new HashMap<>();
-            map.put("roUserId", oldCustomer.getRoUserId());
-            map.put("rwUserId", oldCustomer.getRwUserId());
-            updateField(map, Collections.singletonList(id));
-            if (CollUtil.isNotEmpty(crmMemberSaveBO.getChangeType())) {
-                if (crmMemberSaveBO.getChangeType().contains(2)) {
-                    List<Integer> ids = crmBusinessService.lambdaQuery()
-                            .select(CrmBusiness::getBusinessId)
-                            .eq(CrmBusiness::getCustomerId, id)
-                            .list().stream().map(CrmBusiness::getBusinessId).collect(Collectors.toList());
-                    crmMemberSaveBO.setIds(ids);
-                    crmBusinessService.addMember(crmMemberSaveBO);
-                }
-                if (crmMemberSaveBO.getChangeType().contains(3)) {
-                    List<Integer> ids = crmContractService.lambdaQuery()
-                            .select(CrmContract::getContractId)
-                            .eq(CrmContract::getCustomerId, id)
-                            .list().stream().map(CrmContract::getContractId).collect(Collectors.toList());
-                    crmMemberSaveBO.setIds(ids);
-                    crmContractService.addMember(crmMemberSaveBO);
-                }
-            }
-        }
-
-    }
-
-    /**
-     * 删除团队成员
-     *
-     * @param crmMemberSaveBO data
-     */
-    @Override
-    public void deleteMember(CrmMemberSaveBO crmMemberSaveBO) {
-        for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isRwAuth(id,CrmEnum.CUSTOMER,CrmAuthEnum.EDIT)) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
-            deleteMembers(id, crmMemberSaveBO.getMemberIds());
-        }
-    }
-
-
-    private void deleteMembers(Integer id, List<Long> memberIds) {
-        CrmCustomer oldCustomer = getById(id);
-        Long ownerUserId = oldCustomer.getOwnerUserId();
-        for (Long memberId : memberIds) {
-            if (ownerUserId.equals(memberId)) {
-                throw new CrmException(CrmCodeEnum.CRM_MEMBER_DELETE_ERROR);
-            }
-            oldCustomer.setRoUserId(oldCustomer.getRoUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-            oldCustomer.setRwUserId(oldCustomer.getRwUserId().replace(Const.SEPARATOR + memberId.toString() + Const.SEPARATOR, Const.SEPARATOR));
-            if (!memberId.equals(UserUtil.getUserId())) {
-                addTermMessage(AdminMessageEnum.CRM_CUSTOMER_REMOVE_TEAM, oldCustomer.getCustomerId(), oldCustomer.getCustomerName(), memberId);
-                actionRecordUtil.addDeleteMemberActionRecord(CrmEnum.CUSTOMER, id, memberId, false, oldCustomer.getCustomerName());
-            } else {
-                addTermMessage(AdminMessageEnum.CRM_CUSTOMER_TEAM_EXIT, oldCustomer.getCustomerId(), oldCustomer.getCustomerName(), oldCustomer.getOwnerUserId());
-                actionRecordUtil.addDeleteMemberActionRecord(CrmEnum.CUSTOMER, id, memberId, true, oldCustomer.getCustomerName());
-            }
-        }
-        updateById(oldCustomer);
-        Map<String, Object> map = new HashMap<>();
-        map.put("roUserId", oldCustomer.getRoUserId());
-        map.put("rwUserId", oldCustomer.getRwUserId());
-        updateField(map, Collections.singletonList(id));
-    }
-
-    /**
-     * 退出团队
-     *
-     * @param customerId 客户ID
-     */
-    @Override
-    public void exitTeam(Integer customerId) {
-        deleteMembers(customerId, Collections.singletonList(UserUtil.getUserId()));
-    }
-
-    /**
      * 下载导入模板
      *
      * @param response resp
      * @throws IOException ex
      */
     @Override
-    public void downloadExcel(HttpServletResponse response) throws IOException {
+    public void downloadExcel(boolean isPool,HttpServletResponse response) throws IOException {
         List<CrmModelFiledVO> crmModelFiledList = queryField(null);
         int k = 0;
         for (int i = 0; i < crmModelFiledList.size(); i++) {
@@ -975,7 +815,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                 k=i;break;
             }
         }
-        crmModelFiledList.add(k+1,new CrmModelFiledVO("ownerUserId",FieldEnum.TEXT,"负责人",1).setIsNull(1));
+        crmModelFiledList.add(k+1,new CrmModelFiledVO("ownerUserId",FieldEnum.TEXT,"负责人",1).setIsNull(isPool ? 0 : 1));
         removeFieldByType(crmModelFiledList);
         HSSFWorkbook wb = new HSSFWorkbook();
         HSSFSheet sheet = wb.createSheet("客户导入表");
@@ -1172,33 +1012,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
 
     @Override
     public List<CrmModelFiledVO> information(Integer customerId, Integer poolId) {
-        CrmModel crmModel = queryById(customerId, null);
-        List<String> keyList = Arrays.asList("customerName", "nextTime", "website", "remark", "telephone", "mobile", "email", "lastTime", "updateTime", "createTime");
-        List<String> systemFieldList = Arrays.asList("最后跟进时间", "创建人", "创建时间", "更新时间", "最后跟进记录", "成交状态", "负责人获取客户时间");
-        List<CrmModelFiledVO> crmModelFiledVOS = queryInformation(crmModel, keyList);
-        CrmModelFiledVO filedVO = new CrmModelFiledVO();
-        filedVO.setFieldType(1);
-        filedVO.setFormType("deal_status");
-        filedVO.setName("成交状态");
-        filedVO.setValue(Objects.equals(0, crmModel.get("dealStatus")) ? "未成交" : "已成交");
-        crmModelFiledVOS.add(filedVO);
-        Map<String, Object> map = new HashMap<>();
-        map.put("location", crmModel.get("location"));
-        map.put("address", crmModel.get("address"));
-        map.put("detailAddress", crmModel.get("detailAddress"));
-        map.put("lng", crmModel.get("lng"));
-        map.put("lat", crmModel.get("lat"));
-        crmModelFiledVOS.add(new CrmModelFiledVO().setName("地区定位").setFormType("map_address").setFieldType(1).setValue(map));
-        List<CrmModelFiledVO> collect = crmModelFiledVOS.stream().sorted(Comparator.comparingInt(r -> -r.getFieldType())).peek(r -> {
-            r.setFieldType(null);
-            r.setSetting(null);
-            r.setType(null);
-            if (systemFieldList.contains(r.getName())) {
-                r.setSysInformation(1);
-            } else {
-                r.setSysInformation(0);
-            }
-        }).collect(Collectors.toList());
+        List<CrmModelFiledVO> collect = queryField(customerId, true);
         if (ObjectUtil.isNotEmpty(poolId)) {
             LambdaQueryWrapper<CrmCustomerPoolFieldSetting> wrapper = new LambdaQueryWrapper<>();
             wrapper.select(CrmCustomerPoolFieldSetting::getName, CrmCustomerPoolFieldSetting::getIsHidden);
@@ -1209,17 +1023,10 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             List<String> collect1 = collect.stream().map(CrmModelFiledVO::getName).collect(Collectors.toList());
             List<String> collect2 = fieldSettings.stream().map(CrmCustomerPoolFieldSetting::getName).collect(Collectors.toList());
             Collection<String> disjunction = CollUtil.disjunction(collect1, collect2);
-            collect.removeIf(r -> disjunction.contains(r.getName()) || nameList.contains(r.getName()) || "负责人".equals(r.getName()) || "负责人获取客户时间".equals(r.getName()));
+            collect.removeIf(r -> disjunction.contains(r.getName()) || nameList.contains(r.getName()) || "owner_user_name".equals(r.getFieldName()) || "receive_time".equals(r.getFieldName()));
         } else {
-            collect.removeIf(r -> "前负责人".equals(r.getName()));
+            collect.removeIf(r -> "owner_user_name".equals(r.getFieldName()));
         }
-        ICrmRoleFieldService crmRoleFieldService = ApplicationContextHolder.getBean(ICrmRoleFieldService.class);
-        List<CrmRoleField> roleFieldList = crmRoleFieldService.queryUserFieldAuth(crmModel.getLabel(), 1);
-        Map<String, Integer> levelMap = new HashMap<>();
-        roleFieldList.forEach(crmRoleField -> {
-            levelMap.put(StrUtil.toCamelCase(crmRoleField.getFieldName()), crmRoleField.getAuthLevel());
-        });
-        collect.removeIf(field -> (!UserUtil.isAdmin() && Objects.equals(1, levelMap.get(field.getFieldName()))));
         return collect;
     }
 
@@ -1317,8 +1124,16 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         String condition = AuthUtil.getCrmAuthSql(CrmEnum.BUSINESS, "a", 1,CrmAuthEnum.READ);
         BasePage<Map<String, Object>> page = getBaseMapper().queryBusiness(basePage, pageEntity.getCustomerId(), pageEntity.getSearch(), condition);
         for (Map<String, Object> map : page.getList()) {
-            CrmListBusinessStatusVO crmListBusinessStatusVO = businessTypeService.queryListBusinessStatus((Integer) map.get("typeId"), (Integer) map.get("statusId"), (Integer) map.get("isEnd"));
+            Integer isEnd = TypeUtils.castToInt(map.get("isEnd"));
+            CrmListBusinessStatusVO crmListBusinessStatusVO = businessTypeService.queryListBusinessStatus((Integer) map.get("typeId"), (Integer) map.get("statusId"), isEnd);
             map.put("businessStatusCount", crmListBusinessStatusVO);
+            if(Objects.equals(1,isEnd)) {
+                map.put("statusName","赢单");
+            } else if(Objects.equals(2,isEnd)) {
+                map.put("statusName","输单");
+            } else if(Objects.equals(3,isEnd)) {
+                map.put("statusName","无效");
+            }
         }
         return page;
     }
@@ -1374,7 +1189,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         if (ids.size() == 0) {
             return new ArrayList<>();
         }
-        List<CrmCustomer> list = query().in("customer_id", ids).list();
+        List<CrmCustomer> list = lambdaQuery().select(CrmCustomer::getCustomerId,CrmCustomer::getCustomerName).in(CrmCustomer::getCustomerId, ids).list();
         return list.stream().map(crmCustomer -> {
             SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
             simpleCrmEntity.setId(crmCustomer.getCustomerId());
@@ -1385,7 +1200,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
 
     @Override
     public List<SimpleCrmEntity> queryByNameCustomerInfo(String name) {
-        List<CrmCustomer> list = query().like("customer_name", name).list();
+        List<CrmCustomer> list = lambdaQuery().select(CrmCustomer::getCustomerId,CrmCustomer::getCustomerName).like(CrmCustomer::getCustomerName, name).list();
         return list.stream().map(crmCustomer -> {
             SimpleCrmEntity simpleCrmEntity = new SimpleCrmEntity();
             simpleCrmEntity.setId(crmCustomer.getCustomerId());
@@ -1461,13 +1276,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         map.put("customerId", customerId);
         CrmInfoNumVO infoNumVO = getBaseMapper().queryNum(map);
         infoNumVO.setFileCount(fileService.queryNum(batchIdList).getData());
-        Set<String> member = new HashSet<>();
-        member.addAll(StrUtil.splitTrim(customer.getRoUserId(), Const.SEPARATOR));
-        member.addAll(StrUtil.splitTrim(customer.getRwUserId(), Const.SEPARATOR));
-        if (customer.getOwnerUserId() != null) {
-            member.add(customer.getOwnerUserId().toString());
-        }
-        infoNumVO.setMemberCount(member.size());
+        infoNumVO.setMemberCount(ApplicationContextHolder.getBean(ICrmTeamMembersService.class).queryMemberCount(getLabel(),customer.getCustomerId(),customer.getOwnerUserId()));
         return infoNumVO;
     }
 
@@ -1534,21 +1343,6 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                 .oneOpt().map(CrmCustomer::getCustomerName).orElse("");
     }
 
-
-    /**
-     * 团队成员相关消息
-     */
-    @Override
-    public void addTermMessage(AdminMessageEnum messageEnum, Integer typeId, String title, Long userId) {
-        AdminMessageBO adminMessageBO = new AdminMessageBO();
-        adminMessageBO.setTitle(title);
-        adminMessageBO.setTypeId(typeId);
-        adminMessageBO.setUserId(UserUtil.getUserId());
-        adminMessageBO.setIds(Collections.singletonList(userId));
-        adminMessageBO.setMessageType(messageEnum.getType());
-        ApplicationContextHolder.getBean(AdminMessageService.class).sendMessage(adminMessageBO);
-    }
-
     /**
      * 大的搜索框的搜索字段
      *
@@ -1584,13 +1378,12 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         filedList.add(new CrmModelFiledVO("receiveTime", FieldEnum.DATETIME, 1));
         filedList.add(new CrmModelFiledVO("poolTime", FieldEnum.DATETIME, 1));
         filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-        filedList.add(new CrmModelFiledVO("roUserId", FieldEnum.CHECKBOX, 1));
-        filedList.add(new CrmModelFiledVO("rwUserId", FieldEnum.CHECKBOX, 1));
         filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
         filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
         filedList.add(new CrmModelFiledVO("status", FieldEnum.TEXT, 1));
         filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
         filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
+        filedList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, 0));
         return filedList;
     }
 
@@ -1610,6 +1403,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         }
         updateInformationBO.getList().forEach(record -> {
             CrmCustomer oldCustomer = getById(customerId);
+            uniqueFieldIsAbnormal(record.getString("name"),record.getInteger("fieldId"),record.getString("value"),batchId);
             Map<String, Object> oldCustomerMap = BeanUtil.beanToMap(oldCustomer);
             if (record.getInteger("fieldType") == 1) {
                 Map<String, Object> crmCustomerMap = new HashMap<>(oldCustomerMap);
@@ -1621,26 +1415,20 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                     ElasticUtil.batchUpdateEsData(elasticsearchRestTemplate.getClient(), "customer", crmCustomer.getCustomerId().toString(), crmCustomer.getCustomerName());
                 }
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
-                CrmCustomerData customerData = crmCustomerDataService.lambdaQuery().select(CrmCustomerData::getValue).eq(CrmCustomerData::getFieldId, record.getInteger("fieldId"))
+                CrmCustomerData customerData = crmCustomerDataService.lambdaQuery().select(CrmCustomerData::getValue,CrmCustomerData::getId).eq(CrmCustomerData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmCustomerData::getBatchId, batchId).last("limit 1").one();
                 String value = customerData != null ? customerData.getValue() : null;
-                String detail = actionRecordUtil.getDetailByFormTypeAndValue(record,value);
-                actionRecordUtil.publicContentRecord(CrmEnum.CUSTOMER, BehaviorEnum.UPDATE, customerId, oldCustomer.getCustomerName(), detail);
+                actionRecordUtil.publicContentRecord(CrmEnum.CUSTOMER, BehaviorEnum.UPDATE, customerId, oldCustomer.getCustomerName(), record,value);
                 String newValue = fieldService.convertObjectValueToString(record.getInteger("type"),record.get("value"),record.getString("value"));
-                boolean bol = crmCustomerDataService.lambdaUpdate()
-                        .set(CrmCustomerData::getName, record.getString("fieldName"))
-                        .set(CrmCustomerData::getValue, newValue)
-                        .eq(CrmCustomerData::getFieldId, record.getInteger("fieldId"))
-                        .eq(CrmCustomerData::getBatchId, batchId).update();
-                if (!bol) {
-                    CrmCustomerData crmCustomerData = new CrmCustomerData();
-                    crmCustomerData.setFieldId(record.getInteger("fieldId"));
-                    crmCustomerData.setName(record.getString("fieldName"));
-                    crmCustomerData.setValue(newValue);
-                    crmCustomerData.setCreateTime(new Date());
-                    crmCustomerData.setBatchId(batchId);
-                    crmCustomerDataService.save(crmCustomerData);
-                }
+                CrmCustomerData crmCustomerData = new CrmCustomerData();
+                crmCustomerData.setId(customerData != null ? customerData.getId() : null);
+                crmCustomerData.setFieldId(record.getInteger("fieldId"));
+                crmCustomerData.setName(record.getString("fieldName"));
+                crmCustomerData.setValue(newValue);
+                crmCustomerData.setCreateTime(new Date());
+                crmCustomerData.setBatchId(batchId);
+                crmCustomerDataService.saveOrUpdate(crmCustomerData);
+
             }
             updateField(record, customerId);
         });
@@ -1766,7 +1554,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         }
         List<String> collect = customerIds.stream().map(Object::toString).collect(Collectors.toList());
         CrmSearchBO crmSearchBO = new CrmSearchBO();
-        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "id", CrmSearchBO.FieldSearchEnum.ID, collect)));
+        crmSearchBO.setSearchList(Collections.singletonList(new CrmSearchBO.Search("_id", "text", CrmSearchBO.FieldSearchEnum.ID, collect)));
         crmSearchBO.setLabel(CrmEnum.CUSTOMER.getType());
         crmSearchBO.setPage(eventCrmPageBO.getPage());
         crmSearchBO.setLimit(eventCrmPageBO.getLimit());

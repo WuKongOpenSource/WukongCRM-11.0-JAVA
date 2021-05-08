@@ -97,6 +97,7 @@ public class AdminMessageServiceImpl extends BaseServiceImpl<AdminMessageMapper,
             case OA_LOG_SEND:
                 addOaLogSendMessage(messageEnum, adminMessageBO.getTypeId(), adminMessageBO.getUserId(), adminMessageBO.getIds());
                 break;
+            case OA_LOG_FAVOUR:
             case OA_LOG_REPLY:
                 addOaLogReplyMessage(messageEnum, adminMessageBO.getTitle(), adminMessageBO.getContent(), adminMessageBO.getTypeId(), adminMessageBO.getUserId(), adminMessageBO.getIds());
                 break;

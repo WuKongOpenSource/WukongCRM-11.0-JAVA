@@ -6,7 +6,6 @@ import com.kakarote.authorization.common.AuthorizationCodeEnum;
 import com.kakarote.authorization.entity.AuthorizationUser;
 import com.kakarote.authorization.service.LoginService;
 import com.kakarote.core.common.Const;
-import com.kakarote.core.common.LoginType;
 import com.kakarote.core.common.ParamAspect;
 import com.kakarote.core.common.Result;
 import io.swagger.annotations.Api;

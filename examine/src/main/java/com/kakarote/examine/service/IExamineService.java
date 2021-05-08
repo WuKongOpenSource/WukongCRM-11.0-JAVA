@@ -55,29 +55,66 @@ public interface IExamineService extends BaseService<Examine> {
      * @param examineId 审批ID
      * @param status    1 正常 2 停用 3 删除
      */
-    public Integer updateStatus(Long examineId, Integer status,boolean isRequest);
+    public Examine updateStatus(Long examineId, Integer status,boolean isRequest);
 
 
     /**
-     * 查询指定类型的审批流程树
+     * 预览指定类型的审批流程树
      * @param label 类型
      */
     public List<ExamineFlowVO> previewExamineFlow(Integer label);
 
+    /**
+     * 查询指定的审批流程树
+     * @param examineId 审批ID
+     */
     public List<ExamineFlowVO> queryExamineFlow(Long examineId);
 
+    /**
+     * 查询指定的审批流包含的条件字段数据
+     * @param label 审批类型
+     * @param recordId 审批记录ID
+     * @param examineId 审批ID
+     */
     public List<ExamineFlowConditionDataVO> previewFiledName(Integer label,Integer recordId,Long examineId);
 
+    /**
+     * 预览对应的审批流程
+     * @param examinePreviewBO
+     */
     public ExaminePreviewVO previewExamineFlow(ExaminePreviewBO examinePreviewBO);
 
+    /**
+     * 查询办公审批数据列表
+     * @param examinePageBo
+     */
     BasePage<com.kakarote.core.feign.oa.entity.ExamineVO> queryOaExamineList(ExaminePageBO examinePageBo);
 
+    /**
+     * 查询客户管理审批数据列表
+     * @param examinePageBo
+     */
     BasePage<ExamineRecordInfoVO> queryCrmExamineList(ExaminePageBO examinePageBo);
 
+    /**
+     * 查询办公符合条件的审批数据ID
+     * @param status  状态
+     * @param categoryId 办公审批流ID
+     */
     List<Integer> queryOaExamineIdList(Integer status, Integer categoryId);
 
+    /**
+     * 查询客户管理符合条件的审批数据ID
+     * @param label 审批类型
+     * @param status  状态
+     */
     List<Integer> queryCrmExamineIdList(Integer label,Integer status);
 
 
+    /**
+     * 过滤用户列表 - 去除非正常用户，最后找不到人返回审批流管理员
+     * @param userIds 用户ID集合
+     * @param examineId  审批流ID
+     */
     public List<Long> handleUserList(List<Long> userIds,Long examineId);
 }

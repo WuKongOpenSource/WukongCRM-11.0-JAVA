@@ -1131,6 +1131,7 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
             }
             invoice.setCheckStatus(status);
             ApplicationContextHolder.getBean(ICrmInvoiceService.class).updateById(invoice);
+            ElasticUtil.updateField(elasticsearchRestTemplate, "checkStatus", status, Collections.singletonList(invoice.getInvoiceId()), CrmEnum.INVOICE.getIndex());
         } else if (categoryType == 4) {
             Result<HrmSalaryMonthRecord> hrmSalaryMonthRecordResult = salaryRecordService.querySalaryRecordById(id);
             HrmSalaryMonthRecord salaryMonthRecord = hrmSalaryMonthRecordResult.getData();

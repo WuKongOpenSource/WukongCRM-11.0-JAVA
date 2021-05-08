@@ -12,9 +12,7 @@ import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.CrmBusiness;
 import com.kakarote.crm.entity.PO.CrmContacts;
 import com.kakarote.crm.entity.VO.CrmInfoNumVO;
-import com.kakarote.crm.entity.VO.CrmMembersSelectVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import javax.servlet.http.HttpServletResponse;
 import java.util.List;
@@ -39,12 +37,12 @@ public interface ICrmBusinessService extends BaseService<CrmBusiness> {
     public List<CrmModelFiledVO> queryField(Integer id);
     public List<List<CrmModelFiledVO>> queryFormPositionField(Integer id);
     /**
-     * 分页查询
+     * 查询所有数据
      *
-     * @param search
-     * @return
+     * @param search 搜索对象
+     * @return data
      */
-    public BasePage<Map<String, Object>> queryPageList(@RequestBody CrmSearchBO search);
+    public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search);
 
     /**
      * 查询字段配置
@@ -73,7 +71,7 @@ public interface ICrmBusinessService extends BaseService<CrmBusiness> {
      *
      * @param changOwnerUserBO       data
      */
-    public void changeOwnerUser(CrmBusinessChangOwnerUserBO changOwnerUserBO);
+    public void changeOwnerUser(CrmChangeOwnerUserBO changOwnerUserBO);
 
     /**
      * 全部导出
@@ -123,31 +121,6 @@ public interface ICrmBusinessService extends BaseService<CrmBusiness> {
      * @param contactsBO  data
      */
     public void setContacts(CrmFirstContactsBO contactsBO);
-
-    /**
-     * 获取团队成员
-     * @param businessId 商机ID
-     * @return data
-     */
-    public List<CrmMembersSelectVO> getMembers(Integer businessId);
-
-    /**
-     * 添加团队成员
-     * @param crmMemberSaveBO data
-     */
-    public void addMember(CrmMemberSaveBO crmMemberSaveBO);
-
-    /**
-     * 删除团队成员
-     * @param crmMemberSaveBO data
-     */
-    public void deleteMember(CrmMemberSaveBO crmMemberSaveBO);
-
-    /**
-     * 退出团队
-     * @param businessId 商机ID
-     */
-    public void exitTeam(Integer businessId);
 
     /**
      * 商机关联联系人

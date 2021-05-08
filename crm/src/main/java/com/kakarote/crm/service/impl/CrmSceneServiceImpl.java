@@ -73,9 +73,6 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
                 sceneList.add(new CrmScene(crmEnum.getType(), "全部客户", userId, 0, "", 0, 1, CrmSceneEnum.ALL.getName()));
                 sceneList.add(new CrmScene(crmEnum.getType(), "我负责的客户", userId, 0, "", 0, 1, CrmSceneEnum.SELF.getName()));
                 sceneList.add(new CrmScene(crmEnum.getType(), "下属负责的客户", userId, 0, "", 0, 1, CrmSceneEnum.CHILD.getName()));
-                JSONArray array = new JSONArray();
-                array.add(new JSONObject().fluentPut("name", "roUserId").fluentPut("type", 3).fluentPut("values", Collections.singletonList(userId)));
-                sceneList.add(new CrmScene(crmEnum.getType(), "我参与的客户", userId, 0, array.toJSONString(), 0, 1, ""));
                 sceneList.add(new CrmScene(crmEnum.getType(), "我关注的客户", userId, 0, "", 0, 1, CrmSceneEnum.STAR.getName()));
             } else if (CrmEnum.CONTACTS == crmEnum) {
                 sceneList.add(new CrmScene(crmEnum.getType(), "全部联系人", userId, 0, "", 0, 1, CrmSceneEnum.ALL.getName()));
@@ -95,7 +92,6 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
                 sceneList.add(new CrmScene(crmEnum.getType(), "我负责的商机", userId, 0, "", 0, 1, CrmSceneEnum.SELF.getName()));
                 sceneList.add(new CrmScene(crmEnum.getType(), "下属负责的商机", userId, 0, "", 0, 1, CrmSceneEnum.CHILD.getName()));
                 sceneList.add(new CrmScene(crmEnum.getType(), "我关注的商机", userId, 0, "", 0, 1, CrmSceneEnum.STAR.getName()));
-                sceneList.add(new CrmScene(crmEnum.getType(), "我参与的商机", userId, 0, new JSONArray().fluentAdd(new JSONObject().fluentPut("name", "roUserId").fluentPut("type", 3).fluentPut("values", Collections.singletonList(userId))).toJSONString(), 0, 1, ""));
                 sceneList.add(new CrmScene(crmEnum.getType(), "赢单商机", userId, 0, new JSONArray().fluentAdd(new JSONObject().fluentPut("name", "isEnd").fluentPut("type", 1).fluentPut("values", Collections.singletonList(1))).toJSONString(), 0, 1, ""));
                 sceneList.add(new CrmScene(crmEnum.getType(), "输单商机", userId, 0, new JSONArray().fluentAdd(new JSONObject().fluentPut("name", "isEnd").fluentPut("type", 1).fluentPut("values", Collections.singletonList(2))).toJSONString(), 0, 1, ""));
                 sceneList.add(new CrmScene(crmEnum.getType(), "无效商机", userId, 0, new JSONArray().fluentAdd(new JSONObject().fluentPut("name", "isEnd").fluentPut("type", 1).fluentPut("values", Collections.singletonList(3))).toJSONString(), 0, 1, ""));
@@ -103,7 +99,6 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
                 sceneList.add(new CrmScene(crmEnum.getType(), "全部合同", userId, 0, "", 0, 1, CrmSceneEnum.ALL.getName()));
                 sceneList.add(new CrmScene(crmEnum.getType(), "我负责的合同", userId, 0, "", 0, 1, CrmSceneEnum.SELF.getName()));
                 sceneList.add(new CrmScene(crmEnum.getType(), "下属负责的合同", userId, 0, "", 0, 1, CrmSceneEnum.CHILD.getName()));
-                sceneList.add(new CrmScene(crmEnum.getType(), "我参与的合同", userId, 0, new JSONArray().fluentAdd(new JSONObject().fluentPut("name", "roUserId").fluentPut("type", 3).fluentPut("values", Collections.singletonList(userId))).toJSONString(), 0, 1, ""));
             } else if (CrmEnum.RECEIVABLES == crmEnum) {
                 sceneList.add(new CrmScene(crmEnum.getType(), "全部回款", userId, 0, "", 0, 1, CrmSceneEnum.ALL.getName()));
                 sceneList.add(new CrmScene(crmEnum.getType(), "我负责的回款", userId, 0, "", 0, 1, CrmSceneEnum.SELF.getName()));
@@ -138,7 +133,7 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
         wrapper.eq(CrmField::getLabel, label);
         wrapper.eq(CrmField::getFieldType, 1);
         wrapper.eq(CrmField::getIsHidden, 0);
-        wrapper.select(CrmField::getOptions, CrmField::getType, CrmField::getName, CrmField::getFieldName);
+        wrapper.select(CrmField::getOptions, CrmField::getType, CrmField::getName, CrmField::getFieldName,CrmField::getPrecisions);
         List<CrmModelFiledVO> fieldList = crmFieldService.list(wrapper).stream()
                 .map(field -> {
                     CrmModelFiledVO filedVO = BeanUtil.copyProperties(field, CrmModelFiledVO.class);
@@ -166,13 +161,14 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
             fieldList.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1));
             fieldList.add(new CrmModelFiledVO("detail_address", FieldEnum.TEXT, "详细地址", 1));
             fieldList.add(new CrmModelFiledVO("address", FieldEnum.MAP_ADDRESS, "地区定位", 1));
+            fieldList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, "相关团队",1));
         } else if (CrmEnum.CONTACTS.getType().equals(label)) {
-
             fieldList.add(new CrmModelFiledVO("last_time", FieldEnum.DATETIME, "最后跟进时间", 1));
             fieldList.add(new CrmModelFiledVO("owner_user_id", FieldEnum.USER, "负责人", 1));
             fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));
             fieldList.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1));
             fieldList.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1));
+            fieldList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, "相关团队",1));
         } else if (CrmEnum.PRODUCT.getType().equals(label)) {
             fieldList.add(new CrmModelFiledVO("owner_user_id", FieldEnum.USER, "负责人", 1));
             fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));
@@ -195,6 +191,7 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
             fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));
             fieldList.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1));
             fieldList.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1));
+            fieldList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, "相关团队",1));
         } else if (CrmEnum.CONTRACT.getType().equals(label)) {
             List<Object> checkList = new ArrayList<>();
             checkList.add(new JSONObject().fluentPut("name", "待审核").fluentPut("value", 0));
@@ -210,6 +207,7 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
             fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));
             fieldList.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1));
             fieldList.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1));
+            fieldList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, "相关团队",1));
         } else if (CrmEnum.RECEIVABLES.getType().equals(label)) {
             List<Object> checkList = new ArrayList<>();
             checkList.add(new JSONObject().fluentPut("name", "待审核").fluentPut("value", 0));
@@ -222,10 +220,34 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
             fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));
             fieldList.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1));
             fieldList.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1));
+            fieldList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, "相关团队",1));
         } else if (CrmEnum.RETURN_VISIT.getType().equals(label)) {
             fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));
             fieldList.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1));
             fieldList.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1));
+        } else if (CrmEnum.INVOICE.getType().equals(label)){
+            for (CrmModelFiledVO crmModelFiledVO : fieldList) {
+                if("invoiceType".equals(crmModelFiledVO.getFieldName())){
+                    List<Object> checkList = new ArrayList<>();
+                    checkList.add(new JSONObject().fluentPut("name", "增值税专用发票").fluentPut("value", 1));
+                    checkList.add(new JSONObject().fluentPut("name", "增值税普通发票").fluentPut("value", 2));
+                    checkList.add(new JSONObject().fluentPut("name", "国税通用机打发票").fluentPut("value", 3));
+                    checkList.add(new JSONObject().fluentPut("name", "地税通用机打发票").fluentPut("value", 4));
+                    checkList.add(new JSONObject().fluentPut("name", "收据").fluentPut("value", 5));
+                    crmModelFiledVO.setSetting(checkList);
+                    break;
+                }
+            }
+            fieldList.add(new CrmModelFiledVO("create_user_id", FieldEnum.USER, "创建人", 1));
+            fieldList.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1));
+            fieldList.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1));
+            List<Object> settingList = new ArrayList<>(2);
+            settingList.add(new JSONObject().fluentPut("name", "未开票").fluentPut("value", 0));
+            settingList.add(new JSONObject().fluentPut("name", "已开票").fluentPut("value", 1));
+            fieldList.add(new CrmModelFiledVO("invoiceStatus", FieldEnum.SELECT, "开票状态",1).setSetting(settingList));
+            fieldList.add(new CrmModelFiledVO("invoiceNumber", FieldEnum.TEXT, "发票号码",1));
+            fieldList.add(new CrmModelFiledVO("realInvoiceDate", FieldEnum.DATE, "实际开票日期",1));
+            fieldList.add(new CrmModelFiledVO("logisticsNumber", FieldEnum.TEXT, "物流单号",1));
         } else {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
         }
@@ -233,8 +255,9 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
         queryWrapper.eq(CrmField::getLabel, label);
         queryWrapper.ne(CrmField::getFieldType, 1);
         queryWrapper.eq(CrmField::getIsHidden, 0);
-        queryWrapper.select(CrmField::getFieldName, CrmField::getName, CrmField::getType, CrmField::getOptions);
-        List<CrmModelFiledVO> records = crmFieldService.list(queryWrapper).stream()
+        queryWrapper.select(CrmField::getFieldName, CrmField::getName, CrmField::getType, CrmField::getOptions,CrmField::getRemark,CrmField::getPrecisions);
+        List<CrmField> crmFields = crmFieldService.list(queryWrapper);
+        List<CrmModelFiledVO> records = crmFields.stream()
                 .map(field -> {
                     CrmModelFiledVO filedVO = BeanUtil.copyProperties(field, CrmModelFiledVO.class);
                     crmFieldService.recordToFormType(filedVO, FieldEnum.parse(filedVO.getType()));
@@ -293,6 +316,12 @@ public class CrmSceneServiceImpl extends BaseServiceImpl<CrmSceneMapper, CrmScen
             wrapper.eq(CrmSceneDefault::getUserId, userId);
             wrapper.eq(CrmSceneDefault::getType, oldAdminScene.getType());
             crmSceneDefaultService.update(wrapper);
+        }else {
+            LambdaQueryWrapper<CrmSceneDefault> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(CrmSceneDefault::getSceneId, crmScene.getSceneId())
+                    .eq(CrmSceneDefault::getUserId, userId)
+                    .eq(CrmSceneDefault::getType, oldAdminScene.getType());
+            crmSceneDefaultService.remove(wrapper);
         }
         crmScene.setUserId(userId).setType(oldAdminScene.getType()).setSort(oldAdminScene.getSort()).setIsSystem(oldAdminScene.getIsSystem()).setUpdateTime(DateUtil.date());
         updateById(crmScene);

@@ -270,7 +270,7 @@
             </otherwise>
         </choose>
         <if test="data.categoryId != null">
-            and a.category_id = #{data.categoryId}
+            and a.category_id in (SELECT examine_id FROM wk_examine WHERE examine_init_id=#{data.categoryId})
         </if>
         <if test="data.startTime != null and endTime != null">
             and a.create_time between #{data.startTime} and #{data.endTime}
@@ -300,7 +300,7 @@
             </otherwise>
         </choose>
         <if test="data.categoryId != null and data.categoryId != ''">
-            and a.category_id = #{data.categoryId}
+            and a.category_id in (SELECT examine_id FROM wk_examine WHERE examine_init_id=#{data.categoryId})
         </if>
         <if test="data.checkStatus != null and data.checkStatus != ''">
             <choose>

@@ -29,6 +29,7 @@ import com.kakarote.crm.entity.VO.CrmMembersSelectVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.service.ICrmBackLogDealService;
 import com.kakarote.crm.service.ICrmContractService;
+import com.kakarote.crm.service.ICrmTeamMembersService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -59,6 +60,9 @@ public class CrmContractController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private ICrmTeamMembersService teamMembersService;
 
     @PostMapping("/queryPageList")
     @ApiOperation("查询列表页数据")
@@ -111,7 +115,7 @@ public class CrmContractController {
     @PostMapping("/changeOwnerUser")
     @ApiOperation("修改合同负责人")
     @SysLogHandler(behavior = BehaviorEnum.CHANGE_OWNER)
-    public Result changeOwnerUser(@RequestBody CrmBusinessChangOwnerUserBO crmChangeOwnerUserBO) {
+    public Result changeOwnerUser(@RequestBody CrmChangeOwnerUserBO crmChangeOwnerUserBO) {
         crmContractService.changeOwnerUser(crmChangeOwnerUserBO);
         return R.ok();
     }
@@ -136,11 +140,12 @@ public class CrmContractController {
     @PostMapping("/getMembers/{contractId}")
     @ApiOperation("获取团队成员")
     public Result<List<CrmMembersSelectVO>> getMembers(@PathVariable("contractId") @ApiParam("合同ID") Integer contractId) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, contractId, CrmAuthEnum.READ);
-        if (auth) {
-            throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
+        CrmEnum crmEnum = CrmEnum.CONTRACT;
+        CrmContract contract = crmContractService.getById(contractId);
+        if (contract == null) {
+            throw new CrmException(CrmCodeEnum.CRM_DATA_DELETED, crmEnum.getRemarks());
         }
-        List<CrmMembersSelectVO> members = crmContractService.getMembers(contractId);
+        List<CrmMembersSelectVO> members = teamMembersService.getMembers(crmEnum,contractId,contract.getOwnerUserId());
         return R.ok(members);
     }
 
@@ -148,7 +153,7 @@ public class CrmContractController {
     @ApiOperation("新增团队成员")
     @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result addMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
-        crmContractService.addMember(crmMemberSaveBO);
+        teamMembersService.addMember(CrmEnum.CONTRACT,crmMemberSaveBO);
         return R.ok();
     }
 
@@ -156,7 +161,7 @@ public class CrmContractController {
     @ApiOperation("新增团队成员")
     @SysLogHandler(behavior = BehaviorEnum.ADD_MEMBER)
     public Result updateMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
-        crmContractService.addMember(crmMemberSaveBO);
+        teamMembersService.addMember(CrmEnum.CONTRACT,crmMemberSaveBO);
         return R.ok();
     }
 
@@ -164,22 +169,22 @@ public class CrmContractController {
     @ApiOperation("删除团队成员")
     @SysLogHandler
     public Result deleteMembers(@RequestBody CrmMemberSaveBO crmMemberSaveBO) {
-        crmContractService.deleteMember(crmMemberSaveBO);
+        teamMembersService.deleteMember(CrmEnum.CONTRACT,crmMemberSaveBO);
         return R.ok();
     }
 
     @PostMapping("/exitTeam/{contractId}")
-    @ApiOperation("删除团队成员")
+    @ApiOperation("退出团队")
     @SysLogHandler
     public Result exitTeam(@PathVariable("contractId") @ApiParam("合同ID") Integer contractId) {
-        crmContractService.exitTeam(contractId);
+        teamMembersService.exitTeam(CrmEnum.CONTRACT,contractId);
         return R.ok();
     }
 
     @PostMapping("/qureyReceivablesListByContractId")
-    @ApiOperation("删除团队成员")
+    @ApiOperation("查询回款列表")
     public Result<BasePage<JSONObject>> queryReceivablesListByContractId(@RequestBody CrmRelationPageBO crmRelationPageBO) {
-        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, crmRelationPageBO.getContractId(),CrmAuthEnum.EDIT);
+        boolean auth = AuthUtil.isCrmAuth(CrmEnum.CONTRACT, crmRelationPageBO.getContractId(),CrmAuthEnum.LIST);
         if (auth) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
         }

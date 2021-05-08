@@ -4,11 +4,13 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminService;
+import com.kakarote.core.feign.crm.entity.CrmFieldPatch;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.TagUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,11 +28,11 @@ import java.util.stream.Collectors;
 public class FieldServiceImpl implements FieldService {
 
     private static final String NUM_RESTRICT_REGEX = "^[\\-]?\\d+|[\\-]?\\d+\\.\\d*|[\\-]?\\d*\\.\\d+$";
-    private static final String NUM_REGEX = "^\\d+$";
+
+    private static final FieldEnum[] DEFAULT_FIELD_ENUMS = {FieldEnum.AREA,FieldEnum.AREA_POSITION,FieldEnum.CURRENT_POSITION,FieldEnum.DETAIL_TABLE};
 
     @Autowired
     private AdminService adminService;
-
 
     @Override
     public Object convertValueByFormType(Object value, FieldEnum typeEnum){
@@ -57,9 +59,12 @@ public class FieldServiceImpl implements FieldService {
                 String valueStr = Optional.ofNullable(value).orElse("").toString();
                 newValue = JSON.parse(valueStr);
                 break;
+            case DETAIL_TABLE:
+                newValue = handleDetailTableData(value);
+                break;
             case DATE_INTERVAL:
-                String dataStr = Optional.ofNullable(value).orElse("").toString();
-                newValue = StrUtil.split(dataStr, Const.SEPARATOR);
+                String dateIntervalStr = Optional.ofNullable(value).orElse("").toString();
+                newValue = StrUtil.split(dateIntervalStr, Const.SEPARATOR);
                 break;
             default:
                 newValue = value;
@@ -67,7 +72,55 @@ public class FieldServiceImpl implements FieldService {
         }
         return newValue;
     }
-    
+
+
+
+    /**
+     * 处理明细表格数据
+     * @date 2021/3/5 14:38
+     * @param value
+     * @return java.util.List<java.util.List<com.kakarote.core.feign.crm.entity.CrmFieldPatch>>
+     **/
+    @SuppressWarnings("unchecked")
+    private List<List<CrmFieldPatch>> handleDetailTableData(Object value){
+        List<List<CrmFieldPatch>> dtDataList = new ArrayList<>();
+        String dtStr = Optional.ofNullable(value).orElse("").toString();
+        List<JSONArray> jsonArrayList = JSON.parseObject(dtStr,List.class);
+        jsonArrayList.forEach(jsonArray ->{
+            dtDataList.add(jsonArray.toJavaList(CrmFieldPatch.class));
+        });
+        for (List<CrmFieldPatch> crmFieldPatchList : dtDataList) {
+            for (CrmFieldPatch crmFieldPatch : crmFieldPatchList) {
+                FieldEnum fieldEnum = FieldEnum.parse(crmFieldPatch.getType());
+                Object valueData = crmFieldPatch.getValue();
+                if (ObjectUtil.isEmpty(valueData)){
+                    continue;
+                }
+                switch (fieldEnum) {
+                    case CHECKBOX:
+                        if (valueData instanceof String) {
+                            crmFieldPatch.setValue(StrUtil.split(valueData.toString(), Const.SEPARATOR));
+                        }
+                        break;
+                    case USER:
+                        crmFieldPatch.setValue(adminService.queryUserByIds(TagUtil.toLongSet(valueData.toString())).getData());
+                        break;
+                    case STRUCTURE:
+                        crmFieldPatch.setValue(adminService.queryDeptByIds(TagUtil.toSet(valueData.toString())).getData());
+                        break;
+                    case FILE:
+                        crmFieldPatch.setValue(ApplicationContextHolder.getBean(AdminFileService.class).queryFileList(valueData.toString()).getData());
+                        break;
+                    case SINGLE_USER:
+                        crmFieldPatch.setValue(adminService.queryUserById((Long) value).getData());
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        return dtDataList;
+    }
     
     @Override
     public <T> List<List<T>> convertFormPositionFieldList(List<T> fieldList, Function<T,Integer> groupMapper,
@@ -127,37 +180,10 @@ public class FieldServiceImpl implements FieldService {
     }
 
 
-    @Override
-    public boolean verifyStrIsConformRegex(List<String> values, boolean isNonNull, String regex) {
-        if (CollUtil.isEmpty(values)){
-            return !isNonNull;
-        }
-        if (StrUtil.isEmpty(regex)){
-            regex = NUM_REGEX;
-        }
-        boolean isNum = true;
-        for (String value : values) {
-            if (StrUtil.isEmpty(value)){
-                if (isNonNull){
-                    isNum = false;
-                    break;
-                }
-                continue;
-            }
-            if (!value.matches(regex)){
-                isNum = false;
-                break;
-            }
-        }
-        return isNum;
-    }
-
 
     @Override
     public String convertObjectValueToString(Integer type, Object value, String defaultValue){
-        boolean isNeedHandle = FieldEnum.AREA.getType().equals(type)
-                || FieldEnum.AREA_POSITION.getType().equals(type)
-                || FieldEnum.CURRENT_POSITION.getType().equals(type);
+        boolean isNeedHandle = equalsByType(type);
         if (isNeedHandle) {
             if (value instanceof JSONObject) {
                 return !ObjectUtil.isEmpty(value) ? ((JSONObject) value).toJSONString() : "";
@@ -172,4 +198,28 @@ public class FieldServiceImpl implements FieldService {
         }
         return defaultValue;
     }
+
+    @Override
+    public boolean equalsByType(Object type) {
+        return equalsByType(type,DEFAULT_FIELD_ENUMS);
+    }
+
+    @Override
+    public boolean equalsByType(Object type, FieldEnum... fieldEnums){
+        if (type instanceof String){
+            for (FieldEnum anEnum : fieldEnums) {
+                if(anEnum.getFormType().equals(type)){
+                    return true;
+                }
+            }
+        }else {
+            for (FieldEnum anEnum : fieldEnums) {
+                if (Objects.equals(anEnum.getType(),type)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
+

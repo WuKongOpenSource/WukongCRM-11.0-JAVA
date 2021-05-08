@@ -7,7 +7,6 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.kakarote.core.common.Const;
@@ -34,29 +33,17 @@ import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmFieldMapper;
 import com.kakarote.crm.service.*;
 import lombok.extern.slf4j.Slf4j;
-import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
-import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest;
-import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
-import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.GetAliasesResponse;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.indices.CreateIndexRequest;
-import org.elasticsearch.client.indices.CreateIndexResponse;
-import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -98,6 +85,9 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
     @Autowired
     private FieldService fieldService;
 
+    @Autowired
+    private ICrmFieldExtendService crmFieldExtendService;
+
     /**
      * 查询自定义字段列表
      *
@@ -106,7 +96,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
     @Override
     public List<CrmFieldsBO> queryFields() {
         List<CrmField> list = query().select("IFNULL(MAX(update_time),'2000-01-01 00:00:00') as updateTime", "label")
-                .in("label", Arrays.asList(1, 2, 3, 4, 5, 6, 7, 17))
+                .in("label", Arrays.asList(1, 2, 3, 4, 5, 6, 7, 17,18))
                 .groupBy("label").list();
         return list.stream().map(field -> {
             CrmFieldsBO crmFieldsBO = new CrmFieldsBO();
@@ -155,6 +145,8 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                     fieldNameArr = new String[]{"customer_id", "contract_id", "number", "plan_id"};
                 } else if (crmField.getLabel().equals(CrmEnum.RETURN_VISIT.getType())) {
                     fieldNameArr = new String[]{"customer_id", "contract_id"};
+                }else if (crmField.getLabel().equals(CrmEnum.INVOICE.getType())) {
+                    fieldNameArr = new String[]{"invoice_id", "invoice_apply_number"};
                 }
                 List<String> keyList = Arrays.asList(fieldNameArr);
                 if (keyList.contains(crmField.getFieldName())) {
@@ -164,11 +156,16 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                     throw new CrmException(CrmCodeEnum.REQUIRED_OPTIONS_CANNOT_BE_HIDDEN);
                 }
             }
-            if(FieldEnum.NUMBER.getType().equals(crmField.getType())
-                    || FieldEnum.FLOATNUMBER.getType().equals(crmField.getType())
-                    || FieldEnum.PERCENT.getType().equals(crmField.getType())){
+            //判断数字格式限制的小数位数是否正确
+            if(fieldService.equalsByType(crmField.getType(),FieldEnum.NUMBER,FieldEnum.FLOATNUMBER,FieldEnum.PERCENT)){
                 if (!fieldService.verifyStrForNumRestrict(crmField.getMaxNumRestrict(),crmField.getMinNumRestrict())){
                     throw new CrmException(CrmCodeEnum.THE_FIELD_NUM_RESTRICT_ERROR);
+                }
+            }
+            //判断明细表格的数据是否正确
+            if (FieldEnum.DETAIL_TABLE.getType().equals(crmField.getType())){
+                if (CollUtil.isEmpty(crmField.getFieldExtendList())){
+                    throw new CrmException(CrmCodeEnum.THE_FIELD_DETAIL_TABLE_FORMAT_ERROR);
                 }
             }
             crmField.setLabel(label);
@@ -181,13 +178,23 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
         List<CrmField> removeFieldList = list(queryWrapper.eq("label", label));
         removeFieldList.removeIf(crmField -> fieldIds.contains(crmField.getFieldId()));
         for (CrmField field : removeFieldList) {
-            if (Arrays.asList(2, 4).contains(field.getOperating())) {
+            String cover = Integer.toBinaryString(1 << 8).substring(1);
+            String s = Integer.toBinaryString(field.getOperating());
+            String num = s.length() < 8 ? cover.substring(s.length()) + s : s;
+            char i = num.charAt(1);
+            if (i==0) {
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
             }
         }
         //不在上面循环,避免一些不可恢复的数据
         for (CrmField field : removeFieldList) {
+            if(!Objects.equals(0,field.getFieldType())) {
+                continue;
+            }
             //删除自定义字段
+            if (FieldEnum.DETAIL_TABLE.getType().equals(field.getType())){
+                crmFieldExtendService.deleteCrmFieldExtend(field.getFieldId());
+            }
             removeById(field.getFieldId());
             //删除排序字段
             crmFieldSortService.remove(new QueryWrapper<CrmFieldSort>().eq("field_id", field.getFieldId()));
@@ -221,6 +228,9 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                 case RETURN_VISIT:
                     ApplicationContextHolder.getBean(ICrmReturnVisitDataService.class).lambdaUpdate().eq(CrmReturnVisitData::getFieldId, field.getFieldId()).remove();
                     break;
+                case INVOICE:
+                    ApplicationContextHolder.getBean(ICrmInvoiceDataService.class).lambdaUpdate().eq(CrmInvoiceData::getFieldId, field.getFieldId()).remove();
+                    break;
                 default:
                     break;
             }
@@ -233,9 +243,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             if (ObjectUtil.isEmpty(field.getDefaultValue())){
                 field.setDefaultValue("");
             }else {
-                boolean isNeedHandle = FieldEnum.AREA.getType().equals(field.getType())
-                        || FieldEnum.AREA_POSITION.getType().equals(field.getType())
-                        || FieldEnum.CURRENT_POSITION.getType().equals(field.getType());
+                boolean isNeedHandle = fieldService.equalsByType(field.getType(),FieldEnum.AREA,FieldEnum.AREA_POSITION,FieldEnum.CURRENT_POSITION);
                 if (isNeedHandle) {
                     field.setDefaultValue(JSON.toJSONString(field.getDefaultValue()));
                 }
@@ -248,6 +256,9 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             crmFieldSortQueryWrapper.select("user_id").eq("label", label).groupBy("user_id");
             List<Long> userIdList = crmFieldSortService.listObjs(crmFieldSortQueryWrapper, obj -> Long.valueOf(obj.toString()));
             if (field.getFieldId() != null) {
+                if (FieldEnum.DETAIL_TABLE.getType().equals(field.getType())){
+                    crmFieldExtendService.saveOrUpdateCrmFieldExtend(field.getFieldExtendList(),field.getFieldId(),true);
+                }
                 updateById(field);
                 UpdateWrapper<CrmRoleField> updateWrapper = new UpdateWrapper<>();
                 updateWrapper.set("field_name", field.getFieldName());
@@ -286,6 +297,10 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                 String nextFieldName = crmFieldConfigService.getNextFieldName(label, field.getType(), listObjs(wrapper, Object::toString), Const.AUTH_DATA_RECURSION_NUM, true);
                 field.setFieldName(nextFieldName);
                 save(field);
+                if (FieldEnum.DETAIL_TABLE.getType().equals(field.getType())){
+                    crmFieldExtendService.saveOrUpdateCrmFieldExtend(field.getFieldExtendList(),field.getFieldId(),false);
+                }
+
                 crmRoleFieldService.saveRoleField(field);
                 if (field.getIsHidden() == 0) {
                     userIdList.forEach(userId -> {
@@ -374,7 +389,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                 fieldSort.setFormType(FieldEnum.parse(fieldSort.getType()).getFormType());
             }
         });
-        fieldSortVOList.removeIf(fieldSort -> FieldEnum.DESC_TEXT.getType().equals(fieldSort.getType()));
+        fieldSortVOList.removeIf(fieldSort -> fieldService.equalsByType(fieldSort.getType(),FieldEnum.DESC_TEXT,FieldEnum.DETAIL_TABLE));
         return fieldSortVOList;
     }
 
@@ -399,22 +414,26 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
      */
     @Override
     public void setFieldConfig(CrmFieldSortBO fieldSort) {
-        List<CrmFieldSort> fieldSortList = crmFieldSortService.query().eq("label", fieldSort.getLabel()).list();
-        List<Integer> noHideIds = fieldSort.getNoHideIds();
-        for (int i = 0; i < fieldSortList.size(); i++) {
-            CrmFieldSort sort = fieldSortList.get(i);
-            if (noHideIds.contains(sort.getId())) {
-                sort.setSort(noHideIds.indexOf(sort.getId()) + 1);
-            }
-            if (fieldSort.getHideIds().contains(sort.getId())) {
+        Long userId = UserUtil.getUserId();
+        crmFieldSortService.lambdaUpdate().eq(CrmFieldSort::getLabel,fieldSort.getLabel()).eq(CrmFieldSort::getUserId,userId).remove();
+        List<CrmFieldSort> fieldSortList = crmFieldSortService.queryAllFieldSortList(fieldSort.getLabel(), userId);
+        List<CrmFieldSort> noHideFields = fieldSort.getNoHideFields();
+        List<CrmFieldSort> hideFields = fieldSort.getHideFields();
+
+        for (CrmFieldSort sort : fieldSortList) {
+            if (hideFields.contains(sort)) {
                 sort.setIsHide(1);
                 continue;
             }
-            if (fieldSort.getNoHideIds().contains(sort.getId())) {
+            int index = noHideFields.indexOf(sort);
+            if (index >= 0) {
                 sort.setIsHide(0);
+                sort.setSort(index + 1);
+                CrmFieldSort crmFieldSort = noHideFields.get(index);
+                sort.setStyle(crmFieldSort.getStyle());
             }
         }
-        crmFieldSortService.updateBatchById(fieldSortList, Const.BATCH_SAVE_SIZE);
+        crmFieldSortService.saveBatch(fieldSortList, Const.BATCH_SAVE_SIZE);
     }
 
     /**
@@ -487,6 +506,7 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
         roleFieldList.forEach(crmRoleField -> {
             levelMap.put(StrUtil.toCamelCase(crmRoleField.getFieldName()), crmRoleField.getAuthLevel());
         });
+
         QueryWrapper<CrmField> wrapper = new QueryWrapper<>();
         wrapper.eq("label", crmModel.getLabel()).eq("is_hidden", 0).orderByAsc("sorting");
         List<CrmField> crmFieldList = list(wrapper);
@@ -512,13 +532,13 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             return crmModelFiled;
         }).collect(Collectors.toList());
         CrmEnum crmEnum = CrmEnum.parse(crmModel.getLabel());
-        if (crmEnum == CrmEnum.RECEIVABLES || crmEnum == CrmEnum.CONTRACT || crmEnum == CrmEnum.RETURN_VISIT) {
+        if (crmEnum == CrmEnum.RECEIVABLES || crmEnum == CrmEnum.CONTRACT || crmEnum == CrmEnum.RETURN_VISIT || crmEnum == CrmEnum.INVOICE) {
             AdminConfig numberSetting = adminService.queryFirstConfigByNameAndValue("numberSetting", crmEnum.getType().toString()).getData();
             Integer status = numberSetting.getStatus();
             if (status == 1) {
                 for (CrmModelFiledVO field : fieldList) {
                     String fieldName = field.getFieldName();
-                    boolean b = "num".equals(fieldName) || "number".equals(fieldName) || "visitNumber".equals(fieldName);
+                    boolean b = Arrays.asList("num","number","visitNumber","invoiceApplyNumber").contains(fieldName);
                     if (b && field.getFieldType() == 1) {
                         field.setAutoGeneNumber(1);
                     } else {
@@ -659,348 +679,6 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
         return lambdaQuery().eq(CrmField::getType, FieldEnum.FILE.getType()).list();
     }
 
-    @Autowired
-    private TaskExecutor executorService;
-
-    public class SaveEs implements Runnable {
-        CrmEnum crmEnum;
-        List<CrmModelFiledVO> crmModelFiledList;
-        List<Map<String, Object>> mapList;
-        String index;
-
-        public SaveEs(CrmEnum crmEnum, List<CrmModelFiledVO> crmModelFiledList, List<Map<String, Object>> mapList) {
-            this.crmEnum = crmEnum;
-            this.crmModelFiledList = crmModelFiledList;
-            this.mapList = mapList;
-            this.index = crmEnum.getIndex();
-        }
-
-        public SaveEs(CrmEnum crmEnum, List<CrmModelFiledVO> crmModelFiledList, List<Map<String, Object>> mapList, String index) {
-            this.crmEnum = crmEnum;
-            this.crmModelFiledList = crmModelFiledList;
-            this.mapList = mapList;
-            this.index = index;
-        }
-
-        @Override
-        public void run() {
-            log.warn("线程id{}", Thread.currentThread().getName());
-            mapList.forEach(map -> {
-                map.remove("cid");
-                map.remove("tid");
-                crmModelFiledList.forEach(modelField -> {
-                    if (map.get(modelField.getFieldName()) == null) {
-                        map.remove(modelField.getFieldName());
-                        return;
-                    }
-                    switch (crmEnum) {
-                        case LEADS:
-                            ApplicationContextHolder.getBean(CrmLeadsServiceImpl.class).setOtherField(map);
-                            break;
-                        case CUSTOMER:
-                            ApplicationContextHolder.getBean(CrmCustomerServiceImpl.class).setOtherField(map);
-                            break;
-                        case CUSTOMER_POOL:
-                            ApplicationContextHolder.getBean(CrmCustomerServiceImpl.class).setOtherField(map);
-                            break;
-                        case CONTACTS:
-                            ApplicationContextHolder.getBean(CrmContactsServiceImpl.class).setOtherField(map);
-                            break;
-                        case BUSINESS:
-                            ApplicationContextHolder.getBean(CrmBusinessServiceImpl.class).setOtherField(map);
-                            break;
-                        case CONTRACT:
-                            ApplicationContextHolder.getBean(CrmContractServiceImpl.class).setOtherField(map);
-                            break;
-                        case RECEIVABLES:
-                            ApplicationContextHolder.getBean(CrmReceivablesServiceImpl.class).setOtherField(map);
-                            break;
-                        case PRODUCT:
-                            ApplicationContextHolder.getBean(CrmProductServiceImpl.class).setOtherField(map);
-                            String batchId = (String) map.get("batchId");
-                            CrmProductData unit = ApplicationContextHolder.getBean(ICrmProductDataService.class).lambdaQuery().eq(CrmProductData::getBatchId, batchId).eq(CrmProductData::getName, "unit").one();
-                            if (unit != null) {
-                                map.put("unit", unit.getValue());
-                            } else {
-                                map.put("unit", "");
-                            }
-                            break;
-                        case RETURN_VISIT:
-                            ApplicationContextHolder.getBean(CrmReturnVisitServiceImpl.class).setOtherField(map);
-                            break;
-                        default:
-                            break;
-                    }
-
-                    if (FieldEnum.DATE.getType().equals(modelField.getType())) {
-                        Object value = map.remove(modelField.getFieldName());
-                        if (value instanceof Date) {
-                            map.put(modelField.getFieldName(), DateUtil.formatDate((Date) value));
-                        }
-                    }
-                    if (modelField.getFieldType() == 0 && Arrays.asList(3, 8, 9, 10, 11, 12).contains(modelField.getType())) {
-                        Object value = map.remove(modelField.getFieldName());
-                        if (value != null) {
-                            map.put(modelField.getFieldName(), StrUtil.splitTrim(value.toString(), ","));
-                        } else {
-                            map.put(modelField.getFieldName(), new ArrayList<>());
-                        }
-                    }
-
-                    if (FieldEnum.DATETIME.getType().equals(modelField.getType())) {
-                        Object value = map.remove(modelField.getFieldName());
-                        if (value instanceof Date) {
-                            map.put(modelField.getFieldName(), DateUtil.formatDateTime((Date) value));
-                        }
-                    }
-                    if (FieldEnum.AREA.getType().equals(modelField.getType())
-                            || FieldEnum.AREA_POSITION.getType().equals(modelField.getType())
-                            || FieldEnum.CURRENT_POSITION.getType().equals(modelField.getType())) {
-                        Object value = map.remove(modelField.getFieldName());
-                        if (!ObjectUtil.isEmpty(value)) {
-                            map.put(modelField.getFieldName(), JSON.toJSONString(value));
-                        }
-                    }
-
-                });
-            });
-            ElasticUtil.initData(restTemplate.getClient(), mapList, crmEnum, index);
-            mapList.clear();
-        }
-    }
-
-    /**
-     * 初始化数据
-     *
-     * @param type type
-     * @return data
-     */
-    @Override
-    public Integer initData(Integer type) {
-        if (type == 9) {
-            savePool();
-            return 1;
-        }
-        CrmEnum crmEnum = CrmEnum.parse(type);
-        Integer lastId = 0;
-        Map<String, Object> dataMap = new HashMap<>();
-        dataMap.put("table", crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable());
-        dataMap.put("tableName", crmEnum.getTable());
-        List<CrmField> crmFields = lambdaQuery().eq(CrmField::getLabel, type).in(CrmField::getFieldType,0,2).groupBy(CrmField::getFieldName).list()
-                .stream().peek(field -> field.setFieldName(StrUtil.toCamelCase(field.getFieldName()))).collect(Collectors.toList());
-        dataMap.put("fields", crmFields);
-        dataMap.put("label", type);
-        dataMap.put("lastId", lastId);
-        List<CrmModelFiledVO> crmModelFiledList = queryInitField(type);
-        ElasticUtil.init(crmModelFiledList, ApplicationContextHolder.getBean(ElasticsearchRestTemplate.class).getClient(), CrmEnum.parse(type));
-        while (true) {
-            List<Map<String, Object>> mapList = getBaseMapper().initData(dataMap);
-            if (mapList.size() == 0) {
-                break;
-            }
-            Object o = mapList.get(mapList.size() - 1).get((crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable()) + "Id");
-            lastId = TypeUtils.castToInt(o);
-            dataMap.put("lastId", lastId);
-            log.warn("最后数据id:{},线程id{}", lastId, Thread.currentThread().getName());
-            executorService.execute(new SaveEs(crmEnum, crmModelFiledList, mapList));
-        }
-        return 1;
-
-    }
-
-    private void savePool() {
-        CrmEnum crmEnum = CrmEnum.CUSTOMER;
-        List<CrmCustomerPoolRelation> list = ApplicationContextHolder.getBean(ICrmCustomerPoolRelationService.class).list();
-        Map<Integer, List<CrmCustomerPoolRelation>> collect = list.stream().collect(Collectors.groupingBy(CrmCustomerPoolRelation::getCustomerId));
-        Set<Integer> integers = collect.keySet();
-        BulkRequest bulkRequest = new BulkRequest();
-        for (Integer integer : integers) {
-            List<CrmCustomerPoolRelation> poolRelationList = collect.get(integer);
-            List<Integer> poolId = new ArrayList<>();
-            for (CrmCustomerPoolRelation relation : poolRelationList) {
-                poolId.add(relation.getPoolId());
-            }
-            Map<String, Object> map = new HashMap<>();
-            map.put("poolId", poolId);
-            UpdateRequest request = new UpdateRequest(crmEnum.getIndex(), "_doc", integer.toString());
-            request.doc(map);
-            bulkRequest.add(request);
-            if (bulkRequest.requests().size() >= 1000) {
-                try {
-                    restTemplate.getClient().bulk(bulkRequest, RequestOptions.DEFAULT);
-                    restTemplate.refresh(crmEnum.getIndex());
-                } catch (IOException e) {
-                    log.error("es修改失败", e);
-                }
-                bulkRequest = new BulkRequest();
-            }
-        }
-        try {
-            if (bulkRequest.requests().size() == 0) {
-                return;
-            }
-            restTemplate.getClient().bulk(bulkRequest, RequestOptions.DEFAULT);
-            restTemplate.refresh(crmEnum.getIndex());
-        } catch (IOException e) {
-            log.error("es修改失败", e);
-        }
-    }
-
-    private List<CrmModelFiledVO> queryInitField(Integer type) {
-        QueryWrapper<CrmField> wrapper = new QueryWrapper<>();
-        wrapper.eq("label", type).orderByAsc("sorting");
-        wrapper.groupBy("field_name");
-        List<CrmField> crmFieldList = list(wrapper);
-        CrmEnum crmEnum = CrmEnum.parse(type);
-        List<CrmModelFiledVO> filedList = crmFieldList.stream().map(field -> BeanUtil.copyProperties(field, CrmModelFiledVO.class)).collect(Collectors.toList());
-        switch (crmEnum) {
-            case LEADS: {
-                filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("lastContent", FieldEnum.TEXTAREA, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
-
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
-                break;
-            }
-            case CUSTOMER: {
-                filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("lastContent", FieldEnum.TEXTAREA, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("receiveTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("dealTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("poolTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("roUserId", FieldEnum.CHECKBOX, 1));
-                filedList.add(new CrmModelFiledVO("rwUserId", FieldEnum.CHECKBOX, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("status", FieldEnum.TEXT, 1));
-
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("dealStatus", FieldEnum.SELECT, 1));
-                filedList.add(new CrmModelFiledVO("detailAddress", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("address", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("preOwnerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("preOwnerUserName", FieldEnum.TEXT, 1));
-                break;
-            }
-            case CONTACTS: {
-                filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
-
-                filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
-                break;
-            }
-            case PRODUCT: {
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("categoryName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("unit", FieldEnum.SELECT, 1));
-                break;
-            }
-            case BUSINESS: {
-                filedList.add(new CrmModelFiledVO("typeId", FieldEnum.SELECT, 1));
-                filedList.add(new CrmModelFiledVO("statusId", FieldEnum.SELECT, 1));
-                filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("nextTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("receiveTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("roUserId", FieldEnum.CHECKBOX, 1));
-                filedList.add(new CrmModelFiledVO("rwUserId", FieldEnum.CHECKBOX, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("status", FieldEnum.TEXT, 1));
-
-                filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("typeName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("statusName", FieldEnum.TEXT, 1));
-                break;
-            }
-            case CONTRACT: {
-                filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("roUserId", FieldEnum.CHECKBOX, 1));
-                filedList.add(new CrmModelFiledVO("rwUserId", FieldEnum.CHECKBOX, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("companyUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("checkStatus", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("contractId", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("receivedMoney", FieldEnum.FLOATNUMBER, 1));
-                filedList.add(new CrmModelFiledVO("unreceivedMoney", FieldEnum.FLOATNUMBER, 1));
-
-//                客户名称，商机名称，公司签约人（员工），客户签约人（联系人），负责人，创建人
-                filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("businessName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("contactsName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("companyUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("contractMoney", FieldEnum.FLOATNUMBER, 1));
-                break;
-            }
-            case RECEIVABLES: {
-                filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("checkStatus", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("planId", FieldEnum.TEXT, 1));
-                //客户名称，合同编号，负责人，创建人
-                filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("contractNum", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("planNum", FieldEnum.NUMBER, 1));
-                filedList.add(new CrmModelFiledVO("contractMoney", FieldEnum.FLOATNUMBER, 1));
-                break;
-            }
-            case RETURN_VISIT: {
-//                回访人，客户名称，联系人，合同编号，创建人
-                filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("contactsName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("contractNum", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                break;
-            }
-            default:
-                break;
-        }
-        return filedList;
-    }
-
-    private void dateCheck(Integer label, Integer type) {
-        List<String> name = lambdaQuery().select(CrmField::getFieldName).eq(CrmField::getLabel, label).list().stream().map(CrmField::getFieldName).collect(Collectors.toList());
-        String nextFieldName = crmFieldConfigService.getNextFieldName(label, type, name, Const.AUTH_DATA_RECURSION_NUM, false);
-        Integer integer = getBaseMapper().dataCheck(nextFieldName, label, type);
-        if (integer > 0) {
-            dateCheck(label, type);
-        }
-    }
-
     @Override
     public void recordToFormType(CrmModelFiledVO record, FieldEnum typeEnum) {
         record.setFormType(typeEnum.getFormType());
@@ -1009,8 +687,16 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                 record.setDefaultValue(StrUtil.splitTrim((CharSequence) record.getDefaultValue(), Const.SEPARATOR));
                 record.setValue(StrUtil.splitTrim((CharSequence) record.getValue(), Const.SEPARATOR));
             case SELECT:
-                if (CollUtil.isEmpty(record.getSetting())) {
-                    record.setSetting(new ArrayList<>(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR)));
+                if(Objects.equals(record.getRemark(),FieldEnum.OPTIONS_TYPE.getFormType())) {
+                    if (CollUtil.isEmpty(record.getOptionsData())) {
+                        JSONObject optionsData = JSON.parseObject(record.getOptions());
+                        record.setOptionsData(optionsData);
+                        record.setSetting(new ArrayList<>(optionsData.keySet()));
+                    }
+                }else {
+                    if (CollUtil.isEmpty(record.getSetting())) {
+                        record.setSetting(new ArrayList<>(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR)));
+                    }
                 }
                 break;
             case DATE_INTERVAL:
@@ -1033,6 +719,11 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
                     record.setValue(JSON.parse(value));
                 }
                 break;
+            case DETAIL_TABLE:
+                if (CollUtil.isEmpty(record.getFieldExtendList())) {
+                    record.setFieldExtendList(crmFieldExtendService.queryCrmFieldExtend(record.getFieldId()));
+                }
+                break;
             case DESC_TEXT:
                 record.setValue(record.getDefaultValue());
                 break;
@@ -1048,7 +739,13 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             case CHECKBOX:
                 record.setDefaultValue(StrUtil.splitTrim((CharSequence) record.getDefaultValue(), Const.SEPARATOR));
             case SELECT:
-                record.setSetting(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR));
+                if(Objects.equals(record.getRemark(),FieldEnum.OPTIONS_TYPE.getFormType())) {
+                    JSONObject optionsData = JSON.parseObject(record.getOptions());
+                    record.setOptionsData(optionsData);
+                    record.setSetting(new ArrayList<>(optionsData.keySet()));
+                }else {
+                    record.setSetting(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR));
+                }
                 break;
             case DATE_INTERVAL:
                 String dataValueStr = Optional.ofNullable(record.getDefaultValue()).orElse("").toString();
@@ -1063,6 +760,9 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             case CURRENT_POSITION:
                 String defaultValue = Optional.ofNullable(record.getDefaultValue()).orElse("").toString();
                 record.setDefaultValue(JSON.parse(defaultValue));
+                break;
+            case DETAIL_TABLE:
+                record.setFieldExtendList(crmFieldExtendService.queryCrmFieldExtend(record.getFieldId()));
                 break;
             default:
                 record.setSetting(new ArrayList<>());
@@ -1104,71 +804,6 @@ public class CrmFieldServiceImpl extends BaseServiceImpl<CrmFieldMapper, CrmFiel
             fleldStyle.setFieldName(fieldStyle.getField());
             fleldStyle.setUserId(UserUtil.getUserId());
             crmCustomerPoolFieldStyleService.save(fleldStyle);
-        }
-    }
-
-    @Override
-    public void changeEsIndex(List<Integer> labels) {
-        for (Integer label : labels) {
-            List<CrmModelFiledVO> crmModelFiledList = queryInitField(label);
-            Map<String, Object> properties = new HashMap<>(crmModelFiledList.size());
-            crmModelFiledList.forEach(crmField -> properties.put(crmField.getFieldName(), ElasticUtil.parseType(crmField.getType())));
-            Map<String, Object> mapping = new HashMap<>();
-            mapping.put("properties", properties);
-            CrmEnum crmEnum = CrmEnum.parse(label);
-            String indexAlias = crmEnum.getIndex();
-            String createIndex = indexAlias + ":" + DateUtil.formatDate(DateUtil.date());
-            CreateIndexRequest createIndexRequest = new CreateIndexRequest(createIndex);
-            createIndexRequest.mapping(mapping);
-            try {
-                restTemplate.deleteIndex(createIndex);
-                CreateIndexResponse createIndexResponse = restTemplate.getClient().indices().create(createIndexRequest, RequestOptions.DEFAULT);
-                boolean acknowledged = createIndexResponse.isAcknowledged();
-                if (acknowledged) {
-                    //初始化数据
-                    Integer lastId = 0;
-                    Map<String, Object> dataMap = new HashMap<>();
-                    dataMap.put("table", crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable());
-                    dataMap.put("tableName", crmEnum.getTable());
-                    List<CrmField> crmFields = lambdaQuery().eq(CrmField::getLabel, crmEnum.getType()).groupBy(CrmField::getFieldName).list()
-                            .stream().filter(field -> field.getFieldType() == 0).peek(field -> field.setFieldName(StrUtil.toCamelCase(field.getFieldName()))).collect(Collectors.toList());
-                    dataMap.put("fields", crmFields);
-                    dataMap.put("label", crmEnum.getType());
-                    dataMap.put("lastId", lastId);
-                    while (true) {
-                        List<Map<String, Object>> mapList = getBaseMapper().initData(dataMap);
-                        if (mapList.size() == 0) {
-                            break;
-                        }
-                        Object o = mapList.get(mapList.size() - 1).get((crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable()) + "Id");
-                        lastId = TypeUtils.castToInt(o);
-                        dataMap.put("lastId", lastId);
-                        log.warn("最后数据id:{},线程id{}", lastId, Thread.currentThread().getName());
-                        executorService.execute(new SaveEs(crmEnum, crmModelFiledList, mapList, createIndex));
-                    }
-                    //修改索引别名
-                    IndicesAliasesRequest aliasRequest = new IndicesAliasesRequest();
-                    GetAliasesResponse alias = restTemplate.getClient().indices().getAlias(new GetAliasesRequest(indexAlias, indexAlias + "_backup"), RequestOptions.DEFAULT);
-                    Map<String, Set<AliasMetaData>> oldAliases = alias.getAliases();
-                    if (CollUtil.isNotEmpty(oldAliases)) {
-                        TreeSet<String> oldIndexSet = new TreeSet<>(oldAliases.keySet());
-                        String lastIndex = oldIndexSet.last();
-                        aliasRequest.addAliasAction(IndicesAliasesRequest.AliasActions.remove().index(lastIndex).alias(indexAlias));
-                        aliasRequest.addAliasAction(IndicesAliasesRequest.AliasActions.add().index(lastIndex).alias(indexAlias + "_backup"));
-                        Set<String> deleteIndexs = oldIndexSet.stream().filter(index -> !index.equals(lastIndex)).collect(Collectors.toSet());
-                        if (CollUtil.isNotEmpty(deleteIndexs)) {
-                            restTemplate.getClient().indices().delete(new DeleteIndexRequest(deleteIndexs.toArray(new String[0])), RequestOptions.DEFAULT);
-                        }
-                    }
-                    aliasRequest.addAliasAction(IndicesAliasesRequest.AliasActions.add().index(createIndex).alias(indexAlias));
-                    restTemplate.getClient().indices().updateAliases(aliasRequest, RequestOptions.DEFAULT);
-                } else {
-                    throw new CrmException(CrmCodeEnum.INDEX_CREATE_FAILED);
-                }
-            } catch (IOException e) {
-                log.error("数据初始化异常:{}", e.getMessage());
-                throw new CrmException(CrmCodeEnum.INDEX_CREATE_FAILED);
-            }
         }
     }
 

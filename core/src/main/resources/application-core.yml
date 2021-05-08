@@ -27,8 +27,10 @@ ribbon:
 feign:
   client:
     config:
-      default.connect-timeout: 10000
-      default.read-timeout: 10000
+      default:
+        connect-timeout: 60000
+        read-timeout: 60000
+
   sentinel:
     enabled: true
   httpclient:

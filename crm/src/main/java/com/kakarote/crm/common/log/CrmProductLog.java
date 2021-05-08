@@ -96,6 +96,9 @@ public class CrmProductLog {
                 String oldFieldValue = crmProductDataService.lambdaQuery().select(CrmProductData::getValue).eq(CrmProductData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmProductData::getBatchId, batchId).one().getValue();
                 String formType = record.getString("formType");
+                if(formType == null){
+                    return;
+                }
                 String newValue = record.getString("value");
                 if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
                     oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));

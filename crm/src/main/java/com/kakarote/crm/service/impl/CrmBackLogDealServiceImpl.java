@@ -9,6 +9,7 @@ import com.kakarote.crm.mapper.CrmBackLogDealMapper;
 import com.kakarote.crm.service.ICrmBackLogDealService;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,6 +38,28 @@ public class CrmBackLogDealServiceImpl extends BaseServiceImpl<CrmBackLogDealMap
         wrapper.eq(CrmBackLogDeal::getCreateUserId, userId);
         wrapper.eq(CrmBackLogDeal::getCrmType, crmEnum.getType());
         wrapper.eq(CrmBackLogDeal::getModel, crmBackLogEnum.getType());
+        wrapper.eq(CrmBackLogDeal::getTypeId, typeId);
+        remove(wrapper);
+    }
+
+    /**
+     * 更新对应的待办事项提醒
+     *
+     * @param userId         用户ID
+     * @param crmEnum        类型
+     * @param typeId         类型ID
+     * @param crmBackLogEnum 模块
+     */
+    @Override
+    public void deleteByTypes(Long userId, CrmEnum crmEnum, Integer typeId, CrmBackLogEnum... crmBackLogEnum) {
+        List<CrmBackLogEnum> backLogEnums = Arrays.asList(crmBackLogEnum);
+        LambdaQueryWrapper<CrmBackLogDeal> wrapper = new LambdaQueryWrapper<>();
+        if (userId != null) {
+            wrapper.eq(CrmBackLogDeal::getCreateUserId, userId);
+        }
+        wrapper.eq(CrmBackLogDeal::getCrmType, crmEnum.getType());
+        List<Integer> types = backLogEnums.stream().map(CrmBackLogEnum::getType).collect(Collectors.toList());
+        wrapper.in(CrmBackLogDeal::getModel, types);
         wrapper.eq(CrmBackLogDeal::getTypeId, typeId);
         remove(wrapper);
     }

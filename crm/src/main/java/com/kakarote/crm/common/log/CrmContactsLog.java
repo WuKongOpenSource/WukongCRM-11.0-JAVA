@@ -80,9 +80,12 @@ public class CrmContactsLog {
                 CrmContacts crmContacts = BeanUtil.mapToBean(crmContactsMap, CrmContacts.class, true);
                 contentList.add(sysLogUtil.updateRecord(oldContactsMap, crmContactsMap, CrmEnum.CONTACTS, crmContacts.getName()));
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
+                String formType = record.getString("formType");
+                if(formType == null){
+                    return;
+                }
                 String oldFieldValue = crmContactsDataService.lambdaQuery().select(CrmContactsData::getValue).eq(CrmContactsData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmContactsData::getBatchId, batchId).one().getValue();
-                String formType = record.getString("formType");
                 String newValue = record.getString("value");
                 if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
                     oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));

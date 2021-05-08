@@ -2,10 +2,12 @@ package com.kakarote.crm.mapper;
 
 import cn.hutool.core.lang.Dict;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.utils.BiTimeUtil;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -90,5 +92,21 @@ public interface CrmInstrumentMapper {
      */
     public JSONObject queryPerformance(Map<String,Object> entity);
 
-    List<JSONObject> queryRecordCount(@Param("data") Dict kv);
+    public List<JSONObject> queryRecordCount(@Param("data") Dict kv);
+
+    /**
+     * 查询数据汇总里面进入公海数量以及从公海领取数量
+     * @param type 1 放入公海 2 从公海领取
+     * @return 对应的数量
+     */
+    public Integer dataInfoCustomerPoolNum(@Param("time") BiTimeUtil.BiTimeEntity entity, @Param("ids") List<Long> ids,@Param("type") Integer type);
+
+    /**
+     * 查询即将到期的合同
+     * @param startTime 开始时间，不受仪表盘筛选限制
+     * @param endTime 结束时间，不受仪表盘筛选限制
+     * @param ids 用户列表
+     * @return data
+     */
+    public Map<String,Object> dataInfoEndContractNum(@Param("startTime") Date startTime,@Param("endTime") Date endTime, @Param("ids") List<Long> ids);
 }

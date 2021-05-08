@@ -7,7 +7,8 @@
            count(b.status != 0 or null) as currentNum,
            count(b.status != 0 or null) as allNum
             from `wk_admin_dept` a
-                left join `wk_admin_user` b on a.dept_id = b.dept_id
+                left join `wk_admin_user` b on a.dept_id = b.dept_id and b.is_del = 0
+                where 1=1
             group by a.dept_id
     </select>
     <select id="queryDeptList" resultType="com.kakarote.admin.entity.PO.AdminDept">
@@ -15,6 +16,7 @@
            count(b.status != 0 or null) as currentNum
             from `wk_admin_dept` a
                 left join `wk_admin_user` b on a.dept_id = b.dept_id
+                where 1=1
             group by a.dept_id
     </select>
 </mapper>

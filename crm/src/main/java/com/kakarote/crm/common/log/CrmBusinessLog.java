@@ -4,10 +4,8 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.StrUtil;
 import com.kakarote.core.common.FieldEnum;
-import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.Content;
-import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.SimpleDept;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminFileService;
@@ -16,11 +14,9 @@ import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.UserUtil;
-import com.kakarote.crm.common.AuthUtil;
-import com.kakarote.crm.constant.CrmAuthEnum;
 import com.kakarote.crm.constant.CrmEnum;
-import com.kakarote.crm.entity.BO.CrmBusinessChangOwnerUserBO;
 import com.kakarote.crm.entity.BO.CrmBusinessSaveBO;
+import com.kakarote.crm.entity.BO.CrmChangeOwnerUserBO;
 import com.kakarote.crm.entity.BO.CrmMemberSaveBO;
 import com.kakarote.crm.entity.BO.CrmUpdateInformationBO;
 import com.kakarote.crm.entity.PO.CrmBusiness;
@@ -63,7 +59,7 @@ public class CrmBusinessLog {
         return contentList;
     }
 
-    public List<Content> changeOwnerUser(CrmBusinessChangOwnerUserBO crmChangeOwnerUserBO) {
+    public List<Content> changeOwnerUser(CrmChangeOwnerUserBO crmChangeOwnerUserBO) {
         return crmChangeOwnerUserBO.getIds().stream().map(id -> {
             String name = crmBusinessService.getBusinessName(id);
             return sysLogUtil.addConversionRecord(CrmEnum.BUSINESS, crmChangeOwnerUserBO.getOwnerUserId(), name);
@@ -95,9 +91,6 @@ public class CrmBusinessLog {
     public List<Content> deleteMembers(CrmMemberSaveBO crmMemberSaveBO) {
         List<Content> contentList = new ArrayList<>();
         for (Integer id : crmMemberSaveBO.getIds()) {
-            if (AuthUtil.isRwAuth(id,CrmEnum.CUSTOMER, CrmAuthEnum.EDIT)) {
-                throw new CrmException(SystemCodeEnum.SYSTEM_NO_AUTH);
-            }
             String businessName = crmBusinessService.getBusinessName(id);
             for (Long memberId : crmMemberSaveBO.getMemberIds()) {
                 if (!memberId.equals(UserUtil.getUserId())) {
@@ -127,9 +120,12 @@ public class CrmBusinessLog {
                 CrmBusiness crmBusiness = BeanUtil.mapToBean(crmBusinessMap, CrmBusiness.class, true);
                 contentList.add(sysLogUtil.updateRecord(oldBusinessMap, crmBusinessMap, CrmEnum.BUSINESS, crmBusiness.getBusinessName()));
             } else if (record.getInteger("fieldType") == 0 || record.getInteger("fieldType") == 2) {
+                String formType = record.getString("formType");
+                if(formType == null){
+                    return;
+                }
                 String oldFieldValue = crmBusinessDataService.lambdaQuery().select(CrmBusinessData::getValue).eq(CrmBusinessData::getFieldId, record.getInteger("fieldId"))
                         .eq(CrmBusinessData::getBatchId, batchId).one().getValue();
-                String formType = record.getString("formType");
                 String newValue = record.getString("value");
                 if (formType.equals(FieldEnum.USER.getFormType()) || formType.equals(FieldEnum.SINGLE_USER.getFormType())) {
                     oldFieldValue = adminService.queryUserByIds(TagUtil.toLongSet(oldFieldValue)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));

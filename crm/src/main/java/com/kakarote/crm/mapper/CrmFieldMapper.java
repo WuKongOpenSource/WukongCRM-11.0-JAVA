@@ -1,6 +1,8 @@
 package com.kakarote.crm.mapper;
 
+import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.servlet.BaseMapper;
+import com.kakarote.crm.entity.BO.CrmFieldDataBO;
 import com.kakarote.crm.entity.PO.CrmField;
 import org.apache.ibatis.annotations.Param;
 
@@ -42,12 +44,8 @@ public interface CrmFieldMapper extends BaseMapper<CrmField> {
 
     public List<Map<String,Object>> initData(Map<String,Object> map);
 
-    Integer queryFieldDuplicateByNoFixed(@Param("name") String name,@Param("value") Object value);
+    public List<CrmFieldDataBO> initFieldData(@Param("lastId") Integer lastId, @Param("table") String table, @Param("tableName") String tableName);
 
     Integer queryCustomerFieldDuplicateByFixed(@Param("name") String name,@Param("value") Object value);
-
-    Integer updateFieldName(@Param("name") String name,@Param("type") Integer type,@Param("count") int count);
-
-    public Integer dataCheck(@Param("name")String name,@Param("label")Integer label,@Param("type")Integer type);
 
 }

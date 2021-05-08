@@ -28,7 +28,7 @@ public class OaCalendarTypeUserServiceImpl extends BaseServiceImpl<OaCalendarTyp
 
     @Override
     public void saveSysCalendarType(Integer typeId) {
-        Result<List<Long>> listResult = adminService.queryUserList();
+        Result<List<Long>> listResult = adminService.queryUserList(1);
         List<Long> userIds = listResult.getData();
         List<OaCalendarTypeUser> oaCalendarTypeUsers = new ArrayList<>();
         userIds.forEach(userId->{

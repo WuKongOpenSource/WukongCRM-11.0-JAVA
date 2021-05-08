@@ -52,7 +52,7 @@ public class OaAnnouncementServiceImpl extends BaseServiceImpl<OaAnnouncementMap
         save(oaAnnouncement);
         List<Long> ids = new ArrayList<>();
         if (StrUtil.isAllEmpty(oaAnnouncement.getOwnerUserIds(), oaAnnouncement.getDeptIds())) {
-            ids.addAll(adminService.queryUserList().getData());
+            ids.addAll(adminService.queryUserList(2).getData());
         } else {
             ids.addAll(StrUtil.splitTrim(oaAnnouncement.getOwnerUserIds(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList()));
             List<Integer> deptIds = StrUtil.splitTrim(oaAnnouncement.getDeptIds(), Const.SEPARATOR).stream().map(Integer::valueOf).collect(Collectors.toList());

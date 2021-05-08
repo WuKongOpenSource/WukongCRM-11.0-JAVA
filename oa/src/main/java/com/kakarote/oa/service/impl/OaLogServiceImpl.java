@@ -74,6 +74,9 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
     @Autowired
     private IOaLogBulletinService logBulletinService;
 
+    @Autowired
+    private IOaLogUserFavourService oaLogUserFavourService;
+
     @Override
     public BasePage<JSONObject> queryList(LogBO bo) {
         JSONObject object = getLogListObject(bo);
@@ -332,19 +335,13 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
         }
     }
 
-    public static boolean isValid(String param) {
+    private boolean isValid(String param) {
         if (param == null) {
             return true;
         }
-        String reg = "(?:')|(?:--)|(/\\*(?:.|[\\n\\r])*?\\*/)|"
-                + "(\\b(select|update|union|and|or|delete|insert|trancate|char|substr|ascii|declare|exec|count|master|into|drop|execute)\\b)";
-
+        String reg = "(?:')|(?:--)|(/\\*(?:.|[\\n\\r])*?\\*/)| (\\b(select|update|union|and|or|delete|insert|trancate|char|substr|ascii|declare|exec|count|master|into|drop|execute)\\b)";
         Pattern sqlPattern = Pattern.compile(reg, Pattern.CASE_INSENSITIVE);
-
-        if (sqlPattern.matcher(param).find()) {
-            return false;
-        }
-        return true;
+        return !sqlPattern.matcher(param).find();
     }
 
     private JSONObject getLogListObject(LogBO bo) {
@@ -366,15 +363,14 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
         object.put("by", by);
         String createUserIdOne = bo.getCreateUserId();
         String createUserIdTwo = bo.getCreateUserId();
-        if (StrUtil.isEmpty(createUserIdOne)) {
+        if (StrUtil.isEmpty(createUserIdOne) && CollUtil.isEmpty(bo.getDeptIds())) {
             object.put("isAdmin", UserUtil.isAdmin());
         }
         List<Long> longList = adminService.queryChildUserId(user.getUserId()).getData();
+        longList.add(user.getUserId());
         if (!UserUtil.isAdmin()) {
             List<Long> userIdList = StrUtil.splitTrim(createUserIdOne, Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList());
-            List<Long> subUserIdList = adminService.queryChildUserId(user.getUserId()).getData();
-            subUserIdList.add(user.getUserId());
-            userIdList.retainAll(subUserIdList);
+            userIdList.retainAll(longList);
             createUserIdOne = StrUtil.join(Const.SEPARATOR, userIdList);
         }
         List<Long> createUserIdOneList = new ArrayList<>();
@@ -384,6 +380,14 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
         List<Long> createUserIdTwoList = new ArrayList<>();
         if (StrUtil.isNotEmpty(createUserIdTwo) && !",".equals(createUserIdTwo)) {
             createUserIdTwoList = Arrays.stream(createUserIdTwo.split(",")).map(Long::parseLong).collect(Collectors.toList());
+        }
+        if(CollUtil.isNotEmpty(bo.getDeptIds())){
+            List<Long> userIds = adminService.queryUserByDeptIds(bo.getDeptIds()).getData();
+            if(!UserUtil.isAdmin()){
+                userIds.retainAll(longList);
+            }
+            createUserIdOneList.addAll(userIds);
+            createUserIdTwoList.addAll(userIds);
         }
         List<Long> userIds = new ArrayList<>();
         if (by.equals(1)) {
@@ -399,7 +403,6 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
                 object.put("userIds2", createUserIdTwoList);
             } else {
                 userIds.addAll(longList);
-                userIds.add(user.getUserId());
                 object.put("userIds1", userIds);
             }
             object.put("send_user_ids", user.getUserId());
@@ -463,12 +466,14 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
         List<Long> userIdList = new ArrayList<>();
         //为空代表范围是全部员工
         if (StrUtil.isEmpty(rule.getMemberUserId())) {
-            userIdList.addAll(adminService.queryUserList().getData());
+            userIdList.addAll(adminService.queryUserList(2).getData());
         } else {
             userIdList.addAll(Arrays.stream(rule.getMemberUserId().split(",")).map(Long::parseLong).collect(Collectors.toList()));
         }
-        List<Long> data = adminService.queryChildUserId(UserUtil.getUserId()).getData();
-        userIdList.retainAll(data);
+        if(!UserUtil.isAdmin()) {
+            List<Long> data = adminService.queryChildUserId(UserUtil.getUserId()).getData();
+            userIdList.retainAll(data);
+        }
         Integer totalNum = userIdList.size();
         String start = "";
         String end = "";
@@ -498,9 +503,6 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
             DateTime endDate = DateUtil.endOfDay(DateUtil.offsetDay(beginDay, day > rule.getEndDay() ? rule.getEndDay() - 1 : day));
             end = DateUtil.format(endDate, "yyyy-MM-dd") + " 12:00";
         }
-//        if (userIdList.size() == 0) {
-//            userIdList.add(UserUtil.getUserId());
-//        }
         return new JSONObject().fluentPut("start", start).fluentPut("end", end).fluentPut("userIds", userIdList).fluentPut("totalNum", totalNum).fluentPut("type", type);
     }
 
@@ -522,6 +524,10 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
                 object.put("file", new ArrayList<>());
             }
         }
+
+        Integer logId = object.getInteger("logId");
+        object.put("favourUser",oaLogUserFavourService.queryFavourLogUserList(logId));
+        object.put("isFavour",oaLogUserFavourService.queryUserWhetherFavourLog(logId));
 
         List<String> sendUserIds = StrUtil.splitTrim(object.getString("sendUserIds"), Const.SEPARATOR);
         if (sendUserIds.size() > 0) {

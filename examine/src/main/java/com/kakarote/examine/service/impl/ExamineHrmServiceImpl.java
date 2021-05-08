@@ -8,6 +8,7 @@ import com.kakarote.core.feign.crm.entity.ExamineField;
 import com.kakarote.core.feign.hrm.entity.HrmSalaryMonthRecord;
 import com.kakarote.core.feign.hrm.service.SalaryRecordService;
 import com.kakarote.examine.constant.ExamineCodeEnum;
+import com.kakarote.examine.constant.ExamineConst;
 import com.kakarote.examine.entity.VO.ExamineFlowConditionDataVO;
 import com.kakarote.examine.service.ExamineModuleService;
 import com.kakarote.examine.service.IExamineService;
@@ -73,7 +74,7 @@ public class ExamineHrmServiceImpl implements ExamineModuleService {
         HrmSalaryMonthRecord hrmSalaryMonthRecord = salaryRecordService.querySalaryRecordById(typeId).getData();
         Map<String, Object> beanMap = BeanUtil.beanToMap(hrmSalaryMonthRecord);
         fieldList.forEach(field -> map.put(field,beanMap.get(field)));
-        map.put("createUserId",hrmSalaryMonthRecord.getCreateUserId());
+        map.put(ExamineConst.CREATE_USER_ID,hrmSalaryMonthRecord.getCreateUserId());
         return map;
     }
 }

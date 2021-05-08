@@ -6,7 +6,7 @@
       <foreach collection="ids" separator="," item="id" open="(" close=")" index="index">
           #{id}
       </foreach>
-      and (operating = '0' or operating = '2')
+      and (field_type  = '0' or field_type  = '2')
         and examine_category_id = #{categoryId}
     </delete>
     <delete id="deleteByFieldValue">
@@ -16,7 +16,7 @@
         <foreach collection="ids" separator="," item="id" open="(" close=")" index="index">
             #{id}
         </foreach>
-      and (operating = '0' or operating = '2')
+      and (field_type  = '0' or field_type  = '2')
         and examine_category_id = #{categoryId}
       )
     </delete>

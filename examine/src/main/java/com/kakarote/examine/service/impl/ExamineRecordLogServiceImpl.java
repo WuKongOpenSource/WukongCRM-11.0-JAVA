@@ -73,11 +73,13 @@ public class ExamineRecordLogServiceImpl extends BaseServiceImpl<ExamineRecordLo
 
         LambdaQueryWrapper<ExamineRecordLog> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         lambdaQueryWrapper.eq(ExamineRecordLog::getRecordId,recordId);
+        //查询有效审批历史数据
         List<Integer> statusList = ListUtil.toList(ExamineStatusEnum.AWAIT.getStatus(),
                 ExamineStatusEnum.UN_SUBMITTED.getStatus(),ExamineStatusEnum.INVALID.getStatus());
         lambdaQueryWrapper.notIn(ExamineRecordLog::getExamineStatus,statusList);
         lambdaQueryWrapper.orderByAsc(ExamineRecordLog::getCreateTime);
         List<ExamineRecordLog> examineRecordLogs = this.list(lambdaQueryWrapper);
+        //缓存人员名称 减少查询
         Map<Long, String> map = new HashMap<>(16);
         ExamineRecordLogVO recordLogVO = new ExamineRecordLogVO();
         for (ExamineRecordLog examineRecordLog : examineRecordLogs) {
@@ -93,11 +95,13 @@ public class ExamineRecordLogServiceImpl extends BaseServiceImpl<ExamineRecordLo
                     examineRecordLogV0.setExamineUserName(userName);
                     map.put(createUserId, userName);
                 }
+                //记录创建人信息
                 recordLogVO = examineRecordLogV0;
                 recordLogVO.setExamineTime(examineRecordLogV0.getCreateTime());
             } else {
                 Long examineUserId;
                 if (ExamineStatusEnum.RECHECK.getStatus().equals(examineRecordLog.getExamineStatus())){
+                    //针对撤回 将审批人置为创建人(只有创建人有撤回权限)
                     examineUserId = examineRecordLog.getCreateUserId();
                 }else {
                     examineUserId = examineRecordLog.getExamineUserId();

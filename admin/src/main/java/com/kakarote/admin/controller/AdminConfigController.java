@@ -198,11 +198,10 @@ public class AdminConfigController {
         return R.ok(moduleSettingVO);
     }
 
-    @ApiOperation(value = "查询手机端模块配置")
-    @PostMapping("/queryMobileModuleSetting")
-    public Result<JSONArray> queryMobileModuleSetting() {
-        String name = "MobileModuleSetting";
-        AdminUserConfig userConfig = adminUserConfigService.queryUserConfigByName(name);
+    @ApiOperation(value = "查询自定义配置")
+    @PostMapping("/queryCustomSetting/{customKey}")
+    public Result<JSONArray> queryCustomSetting(@PathVariable("customKey") String customKey) {
+        AdminUserConfig userConfig = adminUserConfigService.queryUserConfigByName(customKey);
         if (userConfig == null) {
             return Result.ok(new JSONArray());
         }
@@ -213,21 +212,20 @@ public class AdminConfigController {
      * 修改手机端模块设置
      */
 
-    @ApiOperation(value = "修改手机端模块配置")
-    @PostMapping("/setMobileModuleSetting")
-    public Result setMobileModuleSetting(@RequestBody JSONArray json) {
-        String name = "MobileModuleSetting";
-        AdminUserConfig userConfig = adminUserConfigService.queryUserConfigByName(name);
+    @ApiOperation(value = "修改自定义配置")
+    @PostMapping("/setCustomSetting/{customKey}")
+    public Result queryCustomSetting(@RequestBody JSONArray json,@PathVariable("customKey") String customKey) {
+        AdminUserConfig userConfig = adminUserConfigService.queryUserConfigByName(customKey);
         if (userConfig != null) {
             userConfig.setValue(json.toJSONString());
             adminUserConfigService.updateById(userConfig);
         } else {
             userConfig = new AdminUserConfig();
             userConfig.setStatus(1);
-            userConfig.setName("MobileModuleSetting");
+            userConfig.setName(customKey);
             userConfig.setValue(json.toJSONString());
             userConfig.setUserId(UserUtil.getUserId());
-            userConfig.setDescription("手机端模块设置");
+            userConfig.setDescription("用户自定义参数设置");
             adminUserConfigService.save(userConfig);
         }
         return R.ok();

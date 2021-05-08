@@ -1,6 +1,7 @@
 package com.kakarote.crm.mapper;
 
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.servlet.BaseMapper;
@@ -71,8 +72,6 @@ public interface CrmCustomerMapper extends BaseMapper<CrmCustomer> {
     public CrmInfoNumVO queryNum(Map<String, Object> map);
 
     Integer ownerNum(@Param("ids") List<Integer> ids, @Param("ownerUserId") Long ownerUserId);
-
-    void deleteMember(@Param("memberId") String memberId, @Param("id") Integer id);
 
     List<CrmDataCheckVO> dataCheck(@Param("data") CrmDataCheckBO dataCheckBO);
 

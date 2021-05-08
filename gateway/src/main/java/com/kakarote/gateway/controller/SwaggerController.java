@@ -20,9 +20,6 @@ public class SwaggerController {
     @Autowired(required = false)
     private SecurityConfiguration securityConfiguration;
 
-    @Autowired(required = false)
-    private UiConfiguration uiConfiguration;
-
     @Autowired
     public SwaggerController(SwaggerProvider swaggerProvider) {
         this.swaggerProvider = swaggerProvider;
@@ -53,7 +50,7 @@ public class SwaggerController {
                 .tagsSorter(TagsSorter.ALPHA)
                 .validatorUrl(null)
                 .build();
-        return Mono.just(new ResponseEntity<>(Optional.ofNullable(uiConfiguration).orElse(build), HttpStatus.OK));
+        return Mono.just(new ResponseEntity<>(build, HttpStatus.OK));
     }
 
     @GetMapping("")
