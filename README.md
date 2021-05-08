@@ -206,7 +206,7 @@ crm.upload.local.uploadPath      需要配置两个地址0为登录才可访问�
 
 ```
 代码生成器地址：core\src\test\com\kakarote\generator\Generator.java
-接口文档地址`http://localhost:8443/swagger-ui.html`或者访问对应服务下 http://服务地址:端口/swagger-ui.html
+接口文档地址`http://localhost:8443/doc.html`
 ```
 
 
