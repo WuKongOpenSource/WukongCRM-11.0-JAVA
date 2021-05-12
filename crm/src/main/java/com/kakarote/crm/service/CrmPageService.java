@@ -116,7 +116,7 @@ public interface CrmPageService {
                 }
             }
             if (isExcel) {
-                while (hits.length % 10000 == 0) {
+                while (hits.length !=0 && hits.length % 10000 == 0) {
                     hits = getAllData(searchRequest, hits);
                 }
             }
