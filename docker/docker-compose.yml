@@ -1,35 +1,33 @@
 version: '3'
 services:
-  db:
-    image: 'registry.cn-hangzhou.aliyuncs.com/72crm/mysql:5.7'
-    container_name: mysql
+  mysql:
+    image: registry.cn-hangzhou.aliyuncs.com/72crm/mysql:5.7
+    container_name: wkcrm_mysql
     volumes:
-      - ./conf/mysql/mysqld.cnf:/etc/mysql/conf.d/source/mysqld.cnf
       - ./data/mysql/data:/var/lib/mysql
-      - ./data/mysql/init:/docker-entrypoint-initdb.d/
-      - ./log/mysql:/var/log/mysql/
-      - ./mysql.sh:/mysql.sh
+      - ./data/mysql/init:/docker-entrypoint-initdb.d
     environment:
       - MYSQL_ROOT_PASSWORD=password
       - TZ=Asia/Shanghai
       - LANG=en_US.UTF-8
     networks:
-      wkcrm_network:
+      - wkcrm_network
     ports:
-      - '3306:3306'
-    entrypoint: /mysql.sh
+      - "3306:3306"
     restart: always
+
   redis:
-    image: 'registry.cn-hangzhou.aliyuncs.com/72crm/redis:6.0.8'
-    container_name: redis
+    image: registry.cn-hangzhou.aliyuncs.com/72crm/redis:6.0.8
+    container_name: wkcrm_redis
     volumes:
       - ./conf/redis/redis.conf:/etc/redis.conf
     ports:
-      - '6379:6379'
+      - "6379:6379"
     networks:
-      wkcrm_network:
+      - wkcrm_network
     command: [ "redis-server", "/etc/redis.conf" ]
     restart: always
+
   elasticsearch:
     image: registry.cn-hangzhou.aliyuncs.com/72crm/elasticsearch:6.8.6
     container_name: elasticsearch
@@ -43,30 +41,32 @@ services:
     ports:
       - "9200:9200"
     networks:
-      wkcrm_network:
+      - wkcrm_network
     restart: always
+
   nacos:
-    image: registry.cn-hangzhou.aliyuncs.com/72crm/nacos:1.2.1
-    container_name: nacos
+    image: chaiyd/nacos:2.0.1
+    container_name: wkcrm_nacos
     environment:
       - MODE=standalone
-      - TZ=Asia/Shanghai
-      - LANG=en_US.UTF-8
+      - MYSQL_MASTER_SERVICE_HOST=mysql
+      - MYSQL_MASTER_SERVICE_PORT=3306
+      - MYSQL_MASTER_SERVICE_DB_NAME=nacos
+      - MYSQL_MASTER_SERVICE_USER=root
+      - MYSQL_MASTER_SERVICE_PASSWORD=password
     depends_on:
-      - db
+      - mysql
     volumes:
-      - ./conf/nacos:/home/nacos/conf
       - ./log/nacos:/home/nacos/logs
-      - ./nacos.sh:/nacos.sh
-    entrypoint: /nacos.sh -c 'echo "start web service here"'
     ports:
       - "8848:8848"
     networks:
-      wkcrm_network:
+      - wkcrm_network
     restart: always
+
   xxl-job-admin:
     image: registry.cn-hangzhou.aliyuncs.com/72crm/xxl-job:2.1.2
-    container_name: xxl-job-admin
+    container_name: wkcrm_xxl-job-admin
     volumes:
       - ./log/xxl-job:/data/applogs/xxl-job/
     environment:
@@ -74,23 +74,32 @@ services:
     ports:
       - "8080:8080"
     networks:
-      wkcrm_network:
+      - wkcrm_network
+    depends_on:
+      - mysql
+      - nacos
+      - redis
     restart: always
+
   nginx:
-    image: registry.cn-hangzhou.aliyuncs.com/72crm/nginx:latest
-    container_name: "nginx"
+    image: chaiyd/nginx:1.20.0
+    # docker-nginx https://github.com/chaiyd/nginx.git
+    container_name: wkcrm_nginx
     ports:
       - "80:80"
     volumes:
-      - ./log/nginx/:/var/log/nginx/
+      - ./log/nginx/:/etc/nginx/logs/
       - ./conf/nginx/conf.d/:/etc/nginx/conf.d/
-      - ./conf/nginx/nginx.conf:/etc/nginx/nginx.conf
+      #- ./conf/nginx/nginx.conf:/etc/nginx/nginx.conf
     networks:
-      wkcrm_network:
+      - wkcrm_network
+    depends_on:
+      - wkcrm
     restart: always
+
   wkcrm:
     image: registry.cn-hangzhou.aliyuncs.com/72crm/crm:11.3.1
-    container_name: "wkcrm"
+    container_name: wkcrm
     environment:
       - TZ=Asia/Shanghai
       - LANG=en_US.UTF-8
@@ -101,11 +110,13 @@ services:
     ports:
       - "8443:8443"
     networks:
-      wkcrm_network:
+      - wkcrm_network
     entrypoint: /wkcrm.sh restart
+    depends_on:
+      - mysql
+      - nacos
+      - redis
     restart: always
 
 networks:
   wkcrm_network:
-    external:
-      name: wkcrm_network

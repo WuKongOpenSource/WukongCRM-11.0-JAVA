@@ -6,13 +6,13 @@ echo -e "\033[46;37;5m -------------- 开始安装docker所需环境 -----------
 # 安装docker环境
 echo " ------------ 开始安装docker服务 ------------ ";
 yum update -y;
-yum install -y yum-utils device-mapper-persistent-data lvm2;
+yum install -y yum-utils device-mapper-persistent-data lvm2 epel-release;
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo;
-yum install -y docker-ce;
+yum install -y docker-ce docker-compose;
 systemctl start docker;
 systemctl enable docker;
 docker version;
-sudo curl -L "https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose;
-sudo chmod +x /usr/local/bin/docker-compose;
+#sudo curl -L "https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose;
+#sudo chmod +x /usr/local/bin/docker-compose;
 docker-compose version;
 echo " ------------ docker服务安装完毕 ------------ ";
