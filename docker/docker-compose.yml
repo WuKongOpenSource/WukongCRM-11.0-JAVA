@@ -47,11 +47,11 @@ services:
     container_name: wkcrm_nacos
     environment:
       - MODE=standalone
-      - MYSQL_MASTER_SERVICE_HOST=mysql
-      - MYSQL_MASTER_SERVICE_PORT=3306
-      - MYSQL_MASTER_SERVICE_DB_NAME=nacos
-      - MYSQL_MASTER_SERVICE_USER=root
-      - MYSQL_MASTER_SERVICE_PASSWORD=password
+      - MYSQL_SERVICE_HOST=mysql
+      - MYSQL_SERVICE_PORT=3306
+      - MYSQL_SERVICE_DB_NAME=nacos
+      - MYSQL_SERVICE_USER=root
+      - MYSQL_SERVICE_PASSWORD=password
     depends_on:
       - mysql
     volumes:
