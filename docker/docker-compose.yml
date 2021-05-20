@@ -1,15 +1,13 @@
 version: '3'
 services:
   mysql:
-    image: registry.cn-hangzhou.aliyuncs.com/72crm/mysql:5.7
+    image: chaiyd/mysql:8.0.25
     container_name: wkcrm_mysql
     volumes:
       - ./data/mysql/data:/var/lib/mysql
       - ./data/mysql/init:/docker-entrypoint-initdb.d
     environment:
       - MYSQL_ROOT_PASSWORD=password
-      - TZ=Asia/Shanghai
-      - LANG=en_US.UTF-8
     networks:
       - wkcrm_network
     ports:
@@ -90,6 +88,7 @@ services:
     volumes:
       - ./log/nginx/:/etc/nginx/logs/
       - ./conf/nginx/conf.d/:/etc/nginx/conf.d/
+      #- ./html/static:/etc/nginx/html/static
       #- ./conf/nginx/nginx.conf:/etc/nginx/nginx.conf
     networks:
       - wkcrm_network
