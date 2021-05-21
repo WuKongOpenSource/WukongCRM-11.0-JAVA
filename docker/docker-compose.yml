@@ -47,6 +47,7 @@ services:
     container_name: wkcrm_nacos
     environment:
       - MODE=standalone
+      - SPRING_DATASOURCE_PLATFORM=mysql # nacos当前版本使用MySQL 8.0 存在bug
       - MYSQL_SERVICE_HOST=mysql
       - MYSQL_SERVICE_PORT=3306
       - MYSQL_SERVICE_DB_NAME=nacos
