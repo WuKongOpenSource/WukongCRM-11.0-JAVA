@@ -722,7 +722,7 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
 
     @Override
     public Dict getSearchTransferMap() {
-        return Dict.create().set("createUserId", "createUserName").set("preOwnerUserId","preOwnerUserName");
+        return Dict.create().set("createUserName", "createUserId").set("preOwnerUserName","preOwnerUserId");
     }
 
     /**
