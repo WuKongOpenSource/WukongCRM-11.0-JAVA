@@ -22,6 +22,9 @@
     <select id="todayOvertimeNum" resultType="java.lang.Integer">
         select count(*) from wk_crm_${table}
         where next_time &lt; now() and last_time &lt; next_time and owner_user_id = #{userId}
+        <if test="type == 1">
+            and is_transform = '0'
+        </if>
         <if test="type == 2">
             and status != 3
         </if>
