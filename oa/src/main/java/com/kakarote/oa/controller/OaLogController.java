@@ -1,8 +1,6 @@
 package com.kakarote.oa.controller;
 
 
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
@@ -13,9 +11,11 @@ import com.kakarote.core.common.log.SysLog;
 import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.oa.common.log.OaLogLog;
 import com.kakarote.oa.entity.BO.LogBO;
 import com.kakarote.oa.entity.PO.OaLogRule;
+import com.kakarote.oa.entity.VO.OaBusinessNumVO;
 import com.kakarote.oa.service.IOaCommonService;
 import com.kakarote.oa.service.IOaLogRuleService;
 import com.kakarote.oa.service.IOaLogService;
@@ -23,12 +23,11 @@ import com.kakarote.oa.service.IOaLogUserFavourService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -170,45 +169,26 @@ public class OaLogController {
     @SysLogHandler(behavior = BehaviorEnum.EXCEL_EXPORT,object = "导出日志",detail = "导出日志")
     public void export(@RequestBody LogBO logBO,HttpServletResponse response){
         List<Map<String, Object>> list = oaLogService.export(logBO);
-        try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            writer.addHeaderAlias("category", "日志类型");
-            writer.addHeaderAlias("createTime", "创建日期");
-            writer.addHeaderAlias("createUserName", "创建人");
-            writer.addHeaderAlias("sendName", "发送给");
-            writer.addHeaderAlias("content", "今日工作内容");
-            writer.addHeaderAlias("tomorrow", "明日工作内容");
-            writer.addHeaderAlias("question", "遇到问题");
-            writer.addHeaderAlias("relateCrmWork", "关联业务");
-            writer.addHeaderAlias("comment", "回复");
-            writer.merge(8, "日志信息");
-            writer.setOnlyAlias(true);
-            writer.write(list, true);
-            writer.setRowHeight(0, 20);
-            writer.setRowHeight(1, 20);
-            for (int i = 0; i < 9; i++) {
-                writer.setColumnWidth(i, 20);
+        List<ExcelParseUtil.ExcelDataEntity> dataList = new ArrayList<>();
+        dataList.add(ExcelParseUtil.toEntity("category", "日志类型"));
+        dataList.add(ExcelParseUtil.toEntity("createTime", "创建日期"));
+        dataList.add(ExcelParseUtil.toEntity("createUserName", "创建人"));
+        dataList.add(ExcelParseUtil.toEntity("sendName", "发送给"));
+        dataList.add(ExcelParseUtil.toEntity("content", "今日工作内容"));
+        dataList.add(ExcelParseUtil.toEntity("tomorrow", "明日工作内容"));
+        dataList.add(ExcelParseUtil.toEntity("question", "遇到问题"));
+        dataList.add(ExcelParseUtil.toEntity("relateCrmWork", "关联业务"));
+        dataList.add(ExcelParseUtil.toEntity("comment", "回复"));
+        ExcelParseUtil.exportExcel(list, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+
             }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cellStyle.setWrapText(true);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=log.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出日志错误：", e);
-        }
+            @Override
+            public String getExcelName() {
+                return "日志";
+            }
+        }, dataList);
     }
 
 
@@ -229,6 +209,17 @@ public class OaLogController {
     public Result setOaLogRule(@RequestBody List<OaLogRule> ruleList) {
         oaLogRuleService.setOaLogRule(ruleList);
         return R.ok();
+    }
+
+    /**
+     * app端
+     * @return
+     */
+    @PostMapping("/queryOaBusinessNum")
+    @ApiOperation("app端某个查询数量功能")
+    public Result<OaBusinessNumVO> queryOaBusinessNum(){
+        OaBusinessNumVO businessNumVO = oaLogService.queryOaBusinessNum();
+        return Result.ok(businessNumVO);
     }
 }
 

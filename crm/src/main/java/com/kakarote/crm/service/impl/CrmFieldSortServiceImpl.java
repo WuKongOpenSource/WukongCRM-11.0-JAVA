@@ -88,6 +88,14 @@ public class CrmFieldSortServiceImpl extends BaseServiceImpl<CrmFieldSortMapper,
                 crmFieldList.add(new CrmField("ownerUserName", "负责人", FieldEnum.TEXT));
                 crmFieldList.add(new CrmField("teamMemberIds", "相关团队", FieldEnum.USER));
                 break;
+            case RECEIVABLES_PLAN:
+                crmFieldList.add(new CrmField("num", "期数", FieldEnum.TEXT));
+                crmFieldList.add(new CrmField("ownerUserName", "负责人", FieldEnum.TEXT));
+                crmFieldList.add(new CrmField("realReceivedMoney", "实际回款金额",FieldEnum.FLOATNUMBER));
+                crmFieldList.add(new CrmField("realReturnDate", "实际回款时间",FieldEnum.DATETIME));
+                crmFieldList.add(new CrmField("unreceivedMoney", "未回款金额",FieldEnum.FLOATNUMBER));
+                crmFieldList.add(new CrmField("receivedStatus", "回款状态",FieldEnum.SELECT));
+                break;
             case LEADS:
                 crmFieldList.add(new CrmField("lastTime", "最后跟进时间", FieldEnum.DATE));
                 crmFieldList.add(new CrmField("lastContent", "最后跟进记录", FieldEnum.TEXTAREA));
@@ -117,6 +125,9 @@ public class CrmFieldSortServiceImpl extends BaseServiceImpl<CrmFieldSortMapper,
                 crmFieldList.add(new CrmField("logisticsNumber", "物流单号", FieldEnum.TEXT));
             default:
                 break;
+        }
+        if (!CrmEnum.RECEIVABLES_PLAN.getType().equals(label)&&!CrmEnum.RETURN_VISIT.getType().equals(label)) {
+            crmFieldList.add(new CrmField("ownerDeptName", "所属部门", FieldEnum.TEXT));
         }
         crmFieldList.add(new CrmField("updateTime", "更新时间", FieldEnum.DATETIME));
         crmFieldList.add(new CrmField("createTime", "创建时间", FieldEnum.DATETIME));
@@ -151,8 +162,11 @@ public class CrmFieldSortServiceImpl extends BaseServiceImpl<CrmFieldSortMapper,
     }
 
     private String parseFieldName(String fieldName) {
-        if ("contract_id".equals(fieldName) || "plan_id".equals(fieldName)) {
-            fieldName = fieldName.substring(0, fieldName.lastIndexOf("_id")).concat("_num");
+        if ("contract_id".equals(fieldName)) {
+            return "contractNum";
+        }
+        if ("receivables_plan_id".equals(fieldName)){
+            return "planNum";
         }
         if (fieldName.endsWith("_id")) {
             fieldName = fieldName.substring(0, fieldName.lastIndexOf("_id")).concat("_name");

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmInsuranceMonthRecordMapper">
+
+    <select id="queryInsuranceEmployee" resultType="java.util.Map">
+        select a.employee_id,b.scheme_id from wk_hrm_employee a
+        left join wk_hrm_employee_social_security_info b on a.employee_id = b.employee_id
+        where b.scheme_id is not null and a.is_del = 0   and  a.entry_status != 4
+    </select>
+    <select id="queryInsuranceRecordList" resultType="com.kakarote.hrm.entity.VO.QueryInsuranceRecordListVO">
+        select a.i_record_id,a.month,a.year,a.title,
+        count(b.status=1  and (a.status = 1 or (a.status = 0  and c.is_del = 0)) OR NULL) as num,
+        count(b.status=0 and (a.status = 1 or (a.status = 0  and c.is_del = 0)) OR NULL) as stopNum,a.status,
+        sum(if(b.status = 1 and (a.status = 1 or (a.status = 0  and c.is_del = 0)),b.personal_insurance_amount,0)) as personal_insurance_amount,
+        sum(if(b.status = 1 and (a.status = 1 or (a.status = 0  and c.is_del = 0)),b.personal_provident_fund_amount,0)) as personal_provident_fund_amount,
+        sum(if(b.status = 1 and (a.status = 1 or (a.status = 0  and c.is_del = 0)),b.corporate_insurance_amount,0)) as corporate_insurance_amount,
+        sum(if(b.status = 1 and (a.status = 1 or (a.status = 0  and c.is_del = 0)),b.corporate_provident_fund_amount,0)) as corporate_provident_fund_amount
+        from wk_hrm_insurance_month_record a
+        left join wk_hrm_insurance_month_emp_record b on a.i_record_id = b.i_record_id
+        left join wk_hrm_employee c on b.employee_id = c.employee_id
+        where 1=1
+        <if test="data.year != null">
+            and a.year = #{data.year}
+        </if>
+          <if test="!isAll">
+              <choose>
+                  <when test="employeeIds != null and employeeIds.size >0">
+                      and c.employee_id in
+                      <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                          #{employeeId}
+                      </foreach>
+                  </when>
+                  <when test="employeeIds != null and employeeIds.size == 0">
+                      and 1=2
+                  </when>
+              </choose>
+          </if>
+        group by a.i_record_id
+        order by a.create_time desc
+    </select>
+    <select id="queryInsurancePageList" resultType="com.kakarote.hrm.entity.VO.QueryInsurancePageListVO">
+        select a.i_emp_record_id,a.employee_id,b.employee_name,b.dept_id,date_format(b.entry_time,'%Y-%m-%d') as entry_time,b.post,b.mobile,b.job_number,
+               c.name as deptName,d.city,d.scheme_name,d.scheme_id,
+               a.personal_insurance_amount,a.personal_provident_fund_amount,
+               a.corporate_insurance_amount,a.corporate_provident_fund_amount,b.is_del
+        from wk_hrm_insurance_month_emp_record a
+        left join wk_hrm_employee b on a.employee_id = b.employee_id
+        left join wk_hrm_dept c on b.dept_id = c.dept_id
+        left join wk_hrm_insurance_scheme d on a.scheme_id = d.scheme_id
+        left join wk_hrm_insurance_month_record e on a.i_record_id = e.i_record_id
+        where a.i_record_id = #{data.iRecordId}  and (e.status = 1 or (e.status = 0 and b.is_del = 0))
+        <if test="data.employeeName != null and data.employeeName != '' ">
+            and b.employee_name like concat('%',#{data.employeeName},'%')
+        </if>
+        <if test="data.schemeId != null and data.schemeId != '' ">
+            and d.scheme_id = #{data.schemeId}
+        </if>
+        <if test="data.city != null and data.city != '' ">
+            and d.city like concat('%',#{data.city},'%')
+        </if>
+        <if test="employeeIds != null and employeeIds.size >0">
+            and b.employee_id in
+            <foreach collection="employeeIds" item="employeeId" index="index" open="(" close=")" separator=",">
+                #{employeeId}
+            </foreach>
+        </if>
+        <choose>
+            <when test="data.status == 0">
+                and a.status = 0
+            </when>
+            <otherwise>
+                and a.status = 1
+            </otherwise>
+        </choose>
+    </select>
+    <select id="queryInsuranceRecord" resultType="com.kakarote.hrm.entity.VO.QueryInsuranceRecordListVO">
+       select a.i_record_id,a.month,a.year,a.title,count(b.status=1 OR NULL) as num,count(b.status=0 OR NULL) as stopNum,a.status,
+       sum(if(b.status = 1,b.personal_insurance_amount,0)) as personal_insurance_amount,
+       sum(if(b.status = 1,b.personal_provident_fund_amount,0)) as personal_provident_fund_amount,
+       sum(if(b.status = 1,b.corporate_insurance_amount,0)) as corporate_insurance_amount,
+       sum(if(b.status = 1,b.corporate_provident_fund_amount,0)) as corporate_provident_fund_amount
+        from wk_hrm_insurance_month_record a
+        left join wk_hrm_insurance_month_emp_record b on a.i_record_id = b.i_record_id
+        left join wk_hrm_employee c on b.employee_id = c.employee_id
+        where a.i_record_id = #{iRecordId} and (a.status = 1 or (a.status = 0 and c.is_del = 0))
+        <if test="employeeIds != null and employeeIds.size >0">
+            and c.employee_id in
+            <foreach collection="employeeIds" item="employeeId" index="index" open="(" close=")" separator=",">
+                #{employeeId}
+            </foreach>
+        </if>
+    </select>
+    <select id="queryDeleteEmpRecordIds" resultType="java.lang.Integer">
+        select i_emp_record_id from wk_hrm_insurance_month_emp_record a
+        left join wk_hrm_employee b on a.employee_id = b.employee_id
+        where a.i_record_id = #{iRecordId} and b.is_del = 1
+    </select>
+</mapper>

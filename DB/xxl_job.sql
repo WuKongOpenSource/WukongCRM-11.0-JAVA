@@ -1,4 +1,3 @@
-
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -57,7 +56,7 @@ CREATE TABLE `xxl_job_info`  (
 INSERT INTO `xxl_job_info` VALUES (11, 3, '0 0 2 * * ?', '定时放入公海', '2020-08-21 14:56:42', '2020-09-26 16:06:42', 'admin', '', 'LAST', 'CrmCustomerJob', '', 'SERIAL_EXECUTION', 7200, 0, 'BEAN', '', 'GLUE代码初始化', '2020-08-21 14:56:42', '', 1, 1601402400000, 1601488800000);
 INSERT INTO `xxl_job_info` VALUES (12, 3, '0 0 0 * * ?', '日程通知', '2020-08-24 14:43:08', '2020-09-26 16:06:35', 'admin', '', 'FIRST', 'EventNoticeJob', '', 'SERIAL_EXECUTION', 0, 0, 'BEAN', '', 'GLUE代码初始化', '2020-08-24 14:43:08', '', 1, 1601395200000, 1601481600000);
 INSERT INTO `xxl_job_info` VALUES (13, 3, '0 0 1 * * ?', '任务设置延期', '2020-08-24 14:43:43', '2020-09-26 16:06:27', 'admin', '', 'FIRST', 'TaskJob', '', 'SERIAL_EXECUTION', 0, 0, 'BEAN', '', 'GLUE代码初始化', '2020-08-24 14:43:43', '', 1, 1601398800000, 1601485200000);
-INSERT INTO `xxl_job_info` VALUES (14, 3, '0 0 2 * * ?', '同步客户信息', '2020-10-27 10:15:45', '2020-10-27 10:15:45', 'admin', '', 'FIRST', 'BiCustomerStatsJob', '', 'SERIAL_EXECUTION', 0, 0, 'BEAN', '', 'GLUE代码初始化', '2020-10-27 10:15:45', '', 1, 0, 0);
+
 -- ----------------------------
 -- Table structure for xxl_job_lock
 -- ----------------------------

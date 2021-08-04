@@ -6,8 +6,6 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -28,6 +26,7 @@ import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
@@ -49,12 +48,10 @@ import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmInvoiceMapper;
 import com.kakarote.crm.service.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.Serializable;
 import java.util.*;
@@ -245,6 +242,7 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
         if (contract != null) {
             map.put("contractNum", contract.getNum());
             map.put("contractMoney", contract.getMoney());
+            map.put("contractName", contract.getName());
         }
     }
 
@@ -346,22 +344,15 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
             if (oldInvoice.getCheckStatus() == 1) {
                 throw new CrmException(CrmCodeEnum.CRM_INVOICE_EXAMINE_PASS_ERROR);
             }
-            if (oldInvoice.getCheckStatus() != 4 && oldInvoice.getCheckStatus() != 2) {
+            if (!Arrays.asList(2,4,5,10).contains(oldInvoice.getCheckStatus())) {
                 throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EDIT_ERROR);
             }
             ExamineRecordSaveBO examineRecordSaveBO = crmModel.getExamineFlowData();
-            ExamineRecordReturnVO crmExamineData = null;
-            if (examineRecordSaveBO != null) {
-                this.supplementFieldInfo(oldInvoice.getInvoiceId(),oldInvoice.getExamineRecordId(),examineRecordSaveBO);
-                examineRecordSaveBO.setTitle(crmInvoice.getInvoiceApplyNumber());
-                crmExamineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
-                crmInvoice.setExamineRecordId(crmExamineData.getRecordId());
-                crmInvoice.setCheckStatus(crmExamineData.getExamineStatus());
-            } else {
-                if (crmInvoice.getCheckStatus() == null) {
-                    crmInvoice.setCheckStatus(1);
-                }
-            }
+            this.supplementFieldInfo(oldInvoice.getInvoiceId(),oldInvoice.getExamineRecordId(),examineRecordSaveBO);
+            examineRecordSaveBO.setTitle(crmInvoice.getInvoiceApplyNumber());
+            ExamineRecordReturnVO crmExamineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
+            crmInvoice.setExamineRecordId(crmExamineData.getRecordId());
+            crmInvoice.setCheckStatus(crmExamineData.getExamineStatus());
             Map<String, Object> oldInvoiceMap = BeanUtil.beanToMap(oldInvoice);
             Map<String, Object> newInvoiceMap = BeanUtil.beanToMap(crmInvoice);
             if(oldInvoiceMap.containsKey("invoiceType")){
@@ -387,18 +378,11 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
             ExamineRecordSaveBO examineRecordSaveBO = crmModel.getExamineFlowData();
             crmInvoice.setCreateUserId(UserUtil.getUserId()).setCreateTime(new Date()).setUpdateTime(new Date()).setBatchId(batchId);
             save(crmInvoice);
-            ExamineRecordReturnVO crmExamineData = null;
-            if (examineRecordSaveBO != null) {
-                this.supplementFieldInfo(crmInvoice.getInvoiceId(),null,examineRecordSaveBO);
-                examineRecordSaveBO.setTitle(crmInvoice.getInvoiceApplyNumber());
-                crmExamineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
-                crmInvoice.setExamineRecordId(crmExamineData.getRecordId());
-                crmInvoice.setCheckStatus(crmExamineData.getExamineStatus());
-            } else {
-                if (crmInvoice.getCheckStatus() == null) {
-                    crmInvoice.setCheckStatus(1);
-                }
-            }
+            this.supplementFieldInfo(crmInvoice.getInvoiceId(),null,examineRecordSaveBO);
+            examineRecordSaveBO.setTitle(crmInvoice.getInvoiceApplyNumber());
+            ExamineRecordReturnVO crmExamineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
+            crmInvoice.setExamineRecordId(crmExamineData.getRecordId());
+            crmInvoice.setCheckStatus(crmExamineData.getExamineStatus());
             updateById(crmInvoice);
             actionRecordUtil.addRecord(crmInvoice.getInvoiceId(), CrmEnum.INVOICE, crmInvoice.getInvoiceApplyNumber());
         }
@@ -443,28 +427,19 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
         List<Map<String, Object>> dataList = queryList(search,true).getList();
-        try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
-            headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
-            headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
-            writer.merge(headList.size() - 1, "发票信息");
-            if (dataList.size() == 0) {
-                Map<String, Object> record = new HashMap<>();
-                headList.forEach(head -> record.put(head.getFieldName(), ""));
-                dataList.add(record);
-            }
-            for (Map<String, Object> map : dataList) {
-                headList.forEach(field ->{
-                    if (fieldService.equalsByType(field.getType())) {
-                        map.put(field.getFieldName(),ActionRecordUtil.parseValue(map.get(field.getFieldName()),field.getType(),false));
-                    }
-                });
-                if(map.get("checkStatus")==null||"".equals(map.get("checkStatus"))){
-                    continue;
+        List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+        ExcelParseUtil.exportExcel(dataList, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+                for (String fieldName : headMap.keySet()) {
+                    record.put(fieldName,ActionRecordUtil.parseValue(record.get(fieldName),headMap.get(fieldName),false));
+                }
+                if(ObjectUtil.isEmpty(record.get("checkStatus"))){
+                    return;
                 }
                 String checkStatus;
                 //0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交 6 创建 7 已删除 8 作废
-                switch ((Integer) map.get("checkStatus")) {
+                switch (TypeUtils.castToInt(record.get("checkStatus"))) {
                     case 1:
                         checkStatus = "通过";
                         break;
@@ -489,43 +464,21 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
                     default:
                         checkStatus = "待审核";
                 }
-                map.put("checkStatus", checkStatus);
-                Integer invoiceType = TypeUtils.castToInt(map.get("invoiceType"));
+                record.put("checkStatus", checkStatus);
+                Integer invoiceType = TypeUtils.castToInt(record.get("invoiceType"));
                 if(invoiceType != null){
-                    map.put("invoiceType", parseInvoiceType(invoiceType));
+                    record.put("invoiceType", parseInvoiceType(invoiceType));
                 }
-                Integer invoiceStatus = TypeUtils.castToInt(map.get("invoiceStatus"));
+                Integer invoiceStatus = TypeUtils.castToInt(record.get("invoiceStatus"));
                 if(invoiceStatus != null){
-                    map.put("invoiceStatus",Objects.equals(1,invoiceStatus)?"已开票":"未开票");
+                    record.put("invoiceStatus",Objects.equals(1,invoiceStatus) ? "已开票" : "未开票");
                 }
             }
-            writer.setOnlyAlias(true);
-            writer.write(dataList, true);
-            writer.setRowHeight(0, 20);
-            writer.setRowHeight(1, 20);
-            for (int i = 0; i < headList.size(); i++) {
-                writer.setColumnWidth(i, 20);
+            @Override
+            public String getExcelName() {
+                return "发票";
             }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=invoice.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出发票错误：", e);
-        }
+        },headList,response);
     }
 
     private String parseInvoiceType(Integer invoiceType){
@@ -557,7 +510,7 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
 
     @Override
     public Dict getSearchTransferMap() {
-        return Dict.create().set("customerId", "customerName").set("contractId","contractNum");
+        return Dict.create().set("customerId", "customerName").set("contractId","contractNum").set("customer_id","customerId");
     }
 
     @Override
@@ -571,7 +524,7 @@ public class CrmInvoiceServiceImpl extends BaseServiceImpl<CrmInvoiceMapper, Crm
         if (invoice.getCheckStatus() == 1) {
             throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EDIT_ERROR);
         }
-        if (invoice.getCheckStatus() != 4 && invoice.getCheckStatus() != 2 && invoice.getCheckStatus() != 5) {
+        if (!Arrays.asList(2,4,5,10).contains(invoice.getCheckStatus())) {
             throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EDIT_ERROR);
         }
         updateInformationBO.getList().forEach(record -> {

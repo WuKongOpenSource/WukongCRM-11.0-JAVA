@@ -17,6 +17,7 @@ import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.SeparatorUtil;
 import com.kakarote.core.utils.TagUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.oa.common.OaCodeEnum;
 import com.kakarote.oa.entity.PO.OaAnnouncement;
@@ -91,7 +92,7 @@ public class OaAnnouncementServiceImpl extends BaseServiceImpl<OaAnnouncementMap
         }
         List<SimpleDept> deptList = adminService.queryDeptByIds(TagUtil.toSet(announcement.getDeptIds())).getData();
         announcement.setDeptList(deptList);
-        List<SimpleUser> userList = adminService.queryUserByIds(TagUtil.toLongSet(announcement.getOwnerUserIds())).getData();
+        List<SimpleUser> userList = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet(announcement.getOwnerUserIds()));
         announcement.setOwnerUserList(userList);
         return announcement;
     }

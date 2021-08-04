@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmDeptMapper">
+
+    <select id="queryById" resultType="com.kakarote.hrm.entity.VO.DeptVO">
+                select a.*,c.employee_name as leadEmployeeName,d.employee_name as mainEmployeeName,e.name as pName,
+                       count(b.is_del = 0 and b.entry_status in (1,3) or null) as allNum,
+                       count(b.employment_forms = 1 and b.entry_status in (1,3) and b.is_del = 0 or null)  as fullTimeNum,
+                       count(b.employment_forms = 2 and b.entry_status in (1,3) and b.is_del = 0 or null)  as nuFullTimeNum
+                from `wk_hrm_dept` a
+                         left join `wk_hrm_employee` b on a.dept_id = b.dept_id
+                left join `wk_hrm_employee` c on a.leader_employee_id = c.employee_id and c.is_del = 0
+                left join `wk_hrm_employee` d on a.main_employee_id = d.employee_id and c.is_del = 0
+                left join wk_hrm_dept e on a.pid = e.dept_id
+                where a.dept_id = #{deptId}
+                <choose>
+                    <when test="employeeIds != null and employeeIds.size >0">
+                        and b.employee_id in
+                        <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                            #{employeeId}
+                        </foreach>
+                    </when>
+                </choose>
+
+    </select>
+    <select id="queryList" resultType="com.kakarote.hrm.entity.VO.DeptVO" >
+        select a.*,
+           count(b.is_del = 0 and b.entry_status in (1,3) or null) as allNum,
+           count(b.is_del = 0 and b.entry_status in (1,3) or null) as myAllNum,
+           count(b.employment_forms = 1 and b.entry_status in (1,3) and b.is_del = 0 or null)  as fullTimeNum,
+           count(b.employment_forms = 1 and b.entry_status in (1,3) and b.is_del = 0 or null)  as myFullTimeNum,
+           count(b.employment_forms = 2 and b.entry_status in (1,3) and b.is_del = 0 or null)  as nuFullTimeNum,
+           count(b.employment_forms = 2 and b.entry_status in (1,3) and b.is_del = 0 or null)  as myNuFullTimeNum
+            from `wk_hrm_dept` a
+                left join `wk_hrm_employee` b on a.dept_id = b.dept_id
+            group by a.dept_id
+    </select>
+    <select id="queryEmployeeByDeptId" resultType="com.kakarote.hrm.entity.VO.QueryEmployeeListByDeptIdVO">
+        select a.employee_id,a.employee_name,a.employment_forms,a.entry_time,a.job_number,a.post,b.name as deptName from wk_hrm_employee a
+        left join wk_hrm_dept b on a.dept_id = b.dept_id
+        where a.dept_id = #{data.deptId}
+        <if test="data.search != null and data.search != ''">
+            and a.employee_name like concat('%',#{data.search},'%')
+        </if>
+        and a.entry_status in (1,3)
+        and a.is_del = 0
+        <if test="employeeIds != null and employeeIds.size > 0">
+            and a.employee_id in
+            <foreach collection="employeeIds" item="employeeId" separator="," open="(" close=")" index="index">
+                #{employeeId}
+            </foreach>
+        </if>
+    </select>
+    <select id="queryDeptEmployeeList" resultType="com.kakarote.hrm.entity.VO.DeptEmployeeVO">
+            select a.*,
+                   count(b.status != 0 or null) as currentNum,
+           count(b.is_del = 0 and b.entry_status in (1,3) or null) as allNum
+            from `wk_hrm_dept` a
+                left join `wk_hrm_employee` b on a.dept_id = b.dept_id
+            group by a.dept_id
+    </select>
+    <select id="queryDeptByEmpIds" resultType="com.kakarote.hrm.entity.VO.DeptVO">
+        select dept_id,
+               count(is_del = 0 and entry_status in (1,3) or null) as allNum,
+               count(is_del = 0 and entry_status in (1,3) or null) as myAllNum,
+               count(employment_forms = 1 and entry_status in (1,3) and is_del = 0 or null)  as fullTimeNum,
+               count(employment_forms = 1 and entry_status in (1,3) and is_del = 0 or null)  as myFullTimeNum,
+               count(employment_forms = 2 and entry_status in (1,3) and is_del = 0 or null)  as nuFullTimeNum,
+               count(employment_forms = 2 and entry_status in (1,3) and is_del = 0 or null)  as myNuFullTimeNum
+        from wk_hrm_employee
+        where employee_id in
+        <foreach collection="employeeIds" item="employeeId" separator="," open="(" close=")" index="index">
+            #{employeeId}
+        </foreach>
+        group by dept_id
+    </select>
+</mapper>

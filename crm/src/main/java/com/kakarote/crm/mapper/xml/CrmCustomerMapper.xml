@@ -121,7 +121,7 @@
         ) a limit 0,10
     </select>
     <select id="queryReceivablesPlan" resultType="com.alibaba.fastjson.JSONObject">
-        select a.plan_id,a.num,b.customer_name,c.num as contract_num,a.money,a.return_date,a.return_type,a.remind,a.remark
+        select a.receivables_plan_id,a.num,b.customer_name,c.num as contract_num,a.money,a.return_date,a.return_type,a.remind,a.remark
         from wk_crm_receivables_plan as a inner join wk_crm_customer as b on a.customer_id = b.customer_id
         inner join wk_crm_contract as c on a.contract_id = c.contract_id
         where b.customer_id = #{customerId} ${conditions}
@@ -131,7 +131,7 @@
         a.owner_user_id,
         a.check_status,a.return_time,d.num as planNum
         from wk_crm_receivables as a inner join wk_crm_contract as b on a.contract_id = b.contract_id
-        left join wk_crm_receivables_plan as d on a.plan_id = d.plan_id
+        left join wk_crm_receivables_plan as d on a.receivables_plan_id = d.receivables_plan_id
         where a.customer_id = #{customerId} and a.check_status != 7 ${conditions}
     </select>
     <select id="queryReturnVisit" resultType="com.alibaba.fastjson.JSONObject">

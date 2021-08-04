@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmEmployeeFieldManageMapper">
+
+    <select id="queryEmployeeManageField" resultType="com.kakarote.hrm.entity.VO.EmployeeFieldManageVO">
+        SELECT a.id,a.entry_status, b.field_id,b.field_name,b.`name`,b.label,b.label_group,a.is_manage_visible
+        from wk_hrm_employee_field_manage a INNER JOIN wk_hrm_employee_field b on a.field_name=b.field_name
+        WHERE  a.entry_status=#{entryStatus} and b.label=#{label} and b.type != 50 ORDER BY b.label_group,b.sorting
+    </select>
+</mapper>

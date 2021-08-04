@@ -64,7 +64,7 @@ public interface CrmInstrumentService {
 
     BasePage<CrmActivity> queryRecordList(BiParams biParams);
 
-    List<CrmActivity> exportRecordList(BiParams biParams);
+    public List<Map<String,Object>> exportRecordList(BiParams biParams);
 
     List<JSONObject> queryRecordCount(BiParams biParams);
 

@@ -412,4 +412,31 @@
         left join wk_admin_user as c on a.pid = c.user_id
         where type_id = #{typeId} and type = 2
     </select>
+
+    <select id="queryOaBusinessNum" resultType="com.kakarote.oa.entity.VO.OaBusinessNumVO">
+        SELECT
+        (
+        SELECT count( 1 )
+        FROM
+        wk_oa_log
+        WHERE
+        create_user_id = #{userId}
+        AND create_time BETWEEN #{startTime} AND #{stopTime}
+        ) as logNum,
+        (
+        select count(1) from wk_oa_examine as a
+        WHERE
+        a.create_user_id = #{userId}
+        ) as examineNum,
+        (
+        select count(1) from wk_work_task as a
+        WHERE
+        a.pid = 0 and a.main_user_id = #{userId} and a.status in(1,2) and ishidden='0'
+        ) as taskNum,
+        (
+        select count(1) from wk_crm_activity as a
+        WHERE
+        a.create_user_id = #{userId} and `status` = '1' and create_time  BETWEEN #{beginTime} AND #{endTime} and type in (1,4)
+        ) as activityNum
+    </select>
 </mapper>

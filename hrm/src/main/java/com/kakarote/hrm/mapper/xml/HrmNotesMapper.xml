@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmNotesMapper">
+
+    <select id="queryNoteListByTime" resultType="com.kakarote.hrm.entity.PO.HrmNotes">
+        select * from wk_hrm_notes where to_days(reminder_time) = to_days(#{time})
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+    </select>
+    <select id="queryNoteStatusList" resultType="java.lang.String">
+        select date_format(reminder_time,'%Y-%m-%d') from wk_hrm_notes where
+        reminder_time between #{data.startTime} and #{data.endTime}
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        group by date_format(reminder_time,'%Y-%m-%d')
+    </select>
+</mapper>

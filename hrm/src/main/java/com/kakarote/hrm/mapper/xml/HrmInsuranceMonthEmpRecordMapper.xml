@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmInsuranceMonthEmpRecordMapper">
+
+    <select id="queryEmpInsuranceMonth" resultType="com.kakarote.hrm.entity.VO.QueryEmpInsuranceMonthVO">
+        select b.employee_id,b.employee_name,b.mobile,b.entry_time,c.name as deptName,
+         d.city,d.scheme_name,a.personal_insurance_amount,a.personal_provident_fund_amount,
+         a.corporate_insurance_amount,a.corporate_provident_fund_amount
+         from wk_hrm_insurance_month_emp_record a
+        left join wk_hrm_employee b on a.employee_id = b.employee_id
+        left join wk_hrm_dept c on b.dept_id = c.dept_id
+        left join wk_hrm_insurance_scheme d on a.scheme_id = d.scheme_id
+        where a.month = #{data.month} and a.year = #{data.year}
+    </select>
+    <select id="queryNoInsuranceEmp" resultType="com.kakarote.hrm.entity.VO.SimpleHrmEmployeeVO">
+        select a.employee_id,a.employee_name,a.post,c.`name` as deptName
+        from wk_hrm_employee a
+        left join wk_hrm_employee_quit_info b on a.employee_id = b.employee_id
+        left join wk_hrm_dept c on a.dept_id = c.dept_id
+        where a.employee_id not in (select b.employee_id from wk_hrm_insurance_month_emp_record b  where i_record_id = #{iRecordId} and status = 1) and is_del = 0
+        and (a.entry_status not in(2,4) or (a.entry_status = 4 and adddate(b.plan_quit_time,interval 6 month) > #{dateTime}))
+
+    </select>
+    <select id="myInsurancePageList" resultType="com.kakarote.hrm.entity.VO.QueryInsurancePageListVO">
+
+    </select>
+</mapper>

@@ -149,8 +149,8 @@ public class CrmExamineServiceImpl extends BaseServiceImpl<CrmExamineMapper, Crm
             if (CollUtil.isNotEmpty(stepList)) {
                 stepList.forEach(step -> {
                     Set<Long> userIds = TagUtil.toLongSet(step.getCheckUserId());
-                    Result<List<SimpleUser>> listResult = adminService.queryUserByIds(userIds);
-                    step.setUserList(listResult.getData());
+                    List<SimpleUser> listResult = UserCacheUtil.getSimpleUsers(userIds);
+                    step.setUserList(listResult);
                 });
                 adminExamine.setStepList(stepList);
             } else {
@@ -159,7 +159,7 @@ public class CrmExamineServiceImpl extends BaseServiceImpl<CrmExamineMapper, Crm
 
             adminExamine.setUpdateUserName(UserCacheUtil.getUserName(adminExamine.getUpdateUserId()));
             if (StrUtil.isNotEmpty((String) adminExamine.getUserIds())) {
-                adminExamine.setUserIds(adminService.queryUserByIds(TagUtil.toLongSet((String) adminExamine.getUserIds())).getData());
+                adminExamine.setUserIds(UserCacheUtil.getSimpleUsers(TagUtil.toLongSet((String) adminExamine.getUserIds())));
             } else {
                 adminExamine.setUserIds(new ArrayList<>());
             }
@@ -181,8 +181,8 @@ public class CrmExamineServiceImpl extends BaseServiceImpl<CrmExamineMapper, Crm
         if (CollUtil.isNotEmpty(stepList)) {
             stepList.forEach(step -> {
                 Set<Long> userIds = TagUtil.toLongSet(step.getCheckUserId());
-                Result<List<SimpleUser>> listResult = adminService.queryUserByIds(userIds);
-                step.setUserList(listResult.getData());
+                List<SimpleUser> listResult = UserCacheUtil.getSimpleUsers(userIds);
+                step.setUserList(listResult);
             });
             examineVO.setStepList(stepList);
         }
@@ -196,12 +196,6 @@ public class CrmExamineServiceImpl extends BaseServiceImpl<CrmExamineMapper, Crm
         if (crmExamine.getStatus() == null) {
             crmExamine.setStatus(2);
         }
-//        String name = Db.queryStr("select name from wk_admin_examine where examine_id = ?", crmExamine.getExamineId());
-//        if (crmExamine.getStatus() == 2) {
-//            adminLogUtil.deleteObjectLog(AdminModelEnum.CRM_EXAMINE, "业务审批流", name);
-//        } else {
-//            adminLogUtil.updateStatusLog(AdminModelEnum.CRM_EXAMINE, adminExamine.getStatus(), name);
-//        }
         updateById(crmExamine);
     }
 
@@ -209,8 +203,6 @@ public class CrmExamineServiceImpl extends BaseServiceImpl<CrmExamineMapper, Crm
     public CrmQueryExamineStepVO queryExamineStep(CrmQueryExamineStepBO queryExamineStepBO) {
         Integer categoryType = queryExamineStepBO.getCategoryType();
         Integer id = queryExamineStepBO.getId();
-//        CrmExamine examine = lambdaQuery().eq(CrmExamine::getCategoryType, categoryType)
-//                .eq(CrmExamine::getStatus, 1).orderByDesc(CrmExamine::getUpdateTime).last("limit 1").one();
         CrmExamine examine = examineMapper.selectCrmExamineByUser(categoryType,UserUtil.isAdmin(),UserUtil.getUserId(),UserUtil.getUser().getDeptId());
         if (examine != null) {
             CrmQueryExamineStepVO examineStepVO = BeanUtil.copyProperties(examine, CrmQueryExamineStepVO.class);
@@ -220,8 +212,8 @@ public class CrmExamineServiceImpl extends BaseServiceImpl<CrmExamineMapper, Crm
                     //根据审核人id查询审核问信息
                     List<SimpleUser> userList = new ArrayList<>();
                     if (step.getCheckUserId() != null) {
-                        Result<List<SimpleUser>> listResult = adminService.queryUserByIds(TagUtil.toLongSet(step.getCheckUserId()));
-                        userList = listResult.getData();
+                        List<SimpleUser> listResult = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet(step.getCheckUserId()));
+                        userList = listResult;
                     }
                     step.setUserList(userList);
                 });
@@ -288,12 +280,12 @@ public class CrmExamineServiceImpl extends BaseServiceImpl<CrmExamineMapper, Crm
                     .list();
             if (CollUtil.isNotEmpty(list)){
                 List<Long> examineUserIds = list.stream().filter(log->log != null && log.getExamineUser()!=null).map(CrmExamineLog::getExamineUser).collect(Collectors.toList());
-                String examineName = adminService.queryUserByIds(examineUserIds).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
+                String examineName = UserCacheUtil.getSimpleUsers(examineUserIds).stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
                 record.put("examineName",examineName);
             }else {
                 record.put("examineName","");
             }
-            record.put("createUser", adminService.queryUserById(record.getLong("createUserId")).getData());
+            record.put("createUser", UserCacheUtil.getSimpleUser(record.getLong("createUserId")));
             Integer examineStatus = record.getInteger("examineStatus");
             Map<String,Integer> permission = new HashMap<>();
             Long createUserId = record.getLong("createUserId");

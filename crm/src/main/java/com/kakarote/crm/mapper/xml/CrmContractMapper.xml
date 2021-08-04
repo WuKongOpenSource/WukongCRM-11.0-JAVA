@@ -20,13 +20,16 @@
         from wk_crm_invoice where contract_id = #{contractId} ${invoiceCon}
     </select>
     <select id="queryReceivablesPlansByContractId" resultType="com.kakarote.crm.entity.PO.CrmReceivablesPlan">
-        select a.plan_id,a.num,a.money,a.return_type,date(a.return_date) as return_date
+        select a.receivables_plan_id,a.num,a.money,a.return_type,date(a.return_date) as return_date
         from wk_crm_receivables_plan as a left join wk_crm_receivables as b on a.receivables_id = b.receivables_id
         where b.receivables_id is null and a.contract_id = #{contractId}
     </select>
+    <select id="queryReceivablesMoney" resultType="java.math.BigDecimal">
+        select IFNULL(sum(IFNULL(money,0)),0) as money from wk_crm_receivables where check_status in ('1','10') and contract_id = #{contractId}
+    </select>
     <select id="queryReceivablesPlansByReceivablesId"
             resultType="com.kakarote.crm.entity.PO.CrmReceivablesPlan">
-        select plan_id,num,money,return_type,date(return_date) as return_date from wk_crm_receivables_plan where receivables_id = #{receivablesId}
+        select receivables_plan_id,num,money,return_type,date(return_date) as return_date from wk_crm_receivables_plan where receivables_id = #{receivablesId}
     </select>
     <select id="querySubtotalByContractId" resultType="com.alibaba.fastjson.JSONObject">
         select distinct ccc.discount_rate,

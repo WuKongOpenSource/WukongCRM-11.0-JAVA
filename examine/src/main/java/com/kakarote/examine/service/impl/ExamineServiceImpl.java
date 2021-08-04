@@ -120,8 +120,8 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
                 if (StrUtil.isNotEmpty(examine.getUserIds())) {
                     Set<Long> userIds = TagUtil.toLongSet(examine.getUserIds());
                     if (CollUtil.isNotEmpty(userIds)) {
-                        Result<List<SimpleUser>> listResult = adminService.queryUserByIds(userIds);
-                        examineVO.setUserList(listResult.getData());
+                        List<SimpleUser> listResult = UserCacheUtil.getSimpleUsers(userIds);
+                        examineVO.setUserList(listResult);
                     } else {
                         examineVO.setUserList(new ArrayList<>());
                     }
@@ -464,7 +464,7 @@ public class ExamineServiceImpl extends BaseServiceImpl<ExamineMapper, Examine> 
                         .orderByAsc(ExamineRecordOptional::getSort).list();
                 if (CollUtil.isNotEmpty(optionalUsers)) {
                     List<Long> userIds = optionalUsers.stream().map(ExamineRecordOptional::getUserId).collect(Collectors.toList());
-                    List<SimpleUser> simpleUsers = adminService.queryUserByIds(handleUserList(userIds,examineId)).getData();
+                    List<SimpleUser> simpleUsers = UserCacheUtil.getSimpleUsers(handleUserList(userIds,examineId));
                     examineFlowVO.setUserList(simpleUsers);
                 }
             }

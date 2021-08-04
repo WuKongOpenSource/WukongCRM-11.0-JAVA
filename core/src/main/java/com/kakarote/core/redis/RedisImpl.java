@@ -228,7 +228,7 @@ public class RedisImpl implements Redis {
      * @param value   存储的值 相当于map中的value
      */
     @Override
-    public void put(Object key, String hashKey, Object value) {
+    public void put(Object key, Object hashKey, Object value) {
         redisTemplate.opsForHash().put(appendKeyPrefix(key), hashKey, value);
     }
 

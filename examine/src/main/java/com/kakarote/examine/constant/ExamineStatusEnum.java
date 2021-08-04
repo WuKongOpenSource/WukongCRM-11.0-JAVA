@@ -4,7 +4,7 @@ import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.exception.CrmException;
 
 /**
- * 审核状态枚举 0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交 6 创建 7 已删除 8 作废
+ * 审核状态枚举 0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交 6 创建 7 已删除 8 作废 10 忽略 即未启用审批流
  */
 public enum ExamineStatusEnum {
     AWAIT(0),
@@ -16,6 +16,7 @@ public enum ExamineStatusEnum {
     CREATE(6),
     REMOVE(7),
     INVALID(8),
+    IGNORE(10),
     ;
 
     private ExamineStatusEnum(Integer status) {

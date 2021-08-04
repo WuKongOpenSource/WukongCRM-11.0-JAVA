@@ -112,4 +112,8 @@ public class CrmMarketing implements Serializable {
     private FileEntity mainFile;
 
 
+    @ApiModelProperty(value = "关联部门ID")
+    private String relationDeptId;
+
+
 }

@@ -12,6 +12,7 @@ import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.TagUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.oa.entity.BO.SetExamineCategoryBO;
 import com.kakarote.oa.entity.BO.UpdateCategoryStatus;
@@ -152,8 +153,8 @@ public class OaExamineCategoryServiceImpl extends BaseServiceImpl<OaExamineCateg
             stepList.forEach(step -> {
                 Set<Long> checkUserIds = TagUtil.toLongSet(step.getCheckUserId());
                 if(CollUtil.isNotEmpty(checkUserIds)){
-                    Result<List<SimpleUser>> listResult = adminService.queryUserByIds(checkUserIds);
-                    step.setUserList(listResult.getData());
+                    List<SimpleUser> listResult = UserCacheUtil.getSimpleUsers(checkUserIds);
+                    step.setUserList(listResult);
                 }else{
                     step.setUserList(new ArrayList<>());
                 }
@@ -161,8 +162,8 @@ public class OaExamineCategoryServiceImpl extends BaseServiceImpl<OaExamineCateg
             category.setStepList(stepList);
             Set<Long> userIds = TagUtil.toLongSet(category.getUserIds());
             if(CollUtil.isNotEmpty(userIds)){
-                Result<List<SimpleUser>> listResult = adminService.queryUserByIds(userIds);
-                category.setUserList(listResult.getData());
+                List<SimpleUser> listResult = UserCacheUtil.getSimpleUsers(userIds);
+                category.setUserList(listResult);
             }else{
                 category.setUserList(new ArrayList<>());
             }

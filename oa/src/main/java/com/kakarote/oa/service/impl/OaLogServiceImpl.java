@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
@@ -28,10 +29,12 @@ import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BiTimeUtil;
 import com.kakarote.core.utils.TagUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.oa.common.OaCodeEnum;
 import com.kakarote.oa.entity.BO.LogBO;
 import com.kakarote.oa.entity.PO.*;
+import com.kakarote.oa.entity.VO.OaBusinessNumVO;
 import com.kakarote.oa.mapper.OaLogMapper;
 import com.kakarote.oa.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -531,9 +534,15 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
 
         List<String> sendUserIds = StrUtil.splitTrim(object.getString("sendUserIds"), Const.SEPARATOR);
         if (sendUserIds.size() > 0) {
-            object.put("sendUserList", adminService.queryUserByIds(sendUserIds.stream().map(Long::valueOf).collect(Collectors.toList())).getData());
+            object.put("sendUserList", UserCacheUtil.getSimpleUsers(sendUserIds.stream().map(Long::valueOf).collect(Collectors.toList())));
         } else {
             object.put("sendUserList", new ArrayList<>());
+        }
+        List<String> sendDeptIds = StrUtil.splitTrim(object.getString("sendDeptIds"), Const.SEPARATOR);
+        if (sendDeptIds.size() > 0) {
+            object.put("sendDeptList",adminService.queryDeptByIds(sendDeptIds.stream().map(Integer::valueOf).collect(Collectors.toList())).getData());
+        } else {
+            object.put("sendDeptList", new ArrayList<>());
         }
         List<String> customerIds = StrUtil.splitTrim(object.getString("customerIds"), Const.SEPARATOR);
         if (customerIds.size() > 0) {
@@ -559,7 +568,7 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
         } else {
             object.put("contractList", new ArrayList<>());
         }
-        object.put("createUser", adminService.queryUserById(object.getLong("createUserId")).getData());
+        object.put("createUser", UserCacheUtil.getSimpleUser(object.getLong("createUserId")));
         int isEdit = userId.equals(object.getLong("createUserId")) ? 1 : 0;
         int isDel = 0;
         if ((System.currentTimeMillis() - 1000 * 3600 * 72) > object.getDate("createTime").getTime()) {
@@ -638,5 +647,20 @@ public class OaLogServiceImpl extends BaseServiceImpl<OaLogMapper, OaLog> implem
             list.add(record.fluentPut("sendName", sendName).fluentPut("relateCrmWork", relateCrmWork.trim()).fluentPut("comment", stringBuilder.toString().trim()));
         }));
         return list;
+    }
+
+    /**
+     * app某个查询数量功能，没有名称
+     */
+    @Override
+    public OaBusinessNumVO queryOaBusinessNum() {
+        Dict dict = Dict.create();
+        dict.put("userId",UserUtil.getUserId());
+        Date date = new Date();
+        dict.put("startTime",DateUtil.offsetDay(date,-30));
+        dict.put("stopTime",date);
+        dict.put("beginTime",DateUtil.beginOfMonth(date));
+        dict.put("endTime",DateUtil.endOfMonth(date));
+        return getBaseMapper().queryOaBusinessNum(dict);
     }
 }

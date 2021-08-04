@@ -304,6 +304,7 @@ public class BiCustomerServiceImpl implements BiCustomerService {
             });
         }
         BiPatch.supplementJsonList(jsonObjectList,"type",timeList,"cycle","customerNum");
+        jsonObjectList.sort(Comparator.comparing(jsonObject -> jsonObject.getString("type")));
         return jsonObjectList;
     }
 

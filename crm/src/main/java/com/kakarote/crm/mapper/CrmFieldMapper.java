@@ -42,9 +42,18 @@ public interface CrmFieldMapper extends BaseMapper<CrmField> {
     public Integer verifyField(@Param("tableName") String tableName, @Param("fieldId") Integer fieldId,
                                     @Param("value") String value, @Param("batchId") String batchId);
 
+    /**
+     * 更新自定义字段
+     * @return 更新条数
+     */
+    @SqlParser(filter = true)
+    public Integer dataCheck(@Param("name")String name,@Param("label")Integer label,@Param("type")Integer type);
+
+    @SqlParser(filter = true)
     public List<Map<String,Object>> initData(Map<String,Object> map);
 
-    public List<CrmFieldDataBO> initFieldData(@Param("lastId") Integer lastId, @Param("table") String table, @Param("tableName") String tableName);
+    @SqlParser(filter = true)
+    public List<CrmFieldDataBO> initFieldData(@Param("lastId") Integer lastId, @Param("primaryKey") String primaryKey, @Param("tableName") String tableName);
 
     Integer queryCustomerFieldDuplicateByFixed(@Param("name") String name,@Param("value") Object value);
 

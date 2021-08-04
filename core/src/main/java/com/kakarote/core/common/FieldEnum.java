@@ -10,7 +10,7 @@ public enum FieldEnum {
 
     /**
      *     字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员
-     *     11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划
+     *     11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划  29图片
      */
     TEXT(1, "text","单行文本"),
     TEXTAREA(2, "textarea","多行文本"),
@@ -47,10 +47,12 @@ public enum FieldEnum {
     SUPPLIER_CAUSE(30, "supplier_cause","供应商"),
     PURCHASE_CAUSE(31, "purchase_cause","采购订单"),
     SALE_CAUSE(32, "sale_cause","销售订单"),
-    WARRHOUSE_CAUSE(33, "warehouse_cause","仓库"),
+    WAREHOUSE_CAUSE(33, "warehouse_cause","仓库"),
     RELATED_ID(34,"related_id","关联对象"),
     COLLECTION_OBJECT(35,"collection_object","收藏"),
-    STATE_CAUSE(39,"state_cause","状态标识"),
+	RETREAT_CAUSE(36, "retreat_cause", "采购退货单"),
+	SALE_RETURN_CAUSE(37, "sale_return_cause", "销售退货"),
+	STATE_CAUSE(39,"state_cause","状态标识"),
     /**
      * 人资
      * */
@@ -68,6 +70,8 @@ public enum FieldEnum {
     CALCULATION_FUNCTION(51,"calculation_function","计算函数"),
     RELATE_CAUSE(52,"relate_cause","关联业务"),
     QUOTE_TYPE(53,"quote_type","引用字段"),
+    CITY(54,"city","省市"),
+    RECRUIT_CHANNEL(55,"recruit_channel","招聘渠道"),
     ;
 
     @Getter

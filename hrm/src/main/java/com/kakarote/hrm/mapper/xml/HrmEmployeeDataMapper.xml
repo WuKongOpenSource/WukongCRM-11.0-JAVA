@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmEmployeeDataMapper">
+
+    <select id="verifyUnique" resultType="java.lang.Integer">
+        select * from wk_hrm_employee_data a
+        left join wk_hrm_employee b on a.employee_id = b.employee_id
+        where b.is_del = 0 and a.field_id = #{fieldId} and a.field_value = #{value}
+        <if test="employeeId != null">
+            and a.employee_id != #{employeeId}
+        </if>
+    </select>
+    <select id="queryFiledListByEmployeeId" resultType="com.alibaba.fastjson.JSONObject">
+        select a.*,b.field_name,b.type
+        from wk_hrm_employee_data as a
+        left join wk_hrm_employee_field as b on a.field_id = b.field_id
+        where a.employee_id = #{employeeId}
+    </select>
+</mapper>

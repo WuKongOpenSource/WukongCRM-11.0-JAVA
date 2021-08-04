@@ -3,14 +3,9 @@ package com.kakarote.crm.controller;
 
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.symmetric.AES;
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.kakarote.core.common.ParamAspect;
-import com.kakarote.core.common.R;
-import com.kakarote.core.common.Result;
-import com.kakarote.core.common.SubModelType;
+import com.kakarote.core.common.*;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.SysLog;
 import com.kakarote.core.common.log.SysLogHandler;
@@ -18,6 +13,7 @@ import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.log.CrmMarketingLog;
@@ -32,19 +28,15 @@ import com.kakarote.crm.mapper.CrmMarketingMapper;
 import com.kakarote.crm.service.ICrmMarketingFormService;
 import com.kakarote.crm.service.ICrmMarketingService;
 import io.swagger.annotations.ApiOperation;
-import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static com.kakarote.core.utils.BaseUtil.getResponse;
 
 /**
  * <p>
@@ -236,62 +228,35 @@ public class CrmMarketingController {
         pageEntity.setPageType(0);
         List<JSONObject> fieldList = ApplicationContextHolder.getBean(CrmMarketingMapper.class).census(pageEntity.parse(), marketingId, userIds, status).getList();
         List<CrmModelFiledVO> nameList = crmMarketingService.queryField(marketingId);
-        ExcelWriter writer = ExcelUtil.getWriter();
-        try {
-            nameList.forEach(record -> writer.addHeaderAlias(record.getFieldName(), record.getName()));
-            writer.addHeaderAlias("ownerUserName", "负责人");
-            String title;
-            CrmMarketing marketing = crmMarketingService.getById(marketingId);
-            Integer crmType = marketing.getCrmType();
-            if (Arrays.asList(ICrmMarketingService.FIXED_CRM_TYPE).contains(crmType)){
-                title = "客户信息";
-            }else {
-                CrmMarketingForm marketingForm = crmMarketingFormService.getById(crmType);
-                title = marketingForm.getTitle();
-            }
-            if (nameList.size() > 1) {
-                writer.merge(nameList.size() - 1, title);
-            }else {
-                writer.merge(1, title);
-            }
-            List<Map<String, Object>> list = fieldList.stream().map(record -> {
-                CrmModelSaveBO jsonObject = JSON.parseObject(record.getString("fieldInfo"), CrmModelSaveBO.class);
-                Map<String, Object> entity = jsonObject.getEntity();
-                jsonObject.getField().forEach(field -> {
-                    entity.put(field.getFieldName(), field.getValue());
-                });
-                entity.put("ownerUserName", UserCacheUtil.getUserName(record.getLong("ownerUserId")));
-                return entity;
-            }).collect(Collectors.toList());
-            HttpServletResponse response = getResponse();
-            writer.setOnlyAlias(true);
-            writer.write(list, true);
-            writer.setRowHeight(0, 20);
-            writer.setRowHeight(1, 20);
-            Cell cell = writer.getCell(0, 0);
-            for (int i = 0; i < nameList.size(); i++) {
-                writer.setColumnWidth(i, 20);
-            }
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            response.setHeader("Content-Disposition", "attachment;filename=customer.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            // 关闭writer，释放内存
-            writer.close();
+        nameList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT,"负责人",1));
+        CrmMarketing marketing = crmMarketingService.getById(marketingId);
+        Integer crmType = marketing.getCrmType();
+        String title;
+        if (Arrays.asList(ICrmMarketingService.FIXED_CRM_TYPE).contains(crmType)){
+            title = "客户信息";
+        }else {
+            CrmMarketingForm marketingForm = crmMarketingFormService.getById(crmType);
+            title = marketingForm.getTitle();
         }
+        List<Map<String, Object>> list = fieldList.stream().map(record -> {
+            CrmModelSaveBO jsonObject = JSON.parseObject(record.getString("fieldInfo"), CrmModelSaveBO.class);
+            Map<String, Object> entity = jsonObject.getEntity();
+            jsonObject.getField().forEach(field -> {
+                entity.put(field.getFieldName(), field.getValue());
+            });
+            entity.put("ownerUserName", UserCacheUtil.getUserName(record.getLong("ownerUserId")));
+            return entity;
+        }).collect(Collectors.toList());
+        ExcelParseUtil.exportExcel(list, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+                record.put("dealStatus", Objects.equals(1, record.get("dealStatus")) ? "已成交" : "未成交");
+            }
+            @Override
+            public String getExcelName() {
+                return title;
+            }
+        }, nameList);
     }
 }
 

@@ -325,7 +325,7 @@
         </if>
         order by create_time desc
     </select>
-    <select id="exportRecordList" resultType="com.kakarote.crm.entity.PO.CrmActivity">
+    <select id="exportRecordList" resultType="java.util.HashMap">
         select a.activity_id,a.type,a.create_time,a.content,a.category,a.next_time,a.batch_id,a.business_ids,a.contacts_ids,a.activity_type,a.activity_type_id,a.status,
         a.lng,a.lat,a.address,a.create_user_id,
         (select GROUP_CONCAT(name) from `wk_crm_contacts` where contacts_id in (a.contacts_ids)) as contacts_names,

@@ -6,6 +6,7 @@ import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.servlet.BaseService;
 import com.kakarote.oa.entity.BO.LogBO;
 import com.kakarote.oa.entity.PO.OaLog;
+import com.kakarote.oa.entity.VO.OaBusinessNumVO;
 
 import java.util.List;
 import java.util.Map;
@@ -58,6 +59,11 @@ public interface IOaLogService extends BaseService<OaLog> {
     JSONObject queryById(Integer logId);
 
     public List<Map<String, Object>> export(LogBO logBO);
+
+    /**
+     * app某个查询数量功能，没有名称
+     */
+    public OaBusinessNumVO queryOaBusinessNum();
 
 
 }

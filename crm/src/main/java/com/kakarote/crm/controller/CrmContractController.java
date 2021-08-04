@@ -29,6 +29,7 @@ import com.kakarote.crm.entity.VO.CrmMembersSelectVO;
 import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.service.ICrmBackLogDealService;
 import com.kakarote.crm.service.ICrmContractService;
+import com.kakarote.crm.service.ICrmInvoiceService;
 import com.kakarote.crm.service.ICrmTeamMembersService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -37,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -63,6 +65,9 @@ public class CrmContractController {
 
     @Autowired
     private ICrmTeamMembersService teamMembersService;
+
+    @Autowired
+    private ICrmInvoiceService crmInvoiceService;
 
     @PostMapping("/queryPageList")
     @ApiOperation("查询列表页数据")
@@ -231,6 +236,25 @@ public class CrmContractController {
     public Result<List<CrmReceivablesPlan>> queryReceivablesPlansByContractId(@RequestParam("contractId") Integer contractId, @RequestParam(value = "receivablesId", required = false) Integer receivablesId) {
         List<CrmReceivablesPlan> receivablesPlanList = crmContractService.queryReceivablesPlansByContractId(contractId, receivablesId);
         return R.ok(receivablesPlanList);
+    }
+
+    @PostMapping("/queryInvoiceByContractId")
+    @ApiOperation("查询合同下发票")
+    public Result<BasePage<Map<String, Object>>> queryInvoiceByContractId(@RequestBody CrmRelationPageBO crmRelationPageBO) {
+        CrmSearchBO search = new CrmSearchBO();
+        search.setPageType(0);
+        search.setLabel(CrmEnum.INVOICE.getType());
+        CrmSearchBO.Search entity = new CrmSearchBO.Search();
+        entity.setFormType(FieldEnum.TEXT.getFormType());
+        entity.setSearchEnum(CrmSearchBO.FieldSearchEnum.IS);
+        entity.setName("contractNum");
+        List<String> nums = new ArrayList<>();
+        CrmContract contract = crmContractService.getById(crmRelationPageBO.getContractId());
+        nums.add(contract.getNum());
+        entity.setValues(nums.stream().map(Object::toString).collect(Collectors.toList()));
+        search.getSearchList().add(entity);
+        BasePage<Map<String, Object>> mapBasePage = crmInvoiceService.queryPageList(search);
+        return R.ok(mapBasePage);
     }
 
     @ApiOperation(value = "查询合同到期提醒设置")

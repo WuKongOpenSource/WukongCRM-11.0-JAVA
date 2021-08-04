@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmSalaryMonthRecordMapper">
+
+    <select id="queryBeforeTaxTotalSalary" resultType="java.math.BigDecimal">
+        select round(ifnull(sum(b.value), 0), 2)
+        from wk_hrm_salary_month_emp_record a
+                 left join wk_hrm_salary_month_option_value b on a.s_emp_record_id = b.s_emp_record_id
+        where a.year = #{year}
+          and a.month &lt; #{month}
+          and employee_id = #{employeeId}
+          and b.code = 220101
+    </select>
+    <select id="queryMonthSalaryCount" resultType="java.util.Map">
+        select ifnull(round(sum(if(b.code = 100101, b.value, 0)), 2), 0) as 'personalInsuranceAmount',
+               ifnull(round(sum(if(b.code = 100102, b.value, 0)), 2), 0) as 'personalProvidentFundAmount',
+               ifnull(round(sum(if(b.code = 110101, b.value, 0)), 2), 0) as 'corporateInsuranceAmount',
+               ifnull(round(sum(if(b.code = 120101, b.value, 0)), 2), 0) as 'corporateProvidentFundAmount',
+               ifnull(round(sum(if(b.code = 210101, b.value, 0)), 2), 0) as 'expectedPaySalary',
+               ifnull(round(sum(if(b.code = 230101, b.value, 0)), 2), 0) as 'personalTax',
+               ifnull(round(sum(if(b.code = 240101, b.value, 0)), 2), 0) as 'realPaySalary'
+        from wk_hrm_salary_month_emp_record a
+                 left join wk_hrm_salary_month_option_value b on a.s_emp_record_id = b.s_emp_record_id
+                 left join wk_hrm_employee c on a.employee_id = c.employee_id
+        where a.s_record_id = #{sRecordId}
+          and c.is_del = 0;
+    </select>
+    <select id="queryHistorySalaryList" resultType="com.kakarote.hrm.entity.VO.QueryHistorySalaryListVO">
+        select a.s_record_id,
+        a.title,
+        count(distinct b.s_emp_record_id) as num,
+        round(sum(if(c.code = 210101, c.value, 0)),2) as expected_pay_salary,
+        round(sum(if(c.code = 230101, c.value, 0)),2) as personal_tax,
+        round(sum(if(c.code = 240101, c.value, 0)),2) as real_pay_salary,
+        a.check_status,
+        a.examine_record_id,
+        a.create_user_id
+        from wk_hrm_salary_month_record a
+        left join wk_hrm_salary_month_emp_record b on a.s_record_id = b.s_record_id
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and b.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+        </choose>
+        left join wk_hrm_salary_month_option_value c on b.s_emp_record_id = c.s_emp_record_id
+        where check_status = 10
+        <if test="data.year != null and data.year != ''">
+            and a.year = #{data.year}
+        </if>
+        group by a.s_record_id
+        order by a.create_time desc
+    </select>
+    <select id="querySalaryOptionCount" resultType="java.util.Map">
+        select round(sum(a.value), 2) as value, a.code
+        from wk_hrm_salary_month_option_value a
+        where a.s_emp_record_id in (select b.s_emp_record_id
+                                    from wk_hrm_salary_month_emp_record b
+                                             left join wk_hrm_employee c on b.employee_id = c.employee_id
+                                    where b.s_record_id = #{sRecordId}
+                                      and c.is_del = 0)
+        group by a.code
+    </select>
+    <select id="queryDeleteEmpRecordIds" resultType="java.lang.Integer">
+        select a.s_emp_record_id
+        from wk_hrm_salary_month_emp_record a
+                 left join wk_hrm_employee b on a.employee_id = b.employee_id
+        where a.s_record_id = #{sRecordId}
+          and b.is_del = 1;
+    </select>
+    <select id="queryHistorySalaryDetail" resultType="com.kakarote.hrm.entity.VO.QueryHistorySalaryDetailVO">
+        select a.s_record_id,
+        a.title,
+        a.year,
+        a.month,
+        a.start_time,
+        a.end_time,
+        count(distinct b.s_emp_record_id) as num,
+        round(sum(if(c.code = 100101, c.value, 0)),2) as personalInsuranceAmount,
+        round(sum(if(c.code = 100102, c.value, 0)),2) as personalProvidentFundAmount,
+        round(sum(if(c.code = 110101, c.value, 0)),2) as corporateInsuranceAmount,
+        round(sum(if(c.code = 120101, c.value, 0)),2) as corporateProvidentFundAmount,
+        round(sum(if(c.code = 210101, c.value, 0)),2) as expectedPaySalary,
+        round(sum(if(c.code = 230101, c.value, 0)),2) as personalTax,
+        round(sum(if(c.code = 240101, c.value, 0)),2) as realPaySalary,
+        a.check_status as status,
+        a.examine_record_id,
+        a.create_user_id
+        from wk_hrm_salary_month_record a
+        left join wk_hrm_salary_month_emp_record b on a.s_record_id = b.s_record_id
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and b.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+        </choose>
+        left join wk_hrm_salary_month_option_value c on b.s_emp_record_id = c.s_emp_record_id
+        where a.s_record_id = #{sRecordId}
+    </select>
+    <select id="querySalaryByIds" resultType="java.util.Map">
+        select round(sum(a.value), 2) as value, a.code
+        from wk_hrm_salary_month_option_value a
+        where a.s_emp_record_id in (select b.s_emp_record_id
+            from wk_hrm_salary_month_emp_record b
+            left join wk_hrm_employee c on b.employee_id = c.employee_id
+            where b.s_record_id = #{sRecordId}
+          and c.is_del = 0)
+        <if test="sEmpRecordIds != null and sEmpRecordIds.size > 0">
+            and a.s_emp_record_id in
+            <foreach collection="sEmpRecordIds" index="index" item="sEmpRecordId" open="(" close=")" separator=",">
+                #{sEmpRecordId}
+            </foreach>
+        </if>
+        group by a.code
+    </select>
+</mapper>

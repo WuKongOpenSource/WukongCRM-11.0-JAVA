@@ -3,13 +3,11 @@ package com.kakarote.crm.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
-import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
@@ -37,6 +35,7 @@ import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.*;
@@ -47,9 +46,7 @@ import com.kakarote.crm.entity.VO.*;
 import com.kakarote.crm.mapper.CrmCustomerMapper;
 import com.kakarote.crm.service.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.update.UpdateRequest;
@@ -59,7 +56,6 @@ import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -155,11 +151,13 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             List<CrmModelFiledVO> modelFiledVOS = appendInformation(crmModel);
             if (crmModel.get("preOwnerUserId") != null) {
                 CrmModelFiledVO filedVO = new CrmModelFiledVO("preOwnerUserName", FieldEnum.SINGLE_USER, "前负责人", 1);
-                List<SimpleUser> data = adminService.queryUserByIds(Collections.singleton((Long) crmModel.get("preOwnerUserId"))).getData();
+                List<SimpleUser> data = UserCacheUtil.getSimpleUsers(Collections.singleton((Long) crmModel.get("preOwnerUserId")));
                 filedVO.setValue(data.get(0));
                 modelFiledVOS.add(filedVO.setSysInformation(1));
             }
+            String ownerDeptName =UserCacheUtil.getDeptName(UserCacheUtil.getUserInfo((Long) crmModel.get("createUserId")).getDeptId());
             modelFiledVOS.add(new CrmModelFiledVO("receive_time", FieldEnum.DATETIME, "负责人获取客户时间", 1).setValue(crmModel.get("receiveTime")).setSysInformation(1));
+            modelFiledVOS.add(new CrmModelFiledVO("ownerDeptName", FieldEnum.TEXT, "所属部门", 1).setValue(ownerDeptName).setSysInformation(1));
             vos.addAll(modelFiledVOS);
         }
         return vos;
@@ -236,7 +234,6 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             }
             List<CrmCustomerPoolRule> ruleList = ApplicationContextHolder.getBean(ICrmCustomerPoolRuleService.class).lambdaQuery().eq(CrmCustomerPoolRule::getPoolId, pool.getPoolId()).list();
             for (CrmCustomerPoolRule rule : ruleList) {
-                Integer remindDay = pool.getRemindDay();
                 //已成交客户是否进入公海 0不进入 1进入
                 Integer dealHandle = rule.getDealHandle();
                 //有商机客户是否进入公海 0不进入 1进入
@@ -466,6 +463,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
         }
         lambdaUpdate().set(CrmCustomer::getUpdateTime, new Date()).set(CrmCustomer::getStatus, 3).in(CrmCustomer::getCustomerId, ids).update();
         LambdaQueryWrapper<CrmCustomer> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(CrmCustomer::getBatchId);
         wrapper.in(CrmCustomer::getCustomerId, ids);
         List<String> batchList = listObjs(wrapper, Object::toString);
         //删除文件
@@ -591,52 +589,22 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
         List<Map<String, Object>> dataList = queryList(search,true).getList();
-        try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
-            headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
-            headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
-            writer.merge(headList.size() - 1, "客户信息");
-            if (dataList.size() == 0) {
-                Map<String, Object> record = new HashMap<>();
-                headList.forEach(head -> record.put(head.getFieldName(), ""));
-                dataList.add(record);
-            }
-            for (Map<String, Object> record : dataList) {
-                headList.forEach(field ->{
-                    if (fieldService.equalsByType(field.getType())) {
-                        record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
-                    }
-                });
+        List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+        ExcelParseUtil.exportExcel(dataList, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+                for (String fieldName : headMap.keySet()) {
+                    record.put(fieldName,ActionRecordUtil.parseValue(record.get(fieldName),headMap.get(fieldName),false));
+                }
                 record.put("dealStatus", Objects.equals(1, record.get("dealStatus")) ? "已成交" : "未成交");
                 record.put("status", Objects.equals(1, record.get("status")) ? "未锁定" : "已锁定");
             }
-            writer.setOnlyAlias(true);
-            writer.write(dataList, true);
-            writer.setRowHeight(0, 20);
-            writer.setRowHeight(1, 20);
-            for (int i = 0; i < headList.size(); i++) {
-                writer.setColumnWidth(i, 20);
+
+            @Override
+            public String getExcelName() {
+                return "客户";
             }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=customer.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出客户错误：", e);
-        }
+        },headList,response);
     }
 
     /**
@@ -816,68 +784,48 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
             }
         }
         crmModelFiledList.add(k+1,new CrmModelFiledVO("ownerUserId",FieldEnum.TEXT,"负责人",1).setIsNull(isPool ? 0 : 1));
-        removeFieldByType(crmModelFiledList);
-        HSSFWorkbook wb = new HSSFWorkbook();
-        HSSFSheet sheet = wb.createSheet("客户导入表");
-        sheet.setDefaultRowHeight((short) 400);
-        CellStyle textStyle = wb.createCellStyle();
-        DataFormat format = wb.createDataFormat();
-        textStyle.setDataFormat(format.getFormat("@"));
-        for (int i = 0; i < crmModelFiledList.size() + 4; i++) {
-            if (crmModelFiledList.size() > i && Objects.equals(crmModelFiledList.get(i).getType(), FieldEnum.DATE.getType())) {
-                CellStyle dateStyle = wb.createCellStyle();
-                DataFormat dateFormat = wb.createDataFormat();
-                dateStyle.setDataFormat(dateFormat.getFormat(DatePattern.NORM_DATE_PATTERN));
-                sheet.setDefaultColumnStyle(i, dateStyle);
-            } else if (crmModelFiledList.size() > i && Objects.equals(crmModelFiledList.get(i).getType(), FieldEnum.DATETIME.getType())) {
-                CellStyle dateStyle = wb.createCellStyle();
-                DataFormat dateFormat = wb.createDataFormat();
-                dateStyle.setDataFormat(dateFormat.getFormat(DatePattern.NORM_DATETIME_PATTERN));
-                sheet.setDefaultColumnStyle(i, dateStyle);
-            } else {
-                sheet.setDefaultColumnStyle(i, textStyle);
+        ExcelParseUtil.importExcel(new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+
             }
-            sheet.setColumnWidth(i, 20 * 256);
-        }
-        HSSFRow titleRow = sheet.createRow(0);
-        CellStyle cellStyle = wb.createCellStyle();
-        cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-        cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        Font font = wb.createFont();
-        font.setBold(true);
-        font.setFontHeightInPoints((short) 16);
-        cellStyle.setFont(font);
-        titleRow.createCell(0).setCellValue("客户导入模板(*)为必填项");
-        cellStyle.setAlignment(HorizontalAlignment.CENTER);
-        titleRow.getCell(0).setCellStyle(cellStyle);
-        CellRangeAddress region = new CellRangeAddress(0, 0, 0, crmModelFiledList.size() + 3);
-        sheet.addMergedRegion(region);
-        try {
-            HSSFRow row = sheet.createRow(1);
-            for (int i = 0; i < crmModelFiledList.size(); i++) {
-                CrmModelFiledVO record = crmModelFiledList.get(i);
-                String fieldName = "_" + record.getFieldName();
-                fieldName = fieldName.replaceAll("[\\n`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。， 、？]", "");
-                //省市区需特殊处理
-                if ("_mapAddress".equals(fieldName)) {
-                    HSSFCell cell1 = row.createCell(i);
+            @Override
+            public String getExcelName() {
+                return "客户";
+            }
+
+            @Override
+            public int addCell(ExcelWriter writer, Integer x, Integer y, String fieldName) {
+                if(writer == null) {
+                    if ("mapAddress".equals(fieldName)) {
+                        return 3;
+                    }
+                    return 0;
+                }
+                if ("mapAddress".equals(fieldName)) {
+                    Workbook wb = writer.getWorkbook();
+                    Sheet sheet = writer.getSheet();
+                    for (int i = 0; i < 4; i++) {
+                        writer.setColumnWidth(x + i, 20);
+                    }
+                    Cell cell1 = writer.getOrCreateCell(x,y);
                     cell1.setCellValue("省");
-                    HSSFCell cell2 = row.createCell(i + 1);
+                    Cell cell2 = writer.getOrCreateCell(x + 1,y);
                     cell2.setCellValue("市");
-                    HSSFCell cell3 = row.createCell(i + 2);
+                    Cell cell3 = writer.getOrCreateCell(x + 2,y);
                     cell3.setCellValue("区");
-                    HSSFCell cell4 = row.createCell(i + 3);
+                    Cell cell4 = writer.getOrCreateCell(x + 3,y);
                     cell4.setCellValue("详细地址");
-                    HSSFSheet hideSheet = wb.createSheet(fieldName);
+                    Sheet hideSheet = wb.createSheet(fieldName);
                     wb.setSheetHidden(wb.getSheetIndex(hideSheet), true);
                     int rowId = 0;
                     // 设置第一行，存省的信息
                     Row provinceRow = hideSheet.createRow(rowId++);
                     provinceRow.createCell(0).setCellValue("省列表");
-                    List<String> provinceList = getBaseMapper().queryCityList(100000);
-                    for (int x = 0; x < provinceList.size(); x++) {
-                        Cell provinceCell = provinceRow.createCell(x + 1);
-                        provinceCell.setCellValue(provinceList.get(x));
+                    String[] provinceList = getBaseMapper().queryCityList(100000).toArray(new String[0]);
+                    for (int line = 0; line < provinceList.length; line++) {
+                        Cell provinceCell = provinceRow.createCell(line + 1);
+                        provinceCell.setCellValue(provinceList[line]);
                     }
                     // 将具体的数据写入到每一行中，行开头为父级区域，后面是子区域。
                     Map<String, List<String>> areaMap = CrmExcelUtil.getAreaMap();
@@ -885,9 +833,9 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                         List<String> son = areaMap.get(key);
                         Row subRow = hideSheet.createRow(rowId++);
                         subRow.createCell(0).setCellValue(key);
-                        for (int x = 0; x < son.size(); x++) {
-                            Cell cell = subRow.createCell(x + 1);
-                            cell.setCellValue(son.get(x));
+                        for (int line = 0; line < son.size(); line++) {
+                            Cell cell = subRow.createCell(line + 1);
+                            cell.setCellValue(son.get(line));
                         }
                         // 添加名称管理器
                         String range = CrmExcelUtil.getRange(1, rowId, son.size());
@@ -898,51 +846,23 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                         name.setRefersToFormula(formula);
                     }
                     // 省级下拉框
-                    CellRangeAddressList provRangeAddressList = new CellRangeAddressList(2, Integer.MAX_VALUE, i, i);
-                    String[] arr = provinceList.toArray(new String[]{});
-                    DVConstraint provConstraint = DVConstraint.createExplicitListConstraint(arr);
-                    HSSFDataValidation provinceDataValidation = new HSSFDataValidation(provRangeAddressList, provConstraint);
-                    provinceDataValidation.createErrorBox("error", "请选择正确的省份");
-                    sheet.addValidationData(provinceDataValidation);
+                    CellRangeAddressList provRangeAddressList = new CellRangeAddressList(2, 10004, x, x);
+                    DataValidationHelper validationHelper = sheet.getDataValidationHelper();
+                    DataValidationConstraint constraint = validationHelper.createExplicitListConstraint(provinceList);
+                    //设置下拉框数据
+                    DataValidation dataValidation = validationHelper.createValidation(constraint, provRangeAddressList);
+                    dataValidation.createErrorBox("error", "请选择正确的省份");
+                    sheet.addValidationData(dataValidation);
                     //市 区下拉框
-                    for (int x = 2; x < 10000; x++) {
-                        CrmExcelUtil.setDataValidation(CrmExcelUtil.getCorrespondingLabel(i + 1), sheet, x, i + 1);
-                        CrmExcelUtil.setDataValidation(CrmExcelUtil.getCorrespondingLabel(i + 2), sheet, x, i + 2);
+                    for (int line = 2; line < 10004; line++) {
+                        CrmExcelUtil.setDataValidation(CrmExcelUtil.getCorrespondingLabel(x + 1), sheet, line, x + 1);
+                        CrmExcelUtil.setDataValidation(CrmExcelUtil.getCorrespondingLabel(x + 2), sheet, line, x + 2);
                     }
-                } else {
-                    HSSFCell cell = row.createCell(i);
-                    cell.setCellValue(record.getName() + (record.getIsNull() == 1 ? "(*)" : ""));
-                    if (record.getSetting() != null && record.getSetting().size() != 0) {
-                        List<String> setting = record.getSetting().stream().map(Object::toString).collect(Collectors.toList());
-                        HSSFSheet hidden = wb.createSheet(fieldName);
-                        HSSFCell sheetCell = null;
-                        for (int j = 0, length = setting.size(); j < length; j++) {
-                            String name = setting.get(j);
-                            HSSFRow sheetRow = hidden.createRow(j);
-                            sheetCell = sheetRow.createCell(0);
-                            sheetCell.setCellValue(name);
-                        }
-                        Name namedCell = wb.createName();
-                        namedCell.setNameName(fieldName);
-                        namedCell.setRefersToFormula(fieldName + "!$A$1:$A$" + setting.size());
-                        CellRangeAddressList regions = new CellRangeAddressList(2, Integer.MAX_VALUE, i, i);
-                        DVConstraint constraint = DVConstraint.createFormulaListConstraint(fieldName);
-                        HSSFDataValidation dataValidation = new HSSFDataValidation(regions, constraint);
-                        wb.setSheetHidden(wb.getSheetIndex(hidden), true);
-                        sheet.addValidationData(dataValidation);
-                    }
+                    return 3;
                 }
+                return 0;
             }
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=customer_import.xls");
-            wb.write(response.getOutputStream());
-        } catch (Exception e) {
-            log.error("error", e);
-        } finally {
-            wb.close();
-        }
+        }, crmModelFiledList, response,"crm");
     }
 
     /**
@@ -1052,7 +972,7 @@ public class CrmCustomerServiceImpl extends BaseServiceImpl<CrmCustomerMapper, C
                 }
             });
             if (userIds.size() > 0) {
-                List<SimpleUser> data = adminService.queryUserByIds(userIds).getData();
+                List<SimpleUser> data = UserCacheUtil.getSimpleUsers(userIds);
                 crmCustomerSetting.setUserIds(data);
                 crmCustomerSetting.setRange(data.stream().map(SimpleUser::getRealname).collect(Collectors.joining(Const.SEPARATOR)));
             } else {

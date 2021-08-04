@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmEmployeeFieldMapper">
+
+
+    <select id="queryListHeads" resultType="com.kakarote.hrm.entity.VO.EmployeeHeadFieldVO">
+        select a.id,a.field_id,a.sort,a.width,a.is_hide,b.type,b.field_name,b.name,b.options,b.component_type,b.is_fixed
+            from `wk_hrm_employee_field_config` a
+                     left join `wk_hrm_employee_field` b on a.field_id = b.field_id
+            where a.user_id = #{userId} order by a.sort
+    </select>
+    <select id="queryFields" resultType="com.kakarote.hrm.entity.VO.FiledListVO">
+        SELECT IFNULL(label_group, '1') as labelGroup, IFNULL(MAX(update_time), '2000-01-01 00:00:00') as update_time, '个人信息' as name
+        FROM `wk_hrm_employee_field`
+        WHERE label_group = 1
+        union all
+        SELECT IFNULL(label_group, '2') as labelGroup, IFNULL(MAX(update_time), '2000-01-01 00:00:00') as update_time, '通讯信息' as name
+        FROM `wk_hrm_employee_field`
+        WHERE label_group = 2
+        union all
+        SELECT IFNULL(label_group, '7') as labelGroup, IFNULL(MAX(update_time), '2000-01-01 00:00:00') as update_time, '联系人信息' as name
+        FROM `wk_hrm_employee_field`
+        WHERE label_group = 7
+        union all
+        SELECT IFNULL(label_group, '11') as labelGroup, IFNULL(MAX(update_time), '2000-01-01 00:00:00') as update_time, '岗位信息' as name
+        FROM `wk_hrm_employee_field`
+        WHERE label_group = 11
+    </select>
+    <select id="queryEmployeeArchivesField" resultType="com.kakarote.hrm.entity.VO.EmployeeArchivesFieldVO">
+        select field_id,name,label_group,is_employee_visible,is_employee_update
+        from wk_hrm_employee_field
+        where label_group in (1,2)
+        and `type` != 50
+        order by label_group,sorting
+    </select>
+</mapper>

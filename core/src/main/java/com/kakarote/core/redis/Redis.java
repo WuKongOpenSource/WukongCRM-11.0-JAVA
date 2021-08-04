@@ -146,7 +146,7 @@ public interface Redis {
      * @param hashKey 相当于 map中的key
      * @param value   存储的值 相当于map中的value
      */
-    public void put(Object key, String hashKey, Object value);
+    public void put(Object key, Object hashKey, Object value);
 
 
     /**

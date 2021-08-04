@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmInsuranceMonthEmpProjectRecordMapper">
+
+    <select id="queryProjectCount" resultType="java.util.Map">
+        select (select sum(personal_amount)
+        from `wk_hrm_insurance_month_emp_project_record` b
+        left join `wk_hrm_insurance_month_emp_record` h on b.i_emp_record_id = h.i_emp_record_id
+        where  b.type not in (10, 11) and b.i_emp_record_id = #{iEmpRecordId} and h.status = 1
+          ) as personal_insurance_amount,
+       (select sum(personal_amount)
+        from `wk_hrm_insurance_month_emp_project_record` c
+        left join `wk_hrm_insurance_month_emp_record` h on c.i_emp_record_id = h.i_emp_record_id
+        where c.i_emp_record_id = #{iEmpRecordId} and h.status = 1
+          and c.type in (10, 11))     as personal_provident_fund_amount,
+       (select sum(corporate_amount)
+        from `wk_hrm_insurance_month_emp_project_record` b
+        left join `wk_hrm_insurance_month_emp_record` h on b.i_emp_record_id = h.i_emp_record_id
+        where b.i_emp_record_id = #{iEmpRecordId} and h.status = 1
+          and b.type not in (10, 11)) as corporate_insurance_amount,
+       (select sum(corporate_amount)
+        from `wk_hrm_insurance_month_emp_project_record` c
+        left join `wk_hrm_insurance_month_emp_record` h on c.i_emp_record_id = h.i_emp_record_id
+        where c.i_emp_record_id = #{iEmpRecordId} and h.status = 1
+          and c.type in (10, 11))     as corporate_provident_fund_amount;
+
+    </select>
+</mapper>

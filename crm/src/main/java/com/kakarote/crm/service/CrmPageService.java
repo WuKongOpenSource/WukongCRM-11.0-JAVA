@@ -44,6 +44,7 @@ import com.kakarote.crm.entity.BO.CrmFieldVerifyBO;
 import com.kakarote.crm.entity.BO.CrmModelSaveBO;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
 import com.kakarote.crm.entity.PO.CrmField;
+import com.kakarote.crm.entity.PO.CrmRoleField;
 import com.kakarote.crm.entity.PO.CrmScene;
 import com.kakarote.crm.entity.PO.CrmTeamMembers;
 import com.kakarote.crm.entity.VO.CrmFieldSortVO;
@@ -71,6 +72,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.kakarote.core.servlet.ApplicationContextHolder.getBean;
@@ -116,16 +118,18 @@ public interface CrmPageService {
                 }
             }
             if (isExcel) {
-                while (hits.length % 10000 == 0) {
+                while (hits.length !=0 && hits.length % 10000 == 0) {
                     hits = getAllData(searchRequest, hits);
                 }
             }
             for (SearchHit hit : hits) {
                 Map<String, Object> sourceAsMap = hit.getSourceAsMap();
-                sourceAsMap.put(getLabel().getTable() + "Id", Integer.valueOf(hit.getId()));
+                sourceAsMap.put(getLabel().getPrimaryKey(), Integer.valueOf(hit.getId()));
                 mapList.add(parseMap(sourceAsMap, voList));
             }
             BasePage<Map<String, Object>> basePage = new BasePage<>();
+            ApplicationContextHolder.getBean(ICrmRoleFieldService.class).replaceMaskFieldValue(getLabel(),mapList,1);
+            basePage.setSize(crmSearchBO.getLimit());
             basePage.setList(mapList);
             basePage.setTotal(searchResponse.getHits().getTotalHits());
             basePage.setCurrent(crmSearchBO.getPage());
@@ -293,7 +297,6 @@ public interface CrmPageService {
         return queryBuilder;
     }
 
-
     /**
      * 场景查询操作
      *
@@ -334,11 +337,13 @@ public interface CrmPageService {
                             return;
                     }
                     QueryWrapper queryWrapper = new QueryWrapper();
-                    queryWrapper.select(getLabel().getTable() + "_id");
+                    queryWrapper.select(getLabel().getPrimaryKey(false));
                     queryWrapper.eq("user_id", userId);
                     List<Map<String, Object>> listMaps = baseService.listMaps(queryWrapper);
                     if (listMaps.size() > 0) {
-                        queryBuilder.filter(QueryBuilders.idsQuery().addIds(listMaps.stream().map(map -> map.get(getLabel().getTable() + "Id").toString()).toArray(String[]::new)));
+                        queryBuilder.filter(QueryBuilders.idsQuery().addIds(listMaps.stream().map(map -> map.get(getLabel().getPrimaryKey()).toString()).toArray(String[]::new)));
+                    } else {
+                        queryBuilder.filter(QueryBuilders.idsQuery().addIds("0"));
                     }
                 }
                 if (getLabel().equals(CrmEnum.LEADS)) {
@@ -371,7 +376,9 @@ public interface CrmPageService {
 
     default void search(CrmSearchBO.Search search, BoolQueryBuilder queryBuilder) {
         if(search.getSearchEnum() == CrmSearchBO.FieldSearchEnum.SCRIPT) {
-            queryBuilder.filter(QueryBuilders.scriptQuery(search.getScript()));
+            if (search.getScript() != null) {
+                queryBuilder.filter(QueryBuilders.scriptQuery(search.getScript()));
+            }
             return;
         }
         if(search.getSearchEnum() == CrmSearchBO.FieldSearchEnum.ID) {
@@ -440,6 +447,7 @@ public interface CrmPageService {
             case SINGLE_USER:
             case STRUCTURE:
                 ElasticUtil.userSearch(search, queryBuilder);
+                break;
             default:
                 ElasticUtil.textSearch(search, queryBuilder);
                 break;
@@ -487,6 +495,10 @@ public interface CrmPageService {
         crmFieldSortList.add(new CrmFieldSortVO().setFieldName("createTime").setName("创建时间").setType(FieldEnum.DATETIME.getType()));
         crmFieldSortList.add(new CrmFieldSortVO().setFieldName("lastTime").setName("最后联系时间").setType(FieldEnum.DATETIME.getType()));
         crmFieldSortList.add(new CrmFieldSortVO().setFieldName("poolTime").setName("进入公海时间").setType(FieldEnum.DATETIME.getType()));
+        crmFieldSortList.add(new CrmFieldSortVO().setFieldName("contactsId").setName("联系人ID").setType(FieldEnum.TEXT.getType()));
+        if(CrmEnum.RECEIVABLES_PLAN == getLabel()) {
+            crmFieldSortList.add(new CrmFieldSortVO().setFieldName("receivablesId").setName("回款ID").setType(FieldEnum.TEXT.getType()));
+        }
         if (crmSearchBO.getPage() <= 100) {
             if (crmSearchBO.getPageType().equals(1)) {
                 // 设置起止和结束
@@ -644,13 +656,19 @@ public interface CrmPageService {
                     if (value instanceof String) {
                         map.put(modelField.getFieldName(), StrUtil.splitTrim(value.toString(), ","));
                     } else if (value instanceof Collection) {
-                        map.put(modelField.getFieldName(), (Collection) value);
+                        map.put(modelField.getFieldName(),value);
                     }
                 }
             }
 
         });
         setOtherField(map);
+        //包含负责人的数据增加一个所属部门
+        if(map.containsKey("ownerUserId")){
+            SimpleUser simpleUser = UserCacheUtil.getSimpleUser(TypeUtils.castToLong(map.get("ownerUserId")));
+            map.put("ownerDeptId",simpleUser.getDeptId());
+            map.put("ownerDeptName",simpleUser.getDeptName());
+        }
         UpdateRequest request = new UpdateRequest(getIndex(), getDocType(),id.toString());
         request.doc(map);
         request.docAsUpsert(true);
@@ -772,6 +790,12 @@ public interface CrmPageService {
         BulkRequest bulkRequest = new BulkRequest();
         ids.forEach(id -> {
             UpdateRequest request = new UpdateRequest(getIndex(), getDocType(), id.toString());
+            //包含负责人的数据增加一个所属部门
+            if(map.containsKey("ownerUserId")){
+                SimpleUser simpleUser = UserCacheUtil.getSimpleUser(TypeUtils.castToLong(map.get("ownerUserId")));
+                map.put("ownerDeptId",simpleUser.getDeptId());
+                map.put("ownerDeptName",simpleUser.getDeptName());
+            }
             request.doc(map);
             bulkRequest.add(request);
         });
@@ -883,12 +907,15 @@ public interface CrmPageService {
     default public void receiveCustomer(CrmCustomerPoolBO poolBO, Integer isReceive, List<Integer> contactsIds) {
         BulkRequest bulkRequest = new BulkRequest();
         try {
+            SimpleUser simpleUser = UserCacheUtil.getSimpleUser(poolBO.getUserId());
             for (Integer id : poolBO.getIds()) {
                 UpdateRequest request = new UpdateRequest(getIndex(), getDocType(), id.toString());
                 Map<String, Object> map = new HashMap<>();
                 String date = DateUtil.formatDateTime(new Date());
                 map.put("ownerUserId", poolBO.getUserId());
-                map.put("ownerUserName", UserCacheUtil.getUserName(poolBO.getUserId()));
+                map.put("ownerUserName", simpleUser.getRealname());
+                map.put("ownerDeptId", simpleUser.getDeptId());
+                map.put("ownerDeptName", simpleUser.getDeptName());
                 map.put("followup", 0);
                 map.put("receiveTime", date);
                 map.put("updateTime", date);
@@ -902,7 +929,9 @@ public interface CrmPageService {
                 Map<String, Object> contactsMap = new HashMap<>();
                 String date = DateUtil.formatDateTime(new Date());
                 contactsMap.put("ownerUserId", poolBO.getUserId());
-                contactsMap.put("ownerUserName", UserCacheUtil.getUserName(poolBO.getUserId()));
+                contactsMap.put("ownerUserName", simpleUser.getRealname());
+                contactsMap.put("ownerDeptId", simpleUser.getDeptId());
+                contactsMap.put("ownerDeptName", simpleUser.getDeptName());
                 contactsMap.put("updateTime", date);
                 contactsRequest.doc(contactsMap);
                 bulkRequest.add(contactsRequest);
@@ -925,34 +954,52 @@ public interface CrmPageService {
      * @param crmModel model
      */
     default public List<CrmModelFiledVO> appendInformation(CrmModel crmModel) {
-        AdminService adminService = getBean(AdminService.class);
         List<CrmModelFiledVO> filedVOS = new ArrayList<>();
         if (!getLabel().equals(CrmEnum.RETURN_VISIT)) {
             CrmModelFiledVO filedVO = new CrmModelFiledVO("owner_user_name", FieldEnum.USER);
             filedVO.setName("负责人");
-            List<SimpleUser> data = adminService.queryUserByIds(Collections.singleton(crmModel.getOwnerUserId())).getData();
-            filedVO.setValue(data);
+            if (crmModel.getOwnerUserId() != null) {
+                List<SimpleUser> data = UserCacheUtil.getSimpleUsers(Collections.singleton(crmModel.getOwnerUserId()));
+                filedVO.setValue(data);
+            }
             filedVO.setFieldType(1);
             filedVOS.add(filedVO);
         }
+        List<CrmRoleField> roleFieldList = getBean(ICrmRoleFieldService.class).queryUserFieldAuth(getLabel().getType(), 1);
+        Map<String, CrmRoleField> levelMap = roleFieldList.stream().collect(Collectors.toMap(crmRoleField->StrUtil.toCamelCase(crmRoleField.getFieldName()), Function.identity()));
         if (getLabel().equals(CrmEnum.CUSTOMER) || getLabel().equals(CrmEnum.LEADS)) {
             filedVOS.add(new CrmModelFiledVO("last_content", FieldEnum.TEXTAREA, "最后跟进记录", 1).setValue(crmModel.get("lastContent")));
         }
-        Object value = adminService.queryUserByIds(Collections.singletonList((Long) crmModel.get("createUserId"))).getData();
+        Object value = UserCacheUtil.getSimpleUsers(Collections.singletonList((Long) crmModel.get("createUserId")));
         filedVOS.add(new CrmModelFiledVO("create_user_name", FieldEnum.USER, "创建人", 1).setValue(value));
         filedVOS.add(new CrmModelFiledVO("create_time", FieldEnum.DATETIME, "创建时间", 1).setValue(crmModel.get("createTime")));
         filedVOS.add(new CrmModelFiledVO("update_time", FieldEnum.DATETIME, "更新时间", 1).setValue(crmModel.get("updateTime")));
-        if (!getLabel().equals(CrmEnum.PRODUCT) && !getLabel().equals(CrmEnum.RECEIVABLES) && !getLabel().equals(CrmEnum.RETURN_VISIT) && !getLabel().equals(CrmEnum.INVOICE)) {
+        if (!getLabel().equals(CrmEnum.PRODUCT) &&
+                !getLabel().equals(CrmEnum.RECEIVABLES) &&
+                !getLabel().equals(CrmEnum.RETURN_VISIT) &&
+                !getLabel().equals(CrmEnum.RECEIVABLES_PLAN) &&
+                !getLabel().equals(CrmEnum.INVOICE)) {
             filedVOS.add(new CrmModelFiledVO("last_time", FieldEnum.DATETIME, "最后跟进时间", 1).setValue(crmModel.get("lastTime")));
+        }
+        if (getLabel().equals(CrmEnum.RECEIVABLES_PLAN)){
+            filedVOS.add(new CrmModelFiledVO("num", FieldEnum.TEXT, "期数", 1).setValue(crmModel.get("num")));
+            filedVOS.add(new CrmModelFiledVO("real_received_money", FieldEnum.TEXT, "实际回款金额", 1).setValue(crmModel.get("realReceivedMoney")));
+            filedVOS.add(new CrmModelFiledVO("unreceived_money", FieldEnum.TEXT, "未回款金额", 1).setValue(crmModel.get("unreceivedMoney")));
+            filedVOS.add(new CrmModelFiledVO("real_return_date", FieldEnum.DATETIME, "实际回款日期", 1).setValue(crmModel.get("realReturnDate")));
         }
         if (Arrays.asList(CrmEnum.CUSTOMER,CrmEnum.CONTACTS,CrmEnum.BUSINESS,CrmEnum.RECEIVABLES,CrmEnum.CONTRACT).contains(getLabel())) {
             List<CrmTeamMembers> teamMembers = ApplicationContextHolder.getBean(ICrmTeamMembersService.class)
                     .lambdaQuery().select(CrmTeamMembers::getUserId)
                     .eq(CrmTeamMembers::getType, getLabel().getType())
-                    .eq(CrmTeamMembers::getTypeId, crmModel.get(getLabel().getTable()+"Id"))
+                    .eq(CrmTeamMembers::getTypeId, crmModel.get(getLabel().getPrimaryKey()))
                     .list();
             filedVOS.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.TEXT, "相关团队", 1).setValue(teamMembers.stream().map(teamMember->UserCacheUtil.getUserName(teamMember.getUserId())).collect(Collectors.joining(Const.SEPARATOR))));
         }
+        filedVOS.removeIf(field -> {
+            String fieldName = StrUtil.toCamelCase(field.getFieldName());
+            //不是admin用户，并且字段授权为不可查询
+            return !UserUtil.isAdmin() && levelMap.containsKey(fieldName) && Objects.equals(1,levelMap.get(fieldName).getAuthLevel());
+        });
         for (CrmModelFiledVO filedVO : filedVOS) {
             filedVO.setSysInformation(1);
         }

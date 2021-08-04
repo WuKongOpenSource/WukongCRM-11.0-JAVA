@@ -6,6 +6,8 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.List;
+
 /**
  * @author zhangzhiwei
  * bi参数
@@ -20,6 +22,9 @@ public class BiParams extends PageEntity {
 
     @ApiModelProperty("用户ID")
     private Long userId;
+
+    @ApiModelProperty("用户IDs")
+    private List<Long> userIds;
 
     @ApiModelProperty("类型")
     private String type;

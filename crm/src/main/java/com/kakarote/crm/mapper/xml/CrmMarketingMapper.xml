@@ -24,6 +24,10 @@
             <foreach collection="userIds" index="index" item="x" separator="or">
                 a.relation_user_id like concat('%,',#{x},',%')
             </foreach>
+                or
+            <foreach collection="deptIds" index="index" item="x" separator="or">
+                a.relation_dept_id like concat('%,',#{x},',%')
+            </foreach>
             )
         </if>
         <if test="crmType != null">

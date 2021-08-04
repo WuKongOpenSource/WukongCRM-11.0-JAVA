@@ -29,16 +29,6 @@ public interface AdminService {
     public Result<UserInfo> getUserInfo(@RequestParam("userId") Long userId);
 
     /**
-     * 根据用户ID获取用户名
-     *
-     * @param userId 用户ID
-     * @return data
-     */
-    @RequestMapping(value = "/adminUser/getNameByUserId")
-    public Result<String> queryUserName(@RequestParam("userId") Long userId);
-
-
-    /**
      * 根据部门ID获取部门名称
      *
      * @param deptId 部门ID
@@ -90,17 +80,6 @@ public interface AdminService {
      */
     @RequestMapping(value = "/adminConfig/queryFirstConfigByName")
     public Result<AdminConfig> queryFirstConfigByName(@RequestParam("name") String name);
-
-
-    /**
-     * 根据ids查询用户信息
-     *
-     * @param ids id列表
-     * @return data
-     */
-    @PostMapping(value = "/adminUser/queryUserByIds")
-    public Result<List<SimpleUser>> queryUserByIds(@RequestBody Collection<Long> ids);
-
 
     /**
      * 根据ids查询正常的用户Id

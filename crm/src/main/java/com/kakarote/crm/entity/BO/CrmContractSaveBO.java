@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
+import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**
@@ -29,4 +30,11 @@ public class CrmContractSaveBO extends CrmModelSaveBO {
 
     @ApiModelProperty("审批数据")
     private ExamineRecordSaveBO examineFlowData;
+
+    public @NotNull ExamineRecordSaveBO getExamineFlowData() {
+        if(examineFlowData != null) {
+            return examineFlowData;
+        }
+        return new ExamineRecordSaveBO();
+    }
 }

@@ -10,7 +10,6 @@ import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.common.log.Content;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
-import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.TagUtil;
@@ -198,7 +197,7 @@ public class SysLogUtil {
                                     oldValue = ApplicationContextHolder.getBean(ICrmBusinessStatusService.class).getBusinessStatusName(Integer.parseInt(oldValue.toString()));
                                 }
                                 break;
-                            case "planId":
+                            case "receivablesPlanId":
                                 if (!"空".equals(newValue)) {
                                     newValue = ApplicationContextHolder.getBean(ICrmReceivablesPlanService.class).getReceivablesPlanNum(Integer.parseInt(newValue.toString()));
                                 }
@@ -224,11 +223,11 @@ public class SysLogUtil {
                                 break;
                             case "relationUserId":
                                 if (!"空".equals(newValue)) {
-                                    List<SimpleUser> newList = ApplicationContextHolder.getBean(AdminService.class).queryUserByIds(TagUtil.toLongSet((String) newValue)).getData();
+                                    List<SimpleUser> newList = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet((String) newValue));
                                     newValue = newList.stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
                                 }
                                 if (!"空".equals(oldValue)) {
-                                    List<SimpleUser> oldList = ApplicationContextHolder.getBean(AdminService.class).queryUserByIds(TagUtil.toLongSet((String) oldValue)).getData();
+                                    List<SimpleUser> oldList = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet((String) oldValue));
                                     oldValue = oldList.stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
                                 }
                                 break;
@@ -310,60 +309,6 @@ public class SysLogUtil {
         actionRecord.setActionId(actionId);
         actionRecord.setDetail("新建了" + crmEnum.getRemarks() + "：" + DateUtil.formatDate(new Date()));
         actionRecord.setObject(DateUtil.formatDate(new Date()));
-        ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
-        THREAD_POOL.execute(actionRecordTask);
-    }
-
-    public void addOaLogUpdateRecord(CrmEnum crmEnum, Integer actionId, String date) {
-        CrmActionRecord actionRecord = new CrmActionRecord();
-        actionRecord.setCreateUserId(UserUtil.getUserId());
-        actionRecord.setCreateTime(new Date());
-        actionRecord.setIpAddress(BaseUtil.getIp());
-        actionRecord.setTypes(crmEnum.getType());
-        actionRecord.setBehavior(BehaviorEnum.UPDATE.getType());
-        actionRecord.setActionId(actionId);
-        actionRecord.setDetail("编辑了" + crmEnum.getRemarks() + "：" + date);
-        actionRecord.setObject(date);
-        ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
-        THREAD_POOL.execute(actionRecordTask);
-    }
-
-    public void addOaExamineActionRecord(CrmEnum crmEnum, Integer actionId, BehaviorEnum behaviorEnum, String content) {
-        CrmActionRecord actionRecord = new CrmActionRecord();
-        actionRecord.setCreateUserId(UserUtil.getUserId());
-        actionRecord.setCreateTime(new Date());
-        actionRecord.setIpAddress(BaseUtil.getIp());
-        actionRecord.setTypes(crmEnum.getType());
-        actionRecord.setBehavior(behaviorEnum.getType());
-        actionRecord.setActionId(actionId);
-        if (content.length() > 20) {
-            content = content.substring(0, 20) + "...";
-        }
-        String prefix = "";
-        switch (behaviorEnum) {
-            case SAVE:
-                prefix = "新建了";
-                break;
-            case UPDATE:
-                prefix = "编辑了";
-                break;
-            case RECHECK_EXAMINE:
-                prefix = "撤回了";
-                break;
-            case PASS_EXAMINE:
-                prefix = "通过了";
-                break;
-            case REJECT_EXAMINE:
-                prefix = "驳回了";
-                break;
-            case DELETE:
-                prefix = "删除了";
-                break;
-            default:
-                break;
-        }
-        actionRecord.setDetail(prefix + crmEnum.getRemarks() + "：" + content);
-        actionRecord.setObject(content);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
         THREAD_POOL.execute(actionRecordTask);
     }

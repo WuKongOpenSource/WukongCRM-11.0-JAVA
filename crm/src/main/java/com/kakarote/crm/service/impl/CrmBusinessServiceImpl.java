@@ -5,9 +5,8 @@ import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -25,6 +24,7 @@ import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
@@ -44,7 +44,6 @@ import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmBusinessMapper;
 import com.kakarote.crm.service.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -58,7 +57,6 @@ import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.*;
@@ -74,7 +72,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @Slf4j
-public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, CrmBusiness> implements CrmPageService, ICrmBusinessService {
+public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, CrmBusiness> implements CrmPageService, ICrmBusinessService{
 
     @Autowired
     private ICrmFieldService crmFieldService;
@@ -210,7 +208,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
             crmModel.put("customerId", customerList);
         }
         List<List<CrmModelFiledVO>> crmModelFiledVOS = crmFieldService.queryFormPositionFieldVO(crmModel);
-        Optional<CrmModelFiledVO> optional = Optional.empty();
+       /* Optional<CrmModelFiledVO> optional = Optional.empty();
         for (List<CrmModelFiledVO> crmModelFiledVOList : crmModelFiledVOS) {
             optional = crmModelFiledVOList.stream().filter(record -> "remark".equals(record.getFieldName())).findFirst();
         }
@@ -219,7 +217,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
                 Optional<CrmModelFiledVO> finalOptional = optional;
                 crmModelFiledVOList.removeIf(record -> Objects.equals(finalOptional.get().getFieldId(),record.getFieldId()));
             }
-        }
+        }*/
         CrmModelFiledVO modelFiledVO = new CrmModelFiledVO().setFieldName("type_id").setName("商机状态组").setValue(crmModel.get("type_id")).setFormType("business_type").setSetting(new ArrayList<>()).setIsNull(1).setFieldType(1).setValue(crmModel.get("typeId")).setAuthLevel(3);
         Object statusId = crmModel.get("statusId");
         if(!Objects.equals(0,crmModel.get("isEnd"))){
@@ -234,10 +232,10 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         JSONObject object = new JSONObject();
         object.fluentPut("discountRate", crmModel.get("discountRate")).fluentPut("product", crmBusinessProductService.queryList(id)).fluentPut("totalPrice", crmModel.get("totalPrice"));
         CrmModelFiledVO filedVO = new CrmModelFiledVO().setFieldName("product").setName("产品").setValue(object).setFormType("product").setSetting(new ArrayList<>()).setIsNull(0).setFieldType(1);
-        optional.ifPresent(vo -> {
+       /* optional.ifPresent(vo -> {
             vo.setStylePercent(100);
             crmModelFiledVOS.add(ListUtil.toList(vo));
-        });
+        });*/
         filedVO.setStylePercent(100);
         crmModelFiledVOS.add(ListUtil.toList(filedVO));
         return crmModelFiledVOS;
@@ -254,6 +252,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
      */
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
+        CrmSearchBO search1 = ObjectUtil.cloneByStream(search);
         BasePage<Map<String, Object>> basePage = queryList(search,false);
         Long userId = UserUtil.getUserId();
         List<Integer> starIds = crmBusinessUserStarService.starList(userId);
@@ -273,7 +272,8 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
         SearchRequest searchRequest = new SearchRequest(getIndex());
         searchRequest.types(getDocType());
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-        BoolQueryBuilder queryBuilder = createQueryBuilder(search);
+        BoolQueryBuilder queryBuilder = createQueryBuilder(search1);
+        log.info("看下商机搜索条件"+search1.toString());
         sourceBuilder.query(queryBuilder);
         sourceBuilder.aggregation(AggregationBuilders.sum("businessSumMoney").field("money"));
         searchRequest.source(sourceBuilder);
@@ -383,7 +383,7 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
 
     @Override
     public Dict getSearchTransferMap() {
-        return Dict.create().set("customerId", "customerName");
+        return Dict.create().set("customerId", "customerName").set("customer_id","customerId");
     }
 
     /**
@@ -485,50 +485,19 @@ public class CrmBusinessServiceImpl extends BaseServiceImpl<CrmBusinessMapper, C
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
         List<Map<String, Object>> dataList = queryList(search,true).getList();
-        try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
-            headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
-            headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
-            writer.merge(headList.size() - 1, "商机信息");
-            if (dataList.size() == 0) {
-                Map<String, Object> record = new HashMap<>();
-                headList.forEach(head -> record.put(head.getFieldName(), ""));
-                dataList.add(record);
+        List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+        ExcelParseUtil.exportExcel(dataList, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+                for (String fieldName : headMap.keySet()) {
+                    record.put(fieldName,ActionRecordUtil.parseValue(record.get(fieldName),headMap.get(fieldName),false));
+                }
             }
-            for (Map<String, Object> record : dataList) {
-                headList.forEach(field ->{
-                    if (fieldService.equalsByType(field.getType())) {
-                        record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
-                    }
-                });
+            @Override
+            public String getExcelName() {
+                return "商机";
             }
-            writer.setOnlyAlias(true);
-            writer.write(dataList, true);
-            writer.setRowHeight(0, 20);
-            writer.setRowHeight(1, 20);
-            for (int i = 0; i < headList.size(); i++) {
-                writer.setColumnWidth(i, 20);
-            }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=business.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出商机错误：", e);
-        }
+        },headList,response);
     }
 
     /**

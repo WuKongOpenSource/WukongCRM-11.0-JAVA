@@ -59,7 +59,7 @@ public interface CrmBackLogMapper {
     @Select("select type_id from wk_crm_back_log_deal where create_user_id = #{userId} and crm_type = #{type} and model = #{model} and pool_id = #{poolId}")
     public List<Integer> queryDealIdByPoolId(@Param("userId") Long userId, @Param("type") Integer type, @Param("model") Integer model, @Param("poolId") Integer poolId);
     
-    @Select("select a.plan_id from wk_crm_receivables_plan as a inner join wk_crm_customer as b on a.customer_id = b.customer_id\n" +
+    @Select("select a.receivables_plan_id from wk_crm_receivables_plan as a inner join wk_crm_customer as b on a.customer_id = b.customer_id\n" +
             "  inner join wk_crm_contract as c on a.contract_id = c.contract_id\n" +
             "  where to_days(a.return_date) >= to_days(now()) and to_days(a.return_date) <= to_days(now())+a.remind and receivables_id is null and c.owner_user_id = #{userId}")
     public List<Integer> queryRemindReceivablesPlanId(@Param("userId") Long userId);

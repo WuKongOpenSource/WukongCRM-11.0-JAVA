@@ -540,5 +540,13 @@ public class CrmCustomerController {
         crmCustomerService.updateInformation(updateInformationBO);
         return R.ok();
     }
+
+    @ParamAspect
+	@PostMapping("/queryCustomerName")
+	@ApiExplain("查询客户名字")
+	public Result<String> queryCustomerName(@RequestParam("customerId") Integer customerId) {
+		String customerName = crmCustomerService.getCustomerName(customerId);
+		return R.ok(customerName);
+	}
 }
 

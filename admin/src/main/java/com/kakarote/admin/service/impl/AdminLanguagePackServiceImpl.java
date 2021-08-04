@@ -25,6 +25,7 @@ import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.servlet.BaseServiceImpl;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.core.utils.UserUtil;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -151,7 +152,7 @@ public class AdminLanguagePackServiceImpl extends BaseServiceImpl<AdminLanguageP
     @Override
     public void exportLanguagePackById(Integer id, HttpServletResponse response) {
         AdminLanguagePack adminLanguagePack = getById(id);
-        List<Map<String, Object>> dataList = new ArrayList<>();
+        List<Map<String, Object>> objectList = new ArrayList<>();
         String translateContext = adminLanguagePack.getLanguagePackContext();
         AdminLanguagePack chineseLanguagePack = lambdaQuery().eq(AdminLanguagePack::getLanguagePackName, LANGUAGE_PACK_CHINESE).one();
         if (chineseLanguagePack == null) {
@@ -159,49 +160,32 @@ public class AdminLanguagePackServiceImpl extends BaseServiceImpl<AdminLanguageP
         }
         Map<String, String> translateMap = getFilePath(translateContext);
         Map<String, String> chineseMap = getFilePath(chineseLanguagePack.getLanguagePackContext());
+        translateMap.forEach((k, v) -> {
+            Map<String, Object> record = new HashMap<>();
+            record.put("fileName", k);
+            record.put("chinese", chineseMap.get(k));
+            record.put("translateName", v);
+            objectList.add(record);
+        });
 
-        try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            writer.addHeaderAlias("fileName", "原始字段");
-            if(LANGUAGE_PACK_CHINESE.equals(adminLanguagePack.getLanguagePackName())){
-                writer.addHeaderAlias("chinese", "字段名称");
-            }else{
-                writer.addHeaderAlias("chinese", LANGUAGE_PACK_CHINESE);
-            }
-            writer.addHeaderAlias("translateName", adminLanguagePack.getLanguagePackName());
-            translateMap.forEach((k, v) -> {
-                Map<String, Object> record = new HashMap<>();
-                record.put("fileName", k);
-                record.put("chinese", chineseMap.get(k));
-                record.put("translateName", v);
-                dataList.add(record);
-            });
-
-            writer.setOnlyAlias(true);
-            writer.write(dataList, true);
-            writer.setRowHeight(0, 20);
-            for (int i = 0; i < 3; i++) {
-                writer.setColumnWidth(i, 30);
-            }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=languagePack.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出语言包错误：", e);
+        List<ExcelParseUtil.ExcelDataEntity> dataList = new ArrayList<>();
+        dataList.add(ExcelParseUtil.toEntity("fileName", "原始字段"));
+        if(LANGUAGE_PACK_CHINESE.equals(adminLanguagePack.getLanguagePackName())){
+            dataList.add(ExcelParseUtil.toEntity("chinese", "字段名称"));
+        }else{
+            dataList.add(ExcelParseUtil.toEntity("chinese", LANGUAGE_PACK_CHINESE));
         }
+        dataList.add(ExcelParseUtil.toEntity("translateName", adminLanguagePack.getLanguagePackName()));
+        ExcelParseUtil.exportExcel(objectList, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+
+            }
+            @Override
+            public String getExcelName() {
+                return "语言包";
+            }
+        }, dataList);
     }
 
     /**

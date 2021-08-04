@@ -9,7 +9,6 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.poi.excel.BigExcelWriter;
 import cn.hutool.poi.excel.ExcelUtil;
 import com.alibaba.fastjson.JSONObject;
-import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.cache.AdminCacheKey;
@@ -23,6 +22,8 @@ import com.kakarote.core.redis.Redis;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.upload.UploadConfig;
 import com.kakarote.core.utils.BaseUtil;
+import com.kakarote.core.utils.ExcelParseUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmExcelUtil;
@@ -111,6 +112,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
             default:
                 throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
         }
+        AuthUtil.queryAuthUserList(uploadExcelBO.getCrmEnum(),CrmAuthEnum.EDIT);
         Long messageId = adminService.saveOrUpdateMessage(adminMessage).getData();
         uploadExcelBO.setMessageId(messageId);
         uploadService.setUploadExcelBO(uploadExcelBO);
@@ -176,7 +178,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
         private void setUploadExcelBO(UploadExcelBO uploadExcelBO){
             this.uploadExcelBO = uploadExcelBO;
             List<Long> longs = adminService.queryUserList(1).getData();
-            List<SimpleUser> simpleUsers = adminService.queryUserByIds(longs).getData();
+            List<SimpleUser> simpleUsers = UserCacheUtil.getSimpleUsers(longs);
             userCacheMap = new HashMap<>(simpleUsers.size(),1.0f);
             for (SimpleUser simpleUser : simpleUsers) {
                 userCacheMap.put(simpleUser.getRealname(),simpleUser.getUserId());
@@ -196,7 +198,6 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
             } catch (Exception e) {
                 log.error("导入出现错误", e);
             } finally {
-                redis.del(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId());
                 UserUtil.removeUser();
             }
 
@@ -206,24 +207,45 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
             if (errorList.size() > 2) {
                 File file = new File(uploadPath + "/excel/" + BaseUtil.getDate() + "/" + IdUtil.simpleUUID() + ".xlsx");
                 BigExcelWriter writer = ExcelUtil.getBigWriter(file);
+                // 取消数据的黑色边框以及数据左对齐
+                CellStyle cellStyle = writer.getCellStyle();
+                cellStyle.setFillBackgroundColor(IndexedColors.BLACK.getIndex());
+                cellStyle.setBorderTop(BorderStyle.NONE);
+                cellStyle.setBorderBottom(BorderStyle.NONE);
+                cellStyle.setBorderLeft(BorderStyle.NONE);
+                cellStyle.setBorderRight(BorderStyle.NONE);
+                cellStyle.setAlignment(HorizontalAlignment.LEFT);
+                Font defaultFont = writer.createFont();
+                defaultFont.setFontHeightInPoints((short) 11);
+                cellStyle.setFont(defaultFont);
+                // 取消数字格式的数据的黑色边框以及数据左对齐
+                CellStyle cellStyleForNumber = writer.getStyleSet().getCellStyleForNumber();
+                cellStyleForNumber.setBorderTop(BorderStyle.NONE);
+                cellStyleForNumber.setBorderBottom(BorderStyle.NONE);
+                cellStyleForNumber.setBorderLeft(BorderStyle.NONE);
+                cellStyleForNumber.setBorderRight(BorderStyle.NONE);
+                cellStyleForNumber.setAlignment(HorizontalAlignment.LEFT);
+                cellStyleForNumber.setFillBackgroundColor(IndexedColors.BLACK.getIndex());
+                cellStyleForNumber.setFont(defaultFont);
+
                 CellStyle textStyle = writer.getWorkbook().createCellStyle();
                 DataFormat format = writer.getWorkbook().createDataFormat();
                 textStyle.setDataFormat(format.getFormat("@"));
+
+                writer.merge(errorList.get(1).size() + 1, errorList.get(0).get(0).toString().trim(), true);
+                writer.getHeadCellStyle().setAlignment(HorizontalAlignment.LEFT);
+                writer.getHeadCellStyle().setWrapText(true);
+                Font headFont = writer.createFont();
+                headFont.setFontHeightInPoints((short) 11);
+                writer.getHeadCellStyle().setFont(headFont);
+                writer.getHeadCellStyle().setFillPattern(FillPatternType.NO_FILL);
+                writer.getOrCreateRow(0).setHeightInPoints(120);
+                writer.setRowHeight(-1, 20);
                 for (int i = 0; i < errorList.get(1).size(); i++) {
-                    writer.setColumnWidth(i, 20);
                     writer.getSheet().setDefaultColumnStyle(i, textStyle);
                 }
-                writer.merge(errorList.get(1).size() - 1, errorList.remove(0).get(0));
-                writer.setDefaultRowHeight(20);
-                Cell cell = writer.getCell(0, 0);
-                CellStyle cellStyle = cell.getCellStyle();
-                cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-                cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-                Font font = writer.createFont();
-                font.setBold(true);
-                font.setFontHeightInPoints((short) 16);
-                cellStyle.setFont(font);
-                cell.setCellStyle(cellStyle);
+                errorList.remove(0);
+
                 // 一次性写出内容，使用默认样式
                 writer.write(errorList);
                 // 关闭writer，释放内存
@@ -233,6 +255,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                 redis.setex(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + "file:" + adminMessage.getMessageId().toString(), 604800, file.getAbsolutePath());
             }
             adminService.saveOrUpdateMessage(adminMessage);
+            redis.del(AdminCacheKey.UPLOAD_EXCEL_MESSAGE_PREFIX + getUploadExcelBO().getMessageId());
             FileUtil.del(getUploadExcelBO().getFilePath());
         }
 
@@ -262,10 +285,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                     break;
                 }
             }
-            List<FieldEnum> fieldEnums = Arrays.asList(FieldEnum.FILE, FieldEnum.CHECKBOX, FieldEnum.USER, FieldEnum.STRUCTURE,
-                    FieldEnum.AREA,FieldEnum.AREA_POSITION,FieldEnum.CURRENT_POSITION,FieldEnum.DATE_INTERVAL,FieldEnum.BOOLEAN_VALUE,
-                    FieldEnum.HANDWRITING_SIGN,FieldEnum.DESC_TEXT,FieldEnum.DETAIL_TABLE,FieldEnum.CALCULATION_FUNCTION);
-            fieldList.removeIf(record -> fieldEnums.contains(FieldEnum.parse(record.getType())));
+            fieldList.removeIf(record -> ExcelParseUtil.removeFieldByType(record.getType()));
             HashMap<String, String> nameMap = new HashMap<>();
             HashMap<String, Integer> isNullMap = new HashMap<>();
             fieldList.forEach(filed -> {
@@ -286,11 +306,11 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                     isNullMap.put("详细地址", 0);
                 } else {
                     boolean isNull = Objects.equals(1, filed.getIsNull());
-                    nameMap.put(filed.getName() + (isNull ? "(*)" : ""), filed.getFieldName());
-                    isNullMap.put(filed.getName() + (isNull ? "(*)" : ""), filed.getIsNull());
+                    nameMap.put((isNull ? "*" : "") + filed.getName(), filed.getFieldName());
+                    isNullMap.put((isNull ? "*" : "") + filed.getName(), filed.getIsNull());
                 }
             });
-            nameMap.put("负责人" + (getUploadExcelBO().getPoolId() != null ? "":"(*)"), "ownerUserName");
+            nameMap.put((getUploadExcelBO().getPoolId() != null ? "":"*") + "负责人", "ownerUserName");
             List<String> nameList = new ArrayList<>(nameMap.keySet());
             if (nameList.size() != rowList.size() || !nameList.containsAll(rowList)) {
                 templateErr = true;
@@ -317,7 +337,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
             }
             SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
             CrmEnum crmEnum = getUploadExcelBO().getCrmEnum();
-            sourceBuilder.fetchSource(new String[]{crmEnum.getTable() + "Id", "batchId", "ownerUserId"}, null);
+            sourceBuilder.fetchSource(new String[]{crmEnum.getPrimaryKey(), "batchId", "ownerUserId"}, null);
             sourceBuilder.size(2);
             sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
             BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
@@ -515,7 +535,7 @@ public class CrmUploadExcelServiceImpl implements CrmUploadExcelService {
                     }
                 } else if (rowIndex == 1) {
                     queryExcelHead(rowList);
-                } else {
+                }else {
                     errorList.add(0, rowList);
                 }
             });

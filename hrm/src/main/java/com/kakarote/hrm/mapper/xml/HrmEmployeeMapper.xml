@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmEmployeeMapper">
+
+
+    <select id="queryPageList" resultType="java.util.Map">
+        SELECT a.employee_id,
+        a.employee_name,
+        a.mobile,
+        a.id_type,
+        a.id_number,
+        a.sex,
+        date_format(a.date_of_birth, '%Y-%m-%d')          as date_of_birth,
+        a.birthday,
+        a.email,
+        a.age,
+        a.country,
+        a.nation,
+        a.native_place,
+        a.address,
+        a.highest_education,
+        date_format(a.entry_time, '%Y-%m-%d')             as entry_time,
+        a.probation,
+        a.entry_status,
+        date_format(a.become_time, '%Y-%m-%d')            as become_time,
+        a.job_number,
+        d.dept_id,
+        d.name                                            as dept_name,
+        c.employee_name                                   as parent_name,
+        a.parent_id,
+        a.post,
+        a.post_level,
+        a.work_address,
+        a.work_detail_address,
+        a.work_city,
+        a.employment_forms,
+        a.status,
+        date_format(a.company_age_start_time, '%Y-%m-%d') as company_age_start_time,
+        a.company_age,
+        e.salary_card_num,
+        e.account_opening_city,
+        e.bank_name,
+        e.opening_bank,
+        g.accumulation_fund_num,
+        g.social_security_num,
+        g.scheme_id,
+        h.value                                           as channelName,
+        f.contract_type,
+        f.contract_num,
+        f.start_time,
+        f.end_time,
+        f.term
+        FROM `wk_hrm_employee` `a`
+        left join `wk_hrm_employee` c on a.parent_id = c.employee_id
+        left join `wk_hrm_dept` d on a.dept_id = d.dept_id
+        left join `wk_hrm_employee_salary_card` e
+        on a.employee_id = e.employee_id
+        left join `wk_hrm_employee_social_security_info` g
+        on a.employee_id = g.employee_id
+        left join wk_hrm_recruit_channel h on a.channel_id = h.channel_id
+        left join `wk_hrm_employee_contract` f on a.employee_id = f.employee_id and f.status = 1
+        where a.is_del = 0
+        <include refid="employeeListCondition"/>
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        group by a.employee_id
+        <choose>
+            <when test="data.sortField != null and data.sortField != ''">
+                ORDER BY a.${data.sortField}
+                <if test="data.order == 1">
+                    desc
+                </if>
+                <if test="data.order == 2">
+                    asc
+                </if>
+            </when>
+            <otherwise>
+                ORDER BY a.`update_time` desc
+            </otherwise>
+        </choose>
+        <if test="data.sortField != null and data.sortField != ''">
+
+        </if>
+
+    </select>
+    <select id="queryEmployeeInfoByMobile" resultType="com.kakarote.hrm.entity.VO.EmployeeInfo">
+        select a.employee_id,a.employee_name,a.mobile,a.sex,a.age,a.job_number,
+               a.dept_id,b.name as deptName,a.parent_id,c.employee_name as parnetName,
+               a.post
+        from wk_hrm_employee a
+        left join wk_hrm_dept b on a.dept_id = b.dept_id
+        left join wk_hrm_employee c on a.parent_id = c.employee_id
+        where a.mobile = #{mobile} and a.is_del = 0
+    </select>
+    <select id="queryNoPaySalaryEmployee" resultType="java.util.Map">
+        select employee_id, employee_name, job_number, a.dept_id,b.name as deptName, post, status, entry_time
+        from wk_hrm_employee a
+        left join wk_hrm_dept b on a.dept_id = b.dept_id
+        where a.employee_id in
+        <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+            #{employeeId}
+        </foreach>
+    </select>
+    <select id="queryFieldValueNoDelete" resultType="java.lang.Integer">
+        SELECT count(*) FROM `wk_hrm_employee` where is_del = 0
+        and
+        <foreach collection="uniqueList" item="record" index="index" separator="or" open="(" close=")">
+            <choose>
+                <when test="record.value != null and record.isFixed == 1">
+                    ${record.fieldName} = #{record.value}
+                </when>
+                <when test="record.value != null">
+                    employee_id in (SELECT batch_id FROM `wk_hrm_employee_data` WHERE field_id= #{record.fieldId} and
+                    value= #{record.value})
+                </when>
+            </choose>
+        </foreach>
+    </select>
+    <select id="queryToInByMonth" resultType="java.lang.Integer">
+        select employee_id from wk_hrm_employee where year(entry_time) = #{year}
+         and month(entry_time) = #{month} and entry_status = 2 and is_del = 0
+    </select>
+    <select id="queryToLeaveByMonth" resultType="java.lang.Integer">
+        select a.employee_id from wk_hrm_employee a
+        left join wk_hrm_employee_quit_info b on a.employee_id = b.employee_id
+        where year(b.plan_quit_time) = #{year} and month(b.plan_quit_time) = #{month} and a.entry_status = 3 and a.is_del = 0
+    </select>
+    <select id="queryToCorrectCount" resultType="java.lang.Integer">
+        select employee_id from wk_hrm_employee where status = 2 and
+        year(become_time) = year(now()) and month(become_time) = month(now()) and is_del = 0
+         group by employee_id
+    </select>
+    <select id="queryBirthdayEmp" resultType="java.lang.Integer">
+        select employee_id from wk_hrm_employee where ((
+        birthday_type = 1 and birthday in
+        <foreach collection="solarList" index="index" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>)
+        or (birthday_type = 2 and birthday in
+        <foreach collection="lunarList" index="index" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+        )) and is_del = 0 and entry_status != 4
+    </select>
+    <select id="queryBirthdayListByTime" resultType="com.kakarote.hrm.entity.PO.HrmEmployee">
+        select employee_id,age,employee_name from wk_hrm_employee where ((birthday_type = 1 and birthday = #{solarBirthday})
+        or (birthday_type = 2 and birthday = #{lunarBirthday}) and entry_status in(1,3)) and is_del = 0 and entry_status != 4
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+    </select>
+    <select id="queryEntryEmpListByTime" resultType="com.kakarote.hrm.entity.PO.HrmEmployee">
+        select employee_id,employee_name from wk_hrm_employee where to_days(entry_time) = to_days(#{time}) and is_del = 0
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+    </select>
+    <select id="queryBecomeEmpListByTime" resultType="com.kakarote.hrm.entity.PO.HrmEmployee">
+        select employee_id,employee_name from wk_hrm_employee where to_days(become_time) = to_days(#{time}) and is_del = 0
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+    </select>
+    <select id="queryLeaveEmpListByTime" resultType="com.kakarote.hrm.entity.PO.HrmEmployee">
+        select a.employee_id,a.employee_name from wk_hrm_employee a
+        inner join wk_hrm_employee_quit_info b on a.employee_id = b.employee_id
+        where to_days(b.plan_quit_time) = to_days(#{time}) and a.entry_status = 3 and a.is_del = 0
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+    </select>
+    <select id="querySimpleEmpByDeptId" resultType="com.kakarote.hrm.entity.VO.SimpleHrmEmployeeVO">
+        select employee_id,employee_name,post from wk_hrm_employee where is_del = 0 and entry_status in (1,3)
+        <choose>
+            <when test="deptId == 0">
+                and dept_id is null
+            </when>
+            <otherwise>
+                and dept_id = #{deptId}
+            </otherwise>
+        </choose>
+
+    </select>
+    <select id="export" resultType="java.util.Map">
+        select employee_name, job_number,mobile,dept_id,post,employment_forms,
+        status,date_format(a.entry_time,'%Y-%m-%d') as
+        entry_time,id_type,id_number
+        from wk_hrm_employee a
+        where 1= 1 and a.is_del = 0
+        <include refid="employeeListCondition"/>
+    </select>
+    <select id="filterDeleteEmployeeIds" resultType="java.lang.Integer">
+        select employee_id from wk_hrm_employee where is_del = 0
+        and employee_id in
+        <foreach collection="employeeIds" index="index" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </select>
+    <select id="queryEntryStatusList" resultType="java.lang.String">
+        select date_format(entry_time,'%Y-%m-%d') from wk_hrm_employee where
+            entry_time between #{data.startTime} and #{data.endTime}  and is_del = 0
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        group by date_format(entry_time,'%Y-%m-%d')
+    </select>
+    <select id="queryBecomeStatusList" resultType="java.lang.String">
+        select date_format(become_time,'%Y-%m-%d') from wk_hrm_employee where
+        become_time between #{data.startTime} and #{data.endTime}  and is_del = 0
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        group by date_format(become_time,'%Y-%m-%d')
+    </select>
+    <select id="queryLeaveStatusList" resultType="java.lang.String">
+        select date_format(b.plan_quit_time,'%Y-%m-%d') from wk_hrm_employee a
+        inner join wk_hrm_employee_quit_info b on a.employee_id = b.employee_id
+        where b.plan_quit_time between #{data.startTime} and #{data.endTime}  and is_del = 0
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        group by date_format(b.plan_quit_time,'%Y-%m-%d')
+    </select>
+
+    <sql id="employeeListCondition">
+        <if test="data.employeeName != null and data.employeeName != ''">
+            and a.employee_name like concat('%',#{data.employeeName},'%')
+        </if>
+        <if test="data.mobile != null and data.mobile != ''">
+            and a.mobile like concat('%',#{data.mobile},'%')
+        </if>
+        <if test="data.sex != null and data.sex != ''">
+            and a.sex = #{data.sex}
+        </if>
+        <if test="data.entryTime != null">
+            and date_format(a.entry_time,'%y-%m-%d') between date_format(#{data.entryTime[0]},'%y-%m-%d') and
+            date_format(#{data.entryTime[1]},'%y-%m-%d')
+        </if>
+        <if test="data.jobNumber != null and data.jobNumber != ''">
+            and a.job_number like concat('%',#{data.jobNumber},'%')
+        </if>
+        <if test="data.deptId != null and data.deptId != ''">
+            and a.dept_id = #{data.deptId}
+        </if>
+        <if test="data.post != null and data.post != ''">
+            and a.post = #{data.post}
+        </if>
+        <if test="data.becomeTime != null">
+            and date_format(a.become_time,'%y-%m-%d') between date_format(#{data.becomeTime[0]},'%y-%m-%d') and
+            date_format(#{data.becomeTime[1]},'%y-%m-%d')
+        </if>
+        <if test="data.workAddress != null and data.workAddress != ''">
+            and a.work_address = #{data.workAddress}
+        </if>
+        <if test="data.employmentForms != null and data.employmentForms != ''">
+            and a.employment_forms = #{data.employmentForms}
+        </if>
+        <if test="data.status != null and data.status != '' and data.status != 11 and data.status != 12 and data.status != 13 and data.status != 14 and data.status != 15">
+            and a.status = #{data.status} and a.entry_status in (1,3)
+        </if>
+        <if test="data.status == '11'">
+            and a.entry_status in (1,3)
+        </if>
+        <if test="data.status == '12'">
+            and a.status in (1,2) and a.entry_status in (1,3)
+        </if>
+        <if test="data.status == '13'">
+            and a.entry_status = 2
+        </if>
+        <if test="data.status == '14'">
+            and a.entry_status = 3
+        </if>
+        <if test="data.status == '15'">
+            and a.entry_status = 4
+        </if>
+        <if test="data.employeeSurvey != null">
+            <choose>
+                <when test="data.employeeSurvey == 1">
+                    and a.employee_id in (select employee_id from wk_hrm_employee_abnormal_change_record
+                    where year(change_time) = year(now()) and month(change_time) = month(now()) and type = 1
+                    group by employee_id having max(create_time))
+                </when>
+                <when test="data.employeeSurvey == 2">
+                    and a.employee_id in (select employee_id from wk_hrm_employee_abnormal_change_record
+                    where year(change_time) = year(now()) and month(change_time) = month(now()) and type = 2
+                    group by employee_id having max(create_time))
+                </when>
+                <when test="data.employeeSurvey == 3">
+                    and a.employee_id in (select employee_id from wk_hrm_employee_abnormal_change_record
+                    where year(change_time) = year(now()) and month(change_time) = month(now()) and type = 3
+                    group by employee_id having max(create_time))
+                </when>
+                <when test="data.employeeSurvey == 4">
+                    and a.employee_id in (select employee_id from wk_hrm_employee_abnormal_change_record
+                    where year(change_time) = year(now()) and month(change_time) = month(now()) and type = 4
+                    group by employee_id having max(create_time))
+                </when>
+                <when test="data.employeeSurvey == 5">
+                    and a.employee_id in (select employee_id from wk_hrm_employee where year(entry_time) = year(now())
+                    and month(entry_time) = month(now()) and entry_status = 2)
+                </when>
+                <when test="data.employeeSurvey == 6">
+                    and a.employee_id in (select a.employee_id from wk_hrm_employee a
+                    left join wk_hrm_employee_quit_info b on a.employee_id = b.employee_id
+                    where year(b.plan_quit_time) = year(now()) and month(b.plan_quit_time) = month(now()) and
+                    a.entry_status = 3)
+                </when>
+            </choose>
+        </if>
+        <if test="data.toDoRemind != null">
+            <choose>
+                <when test="data.toDoRemind == 2">
+                    and a.employee_id in (select a.employee_id from wk_hrm_employee a
+                    left join wk_hrm_employee_quit_info b on a.employee_id = b.employee_id
+                    where year(b.plan_quit_time) = year(now()) and month(b.plan_quit_time) = month(now()) and
+                    a.entry_status = 3)
+                </when>
+                <when test="data.toDoRemind == 3">
+                    and a.employee_id in (select employee_id from wk_hrm_employee_contract where
+                    year(end_time) = year(now()) and month(end_time) = month(now()) group by employee_id)
+                </when>
+                <when test="data.toDoRemind == 4">
+                    and a.employee_id in (select employee_id from wk_hrm_employee where status = 2 and
+                    year(become_time) = year(now()) and month(become_time) = month(now())
+                    group by employee_id)
+                </when>
+                <when test="data.toDoRemind == 5">
+                    and a.employee_id in (select employee_id from wk_hrm_employee where year(entry_time) = year(now())
+                    and month(entry_time) = month(now()) and entry_status = 2)
+                </when>
+                <when test="data.toDoRemind == 6">
+                    -- 生日
+                    and a.employee_id in
+                    <choose>
+                        <when test="birthdayEmpList.size >0">
+                            <foreach collection="birthdayEmpList" separator="," open="(" close=")" item="empId"
+                                     index="index">
+                                #{empId}
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            (-1)
+                        </otherwise>
+                    </choose>
+
+                </when>
+            </choose>
+        </if>
+        <if test="data.employeeIds != null and data.employeeIds.size >0  ">
+            and a.employee_id in
+            <foreach collection="data.employeeIds" index="index" item="id" open="(" close=")" separator=",">
+                #{id}
+            </foreach>
+        </if>
+    </sql>
+</mapper>

@@ -25,5 +25,8 @@ public interface CrmCacheKey {
      */
     String CRM_CALL_CACHE_KEY = "call:";
 
-    String CRM__AUTH_USER_CACHE_KEY = "userAuth:Menu:";
+    /**
+     * 数据权限缓存key
+     */
+    String CRM_AUTH_USER_CACHE_KEY = "userAuth:Menu:";
 }

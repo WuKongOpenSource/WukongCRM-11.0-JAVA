@@ -8,12 +8,12 @@ import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.util.TypeUtils;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.log.BehaviorEnum;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
-import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.TagUtil;
@@ -168,7 +168,8 @@ public class ActionRecordUtil {
         propertiesMap.put(CrmEnum.CONTACTS.getType(), Dict.create().set("name", "姓名").set("customerId", "客户姓名").set("mobile", "手机").set("nextTime", "下次联系时间").set("remark", "备注").set("telephone", "电话").set("email", "电子邮箱").set("post", "职务").set("address", "地址"));
         propertiesMap.put(CrmEnum.BUSINESS.getType(), Dict.create().set("businessName", "商机名称").set("customerId", "客户姓名").set("money", "商机金额").set("dealDate", "预计成交日期").set("remark", "备注").set("typeId", "商机状态组").set("statusId", "商机阶段").set("totalPrice", "总金额").set("discountRate", "整单折扣（%）"));
         propertiesMap.put(CrmEnum.CONTRACT.getType(), Dict.create().set("num", "合同编号").set("name", "合同名称").set("customerId", "客户名称").set("contactsId", "客户签约人").set("businessId", "商机名称").set("orderDate", "下单时间").set("money", "合同金额").set("startTime", "合同开始时间").set("endTime", "合同结束时间").set("companyUserId", "公司签约人").set("remark", "备注").set("totalPrice", "总金额").set("discountRate", "整单折扣（%）"));
-        propertiesMap.put(CrmEnum.RECEIVABLES.getType(), Dict.create().set("number", "回款编号").set("customerId", "客户姓名").set("contractId", "合同编号").set("returnTime", "回款日期").set("money", "回款金额").set("planId", "期数").set("remark", "备注"));
+        propertiesMap.put(CrmEnum.RECEIVABLES.getType(), Dict.create().set("number", "回款编号").set("customerId", "客户姓名").set("contractId", "合同编号").set("returnTime", "回款日期").set("money", "回款金额").set("receivablesPlanId", "期数").set("remark", "备注"));
+        propertiesMap.put(CrmEnum.RECEIVABLES_PLAN.getType(), Dict.create().set("money", "计划回款金额").set("return_date", "计划回款日期").set("return_type", "计划回款方式").set("remind", "提前几天提醒").set("remark", "备注"));
         propertiesMap.put(CrmEnum.PRODUCT.getType(), Dict.create().set("name", "产品名称").set("categoryId", "产品类型").set("num", "产品编码").set("price", "价格").set("description", "产品描述"));
         propertiesMap.put(CrmEnum.MARKETING.getType(), Dict.create().set("marketingName", "活动名称").set("crmType", "关联对象").set("relationUserId", "参与人员").set("marketingType", "活动类型").set("startTime", "开始时间").set("endTime", "截止时间").set("browse", "浏览数").set("submitNum", "提交数").set("marketingMoney", "活动预算").set("address", "活动地址").set("synopsis", "活动简介"));
         propertiesMap.put(CrmEnum.RETURN_VISIT.getType(), Dict.create().set("visitNumber", "回访编号").set("visitTime", "回访时间").set("ownerUserId", "回访人").set("customerId", "客户名称").set("contractId", "合同编号").set("contactsId", "联系人"));
@@ -279,10 +280,12 @@ public class ActionRecordUtil {
                         switch (oldKey) {
                             case "companyUserId":
                                 if (!"空".equals(newValue)) {
-                                    newValue = UserCacheUtil.getUserName(Long.valueOf(newValue.toString()));
+                                    newValue = StrUtil.splitTrim(newValue.toString(),Const.SEPARATOR)
+                                            .stream().map(id-> UserCacheUtil.getUserName(TypeUtils.castToLong(id))).collect(Collectors.joining(Const.SEPARATOR));
                                 }
                                 if (!"空".equals(oldValue)) {
-                                    oldValue = UserCacheUtil.getUserName(Long.valueOf(oldValue.toString()));
+                                    oldValue = StrUtil.splitTrim(oldValue.toString(),Const.SEPARATOR)
+                                            .stream().map(id-> UserCacheUtil.getUserName(TypeUtils.castToLong(id))).collect(Collectors.joining(Const.SEPARATOR));
                                 }
                                 break;
                             case "customerId":
@@ -333,7 +336,7 @@ public class ActionRecordUtil {
                                     oldValue = ApplicationContextHolder.getBean(ICrmBusinessStatusService.class).getBusinessStatusName(Integer.parseInt(oldValue.toString()));
                                 }
                                 break;
-                            case "planId":
+                            case "receivablesPlanId":
                                 if (!"空".equals(newValue)) {
                                     newValue = ApplicationContextHolder.getBean(ICrmReceivablesPlanService.class).getReceivablesPlanNum(Integer.parseInt(newValue.toString()));
                                 }
@@ -359,11 +362,11 @@ public class ActionRecordUtil {
                                 break;
                             case "relationUserId":
                                 if (!"空".equals(newValue)) {
-                                    List<SimpleUser> newList = ApplicationContextHolder.getBean(AdminService.class).queryUserByIds(TagUtil.toLongSet((String) newValue)).getData();
+                                    List<SimpleUser> newList = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet((String) newValue));
                                     newValue = newList.stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
                                 }
                                 if (!"空".equals(oldValue)) {
-                                    List<SimpleUser> oldList = ApplicationContextHolder.getBean(AdminService.class).queryUserByIds(TagUtil.toLongSet((String) oldValue)).getData();
+                                    List<SimpleUser> oldList = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet((String) oldValue));
                                     oldValue = oldList.stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
                                 }
                                 break;
@@ -573,6 +576,23 @@ public class ActionRecordUtil {
         actionRecord.setActionId(actionId);
         String userName = UserCacheUtil.getUserName(userId);
         actionRecord.setDetail("给" + crmEnum.getRemarks() + "：" + name + "添加了团队成员：" + userName);
+        actionRecord.setContent(JSON.toJSONString(Collections.singletonList(actionRecord.getDetail())));
+        actionRecord.setObject(name);
+        ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
+        THREAD_POOL.execute(actionRecordTask);
+    }
+
+    public void addMemberActionRecord(CrmEnum crmEnum, Integer actionId, List<Long> userIds, String name) {
+        CrmActionRecord actionRecord = new CrmActionRecord();
+        actionRecord.setCreateUserId(UserUtil.getUserId());
+        actionRecord.setCreateTime(new Date());
+        actionRecord.setIpAddress(BaseUtil.getIp());
+        actionRecord.setTypes(crmEnum.getType());
+        actionRecord.setBehavior(BehaviorEnum.ADD_MEMBER.getType());
+        actionRecord.setActionId(actionId);
+        String userName = UserCacheUtil.getUserNameList(userIds);
+        actionRecord.setDetail("给" + crmEnum.getRemarks() + "：" + name + "添加了团队成员：" + userName);
+        actionRecord.setContent(JSON.toJSONString(Collections.singletonList(actionRecord.getDetail())));
         actionRecord.setObject(name);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
         THREAD_POOL.execute(actionRecordTask);
@@ -593,6 +613,7 @@ public class ActionRecordUtil {
             String userName = UserCacheUtil.getUserName(userId);
             actionRecord.setDetail("移除了" + crmEnum.getRemarks() + "：" + name + "的团队成员：" + userName);
         }
+        actionRecord.setContent(JSON.toJSONString(Collections.singletonList(actionRecord.getDetail())));
         actionRecord.setObject(name);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
         THREAD_POOL.execute(actionRecordTask);
@@ -692,60 +713,6 @@ public class ActionRecordUtil {
         actionRecord.setActionId(actionId);
         actionRecord.setDetail("新建了" + crmEnum.getRemarks() + "：" + DateUtil.formatDate(new Date()));
         actionRecord.setObject(DateUtil.formatDate(new Date()));
-        ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
-        THREAD_POOL.execute(actionRecordTask);
-    }
-
-    public void addOaLogUpdateRecord(CrmEnum crmEnum, Integer actionId, String date) {
-        CrmActionRecord actionRecord = new CrmActionRecord();
-        actionRecord.setCreateUserId(UserUtil.getUserId());
-        actionRecord.setCreateTime(new Date());
-        actionRecord.setIpAddress(BaseUtil.getIp());
-        actionRecord.setTypes(crmEnum.getType());
-        actionRecord.setBehavior(BehaviorEnum.UPDATE.getType());
-        actionRecord.setActionId(actionId);
-        actionRecord.setDetail("编辑了" + crmEnum.getRemarks() + "：" + date);
-        actionRecord.setObject(date);
-        ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
-        THREAD_POOL.execute(actionRecordTask);
-    }
-
-    public void addOaExamineActionRecord(CrmEnum crmEnum, Integer actionId, BehaviorEnum behaviorEnum, String content) {
-        CrmActionRecord actionRecord = new CrmActionRecord();
-        actionRecord.setCreateUserId(UserUtil.getUserId());
-        actionRecord.setCreateTime(new Date());
-        actionRecord.setIpAddress(BaseUtil.getIp());
-        actionRecord.setTypes(crmEnum.getType());
-        actionRecord.setBehavior(behaviorEnum.getType());
-        actionRecord.setActionId(actionId);
-        if (content.length() > 20) {
-            content = content.substring(0, 20) + "...";
-        }
-        String prefix = "";
-        switch (behaviorEnum) {
-            case SAVE:
-                prefix = "新建了";
-                break;
-            case UPDATE:
-                prefix = "编辑了";
-                break;
-            case RECHECK_EXAMINE:
-                prefix = "撤回了";
-                break;
-            case PASS_EXAMINE:
-                prefix = "通过了";
-                break;
-            case REJECT_EXAMINE:
-                prefix = "驳回了";
-                break;
-            case DELETE:
-                prefix = "删除了";
-                break;
-            default:
-                break;
-        }
-        actionRecord.setDetail(prefix + crmEnum.getRemarks() + "：" + content);
-        actionRecord.setObject(content);
         ActionRecordTask actionRecordTask = new ActionRecordTask(actionRecord);
         THREAD_POOL.execute(actionRecordTask);
     }

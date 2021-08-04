@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmAttendanceClockMapper">
+
+    <select id="queryPageList" resultType="com.kakarote.hrm.entity.VO.QueryAttendancePageVO">
+        select a.*,b.employee_name,b.job_number,b.post,c.name as deptName from wk_hrm_attendance_clock a
+        left join wk_hrm_employee b on a.clock_employee_id = b.employee_id
+        left join wk_hrm_dept c on b.dept_id = c.dept_id
+        where b.is_del = 0
+        <if test="data.deptId != null and data.deptId  != ''">
+            and b.dept_id = #{data.deptId}
+        </if>
+        <if test="data.date != null and data.date != ''">
+            and date_format(a.clock_time,'%Y-%m') = date_format(#{data.date},'%Y-%m')
+        </if>
+        <if test="data.search != null and data.search != ''">
+            and (b.employee_name like concat('%',#{data.search},'%') or b.job_number like
+            concat('%',#{data.search},'%'))
+        </if>
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.clock_employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        order by a.clock_time,a.clock_employee_id desc
+    </select>
+    <select id="queryClockListByTime" resultType="com.kakarote.hrm.entity.PO.HrmAttendanceClock">
+        select a.*,b.employee_name from wk_hrm_attendance_clock a
+                                            left join wk_hrm_employee b on a.clock_employee_id = b.employee_id
+        where date_format(attendance_time,'%Y-%m-%d') = #{time}
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.clock_employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+    </select>
+    <select id="queryClockStatusList" resultType="java.lang.String">
+        select date_format(attendance_time,'%Y-%m-%d') from wk_hrm_attendance_clock
+        where attendance_time between #{data.startTime} and #{data.endTime}
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and clock_employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        group by date_format(attendance_time,'%Y-%m-%d')
+    </select>
+    <select id="queryMyPageList" resultType="com.kakarote.hrm.entity.VO.QueryAttendancePageVO">
+        select a.*,b.employee_name,b.job_number,b.post,c.name as deptName from wk_hrm_attendance_clock a
+        left join wk_hrm_employee b on a.clock_employee_id = b.employee_id
+        left join wk_hrm_dept c on b.dept_id = c.dept_id
+        where b.is_del = 0 and a.clock_employee_id = #{employeeId}
+        order by a.clock_time desc
+    </select>
+</mapper>

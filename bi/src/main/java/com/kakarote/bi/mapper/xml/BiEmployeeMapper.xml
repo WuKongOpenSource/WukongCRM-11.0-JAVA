@@ -16,7 +16,7 @@
                     ${x-1}
                 </otherwise>
             </choose>
-            and check_status = 1 and owner_user_id in
+            and check_status in (1,10) and owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>) as lastMonth,
@@ -27,7 +27,7 @@
                 #{item}
             </for>) as lastYear
             from wk_crm_contract
-            where DATE_FORMAT(order_date,'%Y%m') = ${x} and check_status = 1 and owner_user_id in
+            where DATE_FORMAT(order_date,'%Y%m') = ${x} and check_status in (1,10) and owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>
@@ -48,18 +48,18 @@
                     ${x-1}
                 </otherwise>
             </choose>
-            and check_status = 1 and owner_user_id in
+            and check_status in (1,10) and owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>) as lastMonth,
             (select IFNULL(SUM(money),0)
             from wk_crm_contract
-            where DATE_FORMAt(order_date,'%Y%m') = ${x-100} and check_status = 1  and owner_user_id in
+            where DATE_FORMAt(order_date,'%Y%m') = ${x-100} and check_status in (1,10) and owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>) as lastYear
             from wk_crm_contract
-            where DATE_FORMAT(order_date,'%Y%m') = ${x} and check_status = 1 and owner_user_id in
+            where DATE_FORMAT(order_date,'%Y%m') = ${x} and check_status in (1,10) and owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>
@@ -80,18 +80,18 @@
                     ${x-1}
                 </otherwise>
             </choose>
-            and check_status = 1 and owner_user_id in
+            and check_status in (1,10) and owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>) as lastMonth,
             (select IFNULL(SUM(money),0)
             from wk_crm_receivables
-            where DATE_FORMAt(return_time,'%Y%m') = ${x-100} and check_status = 1  and owner_user_id in
+            where DATE_FORMAt(return_time,'%Y%m') = ${x-100} and check_status in (1,10)  and owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>) as lastYear
             from wk_crm_receivables
-            where DATE_FORMAT(return_time,'%Y%m') = ${x} and check_status = 1 and owner_user_id in
+            where DATE_FORMAT(return_time,'%Y%m') = ${x} and check_status in (1,10) and owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>
@@ -137,14 +137,14 @@
     <select id="totalInvoice" resultType="com.alibaba.fastjson.JSONObject">
         SELECT
             (
-            SELECT IFNULL(sum(b.invoice_money),0) FROM wk_crm_invoice as b WHERE b.check_status = '1' and b.real_invoice_date BETWEEN #{startTime} and #{endTime}
+            SELECT IFNULL(sum(b.invoice_money),0) FROM wk_crm_invoice as b WHERE b.check_status in (1,10) and b.real_invoice_date BETWEEN #{startTime} and #{endTime}
             and b.owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
             </for>
              ) as invoiceMoney,
             (
-            SELECT IFNULL(sum(c.money),0) FROM wk_crm_receivables as c WHERE c.check_status = '1' and c.return_time BETWEEN #{startTime} and #{endTime}
+            SELECT IFNULL(sum(c.money),0) FROM wk_crm_receivables as c WHERE c.check_status in (1,10) and c.return_time BETWEEN #{startTime} and #{endTime}
             and c.owner_user_id in
             <for collection="userIds" item="item">
                 #{item}
@@ -160,8 +160,8 @@
         ifnull(sum(b.money),0)  as receivablesMoney
         FROM
         wk_crm_invoice as a
-        LEFT JOIN wk_crm_receivables as b on a.contract_id = b.contract_id and b.check_status = '1'
-        WHERE a.check_status = '1' and a.real_invoice_date BETWEEN #{startTime} and #{endTime}
+        LEFT JOIN wk_crm_receivables as b on a.contract_id = b.contract_id and b.check_status in (1,10)
+        WHERE a.check_status in (1,10) and a.real_invoice_date BETWEEN #{startTime} and #{endTime}
         and a.owner_user_id in
         <for collection="userIds" item="item">
             #{item}
@@ -173,7 +173,7 @@
         FROM
         wk_crm_receivables as a
         LEFT JOIN wk_crm_invoice as b on a.contract_id = b.contract_id
-        WHERE a.check_status = '1' and a.return_time BETWEEN #{startTime} and #{endTime}
+        WHERE a.check_status in (1,10) and a.return_time BETWEEN #{startTime} and #{endTime}
         and a.owner_user_id in
         <for collection="userIds" item="item">
             #{item}

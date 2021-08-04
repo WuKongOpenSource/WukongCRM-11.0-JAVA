@@ -196,7 +196,7 @@ public class ExamineConditionServiceImpl extends BaseServiceImpl<ExamineConditio
      **/
     private Map<String, Object> convertDataMapByExamineGeneralBO(ExamineGeneralBO examineGeneralBO){
         Map<String, Object> dataMap = new HashMap<>(3);
-        dataMap.put(ExamineConst.USER_LIST,adminService.queryUserByIds(examineGeneralBO.getUserList()).getData());
+        dataMap.put(ExamineConst.USER_LIST,UserCacheUtil.getSimpleUsers(examineGeneralBO.getUserList()));
         List<Map<String, Object>> deptMapList = new ArrayList<>();
         List<Integer> deptList = examineGeneralBO.getDeptList();
         if (CollUtil.isNotEmpty(deptList)){

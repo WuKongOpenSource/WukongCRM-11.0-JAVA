@@ -28,6 +28,9 @@ public interface CrmService {
     @PostMapping("/crmCustomer/querySimpleEntity")
     public Result<List<SimpleCrmEntity>> queryCustomerInfo(@RequestBody Collection ids);
 
+	@PostMapping("/crmCustomer/queryCustomerName")
+	Result<String> queryCustomerName(@RequestParam("customerId") Integer customerId);
+
     @PostMapping("/crmLeads/querySimpleEntity")
     public Result<List<SimpleCrmEntity>> queryLeadsInfo(@RequestBody Collection ids);
 
@@ -102,6 +105,10 @@ public interface CrmService {
 
     @PostMapping(value = "/crmField/batchUpdateEsData")
     Result batchUpdateEsData(@RequestParam("id") String id, @RequestParam("name") String name);
+
+    @PostMapping("/crmCustomerJob/updateReceivablesPlan")
+    Result updateReceivablesPlan();
+
 
     @PostMapping("/crmCustomerJob/putInInternational")
     Result putInInternational();

@@ -2,7 +2,6 @@ package com.kakarote.crm.mapper;
 
 import cn.hutool.core.lang.Dict;
 import com.alibaba.fastjson.JSONObject;
-import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.utils.BiTimeUtil;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
@@ -76,6 +75,14 @@ public interface CrmInstrumentMapper {
      * @return data
      */
     public Map<String, Object> dataInfoReceivables(@Param("time") BiTimeUtil.BiTimeEntity entity, @Param("ids") List<Long> ids);
+
+    /**
+     * 回款计划数据汇总
+     * @param entity time
+     * @param ids ids
+     * @return data
+     */
+    public Map<String, Object> dataInfoReceivablesPlan(@Param("time") BiTimeUtil.BiTimeEntity entity, @Param("ids") List<Long> ids);
 
     /**
      * 回款数据汇总

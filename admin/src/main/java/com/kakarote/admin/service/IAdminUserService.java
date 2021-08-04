@@ -12,6 +12,8 @@ import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.servlet.BaseService;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -96,6 +98,12 @@ public interface IAdminUserService extends BaseService<AdminUser> {
     public void setUserStatus(AdminUserStatusBO adminUserStatusBO);
 
     /**
+     * 设置状态
+     * @param adminUserStatusBO status
+     */
+    public void activateUser(AdminUserStatusBO adminUserStatusBO);
+
+    /**
      * 重置密码
      * @param adminUserStatusBO status
      */
@@ -120,13 +128,6 @@ public interface IAdminUserService extends BaseService<AdminUser> {
      * @return data
      */
     public void attention(Long userId);
-
-    /**
-     * 根据用户ID获取用户名称
-     * @param userId 用户ID
-     * @return data
-     */
-    public String getNameByUserId(Long userId);
 
     /**
      * 根据ids查询用户信息
@@ -173,4 +174,9 @@ public interface IAdminUserService extends BaseService<AdminUser> {
      * @return
      */
     public List<UserInfo> queryAllUserInfoList();
+
+    /**
+     * 下载员工导入模板
+     */
+    public void downloadExcel(HttpServletResponse response) throws IOException;
 }

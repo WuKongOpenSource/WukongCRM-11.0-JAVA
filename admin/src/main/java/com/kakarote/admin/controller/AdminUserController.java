@@ -150,6 +150,12 @@ public class AdminUserController {
         return R.ok(object);
     }
 
+    @PostMapping("/downloadExcel")
+    @ApiOperation("下载导入模板")
+    public void downloadExcel(HttpServletResponse response) throws IOException {
+        adminUserService.downloadExcel(response);
+    }
+
     @PostMapping("/downExcel")
     @ApiOperation("excel下载错误数据")
     public void downExcel(@RequestParam("token") String token, HttpServletResponse response) {
@@ -181,6 +187,14 @@ public class AdminUserController {
     @SysLogHandler(behavior = BehaviorEnum.UPDATE)
     public Result setUserStatus(@RequestBody AdminUserStatusBO adminUserStatusBO) {
         adminUserService.setUserStatus(adminUserStatusBO);
+        return R.ok();
+    }
+
+    @PostMapping("/activateUser")
+    @ApiOperation("激活账号")
+    @SysLogHandler(behavior = BehaviorEnum.UPDATE)
+    public Result activateUser(@RequestBody AdminUserStatusBO adminUserStatusBO) {
+        adminUserService.activateUser(adminUserStatusBO);
         return R.ok();
     }
 
@@ -272,12 +286,6 @@ public class AdminUserController {
         return R.ok();
     }
 
-    @RequestMapping("/getNameByUserId")
-    @ApiExplain("根据用户ID获取用户名称")
-    public Result getNameByUserId(@NotNull Long userId) {
-        return R.ok(adminUserService.getNameByUserId(userId));
-    }
-
     @RequestMapping("/queryChildUserId")
     @ApiExplain("根据用户ID下的子用户")
     public Result<List<Long>> queryChildUserId(@NotNull Long userId) {
@@ -301,20 +309,15 @@ public class AdminUserController {
     public Result<UserInfo> queryInfoByUserId(@NotNull Long userId) {
         AdminUser byId = adminUserService.getById(userId);
         UserInfo userInfo = null;
-        if (byId != null && byId.getDeptId() != null) {
+        if (byId != null) {
             userInfo = BeanUtil.copyProperties(byId, UserInfo.class);
-            String nameByDeptId = UserCacheUtil.getDeptName(byId.getDeptId());
-            userInfo.setDeptName(nameByDeptId);
+            if(byId.getDeptId() != null) {
+                String nameByDeptId = UserCacheUtil.getDeptName(byId.getDeptId());
+                userInfo.setDeptName(nameByDeptId);
+            }
             userInfo.setRoles(adminUserService.queryUserRoleIds(userInfo.getUserId()));
         }
         return R.ok(userInfo);
-    }
-
-    @PostMapping("/queryUserByIds")
-    @ApiExplain("根据用户ID获取用户")
-    public Result<List<SimpleUser>> queryUserByIds(@RequestBody List<Long> ids) {
-        List<SimpleUser> simpleUsers = adminUserService.queryUserByIds(ids);
-        return R.ok(simpleUsers);
     }
 
     @PostMapping("/queryNormalUserByIds")
@@ -328,6 +331,9 @@ public class AdminUserController {
     @ApiExplain("根据用户ID获取用户")
     public Result<SimpleUser> queryUserById(@RequestParam("userId") Long userId) {
         AdminUser adminUser = adminUserService.getById(userId);
+        if(adminUser != null) {
+            adminUser.setDeptName(deptService.getNameByDeptId(adminUser.getDeptId()));
+        }
         return R.ok(BeanUtil.copyProperties(adminUser, SimpleUser.class));
     }
 

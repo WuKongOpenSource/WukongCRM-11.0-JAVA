@@ -26,7 +26,12 @@ public class CrmServiceImpl implements CrmService {
         return Result.ok(new ArrayList<>());
     }
 
-    @Override
+	@Override
+	public Result<String> queryCustomerName(Integer customerId) {
+		return Result.ok(new String());
+	}
+
+	@Override
     public Result<List<SimpleCrmEntity>> queryLeadsInfo(Collection ids) {
         return Result.ok(new ArrayList<>());
     }
@@ -113,6 +118,11 @@ public class CrmServiceImpl implements CrmService {
 
     @Override
     public Result batchUpdateEsData(String id, String name) {
+        return Result.ok();
+    }
+
+    @Override
+    public Result updateReceivablesPlan() {
         return Result.ok();
     }
 

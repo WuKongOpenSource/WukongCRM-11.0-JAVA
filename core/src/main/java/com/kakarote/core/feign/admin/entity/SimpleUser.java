@@ -24,4 +24,21 @@ public class SimpleUser implements Serializable {
 
     @ApiModelProperty("昵称")
     private String realname;
+
+    @ApiModelProperty("部门ID")
+    private Integer deptId;
+
+    @ApiModelProperty("部门名称")
+    private String deptName;
+
+    public SimpleUser() {
+    }
+
+    public SimpleUser(Long userId, String img, String realname, Integer deptId, String deptName) {
+        this.userId = userId;
+        this.img = img;
+        this.realname = realname;
+        this.deptId = deptId;
+        this.deptName = deptName;
+    }
 }

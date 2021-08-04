@@ -81,7 +81,7 @@ public class CrmVerify {
     private Result verifyProduct(CrmModelSaveBO model) {
         JSONObject entity = new JSONObject(model.getEntity());
         if (StrUtil.isNotEmpty(entity.getString("price"))) {
-            if (!ReUtil.isMatch(PatternPool.MONEY, entity.getString("price"))) {
+            if (!ReUtil.isMatch(PatternPool.MONEY, entity.getString("price"))&&!ReUtil.isMatch(PatternPool.NUMBERS, entity.getString("price"))) {
                 return R.error(CrmCodeEnum.CRM_PRICE_FORMAT_ERROR);
             }
         }

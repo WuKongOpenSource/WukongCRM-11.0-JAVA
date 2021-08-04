@@ -11,6 +11,7 @@ import lombok.ToString;
 import lombok.experimental.Accessors;
 import org.elasticsearch.script.Script;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +24,7 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = false)
 @ApiModel(value = "高级筛选BO", description = "高级筛选表")
 @ToString
-public class CrmSearchBO extends PageEntity {
+public class CrmSearchBO extends PageEntity implements Serializable {
 
     @ApiModelProperty(value = "搜索条件")
     private String search;
@@ -33,19 +34,23 @@ public class CrmSearchBO extends PageEntity {
 
     @ApiModelProperty(value = "场景ID")
     private Integer sceneId;
+
     @ApiModelProperty(value = "type")
     private Integer label;
+
     @ApiModelProperty(value = "排序字段")
     private String sortField;
+
     @ApiModelProperty(value = "排序字段 1 倒序 2 正序")
     private Integer order;
+
     @ApiModelProperty(value = "高级筛选列表")
     private List<Search> searchList = new ArrayList<>();
 
     @Data
     @ApiModel(value = "高级筛选子查询")
     @Accessors(chain = true)
-    public static class Search {
+    public static class Search implements Serializable {
 
         @ApiModelProperty(value = "名字")
         private String name;

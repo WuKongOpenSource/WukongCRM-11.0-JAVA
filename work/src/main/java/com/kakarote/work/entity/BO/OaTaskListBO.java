@@ -6,6 +6,8 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.List;
+
 /**
  * @author wyq
  */
@@ -34,6 +36,9 @@ public class OaTaskListBO extends PageEntity {
 
     @ApiModelProperty("负责人id")
     private Long mainUserId;
+
+    @ApiModelProperty("负责人ids")
+    private List<Long> mainUserIds;
 
     @ApiModelProperty("任务名称关键字")
     private String search;

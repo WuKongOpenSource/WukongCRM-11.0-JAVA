@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmEmployeeContractMapper">
+
+    <select id="queryToExpireContractCount" resultType="java.lang.Integer">
+        select a.employee_id from wk_hrm_employee_contract a
+        left join  wk_hrm_employee b on a.employee_id = b.employee_id
+        where year(a.end_time) = year(now()) and month(a.end_time) = month(now()) and b.is_del = 0
+        group by a.employee_id
+    </select>
+</mapper>

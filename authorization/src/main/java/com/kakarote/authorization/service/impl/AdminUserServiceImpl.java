@@ -48,4 +48,9 @@ public class AdminUserServiceImpl implements AdminUserService {
     public Result setUserStatus(AdminUserStatusBO adminUserStatusBO) {
         return Result.ok();
     }
+
+    @Override
+    public Result activateUser(AdminUserStatusBO adminUserStatusBO) {
+        return Result.ok();
+    }
 }

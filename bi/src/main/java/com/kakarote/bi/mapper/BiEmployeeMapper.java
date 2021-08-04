@@ -1,7 +1,6 @@
 package com.kakarote.bi.mapper;
 
 import com.alibaba.fastjson.JSONObject;
-import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.utils.BiTimeUtil;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;

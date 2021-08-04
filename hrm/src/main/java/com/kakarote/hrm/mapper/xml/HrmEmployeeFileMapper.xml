@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmEmployeeFileMapper">
+
+    <select id="queryFileNum" resultType="java.util.Map">
+      SELECT
+        count(sub_type = 11 or null) AS 'subType11',
+        count(sub_type = 12 or null) AS 'subType12',
+        count(sub_type = 13 or null) AS 'subType13',
+        count(sub_type = 14 or null) AS 'subType14',
+        count(sub_type = 15 or null) AS 'subType15',
+        count(sub_type = 16 or null) AS 'subType16',
+        count(sub_type = 17 or null) AS 'subType17',
+        count(sub_type = 18 or null) AS 'subType18',
+        count(sub_type = 19 or null) AS 'subType19',
+        count(sub_type = 21 or null) AS 'subType21',
+        count(sub_type = 22 or null) AS 'subType22',
+        count(sub_type = 23 or null) AS 'subType23',
+        count(sub_type = 24 or null) AS 'subType24',
+        count(sub_type = 25 or null) AS 'subType25',
+        count(sub_type = 26 or null) AS 'subType26',
+        count(sub_type = 27 or null) AS 'subType27',
+        count(sub_type = 31 or null) AS 'subType31',
+        count(sub_type = 32 or null) AS 'subType32',
+        count(sub_type = 33 or null) AS 'subType33'
+      FROM
+	      wk_hrm_employee_file
+      where employee_id = #{employeeId}
+    </select>
+</mapper>

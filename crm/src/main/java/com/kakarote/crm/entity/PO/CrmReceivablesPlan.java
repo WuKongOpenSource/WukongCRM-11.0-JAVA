@@ -28,8 +28,8 @@ public class CrmReceivablesPlan implements Serializable {
 
     private static final long serialVersionUID=1L;
 
-    @TableId(value = "plan_id", type = IdType.AUTO)
-    private Integer planId;
+    @TableId(value = "receivables_plan_id", type = IdType.AUTO)
+    private Integer receivablesPlanId;
 
     @ApiModelProperty(value = "期数")
     private String num;
@@ -74,7 +74,19 @@ public class CrmReceivablesPlan implements Serializable {
     private Date updateTime;
 
     @ApiModelProperty(value = "附件批次ID")
-    private String fileBatch;
+    private String batchId;
+
+    @ApiModelProperty(value = "实际回款金额")
+    private BigDecimal realReceivedMoney;
+
+    @ApiModelProperty(value = "实际回款日期")
+    private Date realReturnDate;
+
+    @ApiModelProperty(value = "未回款金额")
+    private BigDecimal unreceivedMoney;
+
+    @ApiModelProperty(value = "回款状态 0 待回款 1 回款完成 2 部分回款 3 作废 4 逾期 5 待生效")
+    private Integer receivedStatus;
 
     @ApiModelProperty(value = "合同ID")
     private Integer contractId;

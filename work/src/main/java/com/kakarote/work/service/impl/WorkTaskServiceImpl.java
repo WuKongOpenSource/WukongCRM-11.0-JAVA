@@ -157,7 +157,7 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
             }
             Integer taskId = taskInfo.getTaskId();
             if (ObjectUtil.isNotEmpty(taskInfo.getMainUserId())) {
-                SimpleUser simpleUser = adminService.queryUserById(taskInfo.getMainUserId()).getData();
+                SimpleUser simpleUser = UserCacheUtil.getSimpleUser(taskInfo.getMainUserId());
                 taskInfo.setMainUser(simpleUser);
             } else {
                 taskInfo.setMainUser(null);
@@ -842,9 +842,9 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
         TaskDetailVO task = getBaseMapper().queryTaskInfo(taskId);
         task.setStopTime(DateUtil.formatDate((Date) task.getStopTime()));
         if (task.getMainUserId() != null) {
-            task.setMainUser(adminService.queryUserById(task.getMainUserId()).getData());
+            task.setMainUser(UserCacheUtil.getSimpleUser(task.getMainUserId()));
         }
-        task.setCreateUser(adminService.queryUserById(task.getCreateUserId()).getData());
+        task.setCreateUser(UserCacheUtil.getSimpleUser(task.getCreateUserId()));
         List<WorkTaskLabelBO> labelList = new ArrayList<>();
         List<SimpleUser> ownerUserList = new ArrayList<>();
         if (StrUtil.isNotBlank(task.getLabelId())) {
@@ -855,7 +855,7 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
         }
         List<Long> ids = StrUtil.splitTrim(task.getOwnerUserId(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList());
         if (ids.size() > 0) {
-            ownerUserList.addAll(adminService.queryUserByIds(ids).getData());
+            ownerUserList.addAll(UserCacheUtil.getSimpleUsers(ids));
         }
         setRelation(taskId, task);
         task.setOwnerUserList(ownerUserList);
@@ -961,7 +961,7 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
                 List<JSONObject> recordList = getBaseMapper().getTaskListExport(oaTaskListBO, userIds);
                 List<Map<String, Object>> list = new ArrayList<>();
                 recordList.forEach(r -> {
-                    String ownerUserName = adminService.queryUserByIds(TagUtil.toLongSet(r.getString("ownerUserId"))).getData()
+                    String ownerUserName = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet(r.getString("ownerUserId")))
                             .stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
                     r.put("ownerUserName", ownerUserName);
                     String mainUserName = UserCacheUtil.getUserName(r.getLong("mainUserId"));
@@ -1008,7 +1008,7 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
         for (TaskInfoVO task : tasks) {
             Long mainUserId = task.getMainUserId();
             if (mainUserId != null) {
-                SimpleUser mainUser = adminService.queryUserById(mainUserId).getData();
+                SimpleUser mainUser = UserCacheUtil.getSimpleUser(mainUserId);
                 task.setMainUser(mainUser);
             }
             labelList = new ArrayList<>();
@@ -1027,7 +1027,7 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
             if (StrUtil.isNotBlank(task.getOwnerUserId())) {
                 List<Long> ids = StrUtil.splitTrim(task.getOwnerUserId(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList());
                 if (ids.size() > 0) {
-                    task.setOwnerUserList(adminService.queryUserByIds(ids).getData());
+                    task.setOwnerUserList(UserCacheUtil.getSimpleUsers(ids));
                 }
             }
             WorkTaskRelation workTaskRelation = workTaskRelationService.query().eq("task_id", task.getTaskId()).one();
@@ -1083,7 +1083,7 @@ public class WorkTaskServiceImpl extends BaseServiceImpl<WorkTaskMapper, WorkTas
             Long mainUserId = record.getLong("mainUserId");
             record.put("mainUserName", UserCacheUtil.getUserName(mainUserId));
             String ownerUserId = record.getString("ownerUserId");
-            record.put("ownerUserName", adminService.queryUserByIds(TagUtil.toLongSet(ownerUserId)).getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(",")));
+            record.put("ownerUserName", UserCacheUtil.getSimpleUsers(TagUtil.toLongSet(ownerUserId)).stream().map(SimpleUser::getRealname).collect(Collectors.joining(",")));
             //拼接关联业务内容
             String relateCrmWork = "";
             if (StrUtil.isNotEmpty(record.getString("customerIds"))) {

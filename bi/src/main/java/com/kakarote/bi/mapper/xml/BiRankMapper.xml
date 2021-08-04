@@ -217,7 +217,7 @@
         FROM wk_crm_contract as cct
         LEFT JOIN wk_admin_user as cau on cau.user_id = cct.owner_user_id
         left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
-        WHERE check_status = 1
+        WHERE check_status in (1,10)
         and  cct.owner_user_id in
         <for collection="userIds" item="item">
             #{item}
@@ -232,7 +232,7 @@
         wk_crm_receivables as cct
         LEFT JOIN wk_admin_user as cau on cau.user_id = cct.owner_user_id
         left join wk_admin_dept as cad on cad.dept_id = cau.dept_id
-        WHERE check_status = 1
+        WHERE check_status in (1,10)
         and  cct.owner_user_id in
         <for collection="userIds" item="item">
             #{item}
@@ -322,7 +322,7 @@
         AND activity_type = 1
         AND type = 1
         left join wk_crm_customer c on b.activity_type_id = c.customer_id
-        WHERE c.status != 3 
+        WHERE c.status != 3
         AND DATE_FORMAT(b.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
         union
         SELECT a.customer_id,b.create_user_id
@@ -331,7 +331,7 @@
         AND activity_type = 3
         AND type = 1
         left join wk_crm_customer c on b.activity_type_id = c.customer_id
-        WHERE c.status != 3 
+        WHERE c.status != 3
         AND DATE_FORMAT(b.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
         union
         SELECT a.customer_id,b.create_user_id
@@ -340,7 +340,7 @@
         AND activity_type = 5
         AND type = 1
         left join wk_crm_customer c on b.activity_type_id = c.customer_id
-        WHERE c.status != 3 
+        WHERE c.status != 3
         AND DATE_FORMAT(b.create_time, '${sqlDateFormat}') between #{beginTime} and #{finalTime}
         ) as v
         left JOIN wk_admin_user cau on cau.user_id = v.create_user_id
@@ -391,7 +391,7 @@
         SELECT IFNULL(SUM(cct.money), 0) as money,(TRUNCATE ( IFNULL((IFNULL(SUM(cct.money), 0)/SUM(achievement)),0)*100 ,2)) as rate,
         cau.realname,cau.user_id,cau.img,cct.owner_user_id,cad.name as structureName
         FROM
-        (select sum(money) as money, owner_user_id from wk_crm_contract where check_status = 1
+        (select sum(money) as money, owner_user_id from wk_crm_contract where check_status in ('1','10')
         and  owner_user_id in
         <for collection="data.userIds" item="item">
             #{item}
@@ -417,7 +417,7 @@
         SELECT IFNULL(SUM(cct.money), 0) as money,(TRUNCATE ( IFNULL((IFNULL(SUM(cct.money), 0)/SUM(achievement)),0)*100 ,2)) as rate,
         cau.realname,cau.user_id,cau.img,cad.name as structureName
         FROM
-        (select sum(money) as money, owner_user_id from wk_crm_receivables where check_status = 1
+        (select sum(money) as money, owner_user_id from wk_crm_receivables where check_status in ('1','10')
         and  owner_user_id in
         <for collection="data.userIds" item="item">
             #{item}

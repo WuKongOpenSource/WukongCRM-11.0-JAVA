@@ -1,6 +1,7 @@
 package com.kakarote.crm.entity.PO;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
@@ -38,6 +39,19 @@ public class CrmRoleField implements Serializable {
         this.authLevel = authLevel;
         this.operateType = operateType;
         this.fieldType = fieldType;
+        this.maskType = 0;
+    }
+
+    public CrmRoleField(Integer label,Integer roleId, String fieldName, String name, Integer authLevel, Integer operateType, Integer fieldType, Integer type) {
+        this.label = label;
+        this.roleId = roleId;
+        this.fieldName = fieldName;
+        this.name = name;
+        this.authLevel = authLevel;
+        this.operateType = operateType;
+        this.fieldType = fieldType;
+        this.maskType = 0;
+        this.type =type;
     }
 
     @TableId(value = "id", type = IdType.AUTO)
@@ -48,6 +62,10 @@ public class CrmRoleField implements Serializable {
 
     @ApiModelProperty(value = "crm模块")
     private Integer label;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "字段类型")
+    private Integer type;
 
     @ApiModelProperty(value = "字段id")
     private Integer fieldId;
@@ -64,9 +82,9 @@ public class CrmRoleField implements Serializable {
     @ApiModelProperty(value = "操作权限 1都可以设置 2只有查看权限可设置 3只有编辑权限可设置 4都不能设置")
     private Integer operateType;
 
+    @ApiModelProperty(value = "掩码类型 0 都不隐藏 1 列表隐藏详情不隐藏 2 都隐藏")
+    private Integer maskType;
+
     @ApiModelProperty(value = "  0自定义字段 1原始字段 2原始字段但值在data表 3关联表的字段 4系统字段")
     private Integer fieldType;
-
-
-
 }

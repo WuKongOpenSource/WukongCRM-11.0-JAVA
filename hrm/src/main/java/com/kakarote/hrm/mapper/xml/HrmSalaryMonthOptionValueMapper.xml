@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmSalaryMonthOptionValueMapper">
+
+    <select id="querySalaryOptionValue" resultType="com.kakarote.hrm.entity.DTO.ComputeSalaryDTO">
+        select a.id,a.code,b.parent_code,a.value,b.is_plus,b.is_tax,b.name,b.is_fixed,b.is_compute from wk_hrm_salary_month_option_value a
+        inner join wk_hrm_salary_option b on a.code = b.code
+        where a.s_emp_record_id = #{sEmpRecordId}
+    </select>
+</mapper>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmEmployeeContactsDataMapper">
+
+    <select id="verifyUnique" resultType="java.lang.Integer">
+        select count(1) from wk_hrm_employee_contacts_data a
+        left join wk_hrm_employee_contacts b on a.contacts_id = b.contacts_id
+        left join wk_hrm_employee c on b.employee_id = c.employee_id
+        where  c.is_del = 0 and a.field_id = #{fieldId} and a.field_value = #{value}
+        <if test="contactsId != null">
+            and a.contacts_id != #{contactsId}
+        </if>
+    </select>
+</mapper>

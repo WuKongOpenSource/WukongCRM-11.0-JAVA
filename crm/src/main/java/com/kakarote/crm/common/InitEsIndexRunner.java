@@ -10,8 +10,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.CrmFieldDataBO;
 import com.kakarote.crm.entity.PO.CrmCustomerPoolRelation;
@@ -63,7 +65,7 @@ public class InitEsIndexRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         for (CrmEnum value : CrmEnum.values()) {
-            if (!Arrays.asList(CrmEnum.RECEIVABLES_PLAN, CrmEnum.MARKETING, CrmEnum.CUSTOMER_POOL,CrmEnum.NULL).contains(value) && !restTemplate.indexExists(value.getIndex())) {
+            if (!Arrays.asList(CrmEnum.MARKETING, CrmEnum.CUSTOMER_POOL,CrmEnum.NULL).contains(value) && !restTemplate.indexExists(value.getIndex())) {
                 initData(value);
                 log.info("es {} index init success!", value.getIndex());
             }
@@ -82,9 +84,8 @@ public class InitEsIndexRunner implements ApplicationRunner {
         CrmFieldMapper fieldMapper = (CrmFieldMapper) crmFieldService.getBaseMapper();
         Integer lastId = 0;
         Map<String, Object> dataMap = new HashMap<>();
-        String table = crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable();
-        dataMap.put("table", table);
-        dataMap.put("tableName", crmEnum.getTable());
+        dataMap.put("primaryKey", crmEnum.getPrimaryKey(false));
+        dataMap.put("tableName", crmEnum.getTableName());
         dataMap.put("lastId", lastId);
         dataMap.put("label", crmEnum.getType());
         List<Future<Boolean>> futureList = new LinkedList<>();
@@ -93,7 +94,7 @@ public class InitEsIndexRunner implements ApplicationRunner {
             if (mapList.size() == 0) {
                 break;
             }
-            Object o = mapList.get(mapList.size() - 1).get(table + "Id");
+            Object o = mapList.get(mapList.size() - 1).get(crmEnum.getPrimaryKey());
             lastId = TypeUtils.castToInt(o);
             dataMap.put("lastId", lastId);
             log.warn("最后数据id:{},线程id{}", lastId, Thread.currentThread().getName());
@@ -107,13 +108,14 @@ public class InitEsIndexRunner implements ApplicationRunner {
                 Boolean result = future.get();
                 log.info("数据处理完成：{}", result);
             } catch (InterruptedException | ExecutionException e) {
+                log.error("数据错误错误",e);
                 throw new CrmException(SystemCodeEnum.SYSTEM_SERVER_ERROR);
             }
         }
         restTemplate.refresh(crmEnum.getIndex());
         lastId = 0;
         while (true) {
-            List<CrmFieldDataBO> dataBOS = fieldMapper.initFieldData(lastId, table, crmEnum.getTable());
+            List<CrmFieldDataBO> dataBOS = fieldMapper.initFieldData(lastId, crmEnum.getPrimaryKey(false), crmEnum.getTableName());
             if (dataBOS.size() == 0) {
                 break;
             }
@@ -133,7 +135,6 @@ public class InitEsIndexRunner implements ApplicationRunner {
         }
         restTemplate.refresh(crmEnum.getIndex());
     }
-
     private Map<String, Integer> initField(CrmEnum crmEnum) {
         String index = crmEnum.getIndex();
         GetIndexRequest indexRequest = new GetIndexRequest(index);
@@ -252,31 +253,29 @@ public class InitEsIndexRunner implements ApplicationRunner {
         List<CrmField> crmFieldList = crmFieldService.list(wrapper);
         CrmEnum crmEnum = CrmEnum.parse(type);
         List<CrmModelFiledVO> filedList = crmFieldList.stream().map(field -> BeanUtil.copyProperties(field, CrmModelFiledVO.class)).collect(Collectors.toList());
+        filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
+        filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
+        filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
+        filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
+        if(CrmEnum.RETURN_VISIT != crmEnum) {
+            filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
+            filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
+            filedList.add(new CrmModelFiledVO("ownerDeptId", FieldEnum.STRUCTURE, 1));
+            filedList.add(new CrmModelFiledVO("ownerDeptName", FieldEnum.TEXT, 1));
+        }
         switch (crmEnum) {
             case LEADS: {
                 filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
                 filedList.add(new CrmModelFiledVO("lastContent", FieldEnum.TEXTAREA, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
                 break;
             }
             case CUSTOMER: {
                 filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
                 filedList.add(new CrmModelFiledVO("lastContent", FieldEnum.TEXTAREA, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
                 filedList.add(new CrmModelFiledVO("receiveTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
                 filedList.add(new CrmModelFiledVO("dealTime", FieldEnum.DATETIME, 1));
                 filedList.add(new CrmModelFiledVO("poolTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
                 filedList.add(new CrmModelFiledVO("status", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("dealStatus", FieldEnum.SELECT, 1));
                 filedList.add(new CrmModelFiledVO("detailAddress", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("address", FieldEnum.TEXT, 1));
@@ -287,23 +286,11 @@ public class InitEsIndexRunner implements ApplicationRunner {
             }
             case CONTACTS: {
                 filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
                 filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, 1));
                 break;
             }
             case PRODUCT: {
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("categoryName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("unit", FieldEnum.SELECT, 1));
                 break;
@@ -312,16 +299,10 @@ public class InitEsIndexRunner implements ApplicationRunner {
                 filedList.add(new CrmModelFiledVO("typeId", FieldEnum.SELECT, 1));
                 filedList.add(new CrmModelFiledVO("statusId", FieldEnum.SELECT, 1));
                 filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
                 filedList.add(new CrmModelFiledVO("nextTime", FieldEnum.DATETIME, 1));
                 filedList.add(new CrmModelFiledVO("receiveTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
                 filedList.add(new CrmModelFiledVO("status", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("typeName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("statusName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, 1));
@@ -329,10 +310,6 @@ public class InitEsIndexRunner implements ApplicationRunner {
             }
             case CONTRACT: {
                 filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
                 filedList.add(new CrmModelFiledVO("companyUserId", FieldEnum.USER, 1));
                 filedList.add(new CrmModelFiledVO("checkStatus", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("contractId", FieldEnum.TEXT, 1));
@@ -342,42 +319,43 @@ public class InitEsIndexRunner implements ApplicationRunner {
                 filedList.add(new CrmModelFiledVO("businessName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("contactsName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("companyUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("contractMoney", FieldEnum.FLOATNUMBER, 1));
-
                 filedList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, 1));
                 break;
             }
             case RECEIVABLES: {
                 filedList.add(new CrmModelFiledVO("lastTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
                 filedList.add(new CrmModelFiledVO("checkStatus", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("planId", FieldEnum.TEXT, 1));
+                filedList.add(new CrmModelFiledVO("receivablesPlanId", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("contractNum", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("planNum", FieldEnum.NUMBER, 1));
                 filedList.add(new CrmModelFiledVO("contractMoney", FieldEnum.FLOATNUMBER, 1));
-
                 filedList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, 1));
+                break;
+            }
+            case RECEIVABLES_PLAN: {
+                filedList.add(new CrmModelFiledVO("realReceivedMoney", FieldEnum.FLOATNUMBER, 1));
+                filedList.add(new CrmModelFiledVO("realReturnDate", FieldEnum.DATETIME, 1));
+                filedList.add(new CrmModelFiledVO("unreceivedMoney", FieldEnum.FLOATNUMBER, 1));
+                filedList.add(new CrmModelFiledVO("receivedStatus", FieldEnum.SELECT, 1));
+                filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
+                filedList.add(new CrmModelFiledVO("contractNum", FieldEnum.TEXT, 1));
+                filedList.add(new CrmModelFiledVO("num", FieldEnum.TEXT, 1));
+                filedList.add(new CrmModelFiledVO("contractMoney", FieldEnum.FLOATNUMBER, 1));
+                filedList.add(new CrmModelFiledVO("receivablesId", FieldEnum.TEXT, 1));
+                filedList.add(new CrmModelFiledVO("remindDate", FieldEnum.DATETIME, 1));
                 break;
             }
             case RETURN_VISIT: {
                 filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("contactsName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("contractNum", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("updateTime", FieldEnum.DATETIME, 1));
-                filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
                 break;
             }
+
             case INVOICE: {
+                filedList.add(new CrmModelFiledVO("contractName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("contractNum", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("contractMoney", FieldEnum.FLOATNUMBER, 1));
                 filedList.add(new CrmModelFiledVO("customerName", FieldEnum.TEXT, 1));
@@ -385,8 +363,6 @@ public class InitEsIndexRunner implements ApplicationRunner {
                 filedList.add(new CrmModelFiledVO("createTime", FieldEnum.DATETIME, 1));
                 filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
                 filedList.add(new CrmModelFiledVO("ownerUserName", FieldEnum.TEXT, 1));
-                filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
-                filedList.add(new CrmModelFiledVO("createUserName", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("checkStatus", FieldEnum.TEXT, 1));
                 filedList.add(new CrmModelFiledVO("invoiceStatus", FieldEnum.NUMBER, 1));
                 filedList.add(new CrmModelFiledVO("invoiceNumber", FieldEnum.TEXT, 1));
@@ -422,7 +398,7 @@ public class InitEsIndexRunner implements ApplicationRunner {
          * @throws Exception if unable to compute a result
          */
         @Override
-        public Boolean call() throws Exception {
+        public Boolean call() {
             log.warn("线程id{}", Thread.currentThread().getName());
             BulkRequest bulkRequest = new BulkRequest();
             for (Map<String, Object> map : mapList) {
@@ -451,13 +427,19 @@ public class InitEsIndexRunner implements ApplicationRunner {
                     case RETURN_VISIT:
                         ApplicationContextHolder.getBean(CrmReturnVisitServiceImpl.class).setOtherField(map);
                         break;
+                    case RECEIVABLES_PLAN:
+                        ApplicationContextHolder.getBean(CrmReceivablesPlanServiceImpl.class).setOtherField(map);
                     case INVOICE:
                         ApplicationContextHolder.getBean(CrmInvoiceServiceImpl.class).setOtherField(map);
                         break;
                     default:
                         break;
                 }
-
+                if(map.containsKey("ownerUserId")){
+                    SimpleUser simpleUser = UserCacheUtil.getSimpleUser(TypeUtils.castToLong(map.get("ownerUserId")));
+                    map.put("ownerDeptId",simpleUser.getDeptId());
+                    map.put("ownerDeptName",simpleUser.getDeptName());
+                }
                 fieldMap.forEach((k, v) -> {
                     if (FieldEnum.DATE.getType().equals(v)) {
                         Object value = map.remove(k);
@@ -478,7 +460,7 @@ public class InitEsIndexRunner implements ApplicationRunner {
                 });
 
                 IndexRequest request = new IndexRequest(crmEnum.getIndex(), "_doc");
-                request.id(map.get((crmEnum == CrmEnum.RETURN_VISIT ? "visit" : crmEnum.getTable()) + "Id").toString());
+                request.id(map.get(crmEnum.getPrimaryKey()).toString());
                 request.source(map);
                 bulkRequest.add(request);
                 if (bulkRequest.requests().size() >= 1000) {

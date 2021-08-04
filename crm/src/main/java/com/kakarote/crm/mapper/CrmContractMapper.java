@@ -11,6 +11,7 @@ import com.kakarote.crm.entity.PO.CrmReceivablesPlan;
 import com.kakarote.crm.entity.VO.CrmInfoNumVO;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,8 @@ public interface CrmContractMapper extends BaseMapper<CrmContract> {
     public CrmInfoNumVO queryNum(Map<String,Object> map);
 
     List<CrmReceivablesPlan> queryReceivablesPlansByContractId(Integer contractId);
+
+    public BigDecimal queryReceivablesMoney(@Param("contractId") Integer contractId);
 
     CrmReceivablesPlan queryReceivablesPlansByReceivablesId(Integer receivablesId);
 

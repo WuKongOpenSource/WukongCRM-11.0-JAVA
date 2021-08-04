@@ -75,13 +75,6 @@
             <artifactId>knife4j-spring-boot-starter</artifactId>
             <version>${knife4j.version}</version>
         </dependency>
-        <!--在线更新-->
-        <dependency>
-            <groupId>com.kakarote</groupId>
-            <artifactId>wk_update</artifactId>
-            <version>2.2-SNAPSHOT</version>
-            <classifier>jar-with-dependencies</classifier>
-        </dependency>
     </dependencies>
 
     <build>

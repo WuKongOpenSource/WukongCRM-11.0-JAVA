@@ -55,14 +55,14 @@
                             from wk_crm_contract
                             where owner_user_id = #{userId}
                             and DATE_FORMAT(order_date, '%Y%m') = CONCAT('${year}', '${x.value}')
-                            and check_status = 1) as b
+                            and check_status in ('1','10')) as b
                         </when>
                         <when test="status == 2">
                             (select IFNULL(SUM(money), 0) as receivables
                             from wk_crm_receivables
                             where owner_user_id = #{userId}
                             and DATE_FORMAT(return_time, '%Y%m') = CONCAT('${year}', '${x.value}')
-                            and check_status = 1)       as b
+                            and check_status in ('1','10'))       as b
                         </when>
                     </choose>
                 </when>
@@ -75,7 +75,7 @@
                             where a.owner_user_id = b.user_id
                             and b.dept_id = #{deptId}
                             and DATE_FORMAT(order_date, '%Y%m') = CONCAT('${year}', '${x.value}')
-                            and check_status = 1) as b
+                            and check_status in ('1','10')) as b
                         </when>
                         <when test="status == 2">
                             (select IFNULL(SUM(a.money), 0)  as receivables
@@ -84,7 +84,7 @@
                             where a.owner_user_id = b.user_id
                             and b.dept_id = #{deptId}
                             and DATE_FORMAT(return_time, '%Y%m') = CONCAT('${year}', '${x.value}')
-                            and check_status = 1) as b
+                            and check_status in ('1','10')) as b
                         </when>
                     </choose>
                 </when>

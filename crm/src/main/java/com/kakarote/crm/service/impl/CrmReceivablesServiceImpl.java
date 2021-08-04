@@ -7,9 +7,8 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.kakarote.core.common.FieldEnum;
@@ -29,11 +28,13 @@ import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.AuthUtil;
 import com.kakarote.crm.common.CrmModel;
+import com.kakarote.crm.common.ElasticUtil;
 import com.kakarote.crm.constant.*;
 import com.kakarote.crm.entity.BO.*;
 import com.kakarote.crm.entity.PO.*;
@@ -43,7 +44,6 @@ import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmReceivablesMapper;
 import com.kakarote.crm.service.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -58,7 +58,6 @@ import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.Serializable;
@@ -152,7 +151,7 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
         filedList.add(new CrmModelFiledVO("ownerUserId", FieldEnum.USER, 1));
         filedList.add(new CrmModelFiledVO("createUserId", FieldEnum.USER, 1));
         filedList.add(new CrmModelFiledVO("checkStatus", FieldEnum.TEXT, 1));
-        filedList.add(new CrmModelFiledVO("planId", FieldEnum.TEXT, 1));
+        filedList.add(new CrmModelFiledVO("receivablesPlanId", FieldEnum.TEXT, 1));
         filedList.add(new CrmModelFiledVO("teamMemberIds", FieldEnum.USER, 0));
         return filedList;
     }
@@ -214,11 +213,12 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
      */
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
+        CrmSearchBO search1 = ObjectUtil.cloneByStream(search);
         BasePage<Map<String, Object>> basePage = queryList(search,false);
         SearchRequest searchRequest = new SearchRequest(getIndex());
         searchRequest.types(getDocType());
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-        BoolQueryBuilder queryBuilder = createQueryBuilder(search);
+        BoolQueryBuilder queryBuilder = createQueryBuilder(search1);
         queryBuilder.must(QueryBuilders.termQuery("checkStatus", 1));
         sourceBuilder.query(queryBuilder);
         sourceBuilder.aggregation(AggregationBuilders.sum("receivablesMoney").field("money"));
@@ -283,7 +283,7 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
     public void addOrUpdate(CrmContractSaveBO crmModel) {
         CrmReceivables crmReceivables = BeanUtil.copyProperties(crmModel.getEntity(), CrmReceivables.class);
         CrmContract crmContract = crmContractService.getById(crmReceivables.getContractId());
-        if (crmContract == null || !crmContract.getCheckStatus().equals(1)) {
+        if (crmContract == null || !Arrays.asList(1,10).contains(crmContract.getCheckStatus())) {
             throw new CrmException(CrmCodeEnum.CRM_RECEIVABLES_ADD_ERROR);
         }
         crmReceivables.setCreateUserId(UserUtil.getUserId());
@@ -309,63 +309,59 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
             crmReceivables.setOwnerUserId(UserUtil.getUserId());
             save(crmReceivables);
             if (crmReceivables.getCheckStatus() == null || crmReceivables.getCheckStatus() != 5) {
-                if (examineRecordSaveBO != null) {
-                    this.supplementFieldInfo(2, crmReceivables.getReceivablesId(), null, examineRecordSaveBO);
-                    examineRecordSaveBO.setTitle(crmReceivables.getNumber());
-                    examineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
-                    crmReceivables.setExamineRecordId(examineData.getRecordId());
-                    crmReceivables.setCheckStatus(examineData.getExamineStatus());
-
-                } else {
-                    crmReceivables.setCheckStatus(1);
-                }
+                this.supplementFieldInfo(2, crmReceivables.getReceivablesId(), null, examineRecordSaveBO);
+                examineRecordSaveBO.setTitle(crmReceivables.getNumber());
+                examineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
+                crmReceivables.setExamineRecordId(examineData.getRecordId());
+                crmReceivables.setCheckStatus(examineData.getExamineStatus());
             }
             updateById(crmReceivables);
-            if (crmReceivables.getCheckStatus() == 1) {
-                examineRecordService.updateContractMoney(crmReceivables.getReceivablesId());
-            }
-            CrmReceivablesPlan crmReceivablesPlan = crmReceivablesPlanService.getById(crmReceivables.getPlanId());
+            CrmReceivablesPlan crmReceivablesPlan = crmReceivablesPlanService.getById(crmReceivables.getReceivablesPlanId());
             if (crmReceivablesPlan != null) {
                 crmReceivablesPlan.setReceivablesId(crmReceivables.getReceivablesId());
                 crmReceivablesPlan.setUpdateTime(DateUtil.date());
+                ElasticUtil.updateField(getRestTemplate(),"receivablesId",crmReceivables.getReceivablesId(),Collections.singletonList(crmReceivablesPlan.getReceivablesPlanId()),CrmEnum.RECEIVABLES_PLAN.getIndex());
                 crmReceivablesPlanService.updateById(crmReceivablesPlan);
             }
             crmActivityService.addActivity(2, CrmActivityEnum.RECEIVABLES, crmReceivables.getReceivablesId());
             actionRecordUtil.addRecord(crmReceivables.getReceivablesId(), CrmEnum.RECEIVABLES, crmReceivables.getNumber());
+            crmReceivables = getById(crmReceivables.getReceivablesId());
+            if (crmReceivables.getCheckStatus() == 1 || crmReceivables.getCheckStatus() == 10){
+                examineRecordService.updateContractMoney(crmReceivables.getReceivablesId());
+                crmReceivablesPlanService.updateReceivedStatus(CrmEnum.RECEIVABLES,crmReceivables,crmReceivables.getCheckStatus());
+            }
         } else {
             CrmReceivables receivables = getById(crmReceivables.getReceivablesId());
             if (receivables.getCheckStatus() == 1){
                 throw new CrmException(CrmCodeEnum.CRM_RECEIVABLES_EXAMINE_PASS_ERROR);
             }
-            if (receivables.getCheckStatus() != 4 && receivables.getCheckStatus() != 2 && receivables.getCheckStatus() != 5) {
+            if (!Arrays.asList(2,4,5,10).contains(receivables.getCheckStatus())) {
                 throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EDIT_ERROR);
             }
             if (crmReceivables.getCheckStatus() == null || crmReceivables.getCheckStatus() != 5) {
-                if (examineRecordSaveBO != null) {
-                    this.supplementFieldInfo(2, receivables.getReceivablesId(), receivables.getExamineRecordId(), examineRecordSaveBO);
-                    examineRecordSaveBO.setTitle(crmReceivables.getNumber());
-                    examineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
-                    crmReceivables.setExamineRecordId(examineData.getRecordId());
-                    crmReceivables.setCheckStatus(examineData.getExamineStatus());
-                } else {
-                    crmReceivables.setCheckStatus(1);
-                    if (receivables.getCheckStatus() != 1) {
-                        examineRecordService.updateContractMoney(crmReceivables.getReceivablesId());
-                    }
-                }
+                this.supplementFieldInfo(2, receivables.getReceivablesId(), receivables.getExamineRecordId(), examineRecordSaveBO);
+                examineRecordSaveBO.setTitle(crmReceivables.getNumber());
+                examineData = examineService.addExamineRecord(examineRecordSaveBO).getData();
+                crmReceivables.setExamineRecordId(examineData.getRecordId());
+                crmReceivables.setCheckStatus(examineData.getExamineStatus());
             }
             crmReceivables.setUpdateTime(DateUtil.date());
             crmReceivablesPlanService.update().eq("receivables_id", receivables.getReceivablesId()).set("receivables_id", null).update();
-            CrmReceivablesPlan crmReceivablesPlan = crmReceivablesPlanService.getById(crmReceivables.getPlanId());
+            CrmReceivablesPlan crmReceivablesPlan = crmReceivablesPlanService.getById(crmReceivables.getReceivablesPlanId());
             if (crmReceivablesPlan != null) {
                 crmReceivablesPlan.setReceivablesId(crmReceivables.getReceivablesId());
                 crmReceivablesPlan.setUpdateTime(DateUtil.date());
+                ElasticUtil.updateField(getRestTemplate(),"receivablesId",crmReceivables.getReceivablesId(),Collections.singletonList(crmReceivablesPlan.getReceivablesPlanId()),CrmEnum.RECEIVABLES_PLAN.getIndex());
                 crmReceivablesPlanService.updateById(crmReceivablesPlan);
             }
             ApplicationContextHolder.getBean(ICrmBackLogDealService.class).deleteByTypes(null, CrmEnum.RECEIVABLES, crmReceivables.getReceivablesId(), CrmBackLogEnum.CHECK_RECEIVABLES);
             actionRecordUtil.updateRecord(BeanUtil.beanToMap(receivables), BeanUtil.beanToMap(crmReceivables), CrmEnum.CONTRACT, crmContract.getName(), crmContract.getContractId());
             updateById(crmReceivables);
             crmReceivables = getById(crmReceivables.getReceivablesId());
+            if (crmReceivables.getCheckStatus() == 10) {
+                examineRecordService.updateContractMoney(crmReceivables.getReceivablesId());
+                crmReceivablesPlanService.updateReceivedStatus(CrmEnum.RECEIVABLES,crmReceivables,crmReceivables.getCheckStatus());
+            }
         }
         crmModel.setEntity(BeanUtil.beanToMap(crmReceivables));
         savePage(crmModel, crmReceivables.getReceivablesId(),false);
@@ -384,16 +380,17 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
         map.put("ownerUserName", ownerUserName);
         String createUserName = UserCacheUtil.getUserName((Long) map.get("createUserId"));
         map.put("createUserName", createUserName);
-        Integer planId = (Integer) map.get("planId");
-        if (planId != null) {
-            map.put("planNum", crmReceivablesPlanService.query().select("num").eq("plan_id", planId).one().getNum());
+        Integer receivablesPlanId = (Integer) map.get("receivablesPlanId");
+        if (receivablesPlanId != null) {
+            CrmReceivablesPlan receivablesPlan = crmReceivablesPlanService.lambdaQuery().select(CrmReceivablesPlan::getNum).eq(CrmReceivablesPlan::getReceivablesPlanId, receivablesPlanId).one();
+            map.put("planNum", receivablesPlan.getNum());
         }
     }
 
     @Override
     public Dict getSearchTransferMap() {
         return Dict.create()
-                .set("customerId", "customerName").set("contractId", "contractNum").set("planId","planNum");
+                .set("customerId", "customerName").set("contractId", "contractNum").set("receivablesPlanId","planNum");
     }
 
     /**
@@ -414,15 +411,10 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
             if (bol) {
                 throw new CrmException(CrmCodeEnum.CAN_ONLY_DELETE_WITHDRAWN_AND_SUBMITTED_EXAMINE);
             }
-            if (receivables.getCheckStatus() == 1) {
-                examineRecordService.updateUnreceivedMoney(id);
-                //还原合同金额
-            }
             //删除跟进记录
             crmActivityService.deleteActivityRecord(CrmActivityEnum.RECEIVABLES, Collections.singletonList(id));
             //删除字段操作记录
             crmActionRecordService.deleteActionRecord(CrmEnum.RECEIVABLES, Collections.singletonList(receivables.getReceivablesId()));
-
             //删除自定义字段
             crmReceivablesDataService.deleteByBatchId(Collections.singletonList(receivables.getBatchId()));
             //删除文件
@@ -432,6 +424,8 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
             }
             receivables.setCheckStatus(7);
             updateById(receivables);
+            //还原合同金额
+            examineRecordService.updateContractMoney(id);
         }
         deletePage(ids);
     }
@@ -476,28 +470,19 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
         List<Map<String, Object>> dataList = queryList(search,true).getList();
-        try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
-            headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
-            headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
-            writer.merge(headList.size() - 1, "回款信息");
-            if (dataList.size() == 0) {
-                Map<String, Object> record = new HashMap<>();
-                headList.forEach(head -> record.put(head.getFieldName(), ""));
-                dataList.add(record);
-            }
-            dataList.forEach(record -> {
-                headList.forEach(field ->{
-                    if (fieldService.equalsByType(field.getType())) {
-                        record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
-                    }
-                });
-                if (record.get("checkStatus") == null || "".equals(record.get("checkStatus"))) {
+        List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+        ExcelParseUtil.exportExcel(dataList, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+                for (String fieldName : headMap.keySet()) {
+                    record.put(fieldName,ActionRecordUtil.parseValue(record.get(fieldName),headMap.get(fieldName),false));
+                }
+                if (ObjectUtil.isEmpty(record.get("checkStatus"))) {
                     return;
                 }
                 String checkStatus;
                 //0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交
-                switch ((Integer) record.get("checkStatus")) {
+                switch (TypeUtils.castToInt(record.get("checkStatus"))) {
                     case 1:
                         checkStatus = "通过";
                         break;
@@ -520,34 +505,12 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
                         checkStatus = "待审核";
                 }
                 record.put("checkStatus", checkStatus);
-            });
-            writer.setOnlyAlias(true);
-            writer.write(dataList, true);
-            writer.setRowHeight(0, 20);
-            writer.setRowHeight(1, 20);
-            for (int i = 0; i < headList.size(); i++) {
-                writer.setColumnWidth(i, 20);
             }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=receivables.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出回款错误：", e);
-        }
+            @Override
+            public String getExcelName() {
+                return "回款";
+            }
+        },headList,response);
     }
 
     /**
@@ -625,7 +588,7 @@ public class CrmReceivablesServiceImpl extends BaseServiceImpl<CrmReceivablesMap
         if (receivables.getCheckStatus() == 1){
             throw new CrmException(CrmCodeEnum.CRM_RECEIVABLES_EXAMINE_PASS_ERROR);
         }
-        if (receivables.getCheckStatus() != 4 && receivables.getCheckStatus() != 2 && receivables.getCheckStatus() != 5) {
+        if (!Arrays.asList(2,4,5,10).contains(receivables.getCheckStatus())) {
             throw new CrmException(CrmCodeEnum.CRM_CONTRACT_EDIT_ERROR);
         }
         updateInformationBO.getList().forEach(record -> {

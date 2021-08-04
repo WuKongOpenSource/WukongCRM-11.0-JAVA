@@ -105,10 +105,10 @@ public class CrmProductCategoryServiceImpl extends BaseServiceImpl<CrmProductCat
      * @return data
      */
     @Override
-    public List<String> queryListName() {
+    public List<Object> queryListName() {
         QueryWrapper<CrmProductCategory> wrapper = new QueryWrapper<>();
         wrapper.select("name");
-        return listObjs(wrapper, Object::toString);
+        return listObjs(wrapper);
     }
 
     @Override

@@ -24,6 +24,7 @@ import com.kakarote.core.feign.crm.service.CrmEventService;
 import com.kakarote.core.feign.crm.service.CrmService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.TagUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.oa.common.OaCodeEnum;
 import com.kakarote.oa.common.repetitionstrategy.RepetitionFactory;
@@ -387,7 +388,7 @@ public class OaEventServiceImpl extends BaseServiceImpl<OaEventMapper, OaEvent> 
         queryEventByIdVO.setColor(calendarType.getColor());
         UserInfo createUserInfo = adminService.getUserInfo(oaEvent.getCreateUserId()).getData();
         queryEventByIdVO.setCreateUserName(createUserInfo.getRealname());
-        List<SimpleUser> ownerUserList = adminService.queryUserByIds(TagUtil.toLongSet(oaEvent.getOwnerUserIds())).getData();
+        List<SimpleUser> ownerUserList = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet(oaEvent.getOwnerUserIds()));
         queryEventByIdVO.setOwnerUserList(ownerUserList);
         List<OaEventNotice> noticeList = eventNoticeService.lambdaQuery().eq(OaEventNotice::getEventId, eventId).list();
         queryEventByIdVO.setNoticeList(noticeList);

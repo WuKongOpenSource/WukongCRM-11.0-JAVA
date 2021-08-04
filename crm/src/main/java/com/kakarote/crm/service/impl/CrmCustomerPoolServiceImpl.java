@@ -21,6 +21,7 @@ import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.field.FieldService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.constant.CrmActivityEnum;
 import com.kakarote.crm.constant.CrmCodeEnum;
@@ -114,8 +115,8 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
             customerPoolVO.setCustomerNum(count);
             customerPoolVO.setPoolName(pool.getPoolName());
             customerPoolVO.setStatus(pool.getStatus());
-            customerPoolVO.setAdminUser(adminService.queryUserByIds(StrUtil.splitTrim(pool.getAdminUserId(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList())).getData());
-            customerPoolVO.setMemberUser(adminService.queryUserByIds(StrUtil.splitTrim(pool.getMemberUserId(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList())).getData());
+            customerPoolVO.setAdminUser(UserCacheUtil.getSimpleUsers(StrUtil.splitTrim(pool.getAdminUserId(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList())));
+            customerPoolVO.setMemberUser(UserCacheUtil.getSimpleUsers(StrUtil.splitTrim(pool.getMemberUserId(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList())));
             customerPoolVO.setMemberDept(adminService.queryDeptByIds(StrUtil.splitTrim(pool.getMemberDeptId(), Const.SEPARATOR).stream().map(Integer::valueOf).collect(Collectors.toList())).getData());
             voBasePage.getList().add(customerPoolVO);
         });
@@ -269,8 +270,8 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
         customerPoolVO.setCustomerNum(count);
         customerPoolVO.setPoolName(pool.getPoolName());
         customerPoolVO.setStatus(pool.getStatus());
-        customerPoolVO.setAdminUser(adminService.queryUserByIds(StrUtil.splitTrim(pool.getAdminUserId(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList())).getData());
-        customerPoolVO.setMemberUser(adminService.queryUserByIds(StrUtil.splitTrim(pool.getMemberUserId(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList())).getData());
+        customerPoolVO.setAdminUser(UserCacheUtil.getSimpleUsers(StrUtil.splitTrim(pool.getAdminUserId(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList())));
+        customerPoolVO.setMemberUser(UserCacheUtil.getSimpleUsers(StrUtil.splitTrim(pool.getMemberUserId(), Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList())));
         customerPoolVO.setMemberDept(adminService.queryDeptByIds(StrUtil.splitTrim(pool.getMemberDeptId(), Const.SEPARATOR).stream().map(Integer::valueOf).collect(Collectors.toList())).getData());
         List<CrmCustomerPoolRule> ruleList = customerPoolRuleService.lambdaQuery().eq(CrmCustomerPoolRule::getPoolId, poolId).list();
         //客户级别设置转为前端需要的数据结构
@@ -317,6 +318,7 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
         fieldList.add(new CrmModelFiledVO().setFieldName("address").setName("地区定位").setType(18));
         fieldList.add(new CrmModelFiledVO().setFieldName("preOwnerUserId").setName("前负责人").setType(10));
         fieldList.add(new CrmModelFiledVO().setFieldName("poolTime").setName("进入公海时间").setType(13));
+        fieldList.add(new CrmModelFiledVO().setFieldName("ownerDeptName").setName("所属部门").setType(1));
         fieldList.forEach(record -> {
             record.setFieldName(StrUtil.toCamelCase(record.getFieldName()));
             crmFieldService.recordToFormType(record, FieldEnum.parse(record.getType()));
@@ -548,9 +550,9 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
      * @param search
      */
     @Override
-    public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
+    public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search, boolean isExcel) {
         search.setLabel(CrmEnum.CUSTOMER_POOL.getType());
-        BasePage<Map<String, Object>> basePage = queryList(search,false);
+        BasePage<Map<String, Object>> basePage = queryList(search,isExcel);
         basePage.getList().forEach(map -> {
             map.put("poolId", search.getPoolId());
         });
@@ -581,6 +583,16 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
             pool.setAdminUserId(null);
         });
         return list;
+    }
+
+    @Override
+    public Boolean queryAuthListByPoolId(Integer poolId) {
+        if (UserUtil.isAdmin()){
+            return true;
+        }
+        CrmCustomerPool pool = getById(poolId);
+        boolean isAdmin = StrUtil.splitTrim(pool.getAdminUserId(), Const.SEPARATOR).contains(UserUtil.getUserId().toString());
+        return isAdmin;
     }
 
 
@@ -657,7 +669,10 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
         List<Long> adminUserIdList = Arrays.stream(adminUserIds.split(",")).map(Long::parseLong).collect(Collectors.toList());
         JSONObject record = new JSONObject().fluentPut("index", true).fluentPut("receive", true).fluentPut("delete", false).fluentPut("distribute", false).fluentPut("excelexport", false);
         if (adminUserIdList.contains(UserUtil.getUserId()) || UserUtil.isAdmin()) {
-            record.fluentPut("delete", true).fluentPut("distribute", true).fluentPut("excelexport", true);
+            record.fluentPut("delete", true).fluentPut("distribute", true);
+        }
+        if (queryAuthListByPoolId(poolId)){
+            record.fluentPut("excelexport", true);
         }
         return record;
     }
@@ -722,7 +737,7 @@ public class CrmCustomerPoolServiceImpl extends BaseServiceImpl<CrmCustomerPoolM
 
     @Override
     public Dict getSearchTransferMap() {
-        return Dict.create().set("createUserId", "createUserName").set("preOwnerUserId","preOwnerUserName");
+        return Dict.create().set("createUserName", "createUserId").set("preOwnerUserName","preOwnerUserId");
     }
 
     /**

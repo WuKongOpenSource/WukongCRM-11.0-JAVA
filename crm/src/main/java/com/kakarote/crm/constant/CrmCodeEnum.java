@@ -96,7 +96,9 @@ public enum CrmCodeEnum implements ResultCode {
     CRM_ACTIVITY_FORM_NONENTITY_ERROR(2086, "活动表单已不存在！"),
     THE_FIELD_NAME_OF_THE_FORM_CANNOT_BE_REPEATED(2087,"自定义表单字段名称不能重复"),
     THE_FIELD_NUM_RESTRICT_ERROR(2088,"自定义表单限制的数值格式错误"),
-    THE_FIELD_DETAIL_TABLE_FORMAT_ERROR(2089,"清设置表格内的具体字段！")
+    THE_FIELD_DETAIL_TABLE_FORMAT_ERROR(2089,"清设置表格内的具体字段！"),
+    CRM_RECEIVABLES_PLAN_ADD_ERROR(2090,"只有审核通过或审核中的合同才可以添加回款计划！"),
+    CRM_CUSTOMER_POOL_NOT_IS_ADMIN(2091, "没有该公海权限，不能进行操作"),
     ;
 
 

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -16,4 +17,12 @@ public class EsUpdatePropertiesBO {
     private String nameField;
 
     private List<String> indexs;
+
+	private Map<String, String> conditions;
+
+	public EsUpdatePropertiesBO(String idField, String nameField, List<String> indexs) {
+		this.idField = idField;
+		this.nameField = nameField;
+		this.indexs = indexs;
+	}
 }

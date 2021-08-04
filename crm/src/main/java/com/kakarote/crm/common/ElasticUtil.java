@@ -1,14 +1,19 @@
 package com.kakarote.crm.common;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Lists;
 import com.kakarote.core.common.FieldEnum;
+import com.kakarote.core.common.JxcEnum;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.crm.entity.BiParams;
+import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.BiTimeUtil;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.CrmSearchBO;
@@ -28,6 +33,7 @@ import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 
 import java.io.IOException;
@@ -54,9 +60,8 @@ public class ElasticUtil {
         }
     }
 
-    public static void removeField(RestHighLevelClient client,String fieldName, Integer label) {
+    public static void removeField(RestHighLevelClient client, String fieldName, Integer label) {
         UpdateByQueryRequest request = new UpdateByQueryRequest(CrmEnum.parse(label).getIndex());
-        request.setQuery(QueryBuilders.matchAllQuery());
         request.setScript(new Script(ScriptType.INLINE, "painless", "ctx._source." + StrUtil.toCamelCase(fieldName) + " = null", new HashMap<>()));
         request.setBatchSize(1000);
         request.setRefresh(true);
@@ -132,7 +137,16 @@ public class ElasticUtil {
 
     public static void updateField(RestHighLevelClient client, EsUpdateFieldBO esUpdateFieldBO, List<String> indexs) {
         UpdateByQueryRequest request = new UpdateByQueryRequest(indexs.toArray(new String[0]));
-        request.setQuery(QueryBuilders.termQuery(esUpdateFieldBO.getConditionField(), esUpdateFieldBO.getConditionValue()));
+		BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+		queryBuilder.filter(QueryBuilders.termQuery(esUpdateFieldBO.getConditionField(),
+						esUpdateFieldBO.getConditionValue()));
+		if (MapUtil.isNotEmpty(esUpdateFieldBO.getConditions())) {
+			esUpdateFieldBO.getConditions().forEach((k, v) -> {
+				queryBuilder.filter(QueryBuilders.termQuery(k, v));
+			});
+		}
+		request.setQuery(queryBuilder);
+
         String script = "ctx._source.%s=params.value";
         request.setScript(new Script(ScriptType.INLINE, "painless", String.format(script, esUpdateFieldBO.getUpdateField()), Collections.singletonMap("value", esUpdateFieldBO.getUpdateValue())));
         request.setBatchSize(1000);
@@ -154,14 +168,26 @@ public class ElasticUtil {
         userPropertiesList.add(new EsUpdatePropertiesBO("ownerUserId", "ownerUserName", Lists.newArrayList(CrmEnum.LEADS.getIndex()
                 , CrmEnum.CUSTOMER.getIndex(), CrmEnum.CONTACTS.getIndex(), CrmEnum.CONTRACT.getIndex(), CrmEnum.BUSINESS.getIndex()
                 , CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.PRODUCT.getIndex(), CrmEnum.INVOICE.getIndex())));
+        userPropertiesList.add(new EsUpdatePropertiesBO("ownerDeptId", "ownerDeptName", Lists.newArrayList(CrmEnum.LEADS.getIndex()
+                , CrmEnum.CUSTOMER.getIndex(), CrmEnum.CONTACTS.getIndex(), CrmEnum.CONTRACT.getIndex(), CrmEnum.BUSINESS.getIndex()
+                , CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.PRODUCT.getIndex(), CrmEnum.INVOICE.getIndex())));
         userPropertiesList.add(new EsUpdatePropertiesBO("createUserId", "createUserName", Lists.newArrayList(CrmEnum.LEADS.getIndex()
                 , CrmEnum.CUSTOMER.getIndex(), CrmEnum.CONTACTS.getIndex(), CrmEnum.CONTRACT.getIndex(), CrmEnum.BUSINESS.getIndex()
                 , CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.PRODUCT.getIndex(), CrmEnum.INVOICE.getIndex())));
         userPropertiesList.add(new EsUpdatePropertiesBO("companyUserId", "companyUserName", Lists.newArrayList(CrmEnum.CONTRACT.getIndex())));
         updateMap.put("user", userPropertiesList);
+        List<EsUpdatePropertiesBO> deptPropertiesList = new ArrayList<>(2);
+        deptPropertiesList.add(new EsUpdatePropertiesBO("ownerDeptId", "ownerDeptName", Lists.newArrayList(CrmEnum.LEADS.getIndex()
+                , CrmEnum.CUSTOMER.getIndex(), CrmEnum.CONTACTS.getIndex(), CrmEnum.CONTRACT.getIndex(), CrmEnum.BUSINESS.getIndex()
+                , CrmEnum.RECEIVABLES.getIndex(), CrmEnum.PRODUCT.getIndex(), CrmEnum.INVOICE.getIndex())));
+        updateMap.put("dept", deptPropertiesList);
         List<EsUpdatePropertiesBO> customerPropertiesList = new ArrayList<>();
-        customerPropertiesList.add(new EsUpdatePropertiesBO("customerId", "customerName", Lists.newArrayList(CrmEnum.CONTACTS.getIndex(),
-                CrmEnum.BUSINESS.getIndex(), CrmEnum.CONTRACT.getIndex(), CrmEnum.RECEIVABLES.getIndex(), CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.INVOICE.getIndex())));
+
+        List<String> customerIndexList = Lists.newArrayList(CrmEnum.CONTACTS.getIndex(),
+                CrmEnum.BUSINESS.getIndex(), CrmEnum.CONTRACT.getIndex(), CrmEnum.RECEIVABLES.getIndex(),
+                CrmEnum.RETURN_VISIT.getIndex(), CrmEnum.INVOICE.getIndex());
+
+        customerPropertiesList.add(new EsUpdatePropertiesBO("customerId", "customerName", customerIndexList));
         updateMap.put("customer", customerPropertiesList);
         List<EsUpdatePropertiesBO> contactsPropertiesList = new ArrayList<>();
         contactsPropertiesList.add(new EsUpdatePropertiesBO("contactsId", "contactsName", Lists.newArrayList(CrmEnum.CONTRACT.getIndex(),
@@ -187,10 +213,36 @@ public class ElasticUtil {
      * @param name
      */
     public static void batchUpdateEsData(RestHighLevelClient client, String type, String id, String name) {
-        List<EsUpdatePropertiesBO> propertiesList = updateMap.get(type);
-        for (EsUpdatePropertiesBO properties : propertiesList) {
-            updateField(client, new EsUpdateFieldBO(properties.getIdField(), id, properties.getNameField(), name), properties.getIndexs());
+        List<EsUpdatePropertiesBO> sourceProperties = updateMap.get(type);
+        List<EsUpdatePropertiesBO> propertiesList = JSON.parseArray(JSON.toJSONString(sourceProperties), EsUpdatePropertiesBO.class);
+        DiscoveryClient discoveryClient = ApplicationContextHolder.getBean(DiscoveryClient.class);
+
+        if (CollUtil.isNotEmpty(discoveryClient.getInstances("jxc"))) {
+            EsUpdatePropertiesBO customerProperty = propertiesList.stream().filter(p -> ObjectUtil.equal("customerId", p.getIdField())).findFirst().orElse(null);
+            if (ObjectUtil.isNotNull(customerProperty)) {
+                customerProperty.getIndexs().add(JxcEnum.SALE.getIndex());
+                customerProperty.getIndexs().add(JxcEnum.SALE_RETURN.getIndex());
+            }
+            // 销售回款
+            Map<String, String> collectionSupplierMap = new HashMap<>();
+            collectionSupplierMap.put("collectionType", "1");
+            propertiesList.add(new EsUpdatePropertiesBO("collectionObjectId", "collectionObject",
+                    Lists.newArrayList(JxcEnum.COLLECTION.getIndex()), collectionSupplierMap));
+            // 销售退货
+            Map<String, String> paymentSupplierMap = new HashMap<>();
+            paymentSupplierMap.put("paymentType", "11");
+            propertiesList.add(new EsUpdatePropertiesBO("collectionObjectId", "collectionObject",
+                    Lists.newArrayList(JxcEnum.PAYMENT.getIndex()), paymentSupplierMap));
         }
+		for (EsUpdatePropertiesBO properties : propertiesList) {
+			if (MapUtil.isEmpty(properties.getConditions())) {
+				updateField(client, new EsUpdateFieldBO(properties.getIdField(), id, properties.getNameField(), name), properties.getIndexs());
+			} else {
+				updateField(client, new EsUpdateFieldBO(properties.getIdField(), id, properties.getNameField(), name,
+								properties.getConditions()),
+						properties.getIndexs());
+			}
+		}
     }
 
     public static void updateField(ElasticsearchRestTemplate template, String fieldName, Object value, List<Integer> ids, String index) {

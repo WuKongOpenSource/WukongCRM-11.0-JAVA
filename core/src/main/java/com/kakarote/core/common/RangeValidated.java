@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = RangeValidator.class)
 public @interface RangeValidated {
-    String message() default "小范围要小于大范围";
+    String message() default "开始时间要小于结束时间";
     String[] minFieldName() default "startTime";
     String[] maxFieldName() default "endTime";
     Class<?>[] groups() default {};

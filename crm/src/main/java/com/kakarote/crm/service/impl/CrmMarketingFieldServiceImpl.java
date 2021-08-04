@@ -14,6 +14,7 @@ import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.TagUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.entity.BO.MarketingFieldBO;
 import com.kakarote.crm.entity.PO.CrmMarketingField;
@@ -78,8 +79,8 @@ public class CrmMarketingFieldServiceImpl extends BaseServiceImpl<CrmMarketingFi
             if (isDetail == 2) {
                 if (FieldEnum.USER.getType().equals(dataType)) {
                     if (ObjectUtil.isNotEmpty(record.getValue())) {
-                        Result<List<SimpleUser>> listResult = adminService.queryUserByIds(TagUtil.toLongSet((String) record.getValue()));
-                        record.setValue(listResult.getData());
+                        List<SimpleUser> listResult = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet((String) record.getValue()));
+                        record.setValue(listResult);
                     }
                 } else if (FieldEnum.STRUCTURE.getType().equals(dataType)) {
                     if (ObjectUtil.isNotEmpty(record.getValue())) {
@@ -95,8 +96,8 @@ public class CrmMarketingFieldServiceImpl extends BaseServiceImpl<CrmMarketingFi
             } else {
                 if (FieldEnum.USER.getType().equals(dataType)) {
                     if (ObjectUtil.isNotEmpty(record.getValue())) {
-                        Result<List<SimpleUser>> listResult = adminService.queryUserByIds(TagUtil.toLongSet((String) record.getValue()));
-                        String value = listResult.getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
+                        List<SimpleUser> listResult = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet((String) record.getValue()));
+                        String value = listResult.stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
                         record.setValue(value);
                     }
                 } else if (FieldEnum.STRUCTURE.getType().equals(dataType)) {

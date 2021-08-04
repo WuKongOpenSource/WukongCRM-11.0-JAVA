@@ -1,7 +1,6 @@
 package com.kakarote.crm.mapper;
 
 import com.alibaba.fastjson.JSONObject;
-import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.feign.crm.entity.CrmEventBO;
 import com.kakarote.core.servlet.BaseMapper;

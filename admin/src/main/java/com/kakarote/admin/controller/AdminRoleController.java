@@ -198,9 +198,7 @@ public class AdminRoleController {
     @PostMapping("/updateAuthRole/{roleId}")
     @ApiOperation("保存角色与能看到角色的关系关系")
     public Result updateAuthRole(@PathVariable("roleId") Integer roleId,@RequestBody List<Integer> authRoleIds) {
-        if(authRoleIds.size() > 0) {
-            adminRoleAuthService.saveRoleAuth(roleId,authRoleIds);
-        }
+        adminRoleAuthService.saveRoleAuth(roleId,authRoleIds);
         return Result.ok();
     }
 

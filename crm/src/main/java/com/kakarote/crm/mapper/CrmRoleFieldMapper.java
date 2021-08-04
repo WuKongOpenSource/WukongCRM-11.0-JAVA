@@ -2,6 +2,9 @@ package com.kakarote.crm.mapper;
 
 import com.kakarote.core.servlet.BaseMapper;
 import com.kakarote.crm.entity.PO.CrmRoleField;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * <p>
@@ -13,4 +16,12 @@ import com.kakarote.crm.entity.PO.CrmRoleField;
  */
 public interface CrmRoleFieldMapper extends BaseMapper<CrmRoleField> {
 
+    /**
+     * 查询字段授权列表
+     *
+     * @return data
+     */
+    public List<CrmRoleField> queryRoleFieldList(@Param("roleId") Integer roleId, @Param("label") Integer label);
+
+    public List<CrmRoleField> queryMaskFieldList(@Param("maskType") Integer maskType, @Param("label") Integer label);
 }

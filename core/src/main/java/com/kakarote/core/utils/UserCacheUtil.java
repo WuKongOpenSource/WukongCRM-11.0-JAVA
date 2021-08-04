@@ -4,6 +4,7 @@ import com.alicp.jetcache.Cache;
 import com.alicp.jetcache.anno.CreateCache;
 import com.kakarote.core.common.Const;
 import com.kakarote.core.entity.UserInfo;
+import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.redis.Redis;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -28,7 +31,7 @@ public class UserCacheUtil {
     }
 
     @CreateCache(name = Const.ADMIN_USER_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS)
-    private Cache<Long, String> userCache;
+    private Cache<Long, SimpleUser> userCache;
 
     @CreateCache(name = Const.ADMIN_DEPT_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS)
     private Cache<Integer, String> deptCache;
@@ -83,13 +86,43 @@ public class UserCacheUtil {
         if (userId == null) {
             return "";
         }
-        Long key = userId;
-        String name = ME.userCache.get(key);
-        if (name == null) {
-            name = ME.adminService.queryUserName(userId).getData();
-            ME.userCache.put(key, name);
+        return getSimpleUser(userId).getRealname();
+    }
+
+    public static SimpleUser getSimpleUser(Long userId) {
+        if(userId == null){
+            return new SimpleUser();
         }
-        return name;
+        SimpleUser simpleUser = ME.userCache.get(userId);
+        if (simpleUser == null) {
+            simpleUser = ME.adminService.queryUserById(userId).getData();
+            if(simpleUser != null) {
+                ME.userCache.put(userId, simpleUser);
+            } else {
+                simpleUser = new SimpleUser();
+            }
+        }
+        return simpleUser;
+    }
+
+    public static List<SimpleUser> getSimpleUsers(Collection<Long> ids) {
+        if(ids == null || ids.isEmpty()){
+            return Collections.emptyList();
+        }
+        List<SimpleUser> simpleUserList = new ArrayList<>(ids.size());
+        for (Long userId : ids) {
+            SimpleUser simpleUser = ME.userCache.get(userId);
+            if (simpleUser == null) {
+                simpleUser = ME.adminService.queryUserById(userId).getData();
+                if(simpleUser != null) {
+                    ME.userCache.put(userId, simpleUser);
+                } else {
+                    continue;
+                }
+            }
+            simpleUserList.add(simpleUser);
+        }
+        return simpleUserList;
     }
 
     /**
@@ -126,11 +159,10 @@ public class UserCacheUtil {
         if (deptId == null) {
             return "";
         }
-        Integer key = deptId;
-        String name = ME.deptCache.get(key);
+        String name = ME.deptCache.get(deptId);
         if (name == null) {
             name = ME.adminService.queryDeptName(deptId).getData();
-            ME.deptCache.put(key, name);
+            ME.deptCache.put(deptId, name);
         }
         return name;
     }

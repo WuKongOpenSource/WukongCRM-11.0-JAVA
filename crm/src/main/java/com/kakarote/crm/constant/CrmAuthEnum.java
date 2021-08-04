@@ -53,7 +53,8 @@ public enum CrmAuthEnum {
      * 65 新建 66 修改 67 列表 68 详情 211 删除
      * 440 跟进记录
      * 442 新建 443 修改 441 列表 441 详情 444 删除
-     *
+     * 936 跟进记录
+     * 937 新建 938 修改 939 列表 940 详情 941 删除
      * @param crmEnum label
      * @return menuId
      */
@@ -108,6 +109,10 @@ public enum CrmAuthEnum {
             case INVOICE:
                 if (CrmEnum.INVOICE == crmEnum) {
                     start = 420;
+                }
+            case RECEIVABLES_PLAN:
+                if (CrmEnum.RECEIVABLES_PLAN == crmEnum) {
+                    start = 936;
                 }
                 return start + value;
         }

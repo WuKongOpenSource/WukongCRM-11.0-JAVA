@@ -8,9 +8,9 @@ import com.kakarote.core.feign.admin.entity.AdminMessageBO;
 import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
 import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.feign.admin.service.AdminMessageService;
-import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.oa.common.OaCodeEnum;
 import com.kakarote.oa.entity.PO.OaLog;
@@ -43,15 +43,12 @@ public class OaLogUserFavourServiceImpl extends BaseServiceImpl<OaLogUserFavourM
     @Autowired
     private IOaLogService oaLogService;
 
-    @Autowired
-    private AdminService adminService;
-
     @Override
     public List<SimpleUser> queryFavourLogUserList(Integer logId) {
         List<OaLogUserFavour> logUserFavours = lambdaQuery().select(OaLogUserFavour::getUserId).eq(OaLogUserFavour::getLogId, logId).list();
         if (CollUtil.isNotEmpty(logUserFavours)){
             List<Long> userIds = logUserFavours.stream().map(OaLogUserFavour::getUserId).collect(Collectors.toList());
-            return adminService.queryUserByIds(userIds).getData();
+            return UserCacheUtil.getSimpleUsers(userIds);
         }
         return new ArrayList<>();
     }

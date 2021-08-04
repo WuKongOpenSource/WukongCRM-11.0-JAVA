@@ -7,6 +7,8 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
@@ -687,7 +689,7 @@ public class CrmPrintTemplateServiceImpl extends BaseServiceImpl<CrmPrintTemplat
             if (value instanceof Long) {
                 record.put(fieldName, UserCacheUtil.getUserName((Long) value));
             } else if (value instanceof String) {
-                List<SimpleUser> data = adminService.queryUserByIds(StrUtil.splitTrim((CharSequence) value, Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList())).getData();
+                List<SimpleUser> data = UserCacheUtil.getSimpleUsers(StrUtil.splitTrim((CharSequence) value, Const.SEPARATOR).stream().map(Long::valueOf).collect(Collectors.toList()));
                 record.put(fieldName, data.stream().map(SimpleUser::getRealname).collect(Collectors.joining(Const.SEPARATOR)));
             }
         } else if (formType.equals(FieldEnum.STRUCTURE.getType())) {
@@ -705,6 +707,28 @@ public class CrmPrintTemplateServiceImpl extends BaseServiceImpl<CrmPrintTemplat
                 record.put(fieldName, "");
             }
 
+        }else if (formType.equals(FieldEnum.AREA_POSITION.getType())) {
+            if (ObjectUtil.isNotEmpty(value)){
+                JSONArray array = JSON.parseArray((String) value);
+                StringBuilder str = new StringBuilder();
+                for (int i=0;i<array.size();i++) {
+                    JSONObject json = array.getJSONObject(i);
+                    if (str.length() != 0) {
+                        str.append(",");
+                    }
+                    str.append(json.getString("name"));
+                }
+                record.put(fieldName, str.toString());
+            }else {
+                record.put(fieldName, "");
+            }
+        }else if (formType.equals(FieldEnum.CURRENT_POSITION.getType())) {
+            if (ObjectUtil.isNotEmpty(value)){
+               JSONObject json = JSON.parseObject((String) value);
+                record.put(fieldName, json.get("address"));
+            }else {
+                record.put(fieldName, "");
+            }
         }
     }
 

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmRecruitCandidateMapper">
+    <select id="queryPageList" resultType="com.kakarote.hrm.entity.VO.CandidatePageListVO">
+        <include refid="candidateSelectSql"/>
+        <choose>
+            <when test="deptIds != null and deptIds.size >0">
+                and b.dept_id in
+                <foreach collection="deptIds" item="deptId" index="index" open="(" close=")" separator=",">
+                    #{deptId}
+                </foreach>
+            </when>
+            <when test="deptIds != null and deptIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        <if test="data.search != null and data.search != '' ">
+            and ( a.candidate_name like concat('%',#{data.search},'%')
+            or a.mobile like concat('%',#{data.search},'%')
+            or a.email like concat('%',#{data.search},'%')
+            )
+        </if>
+        <if test="data.postId != null and data.postId != '' ">
+            and a.post_id = #{data.postId}
+        </if>
+        <if test="data.ownerEmployeeId != null and data.ownerEmployeeId != '' ">
+            and b.owner_employee_id = #{data.ownerEmployeeId}
+        </if>
+        <if test="data.sex != null and data.sex != '' ">
+            and a.sex = #{data.sex}
+        </if>
+        <if test="data.minAge != null and data.minAge != '' ">
+            and a.age between #{data.minAge} and #{data.maxAge}
+        </if>
+        <if test="data.minWorkTime != null and data.minWorkTime != '' ">
+            and a.work_time between #{data.minWorkTime} and #{data.maxWorkTime}
+        </if>
+        <if test="data.education != null and data.education != '' ">
+            and a.education = #{data.education}
+        </if>
+        <if test="data.graduateSchool != null and data.graduateSchool != '' ">
+            and a.graduate_school like concat('%',#{data.graduateSchool},'%')
+        </if>
+        <if test="data.latestWorkPlace != null and data.latestWorkPlace != '' ">
+            and a.latest_work_place like concat('%',#{data.latestWorkPlace},'%')
+        </if>
+        <if test="data.channelId != null and data.channelId != '' ">
+            and a.channel_id = #{data.channelId}
+        </if>
+        <if test="data.interviewEmployeeId != null and data.interviewEmployeeId != '' ">
+            and c.interview_employee_id = #{data.interviewEmployeeId}
+        </if>
+        <if test="data.interviewTime != null ">
+            and date_format(c.interview_time,'%y-%m-%d') between date_format(#{data.interviewTime[0]},'%y-%m-%d') and date_format(#{data.interviewTime[1]},'%y-%m-%d')
+        </if>
+        <if test="data.status != null and data.status != '' ">
+            and a.status = #{data.status}
+        </if>
+        <if test="data.createTime != null ">
+            and date_format(a.create_time,'%y-%m-%d') between date_format(#{data.createTime[0]},'%y-%m-%d') and date_format(#{data.createTime[1]},'%y-%m-%d')
+        </if>
+        <if test="data.createUserId != null and data.createUserId != '' ">
+            and a.create_user_id = #{data.createUserId}
+        </if>
+        <if test="data.recruitSurvey != null">
+            <choose>
+                <when test="data.recruitSurvey == 3">
+                    and a.status = 6 and a.status_update_time between subdate(now(),interval 6 month ) and now()
+                </when>
+                <when test="data.recruitSurvey == 4">
+                    and a.status = 8 and a.entry_time between subdate(now(),interval 6 month ) and now()
+                </when>
+            </choose>
+        </if>
+        order by a.create_time desc
+    </select>
+    <select id="getById" resultType="com.kakarote.hrm.entity.VO.CandidatePageListVO">
+        <include refid="candidateSelectSql"/>
+        and a.candidate_id = #{candidateId}
+    </select>
+    <select id="queryRecruitListByTime" resultType="java.util.Map">
+        select b.candidate_id,b.candidate_name,a.interview_time from wk_hrm_recruit_interview a
+        left join wk_hrm_recruit_candidate b on a.candidate_id = b.candidate_id
+        left join wk_hrm_recruit_post c on b.post_id = c.post_id
+        where to_days(a.interview_time) = to_days(#{time}) and b.status in (1,2,3,4)
+        <choose>
+            <when test="deptIds != null and deptIds.size >0">
+                and c.dept_id in
+                <foreach collection="deptIds" item="deptId" index="index" open="(" close=")" separator=",">
+                    #{deptId}
+                </foreach>
+            </when>
+            <when test="deptIds != null and deptIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+    </select>
+    <select id="queryDataAuthCandidateStatus" resultType="java.util.Map">
+        select count(a.status) as count,a.status from wk_hrm_recruit_candidate a
+                                 left join wk_hrm_recruit_post b on a.post_id = b.post_id
+        where 1 = 1
+        <choose>
+            <when test="deptIds != null and deptIds.size >0">
+                and b.dept_id in
+                <foreach collection="deptIds" item="deptId" index="index" open="(" close=")" separator=",">
+                    #{deptId}
+                </foreach>
+            </when>
+            <when test="deptIds != null and deptIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        group by a.status
+    </select>
+    <select id="queryRecruitStatusList" resultType="java.lang.String">
+        select date_format(a.interview_time,'%Y-%m-%d') from wk_hrm_recruit_interview a
+        left join wk_hrm_recruit_candidate b on a.candidate_id = b.candidate_id
+        left join wk_hrm_recruit_post c on b.post_id = c.post_id
+        where a.interview_time between #{data.startTime} and #{data.endTime} and b.status in (1,2,3,4)
+        <choose>
+            <when test="deptIds != null and deptIds.size >0">
+                and c.dept_id in
+                <foreach collection="deptIds" item="deptId" index="index" open="(" close=")" separator=",">
+                    #{deptId}
+                </foreach>
+            </when>
+            <when test="deptIds != null and deptIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        group by date_format(a.interview_time,'%Y-%m-%d')
+    </select>
+
+
+    <sql id="candidateSelectSql">
+                select a.*,
+        b.post_name,
+        b.status as postStatus,
+        c.type as interviewType,
+        c.interview_employee_id,
+        c.other_interview_employee_ids,
+        e.employee_name as interview_employee_name,
+        i.employee_id,
+        f.value as channelName,
+        (select group_concat(f.employee_name)
+        from `wk_hrm_employee` f
+        where find_in_set(f.employee_id, c.other_interview_employee_ids)) as other_interview_employee_name,
+        c.interview_time,
+        g.employee_name as ownerEmployeeName,
+        h.dept_id,
+        h.name as deptName
+        from wk_hrm_recruit_candidate as a
+        left join wk_hrm_recruit_post as b on a.post_id = b.post_id
+        left join `wk_hrm_recruit_interview` c on a.candidate_id = c.candidate_id and a.stage_num = c.stage_num and c.result!=4
+        left join `wk_hrm_employee` e on c.interview_employee_id = e.employee_id
+        left join wk_hrm_recruit_channel f on a.channel_id = f.channel_id
+        left join wk_hrm_employee g on b.owner_employee_id = g.employee_id
+        left join wk_hrm_dept h on b.dept_id = h.dept_id
+        left join wk_hrm_employee i on  a.candidate_id= i.candidate_id
+        where 1 = 1
+    </sql>
+</mapper>

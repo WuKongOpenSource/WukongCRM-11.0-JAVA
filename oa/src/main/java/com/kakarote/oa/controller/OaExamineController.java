@@ -4,8 +4,6 @@ package com.kakarote.oa.controller;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.Result;
@@ -14,6 +12,7 @@ import com.kakarote.core.feign.crm.entity.ExamineField;
 import com.kakarote.core.feign.examine.entity.ExamineConditionDataBO;
 import com.kakarote.core.feign.examine.entity.ExamineInfoVo;
 import com.kakarote.core.feign.examine.service.ExamineService;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.oa.entity.BO.AuditExamineBO;
 import com.kakarote.oa.entity.BO.ExamineExportBO;
 import com.kakarote.oa.entity.BO.ExaminePageBO;
@@ -21,16 +20,13 @@ import com.kakarote.oa.entity.BO.GetExamineFieldBO;
 import com.kakarote.oa.entity.PO.OaExamineCategory;
 import com.kakarote.oa.entity.PO.OaExamineField;
 import com.kakarote.oa.entity.VO.ExamineVO;
-import com.kakarote.oa.service.IOaExamineCategoryService;
 import com.kakarote.oa.service.IOaExamineFieldService;
 import com.kakarote.oa.service.IOaExamineService;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,9 +48,6 @@ public class OaExamineController {
 
     @Autowired
     private IOaExamineService oaExamineService;
-
-    @Autowired
-    private IOaExamineCategoryService examineCategoryService;
 
     @Autowired
     private IOaExamineFieldService examineFieldService;
@@ -171,113 +164,82 @@ public class OaExamineController {
             fieldList = examineFieldService.lambdaQuery().eq(OaExamineField::getExamineCategoryId,categoryId).list();
         }
         List<Map<String, Object>> list = oaExamineService.export(examineExportBO,examineInfoVo,fieldList);
-//        Aop.get(ActionRecordUtil.class).addExportActionRecord(CrmEnum.OA_EXAMINE, list.size());
-        ExcelWriter writer = ExcelUtil.getWriter();
-        try {
-            Integer columnNum = 1;
-            writer.addHeaderAlias("category", "审批类型");
-            writer.addHeaderAlias("createTime", "创建日期");
-            writer.addHeaderAlias("createUserName", "创建人");
-            writer.addHeaderAlias("examineStatus", "状态");
-            writer.addHeaderAlias("examineUserName", "当前审批人");
-//            writer.addHeaderAlias("previousExamineUserName", "上一审批人");
-            switch (type) {
-                case 1:
-                    writer.addHeaderAlias("content", "审批内容");
-                    writer.addHeaderAlias("remark", "备注");
-                    columnNum = 8;
-                    break;
-                case 2:
-                    writer.addHeaderAlias("content", "审批内容");
-                    writer.addHeaderAlias("startTime", "开始时间");
-                    writer.addHeaderAlias("endTime", "结束时间");
-                    writer.addHeaderAlias("duration", "时长");
-                    writer.addHeaderAlias("remark", "备注");
-                    columnNum = 11;
-                    break;
-                case 3:
-                    writer.addHeaderAlias("content", "出差事由");
-                    writer.addHeaderAlias("remark", "备注");
-                    writer.addHeaderAlias("duration", "出差总天数");
-                    writer.addHeaderAlias("vehicle", "交通工具");
-                    writer.addHeaderAlias("trip", "单程往返");
-                    writer.addHeaderAlias("startAddress", "出发城市");
-                    writer.addHeaderAlias("endAddress", "目的城市");
-                    writer.addHeaderAlias("startTime", "开始时间");
-                    writer.addHeaderAlias("endTime", "结束时间");
-                    writer.addHeaderAlias("travelDuration", "时长");
-                    writer.addHeaderAlias("description", "出差备注");
-                    columnNum = 17;
-                    break;
-                case 4:
-                    writer.addHeaderAlias("content", "加班原因");
-                    writer.addHeaderAlias("startTime", "开始时间");
-                    writer.addHeaderAlias("endTime", "结束时间");
-                    writer.addHeaderAlias("duration", "加班总天数");
-                    writer.addHeaderAlias("remark", "备注");
-                    columnNum = 11;
-                    break;
-                case 5:
-                    writer.addHeaderAlias("content", "差旅内容");
-                    writer.addHeaderAlias("money", "报销总金额");
-                    writer.addHeaderAlias("remark", "备注");
-                    writer.addHeaderAlias("startAddress", "出发城市");
-                    writer.addHeaderAlias("endAddress", "目的城市");
-                    writer.addHeaderAlias("startTime", "开始时间");
-                    writer.addHeaderAlias("endTme", "结束时间");
-                    writer.addHeaderAlias("traffic", "交通费");
-                    writer.addHeaderAlias("stay", "住宿费");
-                    writer.addHeaderAlias("diet", "餐饮费");
-                    writer.addHeaderAlias("other", "其他费用");
-                    writer.addHeaderAlias("travelMoney", "合计");
-                    writer.addHeaderAlias("description", "费用明细描述");
-                    columnNum = 18;
-                    break;
-                case 6:
-                    writer.addHeaderAlias("content", "审批内容");
-                    writer.addHeaderAlias("money", "借款金额");
-                    writer.addHeaderAlias("remark", "备注");
-                    columnNum = 9;
-                    break;
-                case 0:
-                    fieldList.forEach(field -> writer.addHeaderAlias(field.getFieldName(), field.getName()));
-                    columnNum = fieldList.size() + 6;
-                    break;
-                default:
-                    break;
-            }
-            writer.addHeaderAlias("relateCrmWork", "关联业务");
-            writer.merge(columnNum - 1, "审批信息");
-            writer.setOnlyAlias(true);
-            writer.write(list, true);
-            writer.setRowHeight(0, 20);
-            writer.setRowHeight(1, 20);
-            for (int i = 0; i < columnNum; i++) {
-                writer.setColumnWidth(i, 20);
-            }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=oa_examine.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出日志错误：", e);
-        } finally {
-            // 关闭writer，释放内存
-            writer.close();
+
+        List<ExcelParseUtil.ExcelDataEntity> dataList = new ArrayList<>();
+        dataList.add(ExcelParseUtil.toEntity("category", "审批类型"));
+        dataList.add(ExcelParseUtil.toEntity("createTime", "创建日期"));
+        dataList.add(ExcelParseUtil.toEntity("createUserName", "创建人"));
+        dataList.add(ExcelParseUtil.toEntity("examineStatus", "状态"));
+        dataList.add(ExcelParseUtil.toEntity("examineUserName", "当前审批人"));
+        switch (type) {
+            case 1:
+                dataList.add(ExcelParseUtil.toEntity("content", "审批内容"));
+                dataList.add(ExcelParseUtil.toEntity("remark", "备注"));
+                break;
+            case 2:
+                dataList.add(ExcelParseUtil.toEntity("content", "审批内容"));
+                dataList.add(ExcelParseUtil.toEntity("startTime", "开始时间"));
+                dataList.add(ExcelParseUtil.toEntity("endTime", "结束时间"));
+                dataList.add(ExcelParseUtil.toEntity("duration", "时长"));
+                dataList.add(ExcelParseUtil.toEntity("remark", "备注"));
+                break;
+            case 3:
+                dataList.add(ExcelParseUtil.toEntity("content", "出差事由"));
+                dataList.add(ExcelParseUtil.toEntity("remark", "备注"));
+                dataList.add(ExcelParseUtil.toEntity("duration", "出差总天数"));
+                dataList.add(ExcelParseUtil.toEntity("vehicle", "交通工具"));
+                dataList.add(ExcelParseUtil.toEntity("trip", "单程往返"));
+                dataList.add(ExcelParseUtil.toEntity("startAddress", "出发城市"));
+                dataList.add(ExcelParseUtil.toEntity("endAddress", "目的城市"));
+                dataList.add(ExcelParseUtil.toEntity("startTime", "开始时间"));
+                dataList.add(ExcelParseUtil.toEntity("endTime", "结束时间"));
+                dataList.add(ExcelParseUtil.toEntity("travelDuration", "时长"));
+                dataList.add(ExcelParseUtil.toEntity("description", "出差备注"));
+                break;
+            case 4:
+                dataList.add(ExcelParseUtil.toEntity("content", "加班原因"));
+                dataList.add(ExcelParseUtil.toEntity("startTime", "开始时间"));
+                dataList.add(ExcelParseUtil.toEntity("endTime", "结束时间"));
+                dataList.add(ExcelParseUtil.toEntity("duration", "加班总天数"));
+                dataList.add(ExcelParseUtil.toEntity("remark", "备注"));
+                break;
+            case 5:
+                dataList.add(ExcelParseUtil.toEntity("content", "差旅内容"));
+                dataList.add(ExcelParseUtil.toEntity("money", "报销总金额"));
+                dataList.add(ExcelParseUtil.toEntity("remark", "备注"));
+                dataList.add(ExcelParseUtil.toEntity("startAddress", "出发城市"));
+                dataList.add(ExcelParseUtil.toEntity("endAddress", "目的城市"));
+                dataList.add(ExcelParseUtil.toEntity("startTime", "开始时间"));
+                dataList.add(ExcelParseUtil.toEntity("endTme", "结束时间"));
+                dataList.add(ExcelParseUtil.toEntity("traffic", "交通费"));
+                dataList.add(ExcelParseUtil.toEntity("stay", "住宿费"));
+                dataList.add(ExcelParseUtil.toEntity("diet", "餐饮费"));
+                dataList.add(ExcelParseUtil.toEntity("other", "其他费用"));
+                dataList.add(ExcelParseUtil.toEntity("travelMoney", "合计"));
+                dataList.add(ExcelParseUtil.toEntity("description", "费用明细描述"));
+                break;
+            case 6:
+                dataList.add(ExcelParseUtil.toEntity("content", "审批内容"));
+                dataList.add(ExcelParseUtil.toEntity("money", "借款金额"));
+                dataList.add(ExcelParseUtil.toEntity("remark", "备注"));
+                break;
+            case 0:
+                fieldList.forEach(field -> dataList.add(ExcelParseUtil.toEntity(field.getFieldName(), field.getName())));
+                break;
+            default:
+                break;
         }
+        dataList.add(ExcelParseUtil.toEntity("relateCrmWork", "关联业务"));
+        ExcelParseUtil.exportExcel(list, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+
+            }
+            @Override
+            public String getExcelName() {
+                return "日志";
+            }
+        }, dataList);
     }
 
     @PostMapping("/transfer")

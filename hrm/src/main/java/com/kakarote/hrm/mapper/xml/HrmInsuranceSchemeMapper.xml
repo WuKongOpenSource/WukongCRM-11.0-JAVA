@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmInsuranceSchemeMapper">
+
+    <select id="queryInsuranceSchemePageList" resultType="com.kakarote.hrm.entity.VO.InsuranceSchemeListVO">
+        select a.scheme_id,
+        a.scheme_name,
+        a.city,
+        a.scheme_type,
+        (select count(*) from `wk_hrm_employee_social_security_info` d
+        left join  `wk_hrm_employee` e on d.employee_id = e.employee_id
+        where d.scheme_id = a.scheme_id
+        and e.is_del = 0
+        ) as use_count,
+        <include refid="InsuranceSchemeCount"/>
+
+        from `wk_hrm_insurance_scheme` a
+        where a.is_del = 0 order by a.create_time desc
+    </select>
+    <select id="queryInsuranceSchemeCountById" resultType="java.util.Map">
+        select
+        <include refid="InsuranceSchemeCount"/>
+        from `wk_hrm_insurance_scheme` a
+        where a.scheme_id = #{schemeId}
+    </select>
+
+    <sql id="InsuranceSchemeCount">
+                               (select sum(personal_amount)
+                        from `wk_hrm_insurance_project` b
+                        where b.scheme_id = a.scheme_id
+                          and b.type not in (10,11))                                                                             as personal_insurance_amount,
+                       (select sum(personal_amount)
+                        from `wk_hrm_insurance_project` c
+                        where c.scheme_id = a.scheme_id
+                          and c.type in (10,11))                                                                             as personal_provident_fund_amount,
+                       (select sum(corporate_amount)
+                        from `wk_hrm_insurance_project` b
+                        where b.scheme_id = a.scheme_id
+                          and b.type not in (10,11))                                                                             as corporate_insurance_amount,
+                       (select sum(corporate_amount)
+                        from `wk_hrm_insurance_project` c
+                        where c.scheme_id = a.scheme_id
+                          and c.type in (10,11))                                                                             as corporate_provident_fund_amount
+    </sql>
+
+</mapper>

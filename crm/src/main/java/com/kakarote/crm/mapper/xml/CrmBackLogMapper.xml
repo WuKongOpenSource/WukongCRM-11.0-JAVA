@@ -22,6 +22,9 @@
     <select id="todayOvertimeNum" resultType="java.lang.Integer">
         select count(*) from wk_crm_${table}
         where next_time &lt; now() and last_time &lt; next_time and owner_user_id = #{userId}
+        <if test="type == 1">
+            and is_transform = '0'
+        </if>
         <if test="type == 2">
             and status != 3
         </if>
@@ -124,11 +127,11 @@
         left join wk_crm_receivables d on a.receivables_id = d.receivables_id
         where to_days(a.return_date) &gt;= to_days(now()) and to_days(a.return_date) &lt;= to_days(now())+a.remind
         and (a.receivables_id is null or d.check_status != 1) and c.owner_user_id = #{userId}
-        and a.plan_id not in (select type_id from wk_crm_back_log_deal where model = 7 and crm_type = 8 and create_user_id = #{userId})
+        and a.receivables_plan_id not in (select type_id from wk_crm_back_log_deal where model = 7 and crm_type = 8 and create_user_id = #{userId})
     </select>
 
     <select id="remindReceivables" resultType="com.kakarote.crm.entity.PO.CrmReceivablesPlan">
-        select a.plan_id,a.num,a.customer_id,a.contract_id,c.num as contractNum,a.money,a.return_date,a.return_type,a.remind,a.remark
+        select a.receivables_plan_id,a.num,a.customer_id,a.contract_id,c.num as contractNum,a.money,a.return_date,a.return_type,a.remind,a.remark
         from wk_crm_receivables_plan as a inner join wk_crm_contract as c on a.contract_id = c.contract_id
         left join wk_crm_receivables d on a.receivables_id = d.receivables_id
         where 1=1
@@ -143,11 +146,11 @@
                 and to_days(a.return_date) &lt; to_days(now()) and (a.receivables_id is null or d.check_status != 1)
             </when>
             <otherwise>
-                and plan_id='0'
+                and receivables_plan_id='0'
             </otherwise>
         </choose>
         and c.owner_user_id = #{userId}
-        and a.plan_id not in
+        and a.receivables_plan_id not in
         <for collection="ids" item="item">
             #{item}
         </for>

@@ -23,6 +23,7 @@ import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.TagUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.AuthUtil;
@@ -151,7 +152,7 @@ public class CrmActivityServiceImpl extends BaseServiceImpl<CrmActivityMapper, C
                 if (record.getType() == 1 || record.getType() == 4) {
                     buildActivityRelation(record);
                 }
-                SimpleUser user = adminService.queryUserById(record.getCreateUserId()).getData();
+                SimpleUser user = UserCacheUtil.getSimpleUser(record.getCreateUserId());
                 record.setUserImg(user.getImg());
                 record.setRealname(user.getRealname());
             });
@@ -438,7 +439,7 @@ public class CrmActivityServiceImpl extends BaseServiceImpl<CrmActivityMapper, C
         }
         updateById(crmActivity);
         CrmActivity record = getBaseMapper().queryActivityById(crmActivity.getActivityId());
-        SimpleUser user = adminService.queryUserById(record.getCreateUserId()).getData();
+        SimpleUser user = UserCacheUtil.getSimpleUser(record.getCreateUserId());
         record.setUserImg(user.getImg());
         record.setRealname(user.getRealname());
         buildActivityRelation(record);

@@ -69,4 +69,8 @@ public class AdminMessage implements Serializable {
     @TableField(exist = false)
     private String realname;
 
+    public AdminMessage() {
+        /* 构造message对象时，默认未读，解决批量保存错误问题 */
+        this.isRead = 0;
+    }
 }

@@ -95,9 +95,9 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
     @Override
     public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search) {
         BasePage<Map<String, Object>> basePage = queryList(search,false);
-        for (Map<String, Object> map : basePage.getList()) {
+      /*  for (Map<String, Object> map : basePage.getList()) {
             map.put("visitId",map.remove("return_visitId"));
-        }
+        }*/
         return basePage;
     }
 
@@ -247,7 +247,7 @@ public class CrmReturnVisitServiceImpl extends BaseServiceImpl<CrmReturnVisitMap
             List<JSONObject> contractList = new ArrayList<>();
             JSONObject contract = new JSONObject();
             if (crmModel.get("contractId") != null && !"0".equals(crmModel.get("contractId").toString())) {
-                contractList.add(contract.fluentPut("contractId", crmModel.get("contractId")).fluentPut("num", crmModel.get("contractNum")));
+                contractList.add(contract.fluentPut("contractId", crmModel.get("contractId")).fluentPut("contractNum", crmModel.get("contractNum")));
                 crmModel.put("contractId", contractList);
             }
             List<JSONObject> contactsList = new ArrayList<>();

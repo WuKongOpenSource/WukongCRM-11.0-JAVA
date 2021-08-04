@@ -2,13 +2,10 @@ package com.kakarote.crm.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.kakarote.core.common.FieldEnum;
@@ -26,6 +23,7 @@ import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
@@ -44,10 +42,6 @@ import com.kakarote.crm.entity.VO.CrmModelFiledVO;
 import com.kakarote.crm.mapper.CrmLeadsMapper;
 import com.kakarote.crm.service.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.hssf.usermodel.*;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.ss.util.CellRangeAddressList;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +50,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.*;
@@ -540,82 +533,16 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
             }
         }
         crmModelFiledList.add(k+1,new CrmModelFiledVO("ownerUserId",FieldEnum.TEXT,"负责人",1).setIsNull(1));
-        removeFieldByType(crmModelFiledList);
-        HSSFWorkbook wb = new HSSFWorkbook();
-        HSSFSheet sheet = wb.createSheet("线索导入表");
-        sheet.setDefaultRowHeight((short) 400);
-        CellStyle textStyle = wb.createCellStyle();
-        DataFormat format = wb.createDataFormat();
-        textStyle.setDataFormat(format.getFormat("@"));
-        for (int i = 0; i < crmModelFiledList.size(); i++) {
-            CrmModelFiledVO crmModel = crmModelFiledList.get(i);
-            if (FieldEnum.DATE.getType().equals(crmModel.getType())) {
-                CellStyle dateStyle = wb.createCellStyle();
-                DataFormat dateFormat = wb.createDataFormat();
-                dateStyle.setDataFormat(dateFormat.getFormat(DatePattern.NORM_DATE_PATTERN));
-                sheet.setDefaultColumnStyle(i, dateStyle);
-            } else if (FieldEnum.DATETIME.getType().equals(crmModel.getType())) {
-                CellStyle dateStyle = wb.createCellStyle();
-                DataFormat dateFormat = wb.createDataFormat();
-                dateStyle.setDataFormat(dateFormat.getFormat(DatePattern.NORM_DATETIME_PATTERN));
-                sheet.setDefaultColumnStyle(i, dateStyle);
-            } else {
-                sheet.setDefaultColumnStyle(i, textStyle);
+        ExcelParseUtil.importExcel(new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+
             }
-            sheet.setColumnWidth(i, 20 * 256);
-        }
-        CellStyle cellStyle = wb.createCellStyle();
-        HSSFRow titleRow = sheet.createRow(0);
-        cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-        cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        Font font = wb.createFont();
-        font.setBold(true);
-        font.setFontHeightInPoints((short) 16);
-        cellStyle.setFont(font);
-        titleRow.createCell(0).setCellValue("线索导入模板(*)为必填项");
-        cellStyle.setAlignment(HorizontalAlignment.CENTER);
-        titleRow.getCell(0).setCellStyle(cellStyle);
-        CellRangeAddress region = new CellRangeAddress(0, 0, 0, crmModelFiledList.size()-1);
-        sheet.addMergedRegion(region);
-        try {
-            HSSFRow row = sheet.createRow(1);
-            for (int i = 0; i < crmModelFiledList.size(); i++) {
-                CrmModelFiledVO crmModel = crmModelFiledList.get(i);
-                List<String> setting = crmModel.getSetting().stream().map(Object::toString).collect(Collectors.toList());
-                // 在第一行第一个单元格，插入选项
-                HSSFCell cell = row.createCell(i);
-                // 普通写入操作
-                cell.setCellValue(crmModel.getName() + (crmModel.getIsNull() == 1 ? "(*)" : ""));
-                if (setting.size() != 0) {
-                    String fieldName = "_" + crmModel.getFieldName();
-                    HSSFSheet hidden = wb.createSheet(fieldName);
-                    HSSFCell sheetCell;
-                    for (int j = 0, length = setting.size(); j < length; j++) {
-                        String name = setting.get(j);
-                        HSSFRow sheetRow = hidden.createRow(j);
-                        sheetCell = sheetRow.createCell(0);
-                        sheetCell.setCellValue(name);
-                    }
-                    Name namedCell = wb.createName();
-                    namedCell.setNameName(fieldName);
-                    namedCell.setRefersToFormula(fieldName + "!$A$1:$A$" + setting.size());
-                    CellRangeAddressList regions = new CellRangeAddressList(2, Integer.MAX_VALUE, i, i);
-                    DVConstraint constraint = DVConstraint.createFormulaListConstraint(fieldName);
-                    HSSFDataValidation dataValidation = new HSSFDataValidation(regions, constraint);
-                    wb.setSheetHidden(wb.getSheetIndex(hidden), true);
-                    sheet.addValidationData(dataValidation);
-                }
+            @Override
+            public String getExcelName() {
+                return "线索";
             }
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=leads_import.xls");
-            wb.write(response.getOutputStream());
-        } catch (IOException e) {
-            log.error("获取导入模板异常", e);
-        } finally {
-            wb.close();
-        }
+        }, crmModelFiledList, response,"crm");
     }
 
     /**
@@ -627,50 +554,19 @@ public class CrmLeadsServiceImpl extends BaseServiceImpl<CrmLeadsMapper, CrmLead
     @Override
     public void exportExcel(HttpServletResponse response, CrmSearchBO search) {
         List<Map<String, Object>> dataList = queryList(search,true).getList();
-        try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
-            headList.removeIf(head -> FieldEnum.HANDWRITING_SIGN.getFormType().equals(head.getFormType()));
-            headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
-            writer.merge(headList.size() - 1, "线索信息");
-            if (dataList.size() == 0) {
-                Map<String, Object> record = new HashMap<>();
-                headList.forEach(head -> record.put(head.getFieldName(), ""));
-                dataList.add(record);
+        List<CrmFieldSortVO> headList = crmFieldService.queryListHead(getLabel().getType());
+        ExcelParseUtil.exportExcel(dataList, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+                for (String fieldName : headMap.keySet()) {
+                    record.put(fieldName,ActionRecordUtil.parseValue(record.get(fieldName),headMap.get(fieldName),false));
+                }
             }
-            for (Map<String, Object> record : dataList) {
-                headList.forEach(field ->{
-                    if (fieldService.equalsByType(field.getType())) {
-                        record.put(field.getFieldName(),ActionRecordUtil.parseValue(record.get(field.getFieldName()),field.getType(),false));
-                    }
-                });
+            @Override
+            public String getExcelName() {
+                return "线索";
             }
-            writer.setOnlyAlias(true);
-            writer.write(dataList, true);
-            writer.setRowHeight(0, 30);
-            writer.setRowHeight(1, 20);
-            for (int i = 0; i < headList.size(); i++) {
-                writer.setColumnWidth(i, 20);
-            }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=leads.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出线索错误：", e);
-        }
+        },headList,response);
     }
 
     /**

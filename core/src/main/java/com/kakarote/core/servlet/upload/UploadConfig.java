@@ -14,7 +14,7 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "crm.upload")
 public class UploadConfig {
     /**
-     * 上传类型 1 本地 2 alioss
+     * 上传类型 1 本地 2 阿里云OSS 3 腾讯云COS 4 七牛云QNC
      */
     private Integer config;
 
@@ -63,6 +63,7 @@ public class UploadConfig {
         private String secretKey;
         private Map<String,String> bucketName;
         private String publicUrl;
+        private String privateUrl;
     }
 
 

@@ -55,7 +55,7 @@ jetcache:
 
 crm:
   upload:
-    # 1 本地 2 阿里云OSS
+    #上传类型 1 本地 2 阿里云OSS 3 腾讯云COS 4 七牛云QNC
     config: 1
     oss:
       endpoint:
@@ -82,6 +82,7 @@ crm:
       accessKey:
       secretKey:
       publicUrl:
+      privateUrl:
       bucketName:
         0:
         1:

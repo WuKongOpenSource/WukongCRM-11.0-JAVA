@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmAchievementEmployeeAppraisalMapper">
+
+    <select id="queryMyAppraisal" resultType="com.kakarote.hrm.entity.VO.QueryMyAppraisalVO">
+        select a.employee_appraisal_id,
+               a.appraisal_id,
+               b.appraisal_name,
+               b.start_time,
+               b.end_time,
+               c.employee_name as follow_up_employee_name,
+               a.score,
+               a.status,
+               a.is_draft,
+               d.level_name
+        from `wk_hrm_achievement_employee_appraisal` a
+                 left join `wk_hrm_achievement_appraisal` b on a.appraisal_id = b.appraisal_id
+                 left join `wk_hrm_employee` c on a.follow_up_employee_id = c.employee_id
+                 left join `wk_hrm_achievement_appraisal_score_level` d on a.level_id = d.level_id
+        where a.employee_id = #{employeeId}
+        <if test="status != null">
+            <choose>
+                <when test="status==0">
+                    and a.status =1
+                </when>
+                <when test="status==1">
+                    and a.status !=1
+                </when>
+            </choose>
+        </if>
+        order by a.create_time desc
+    </select>
+    <select id="evaluatoList" resultType="com.kakarote.hrm.entity.VO.EvaluatoListVO">
+        select a.employee_evaluato_id,
+               a.employee_appraisal_id,
+               d.appraisal_id,
+               b.employee_id,
+               b.employee_name,
+               b.mobile,
+               c.name as deptName,
+               d.appraisal_name,
+               a.status
+        from `wk_hrm_achievement_employee_evaluato` a
+        left join `wk_hrm_achievement_employee_appraisal` e on a.employee_appraisal_id = e.employee_appraisal_id
+        left join `wk_hrm_employee` b on e.employee_id = b.employee_id
+        left join `wk_hrm_dept` `c` on b.dept_id = `c`.dept_id
+        left join `wk_hrm_achievement_appraisal` d on d.appraisal_id = a.appraisal_id
+        where a.employee_id = #{employeeId}
+        <if test="data.status != null">
+            and a.status = #{data.status}
+        </if>
+        <if test="data.appraisalId != null">
+        and a.appraisal_id = #{data.appraisalId}
+       </if>
+        <if test="data.search != null and data.search != ''">
+            and (b.employee_name like concat('%',#{data.search},'%')
+            or b.mobile like concat('%',#{data.search},'%')
+            or d.appraisal_name like concat('%',#{data.search},'%'))
+        </if>
+        order by a.create_time desc
+    </select>
+    <select id="queryTodoAppraisalByStatus" resultType="com.kakarote.hrm.entity.VO.TargetConfirmListVO">
+        select a.employee_appraisal_id,d.appraisal_id,b.employee_id,b.employee_name,b.mobile,
+               c.name as deptName,d.appraisal_name,a.status
+        from `wk_hrm_achievement_employee_appraisal` a
+                 left join `wk_hrm_employee` b on a.employee_id = b.employee_id
+                 left join `wk_hrm_dept` `c` on b.dept_id = `c`.dept_id
+                 left join `wk_hrm_achievement_appraisal` d on d.appraisal_id = a.appraisal_id
+        where a.follow_up_employee_id = #{employeeId} and a.status = #{status}
+        <if test="search != null and search != ''">
+            and (b.employee_name like concat('%',#{search},'%')
+            or b.mobile like concat('%',#{search},'%')
+            or d.appraisal_name like concat('%',#{search},'%'))
+        </if>
+        <if test="appraisalId != null">
+            and a.appraisal_id = #{appraisalId}
+        </if>
+        order by a.create_time desc
+    </select>
+    <select id="queryTargetConfirmScreen" resultType="com.kakarote.hrm.entity.VO.TargetConfirmListVO">
+        select a.employee_appraisal_id,d.appraisal_id,b.employee_id,b.employee_name,b.mobile,
+               c.name as deptName,d.appraisal_name,a.status
+        from `wk_hrm_achievement_employee_appraisal` a
+                 left join `wk_hrm_employee` b on a.employee_id = b.employee_id
+                 left join `wk_hrm_dept` `c` on b.dept_id = `c`.dept_id
+                 left join `wk_hrm_achievement_appraisal` d on d.appraisal_id = a.appraisal_id
+        where a.follow_up_employee_id = #{employeeId} and a.status = #{status}
+        order by a.create_time desc
+    </select>
+    <select id="queryEvaluatoScreen" resultType="com.kakarote.hrm.entity.VO.EvaluatoListVO">
+        select a.employee_evaluato_id,
+        a.employee_appraisal_id,
+        d.appraisal_id,
+        b.employee_id,
+        b.employee_name,
+        b.mobile,
+        c.name as deptName,
+        d.appraisal_name,
+        a.status
+        from `wk_hrm_achievement_employee_evaluato` a
+        left join `wk_hrm_achievement_employee_appraisal` e on a.employee_appraisal_id = e.employee_appraisal_id
+        left join `wk_hrm_employee` b on e.employee_id = b.employee_id
+        left join `wk_hrm_dept` `c` on b.dept_id = `c`.dept_id
+        left join `wk_hrm_achievement_appraisal` d on d.appraisal_id = a.appraisal_id
+        where a.employee_id = #{employeeId}
+        <if test="status != null">
+            and a.status = #{status}
+        </if>
+        order by a.create_time desc
+    </select>
+    <select id="queryResultConfirmList" resultType="com.kakarote.hrm.entity.VO.ResultConfirmListVO">
+    select a.appraisal_id,b.appraisal_name,b.start_time,b.end_time,
+           (select count(1) from wk_hrm_achievement_employee_appraisal c
+           left join wk_hrm_employee e on c.employee_id = e.employee_id
+           where c.appraisal_id = a.appraisal_id and c.status = 4 and e.is_del = 0) as waitingNum,
+           (select count(1) from wk_hrm_achievement_employee_appraisal d
+        left join wk_hrm_employee e on d.employee_id = e.employee_id
+           where d.appraisal_id = a.appraisal_id and e.is_del = 0) as totalNum
+    from wk_hrm_achievement_employee_result_confirmors a
+             left join wk_hrm_achievement_appraisal b on a.appraisal_id = b.appraisal_id
+        where a.employee_id = #{employeeId} and a.status = 0
+        <if test="search != null and search != ''">
+            and b.appraisal_name like concat('%',#{search},'%')
+        </if>
+    </select>
+    <select id="queryScoreLevels" resultType="java.util.Map">
+        select level_id,level_name,
+               (select count(1) from wk_hrm_achievement_employee_appraisal b
+               left join wk_hrm_employee c on b.employee_id = c.employee_id
+               where b.level_id = a.level_id and c.is_del = 0
+               ) as num
+               from wk_hrm_achievement_appraisal_score_level a
+        where appraisal_id = #{appraisalId}
+    </select>
+    <select id="queryAppraisalIdInfo" resultType="java.util.Map">
+        select a.appraisal_id,
+               a.appraisal_name,
+               a.is_force,
+               (select count(1)
+                from wk_hrm_achievement_employee_appraisal c
+                left join wk_hrm_employee e on c.employee_id = e.employee_id
+                where c.appraisal_id = a.appraisal_id and c.status = 4 and e.is_del = 0) as waitingNum,
+               (select count(1)
+                from wk_hrm_achievement_employee_appraisal d
+                left join wk_hrm_employee e on d.employee_id = e.employee_id
+                where d.appraisal_id = a.appraisal_id and e.is_del = 0)                         as totalNum,
+               a.full_score
+        from wk_hrm_achievement_appraisal a where a.appraisal_id = #{appraisalId}
+    </select>
+    <select id="queryEmployeeByLevelId" resultType="java.util.Map">
+        select a.employee_id,b.employee_name,b.mobile,a.employee_appraisal_id,
+               a.score,a.level_id,c.`name` deptName,b.post
+               from wk_hrm_achievement_employee_appraisal a
+        left join wk_hrm_employee b on a.employee_id = b.employee_id
+        left join  wk_hrm_dept c on b.dept_id=c.dept_id
+        where a.level_id = #{levelId} and a.appraisal_id = #{appraisalId} and b.is_del = 0
+    </select>
+    <select id="queryWaitingNum" resultType="java.lang.Integer">
+        select count(1)
+                from wk_hrm_achievement_employee_appraisal c
+                left join wk_hrm_employee e on c.employee_id = e.employee_id
+                where c.appraisal_id = #{appraisalId} and c.status = 4 and e.is_del = 0
+    </select>
+    <select id="queryTotalNum" resultType="java.lang.Integer">
+        select count(1)
+                from wk_hrm_achievement_employee_appraisal c
+                left join wk_hrm_employee e on c.employee_id = e.employee_id
+                where c.appraisal_id = #{appraisalId}  and e.is_del = 0
+    </select>
+</mapper>

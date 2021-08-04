@@ -72,7 +72,7 @@ public class CrmBusinessController {
 
     @PostMapping("/add")
     @ApiOperation("保存数据")
-    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity[ businessName]",detail = "'新增了线索:' + #crmModel.entity[businessName]")
+    @SysLogHandler(behavior = BehaviorEnum.SAVE,object = "#crmModel.entity[businessName]",detail = "'新增了线索:' + #crmModel.entity[businessName]")
     public Result add(@RequestBody CrmBusinessSaveBO crmModel) {
         crmBusinessService.addOrUpdate(crmModel);
         return R.ok();

@@ -1,9 +1,11 @@
 .DS_Store
 .idea/
 *.iml
-logs
+gateway/src/main/webapp/public/**
+logs/**
 test
 target
 */target/**
 rebel.xml
 rebel-remote.xml
+

@@ -330,7 +330,7 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
 
     private Map<String, Object> getOvertimeQueryData(CrmEnum crmEnum) {
         Map<String, Object> map = new HashMap<>(6);
-        map.put("table", crmEnum.getTable());
+        map.put("table", crmEnum.getTableName());
         map.put("type", crmEnum.getType());
         map.put("userId", UserUtil.getUserId());
         map.put("model", CrmBackLogEnum.valueOf("TODAY_"+crmEnum.name()).getType());
@@ -784,6 +784,7 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
                 break;
         }
         List<CrmBackLogDeal> backLogDealList = new ArrayList<>();
+        List<Integer> ids  =  new ArrayList<>();
         for (JSONObject jsonObject : jsonObjectList) {
             if (crmType == CrmEnum.CUSTOMER_POOL.getType()) {
                 for (String poolId : jsonObject.getString("poolIds").split(",")) {
@@ -796,9 +797,13 @@ public class CrmBackLogServiceImpl implements ICrmBackLogService {
                 backLogDeal.setModel(model).setCrmType(crmType).setTypeId(jsonObject.getInteger("typeId")).setCreateUserId(userId).setCreateTime(new Date());
                 backLogDealList.add(backLogDeal);
             }
+            ids.add(jsonObject.getInteger("typeId"));
         }
         backLogDealService.saveBatch(backLogDealList);
         redis.del(CrmCacheKey.CRM_BACKLOG_NUM_CACHE_KEY + UserUtil.getUserId().toString());
+        if (crmType == CrmEnum.CUSTOMER.getType()){
+            setCustomerFollowup(ids);
+        }
     }
 
     @Override

@@ -123,7 +123,6 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             ExamineInfoVo infoVo = examineService.queryExamineById(examinePageBO.getCategoryId().longValue()).getData();
             examinePageBO.setCategoryId(infoVo != null ? infoVo.getExamineInitId().intValue() : null);
         }
-//        BasePage<ExamineVO> page = examineMapper.myInitiate(examinePageBO.parse().setOptimizeCountSql(false), examinePageBO, UserUtil.getUserId(), UserUtil.isAdmin(), null);
         BasePage<ExamineVO> page = examineMapper.myInitiateOaExamine(examinePageBO.parse().setOptimizeCountSql(false), examinePageBO, UserUtil.getUserId(), UserUtil.isAdmin());
         transfer(page.getList());
         return page;
@@ -141,8 +140,8 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         Long userId = UserUtil.getUserId();
         recordList.forEach(record -> {
             setRelation(record);
-            Result<SimpleUser> listResult = adminService.queryUserById(record.getCreateUserId());
-            record.setCreateUser(listResult.getData());
+            SimpleUser listResult = UserCacheUtil.getSimpleUser(record.getCreateUserId());
+            record.setCreateUser(listResult);
             String batchId = record.getBatchId();
             ExamineRecordReturnVO recordReturnVO;
             if (record.getExamineRecordId() != null) {
@@ -161,8 +160,8 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
             List<Long> userIds = recordReturnVO.getExamineUserIds();
             String examineName = "";
             if (CollUtil.isNotEmpty(userIds) && examineStatus != 4) {
-                Result<List<SimpleUser>> userList = adminService.queryUserByIds(userIds);
-                examineName = userList.getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
+                List<SimpleUser> userList = UserCacheUtil.getSimpleUsers(userIds);
+                examineName = userList.stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
             }
             if (examineStatus == 4){
                 examineName = record.getCreateUser().getRealname();
@@ -742,10 +741,8 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         }
         examineRecord.setRemarks(nowadayExamineLog.getRemarks());
         if (examineRecord.getExamineStatus().equals(1)) {
-            //Aop.get(ActionRecordUtil.class).addOaExamineActionRecord(CrmEnum.OA_EXAMINE, examineId, BehaviorEnum.PASS_EXAMINE);
             addMessage(2, examineRecord, auditUserId);
         } else if (examineRecord.getExamineStatus().equals(2)) {
-            //Aop.get(ActionRecordUtil.class).addOaExamineActionRecord(CrmEnum.OA_EXAMINE, examineId, BehaviorEnum.REJECT_EXAMINE);
             addMessage(3, examineRecord, auditUserId);
         }
         examineRecord.setRemarks(null);
@@ -760,7 +757,7 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         }
         ExamineVO examineVO = new ExamineVO();
         BeanUtil.copyProperties(oaExamine,examineVO);
-        SimpleUser simpleUser = adminService.queryUserByIds(Collections.singletonList(examineVO.getCreateUserId())).getData().get(0);
+        SimpleUser simpleUser = UserCacheUtil.getSimpleUsers(Collections.singletonList(examineVO.getCreateUserId())).get(0);
         examineVO.setCreateUser(simpleUser);
         String batchId = oaExamine.getBatchId();
         setRelation(examineVO);
@@ -1048,7 +1045,7 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         if (examineType == 1) {
             List<OaExamineStep> list = examineStepService.lambdaQuery().eq(OaExamineStep::getCategoryId, categoryId).list();
             list.forEach(step -> {
-                List<SimpleUser> userList = adminService.queryUserByIds(TagUtil.toLongSet(step.getCheckUserId())).getData();
+                List<SimpleUser> userList = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet(step.getCheckUserId()));
                 step.setUserList(userList);
             });
             category.setStepList(list);
@@ -1182,8 +1179,8 @@ public class OaExamineServiceImpl extends BaseServiceImpl<OaExamineMapper, OaExa
         List<Long> userIds = recordReturnVO.getExamineUserIds();
         String examineName = "";
         if (CollUtil.isNotEmpty(userIds) && (Integer) examineStatus != 4) {
-            Result<List<SimpleUser>> userList = adminService.queryUserByIds(userIds);
-            examineName = userList.getData().stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
+            List<SimpleUser> userList = UserCacheUtil.getSimpleUsers(userIds);
+            examineName = userList.stream().map(SimpleUser::getRealname).collect(Collectors.joining(","));
         }
         if ((Integer)examineStatus == 4){
             Object createUserName = map.get("createUserName");

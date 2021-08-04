@@ -33,24 +33,32 @@ public class CrmCustomerJob {
 
     @XxlJob("CrmCustomerJob")
     public ReturnT<String> crmCustomerJobHandler(String param) {
-            try {
-                Long userId = UserUtil.getSuperUser();
-                if (userId != null) {
-                    UserInfo userInfo = UserUtil.setUser(userId);
-                    redis.setex(CrmCacheKey.CRM_CUSTOMER_JOB_CACHE_KEY, Const.MAX_USER_EXIST_TIME, userInfo);
-                    Result result = crmService.putInInternational();
-                    if (!result.hasSuccess()){
-                        ReturnT<String> fail = ReturnT.FAIL;
-                        fail.setMsg(result.getMsg());
-                        return fail;
-                    }
-                }
-            }finally {
-                redis.del(CrmCacheKey.CRM_CUSTOMER_JOB_CACHE_KEY);
-                UserUtil.removeUser();
-            }
 
+        try {
+            Long userId = UserUtil.getSuperUser();
+            UserInfo userInfo = UserUtil.setUser(userId);
+            redis.setex(CrmCacheKey.CRM_CUSTOMER_JOB_CACHE_KEY, Const.MAX_USER_EXIST_TIME, userInfo);
+            Result result = crmService.putInInternational();
+            crmService.updateReceivablesPlan();
+            if (!result.hasSuccess()) {
+                ReturnT<String> fail = ReturnT.FAIL;
+                fail.setMsg(result.getMsg());
+                return fail;
+            }
+        } finally {
+            redis.del(CrmCacheKey.CRM_CUSTOMER_JOB_CACHE_KEY);
+            UserUtil.removeUser();
+        }
         XxlJobLogger.log("客户定时放入公海执行完成");
         return ReturnT.SUCCESS;
+    }
+
+    @XxlJob("CompanyJob")
+    public ReturnT<String> companyJobHandler(String param) {
+        Result companyRemind = adminService.companyRemind();
+        if (companyRemind.hasSuccess()) {
+            return ReturnT.SUCCESS;
+        }
+        return ReturnT.FAIL;
     }
 }

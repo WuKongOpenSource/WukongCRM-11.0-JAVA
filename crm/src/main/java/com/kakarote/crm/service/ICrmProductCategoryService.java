@@ -52,7 +52,7 @@ public interface ICrmProductCategoryService extends BaseService<CrmProductCatego
      *
      * @return data
      */
-    public List<String> queryListName();
+    public List<Object> queryListName();
 
     /**
      * 通过名称查询产品类别

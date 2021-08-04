@@ -21,7 +21,7 @@
         </if>
     </select>
     <select id="initData" resultType="java.util.HashMap">
-        SELECT * FROM wk_crm_${tableName} WHERE ${table}_id &gt; #{lastId}
+        SELECT * FROM wk_crm_${tableName} WHERE ${primaryKey} &gt; #{lastId}
         <if test="label==2||label==5||label==4">
             and status != 3
         </if>
@@ -38,7 +38,7 @@
         a.field_id,
         a.`name`,
         a.`value`,
-        b.${table}_id as typeId,
+        b.${primaryKey} as typeId,
         c.type
         FROM
         wk_crm_${tableName}_data AS a

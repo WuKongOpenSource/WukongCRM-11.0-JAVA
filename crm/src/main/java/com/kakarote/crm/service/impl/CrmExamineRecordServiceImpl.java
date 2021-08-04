@@ -33,6 +33,7 @@ import com.kakarote.crm.constant.CrmCodeEnum;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.CrmExamineData;
 import com.kakarote.crm.entity.PO.*;
+import com.kakarote.crm.mapper.CrmContractMapper;
 import com.kakarote.crm.mapper.CrmExamineLogMapper;
 import com.kakarote.crm.mapper.CrmExamineRecordMapper;
 import com.kakarote.crm.service.*;
@@ -78,6 +79,9 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
 
     @Autowired
     private JxcExamineService jxcExamineService;
+
+    @Autowired
+    private ICrmReceivablesPlanService receivablesPlanService;
 
     /**
      * 保存审批记录
@@ -230,19 +234,6 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
     }
 
     /**
-     * 删除审批记录
-     *
-     * @param recordId id
-     */
-    @Override
-    public void deleteExamine(Integer recordId) {
-        LambdaQueryWrapper<CrmExamineLog> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(CrmExamineLog::getRecordId, recordId);
-        examineLogService.remove(queryWrapper);
-        removeById(recordId);
-    }
-
-    /**
      * 更新合同回款金额
      *
      * @param id id
@@ -251,43 +242,23 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
     public void updateContractMoney(Integer id) {
         CrmReceivables receivables = crmReceivablesService.getById(id);
         CrmContract contract = crmContractService.getById(receivables.getContractId());
-        BigDecimal unreceivedMoney = contract.getUnreceivedMoney();
+        if(contract == null) {
+            return;
+        }
+        BigDecimal bigDecimal = ((CrmContractMapper) crmContractService.getBaseMapper()).queryReceivablesMoney(contract.getContractId());
+        if(contract.getMoney() == null){
+            contract.setMoney(new BigDecimal("0"));
+        }
         LambdaUpdateWrapper<CrmContract> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.set(CrmContract::getReceivedMoney, contract.getReceivedMoney().add(receivables.getMoney()));
-        updateWrapper.set(CrmContract::getUnreceivedMoney, contract.getUnreceivedMoney().subtract(receivables.getMoney()));
+        updateWrapper.set(CrmContract::getReceivedMoney, bigDecimal);
+        updateWrapper.set(CrmContract::getUnreceivedMoney, contract.getMoney().subtract(bigDecimal));
         updateWrapper.eq(CrmContract::getContractId, contract.getContractId());
-        updateWrapper.eq(CrmContract::getUnreceivedMoney, unreceivedMoney);
         crmContractService.update(updateWrapper);
-        CrmContract newContract = crmContractService.getById(contract.getContractId());
-        Map<String, Object> map = new HashMap<>();
-        map.put("receivedMoney", newContract.getReceivedMoney());
-        map.put("unreceivedMoney", newContract.getUnreceivedMoney());
-        ElasticUtil.updateField(elasticsearchRestTemplate, map, newContract.getContractId(), CrmEnum.CONTRACT.getIndex());
-    }
 
-    /**
-     * 更新合同未回款金额
-     *
-     * @param id id
-     */
-    @Override
-    public void updateUnreceivedMoney(Integer id) {
-        CrmReceivables receivables = crmReceivablesService.getById(id);
-        CrmContract contract = crmContractService.getById(receivables.getContractId());
-        receivables.setMoney(Optional.ofNullable(receivables.getMoney()).orElse(BigDecimal.ZERO));
-        contract.setMoney(Optional.ofNullable(contract.getMoney()).orElse(BigDecimal.ZERO));
-        BigDecimal unreceivedMoney = contract.getUnreceivedMoney();
-        LambdaUpdateWrapper<CrmContract> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.set(CrmContract::getReceivedMoney, contract.getReceivedMoney().subtract(receivables.getMoney()));
-        updateWrapper.set(CrmContract::getUnreceivedMoney, contract.getUnreceivedMoney().add(receivables.getMoney()));
-        updateWrapper.eq(CrmContract::getContractId, contract.getContractId());
-        updateWrapper.eq(CrmContract::getUnreceivedMoney, unreceivedMoney);
-        crmContractService.update(updateWrapper);
-        CrmContract newContract = crmContractService.getById(contract.getContractId());
         Map<String, Object> map = new HashMap<>();
-        map.put("receivedMoney", newContract.getReceivedMoney());
-        map.put("unreceivedMoney", newContract.getUnreceivedMoney());
-        ElasticUtil.updateField(elasticsearchRestTemplate, map, newContract.getContractId(), CrmEnum.CONTRACT.getIndex());
+        map.put("receivedMoney", bigDecimal);
+        map.put("unreceivedMoney", contract.getMoney().subtract(bigDecimal));
+        ElasticUtil.updateField(elasticsearchRestTemplate, map, contract.getContractId(), CrmEnum.CONTRACT.getIndex());
     }
 
     @Override
@@ -901,6 +872,9 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
             ElasticUtil.updateField(elasticsearchRestTemplate, "checkStatus", status, Collections.singletonList(contract.getContractId()), CrmEnum.CONTRACT.getIndex());
         } else if (categoryType == 2) {
             CrmReceivables receivables = ApplicationContextHolder.getBean(ICrmReceivablesService.class).getById(id);
+            receivables.setCheckStatus(status);
+            //回款
+            ApplicationContextHolder.getBean(ICrmReceivablesService.class).updateById(receivables);
             if (status == 4) {
                 if (receivables.getCheckStatus() == 1) {
                     throw new CrmException(CrmCodeEnum.CRM_EXAMINE_RECHECK_PASS_ERROR);
@@ -908,9 +882,6 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
             } else if (status == 1) {
                 updateContractMoney(id);
             }
-            receivables.setCheckStatus(status);
-            //回款
-            ApplicationContextHolder.getBean(ICrmReceivablesService.class).updateById(receivables);
             ElasticUtil.updateField(elasticsearchRestTemplate, "checkStatus", status, Collections.singletonList(receivables.getReceivablesId()), CrmEnum.RECEIVABLES.getIndex());
         } else if (categoryType == 3) {
             CrmInvoice invoice = ApplicationContextHolder.getBean(ICrmInvoiceService.class).getById(id);
@@ -1107,10 +1078,14 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
                 ElasticUtil.updateField(elasticsearchRestTemplate, map, customer.getCustomerId(), CrmEnum.CUSTOMER.getIndex());
             }
             contract.setCheckStatus(status);
+            receivablesPlanService.updateReceivedStatus(CrmEnum.CONTRACT,contract,status);
             ApplicationContextHolder.getBean(ICrmContractService.class).updateById(contract);
             ElasticUtil.updateField(elasticsearchRestTemplate, "checkStatus", status, Collections.singletonList(contract.getContractId()), CrmEnum.CONTRACT.getIndex());
         } else if (categoryType == 2) {
             CrmReceivables receivables = ApplicationContextHolder.getBean(ICrmReceivablesService.class).getById(id);
+            receivables.setCheckStatus(status);
+            //回款
+            ApplicationContextHolder.getBean(ICrmReceivablesService.class).updateById(receivables);
             if (status == 4) {
                 if (receivables.getCheckStatus() == 1) {
                     throw new CrmException(CrmCodeEnum.CRM_EXAMINE_RECHECK_PASS_ERROR);
@@ -1118,9 +1093,7 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
             } else if (status == 1) {
                 updateContractMoney(id);
             }
-            receivables.setCheckStatus(status);
-            //回款
-            ApplicationContextHolder.getBean(ICrmReceivablesService.class).updateById(receivables);
+            receivablesPlanService.updateReceivedStatus(CrmEnum.RECEIVABLES,receivables,status);
             ElasticUtil.updateField(elasticsearchRestTemplate, "checkStatus", status, Collections.singletonList(receivables.getReceivablesId()), CrmEnum.RECEIVABLES.getIndex());
         } else if (categoryType == 3) {
             CrmInvoice invoice = ApplicationContextHolder.getBean(ICrmInvoiceService.class).getById(id);
@@ -1168,9 +1141,11 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
             simpleCrmInfo.setCategory(crmContract.getName());
             simpleCrmInfo.setCategoryId(crmContract.getContractId());
             simpleCrmInfo.setOrderDate(crmContract.getOrderDate());
-            simpleCrmInfo.setCategoryCiteId(crmCustomer.getCustomerId());
-            simpleCrmInfo.setCategoryCiteName(crmCustomer.getCustomerName());
-            simpleCrmInfo.setCreateUser(adminService.queryUserById(crmContract.getCreateUserId()).getData());
+            if(crmCustomer != null) {
+                simpleCrmInfo.setCategoryCiteId(crmCustomer.getCustomerId());
+                simpleCrmInfo.setCategoryCiteName(crmCustomer.getCustomerName());
+            }
+            simpleCrmInfo.setCreateUser(UserCacheUtil.getSimpleUser(crmContract.getCreateUserId()));
         }else if (label == 2){
             CrmReceivables crmReceivables = crmReceivablesService.getById(id);
             if (crmReceivables == null){
@@ -1182,7 +1157,7 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
             simpleCrmInfo.setReturnTime(crmReceivables.getReturnTime());
             simpleCrmInfo.setCategoryCiteId(crmContract.getContractId());
             simpleCrmInfo.setCategoryCiteName(crmContract.getName());
-            simpleCrmInfo.setCreateUser(adminService.queryUserById(crmReceivables.getCreateUserId()).getData());
+            simpleCrmInfo.setCreateUser(UserCacheUtil.getSimpleUser(crmReceivables.getCreateUserId()));
         }else if (label == 3){
             CrmInvoice crmInvoice = ApplicationContextHolder.getBean(ICrmInvoiceService.class).getById(id);
             if (crmInvoice == null){
@@ -1194,7 +1169,7 @@ public class CrmExamineRecordServiceImpl extends BaseServiceImpl<CrmExamineRecor
             simpleCrmInfo.setRealInvoiceDate(crmInvoice.getRealInvoiceDate());
             simpleCrmInfo.setCategoryCiteId(crmContract.getContractId());
             simpleCrmInfo.setCategoryCiteName(crmContract.getName());
-            simpleCrmInfo.setCreateUser(adminService.queryUserById(crmInvoice.getCreateUserId()).getData());
+            simpleCrmInfo.setCreateUser(UserCacheUtil.getSimpleUser(crmInvoice.getCreateUserId()));
         }
         return simpleCrmInfo;
     }

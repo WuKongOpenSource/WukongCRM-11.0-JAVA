@@ -6,12 +6,12 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 DROP TABLE IF EXISTS `undo_log`;
 CREATE TABLE `undo_log`  (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `branch_id` bigint(20) NOT NULL,
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `branch_id` bigint(0) NOT NULL,
   `xid` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
   `context` varchar(128) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
   `rollback_info` longblob NOT NULL,
-  `log_status` int(11) NOT NULL,
+  `log_status` int(0) NOT NULL,
   `log_created` datetime(0) NOT NULL,
   `log_modified` datetime(0) NOT NULL,
   `ext` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
@@ -28,9 +28,9 @@ CREATE TABLE `undo_log`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_attention`;
 CREATE TABLE `wk_admin_attention`  (
-  `attention_id` int(11) NOT NULL AUTO_INCREMENT,
-  `be_user_id` bigint(20) NOT NULL COMMENT '被关注人',
-  `attention_user_id` bigint(20) NOT NULL COMMENT '关注人',
+  `attention_id` int(0) NOT NULL AUTO_INCREMENT,
+  `be_user_id` bigint(0) NOT NULL COMMENT '被关注人',
+  `attention_user_id` bigint(0) NOT NULL COMMENT '关注人',
   PRIMARY KEY (`attention_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '通讯录用户关注表' ROW_FORMAT = Dynamic;
 
@@ -44,8 +44,8 @@ INSERT INTO `wk_admin_attention` VALUES (1, 14773, 14773);
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_config`;
 CREATE TABLE `wk_admin_config`  (
-  `setting_id` int(9) NOT NULL AUTO_INCREMENT,
-  `status` int(1) NOT NULL DEFAULT 0 COMMENT '状态，0:不启用 1 ： 启用',
+  `setting_id` int(0) NOT NULL AUTO_INCREMENT,
+  `status` int(0) NOT NULL DEFAULT 0 COMMENT '状态，0:不启用 1 ： 启用',
   `name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '设置名称',
   `value` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '值',
   `description` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
@@ -64,11 +64,11 @@ INSERT INTO `wk_admin_config` VALUES (262437, 1, 'book', '1', '通讯录');
 INSERT INTO `wk_admin_config` VALUES (262438, 1, 'crm', '1', '客户管理');
 INSERT INTO `wk_admin_config` VALUES (262439, 1, 'project', '1', '项目管理');
 INSERT INTO `wk_admin_config` VALUES (262440, 1, 'calendar', '1', '日历');
-INSERT INTO `wk_admin_config` VALUES (262441, 0, 'email', '2', '邮箱');
-INSERT INTO `wk_admin_config` VALUES (262442, 0, 'knowledge', '2', '知识库');
-INSERT INTO `wk_admin_config` VALUES (262443, 0, 'hrm', '2', '人力资源管理');
-INSERT INTO `wk_admin_config` VALUES (262444, 0, 'jxc', '2', '进销存管理');
-INSERT INTO `wk_admin_config` VALUES (262445, 0, 'call', '3', '呼叫中心');
+INSERT INTO `wk_admin_config` VALUES (262441, 1, 'email', '1', '邮箱');
+INSERT INTO `wk_admin_config` VALUES (262442, 1, 'knowledge', '1', '知识库');
+INSERT INTO `wk_admin_config` VALUES (262443, 1, 'hrm', '1', '人力资源管理');
+INSERT INTO `wk_admin_config` VALUES (262444, 1, 'jxc', '1', '进销存管理');
+INSERT INTO `wk_admin_config` VALUES (262445, 1, 'call', '3', '呼叫中心');
 INSERT INTO `wk_admin_config` VALUES (262446, 0, 'followRecordOption', '打电话', '跟进记录选项');
 INSERT INTO `wk_admin_config` VALUES (262447, 0, 'followRecordOption', '发邮件', '跟进记录选项');
 INSERT INTO `wk_admin_config` VALUES (262448, 0, 'followRecordOption', '发短信', '跟进记录选项');
@@ -91,12 +91,12 @@ INSERT INTO `wk_admin_config` VALUES (262461, 1, 'marketing', NULL, '是否开�
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_dept`;
 CREATE TABLE `wk_admin_dept`  (
-  `dept_id` int(11) NOT NULL AUTO_INCREMENT,
-  `pid` int(11) NULL DEFAULT 0 COMMENT '父级ID 顶级部门为0',
+  `dept_id` int(0) NOT NULL AUTO_INCREMENT,
+  `pid` int(0) NULL DEFAULT 0 COMMENT '父级ID 顶级部门为0',
   `name` varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '部门名称',
-  `num` int(4) NULL DEFAULT NULL COMMENT '排序 越大越靠后',
+  `num` int(0) NULL DEFAULT NULL COMMENT '排序 越大越靠后',
   `remark` varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '部门备注',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '部门负责人',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '部门负责人',
   PRIMARY KEY (`dept_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 14853 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
 
@@ -110,16 +110,16 @@ INSERT INTO `wk_admin_dept` VALUES (14852, 0, '全公司', 1, '', NULL);
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_file`;
 CREATE TABLE `wk_admin_file`  (
-  `file_id` bigint(11) NOT NULL,
+  `file_id` bigint(0) NOT NULL,
   `name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '附件名称',
-  `size` bigint(20) NOT NULL COMMENT '附件大小（字节）',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
+  `size` bigint(0) NOT NULL COMMENT '附件大小（字节）',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `path` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '文件真实路径',
   `file_type` varchar(4) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT 'file' COMMENT '文件类型,file,img',
-  `type` int(1) NULL DEFAULT NULL COMMENT '1 本地 2 阿里云oss',
-  `source` int(1) NULL DEFAULT NULL COMMENT '来源 0 默认 1 admin 2 crm 3 work 4 oa 5 进销存 6 hrm',
-  `is_public` int(1) NULL DEFAULT 0 COMMENT '1 公有访问 0 私有访问',
+  `type` int(0) NULL DEFAULT NULL COMMENT '1 本地 2 阿里云oss',
+  `source` int(0) NULL DEFAULT NULL COMMENT '来源 0 默认 1 admin 2 crm 3 work 4 oa 5 进销存 6 hrm',
+  `is_public` int(0) NULL DEFAULT 0 COMMENT '1 公有访问 0 私有访问',
   `batch_id` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '批次id',
   PRIMARY KEY (`file_id`) USING BTREE,
   INDEX `batch_id`(`batch_id`) USING BTREE
@@ -134,8 +134,8 @@ CREATE TABLE `wk_admin_file`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_login_log`;
 CREATE TABLE `wk_admin_login_log`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `create_user_id` bigint(20) NOT NULL COMMENT '操作人id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `create_user_id` bigint(0) NOT NULL COMMENT '操作人id',
   `login_time` datetime(0) NOT NULL COMMENT '登录时间',
   `ip_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '登录ip地址',
   `login_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '登录地点',
@@ -143,7 +143,7 @@ CREATE TABLE `wk_admin_login_log`  (
   `core` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '终端内核',
   `platform` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '平台',
   `imei` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'IEMI设备号',
-  `auth_result` int(2) NULL DEFAULT NULL COMMENT '认证结果 1成功 2失败',
+  `auth_result` int(0) NULL DEFAULT NULL COMMENT '认证结果 1成功 2失败',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '系统登录日志表' ROW_FORMAT = Dynamic;
 
@@ -156,21 +156,21 @@ CREATE TABLE `wk_admin_login_log`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_menu`;
 CREATE TABLE `wk_admin_menu`  (
-  `menu_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '菜单ID',
-  `parent_id` int(11) UNSIGNED NULL DEFAULT 0 COMMENT '上级菜单ID',
+  `menu_id` int(0) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '菜单ID',
+  `parent_id` int(0) UNSIGNED NULL DEFAULT 0 COMMENT '上级菜单ID',
   `menu_name` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '菜单名称',
   `realm` varchar(127) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '权限标识',
   `realm_url` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '权限URL',
   `realm_module` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '所属模块',
-  `menu_type` int(1) NULL DEFAULT NULL COMMENT '菜单类型  1目录 2 菜单 3 按钮 4特殊',
-  `sort` int(4) UNSIGNED NULL DEFAULT 0 COMMENT '排序（同级有效）',
-  `status` int(4) NULL DEFAULT 1 COMMENT '状态 1 启用 0 禁用',
+  `menu_type` int(0) NULL DEFAULT NULL COMMENT '菜单类型  1目录 2 菜单 3 按钮 4特殊',
+  `sort` int(0) UNSIGNED NULL DEFAULT 0 COMMENT '排序（同级有效）',
+  `status` int(0) NULL DEFAULT 1 COMMENT '状态 1 启用 0 禁用',
   `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '菜单说明',
   PRIMARY KEY (`menu_id`) USING BTREE,
   INDEX `menu_id`(`menu_id`) USING BTREE,
   INDEX `parent_id`(`parent_id`) USING BTREE,
   INDEX `realm`(`realm`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 936 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '后台菜单表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 943 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '后台菜单表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_admin_menu
@@ -419,14 +419,14 @@ INSERT INTO `wk_admin_menu` VALUES (645, 640, '删除', 'delete', '/jxcSale/dele
 INSERT INTO `wk_admin_menu` VALUES (646, 640, '转移', 'transfer', '/jxcField/transfer/5', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (647, 640, '作废', 'setState', '/jxcSale/setStateByIds', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (648, 640, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (650, 6, '销售退货单', 'salereturn', '', NULL, 1, 6, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (651, 650, '新建', 'save', '/jxcSalereturn/addOrUpdate/add', NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (652, 650, '编辑', 'update', '/jxcSalereturn/addOrUpdate/update', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (650, 6, '销售退货单', 'saleReturn', '', NULL, 1, 6, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (651, 650, '新建', 'save', '/jxcSaleReturn/addOrUpdate/add', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (652, 650, '编辑', 'update', '/jxcSaleReturn/addOrUpdate/update', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (653, 650, '查看列表', 'index', '/jxcField/queryPageList/6', NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (654, 650, '查看详情', 'read', '/jxcField/information/6,/jxcSalereturn/queryById/*', NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (655, 650, '删除', 'delete', '/jxcSalereturn/deleteByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (654, 650, '查看详情', 'read', '/jxcField/information/6,/jxcSaleReturn/queryById/*', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (655, 650, '删除', 'delete', '/jxcSaleReturn/deleteByIds', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (656, 650, '转移', 'transfer', '/jxcField/transfer/6', NULL, 3, 1, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (657, 650, '作废', 'setState', '/jxcSalereturn/setStateByIds', NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (657, 650, '作废', 'setState', '/jxcSaleReturn/setStateByIds', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (658, 650, '导出', 'excelexport', NULL, NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (670, 6, '仓库管理', 'warehouse', '', NULL, 1, 7, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (671, 670, '新建', 'save', '/jxcWarehouse/addOrUpdate/add', NULL, 3, 1, 1, NULL);
@@ -564,26 +564,32 @@ INSERT INTO `wk_admin_menu` VALUES (926, 180, '市场活动表单设置', 'activ
 INSERT INTO `wk_admin_menu` VALUES (927, 301, '管理参与人权限', 'manageTaskOwnerUser', '', NULL, 3, 29, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (928, 440, '导入', 'excelimport', '/crmInstrument/importRecordList', NULL, 3, 5, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (929, 440, '导出', 'excelexport', '/crmInstrument/exportRecordList', NULL, 3, 6, 1, NULL);
-INSERT INTO `wk_admin_menu` VALUES (932, 420, '导出', 'excelexport', '/crmInvoice/allExportExcel', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (933, 11, '编辑团队成员', 'teamsave', '/crmContacts/addMembers,/crmContacts/updateMembers,/crmContacts/exitTeam', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (934, 14, '编辑团队成员', 'teamsave', '/crmReceivables/addMembers,/crmReceivables/updateMembers,/crmReceivables/exitTeam', NULL, 3, 1, 1, NULL);
 INSERT INTO `wk_admin_menu` VALUES (935, 166, '角色权限查看', 'read', NULL, NULL, 3, 8, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (936, 1, '回款计划', 'receivablesPlan', NULL, NULL, 1, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (937, 936, '新建', 'save', NULL, NULL, 3, 1, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (938, 936, '编辑', 'update', NULL, NULL, 3, 2, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (939, 936, '查看列表', 'index', NULL, NULL, 3, 3, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (940, 936, '查看详情', 'read', NULL, NULL, 3, 4, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (941, 936, '删除', 'delete', NULL, NULL, 3, 5, 1, NULL);
+INSERT INTO `wk_admin_menu` VALUES (942, 936, '导出', 'excelexport', NULL, NULL, 3, 6, 1, NULL);
 
 -- ----------------------------
 -- Table structure for wk_admin_message
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_message`;
 CREATE TABLE `wk_admin_message`  (
-  `message_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+  `message_id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT '消息ID',
   `title` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '消息标题',
   `content` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '内容',
-  `label` int(2) NULL DEFAULT NULL COMMENT '消息大类 1 任务 2 日志 3 oa审批 4公告 5 日程 6 crm消息 7 知识库 8 人资',
-  `type` int(2) NULL DEFAULT NULL COMMENT '消息类型 详见AdminMessageEnum',
-  `type_id` int(11) NULL DEFAULT NULL COMMENT '关联ID',
-  `create_user` bigint(20) NOT NULL COMMENT '消息创建者 0为系统',
-  `recipient_user` bigint(20) NOT NULL COMMENT '接收人',
+  `label` int(0) NULL DEFAULT NULL COMMENT '消息大类 1 任务 2 日志 3 oa审批 4公告 5 日程 6 crm消息 7 知识库 8 人资',
+  `type` int(0) NULL DEFAULT NULL COMMENT '消息类型 详见AdminMessageEnum',
+  `type_id` int(0) NULL DEFAULT NULL COMMENT '关联ID',
+  `create_user` bigint(0) NOT NULL COMMENT '消息创建者 0为系统',
+  `recipient_user` bigint(0) NOT NULL COMMENT '接收人',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `is_read` int(1) NULL DEFAULT 0 COMMENT '是否已读 0 未读 1 已读',
+  `is_read` int(0) NULL DEFAULT 0 COMMENT '是否已读 0 未读 1 已读',
   `read_time` datetime(0) NULL DEFAULT NULL COMMENT '已读时间',
   PRIMARY KEY (`message_id`) USING BTREE,
   INDEX `recipient_user`(`recipient_user`) USING BTREE
@@ -598,12 +604,12 @@ CREATE TABLE `wk_admin_message`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_model_sort`;
 CREATE TABLE `wk_admin_model_sort`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `type` int(4) NOT NULL COMMENT '导航类型 1头部导航 2客户管理左侧导航',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `type` int(0) NOT NULL COMMENT '导航类型 1头部导航 2客户管理左侧导航',
   `model` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '模块  1仪表盘 2待办事项 3线索 4客户 5联系人 6商机 7合同 8回款 9发票 10回访 11产品 12市场活动',
-  `sort` int(4) NOT NULL COMMENT '排序',
-  `is_hidden` int(2) NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
-  `user_id` bigint(20) NOT NULL COMMENT '用户id',
+  `sort` int(0) NOT NULL COMMENT '排序',
+  `is_hidden` int(0) NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '客户管理导航栏排序表' ROW_FORMAT = Dynamic;
 
@@ -616,15 +622,15 @@ CREATE TABLE `wk_admin_model_sort`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_official_img`;
 CREATE TABLE `wk_admin_official_img`  (
-  `official_img_id` int(11) NOT NULL AUTO_INCREMENT,
-  `size` bigint(20) NULL DEFAULT NULL COMMENT '附件大小（字节）',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `official_img_id` int(0) NOT NULL AUTO_INCREMENT,
+  `size` bigint(0) NULL DEFAULT NULL COMMENT '附件大小（字节）',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '文件真实路径',
   `file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '文件路径',
-  `type` int(1) NULL DEFAULT NULL COMMENT '1.官网设置 2.名片海报',
+  `type` int(0) NULL DEFAULT NULL COMMENT '1.官网设置 2.名片海报',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
-  `tactic` int(6) NULL DEFAULT NULL COMMENT '0',
+  `tactic` int(0) NULL DEFAULT NULL COMMENT '0',
   PRIMARY KEY (`official_img_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '官网图片' ROW_FORMAT = Dynamic;
 
@@ -637,14 +643,14 @@ CREATE TABLE `wk_admin_official_img`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_role`;
 CREATE TABLE `wk_admin_role`  (
-  `role_id` int(11) NOT NULL AUTO_INCREMENT,
+  `role_id` int(0) NOT NULL AUTO_INCREMENT,
   `role_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '名称',
-  `role_type` int(1) NULL DEFAULT NULL COMMENT '0、自定义角色1、管理角色 2、客户管理角色 3、人事角色 4、财务角色 5、项目角色 8、项目自定义角色',
+  `role_type` int(0) NULL DEFAULT NULL COMMENT '0、自定义角色1、管理角色 2、客户管理角色 3、人事角色 4、财务角色 5、项目角色 8、项目自定义角色',
   `remark` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '备注',
-  `status` int(3) NULL DEFAULT 1 COMMENT '1 启用 0 禁用',
-  `data_type` int(1) NOT NULL DEFAULT 5 COMMENT '数据权限 1、本人，2、本人及下属，3、本部门，4、本部门及下属部门，5、全部 ',
-  `is_hidden` int(1) NOT NULL DEFAULT 1 COMMENT '0 隐藏 1 不隐藏',
-  `label` int(2) NULL DEFAULT NULL COMMENT '1 系统项目管理员角色 2 项目管理角色 3 项目编辑角色 4 项目只读角色',
+  `status` int(0) NULL DEFAULT 1 COMMENT '1 启用 0 禁用',
+  `data_type` int(0) NOT NULL DEFAULT 5 COMMENT '数据权限 1、本人，2、本人及下属，3、本部门，4、本部门及下属部门，5、全部 ',
+  `is_hidden` int(0) NOT NULL DEFAULT 1 COMMENT '0 隐藏 1 不隐藏',
+  `label` int(0) NULL DEFAULT NULL COMMENT '1 系统项目管理员角色 2 项目管理角色 3 项目编辑角色 4 项目只读角色',
   PRIMARY KEY (`role_id`) USING BTREE,
   INDEX `role_type`(`role_type`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 180177 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '角色表' ROW_FORMAT = Dynamic;
@@ -672,10 +678,10 @@ INSERT INTO `wk_admin_role` VALUES (180175, '上级角色', 9, NULL, 1, 2, 1, 91
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_role_auth`;
 CREATE TABLE `wk_admin_role_auth`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `role_id` int(11) NOT NULL COMMENT '角色ID',
-  `menu_id` int(11) NOT NULL COMMENT '菜单ID',
-  `auth_role_id` int(11) NULL DEFAULT NULL COMMENT '能查询的角色ID',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `role_id` int(0) NOT NULL COMMENT '角色ID',
+  `menu_id` int(0) NOT NULL COMMENT '菜单ID',
+  `auth_role_id` int(0) NULL DEFAULT NULL COMMENT '能查询的角色ID',
   `remark` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '备注',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `role_type`(`auth_role_id`) USING BTREE
@@ -690,9 +696,9 @@ CREATE TABLE `wk_admin_role_auth`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_role_menu`;
 CREATE TABLE `wk_admin_role_menu`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `role_id` int(11) NOT NULL COMMENT '角色ID',
-  `menu_id` int(11) NOT NULL COMMENT '菜单ID',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `role_id` int(0) NOT NULL COMMENT '角色ID',
+  `menu_id` int(0) NOT NULL COMMENT '菜单ID',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `role_id`(`role_id`) USING BTREE,
   INDEX `menu_id`(`menu_id`) USING BTREE
@@ -969,12 +975,12 @@ INSERT INTO `wk_admin_role_menu` VALUES (2300833, 180176, 891);
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_system_log`;
 CREATE TABLE `wk_admin_system_log`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `create_user_id` int(20) NOT NULL COMMENT '操作人id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `create_user_id` int(0) NOT NULL COMMENT '操作人id',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `ip_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'IP地址',
-  `types` int(4) NULL DEFAULT NULL COMMENT '模块 1企业首页 2应用管理 3员工和部门管理 4名片小程序管理 5角色权限管理 6审批流（合同/回款） 7审批流（办公） 8项目管理 9客户管理 10系统日志管理 11其他设置',
-  `behavior` int(4) NULL DEFAULT NULL COMMENT '行为',
+  `types` int(0) NULL DEFAULT NULL COMMENT '模块 1企业首页 2应用管理 3员工和部门管理 4名片小程序管理 5角色权限管理 6审批流（合同/回款） 7审批流（办公） 8项目管理 9客户管理 10系统日志管理 11其他设置',
+  `behavior` int(0) NULL DEFAULT NULL COMMENT '行为',
   `object` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '操作对象',
   `detail` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '操作详情',
   PRIMARY KEY (`id`) USING BTREE
@@ -989,7 +995,7 @@ CREATE TABLE `wk_admin_system_log`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_user`;
 CREATE TABLE `wk_admin_user`  (
-  `user_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `user_id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT '主键',
   `username` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '用户名',
   `password` varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '密码',
   `salt` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '安全符',
@@ -999,14 +1005,15 @@ CREATE TABLE `wk_admin_user`  (
   `num` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '员工编号',
   `mobile` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '手机号',
   `email` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '邮箱',
-  `sex` int(1) NULL DEFAULT NULL COMMENT '0 未选择 1 男 2 女 ',
-  `dept_id` int(11) NULL DEFAULT NULL COMMENT '部门',
+  `sex` int(0) NULL DEFAULT NULL COMMENT '0 未选择 1 男 2 女 ',
+  `dept_id` int(0) NULL DEFAULT NULL COMMENT '部门',
   `post` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '岗位',
-  `status` int(3) NULL DEFAULT 2 COMMENT '状态,0禁用,1正常,2未激活',
-  `parent_id` bigint(20) NULL DEFAULT 0 COMMENT '直属上级ID',
+  `status` int(0) NULL DEFAULT 2 COMMENT '状态,0禁用,1正常,2未激活',
+  `parent_id` bigint(0) NULL DEFAULT 0 COMMENT '直属上级ID',
   `last_login_time` datetime(0) NULL DEFAULT NULL COMMENT '最后登录时间',
   `last_login_ip` varchar(30) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '最后登录IP 注意兼容IPV6',
-  `is_del` int(1) NOT NULL DEFAULT 0 COMMENT '是否删除 0 未删除 1 已删除',
+  `old_user_id` bigint(0) NULL DEFAULT NULL,
+  `is_del` int(0) NOT NULL DEFAULT 0 COMMENT '是否删除 0 未删除 1 已删除',
   PRIMARY KEY (`user_id`) USING BTREE,
   INDEX `parent_id`(`parent_id`) USING BTREE,
   INDEX `dept_id`(`dept_id`) USING BTREE
@@ -1021,9 +1028,9 @@ CREATE TABLE `wk_admin_user`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_user_config`;
 CREATE TABLE `wk_admin_user_config`  (
-  `setting_id` int(9) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NOT NULL,
-  `status` int(1) NOT NULL DEFAULT 0 COMMENT '状态，0:不启用 1 ： 启用',
+  `setting_id` int(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NOT NULL,
+  `status` int(0) NOT NULL DEFAULT 0 COMMENT '状态，0:不启用 1 ： 启用',
   `name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '设置名称',
   `value` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '值',
   `description` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
@@ -1051,10 +1058,10 @@ INSERT INTO `wk_admin_user_config` VALUES (114573, 14774, 1, 'readNotice', '', '
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_user_his_table`;
 CREATE TABLE `wk_admin_user_his_table`  (
-  `his_table_id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NULL DEFAULT NULL,
-  `his_table` int(1) NULL DEFAULT NULL COMMENT '0 没有 1 有',
-  `type` int(1) NULL DEFAULT 1 COMMENT '1.坐席授权 2.设置默认名片 3.关联员工',
+  `his_table_id` int(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NULL DEFAULT NULL,
+  `his_table` int(0) NULL DEFAULT NULL COMMENT '0 没有 1 有',
+  `type` int(0) NULL DEFAULT 1 COMMENT '1.坐席授权 2.设置默认名片 3.关联员工',
   PRIMARY KEY (`his_table_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '授权坐席' ROW_FORMAT = Dynamic;
 
@@ -1067,9 +1074,9 @@ CREATE TABLE `wk_admin_user_his_table`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_admin_user_role`;
 CREATE TABLE `wk_admin_user_role`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
-  `role_id` int(11) NOT NULL COMMENT '角色ID',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NOT NULL COMMENT '用户ID',
+  `role_id` int(0) NOT NULL COMMENT '角色ID',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `user_id`(`user_id`) USING BTREE,
   INDEX `role_id`(`role_id`) USING BTREE
@@ -1082,54 +1089,29 @@ INSERT INTO `wk_admin_user_role` VALUES (19219, 14773, 180162);
 INSERT INTO `wk_admin_user_role` VALUES (19220, 14774, 180162);
 
 -- ----------------------------
--- Table structure for wk_admin_visiting_card
--- ----------------------------
-DROP TABLE IF EXISTS `wk_admin_visiting_card`;
-CREATE TABLE `wk_admin_visiting_card`  (
-  `card_id` int(11) NOT NULL AUTO_INCREMENT,
-  `card_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '名片名称',
-  `create_user_id` bigint(11) NULL DEFAULT NULL COMMENT '创建人',
-  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `user_id` bigint(11) NULL DEFAULT NULL COMMENT '关联员工id',
-  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '备注',
-  `openid` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
-  `wechat_number` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '微信号',
-  `url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '网址',
-  `address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '地址',
-  `intro` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '简介',
-  `weixin_img` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '微信小程序码',
-  `official_img` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '海报名片',
-  PRIMARY KEY (`card_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '名片表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Records of wk_admin_visiting_card
--- ----------------------------
-
--- ----------------------------
 -- Table structure for wk_call_record
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_call_record`;
 CREATE TABLE `wk_call_record`  (
-  `call_record_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键 记录id',
+  `call_record_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键 记录id',
   `number` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '电话号码',
   `start_time` datetime(0) NULL DEFAULT NULL COMMENT '开始振铃时间',
   `answer_time` datetime(0) NULL DEFAULT NULL COMMENT '接通时间',
   `end_time` datetime(0) NULL DEFAULT NULL COMMENT '结束时间',
-  `talk_time` int(10) NULL DEFAULT 0 COMMENT '通话时长（秒）',
-  `dial_time` int(10) NULL DEFAULT 0 COMMENT '摘机时长',
-  `state` int(2) NULL DEFAULT NULL COMMENT '通话状态 (0未振铃，1未接通，2接通，3呼入未接通)',
-  `type` int(2) NULL DEFAULT NULL COMMENT '通话类型 (0呼出，1呼入)',
+  `talk_time` int(0) NULL DEFAULT 0 COMMENT '通话时长（秒）',
+  `dial_time` int(0) NULL DEFAULT 0 COMMENT '摘机时长',
+  `state` int(0) NULL DEFAULT NULL COMMENT '通话状态 (0未振铃，1未接通，2接通，3呼入未接通)',
+  `type` int(0) NULL DEFAULT NULL COMMENT '通话类型 (0呼出，1呼入)',
   `model` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '关联模块 leads，customer，contacts',
-  `model_id` int(11) NULL DEFAULT NULL COMMENT '关联模块ID',
+  `model_id` int(0) NULL DEFAULT NULL COMMENT '关联模块ID',
   `file_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '录音文件路径',
-  `size` int(10) NULL DEFAULT 0 COMMENT '录音文件大小',
+  `size` int(0) NULL DEFAULT 0 COMMENT '录音文件大小',
   `file_name` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '文件名称',
   `call_upload` tinyint(1) NULL DEFAULT 0 COMMENT '0：CRM服务器; 1：上传至阿里云',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '修改时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '批次',
   PRIMARY KEY (`call_record_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '通话记录' ROW_FORMAT = Dynamic;
@@ -1143,11 +1125,11 @@ CREATE TABLE `wk_call_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_card_weixin_browse`;
 CREATE TABLE `wk_card_weixin_browse`  (
-  `browse_id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NULL DEFAULT NULL COMMENT '名片表',
-  `weixin_leads_id` bigint(20) NULL DEFAULT NULL COMMENT '微信线索表',
+  `browse_id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NULL DEFAULT NULL COMMENT '名片表',
+  `weixin_leads_id` bigint(0) NULL DEFAULT NULL COMMENT '微信线索表',
   `create_time` datetime(0) NULL DEFAULT NULL,
-  `num` int(11) NULL DEFAULT 0 COMMENT '浏览次数',
+  `num` int(0) NULL DEFAULT 0 COMMENT '浏览次数',
   `update_time` datetime(0) NULL DEFAULT NULL,
   PRIMARY KEY (`browse_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '微信浏览名片表' ROW_FORMAT = Dynamic;
@@ -1161,10 +1143,10 @@ CREATE TABLE `wk_card_weixin_browse`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_card_weixin_leads`;
 CREATE TABLE `wk_card_weixin_leads`  (
-  `weixin_leads_id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `is_transform` int(1) NULL DEFAULT 0 COMMENT '1已转化 0 未转化',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL,
+  `weixin_leads_id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `is_transform` int(0) NULL DEFAULT 0 COMMENT '1已转化 0 未转化',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL,
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `weixin_img` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '微信头像',
   `weixin_name` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '微信名称',
@@ -1185,11 +1167,11 @@ CREATE TABLE `wk_card_weixin_leads`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_card_weixin_leads_user`;
 CREATE TABLE `wk_card_weixin_leads_user`  (
-  `weixin_user_id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NULL DEFAULT NULL COMMENT '被关注的员工id',
-  `weixin_leads_id` bigint(20) NULL DEFAULT NULL COMMENT '微信线索id',
+  `weixin_user_id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NULL DEFAULT NULL COMMENT '被关注的员工id',
+  `weixin_leads_id` bigint(0) NULL DEFAULT NULL COMMENT '微信线索id',
   `create_time` datetime(0) NULL DEFAULT NULL,
-  `relevance_user_id` bigint(20) NULL DEFAULT NULL COMMENT '员工id',
+  `relevance_user_id` bigint(0) NULL DEFAULT NULL COMMENT '员工id',
   PRIMARY KEY (`weixin_user_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '名片夹' ROW_FORMAT = Dynamic;
 
@@ -1202,9 +1184,9 @@ CREATE TABLE `wk_card_weixin_leads_user`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_achievement`;
 CREATE TABLE `wk_crm_achievement`  (
-  `achievement_id` int(11) NOT NULL AUTO_INCREMENT,
-  `obj_id` int(11) NULL DEFAULT NULL COMMENT '对象ID',
-  `type` int(2) NULL DEFAULT 0 COMMENT '1公司2部门3员工',
+  `achievement_id` int(0) NOT NULL AUTO_INCREMENT,
+  `obj_id` int(0) NULL DEFAULT NULL COMMENT '对象ID',
+  `type` int(0) NULL DEFAULT 0 COMMENT '1公司2部门3员工',
   `year` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '年',
   `january` decimal(18, 2) NULL DEFAULT 0.00 COMMENT '一月',
   `february` decimal(18, 2) NULL DEFAULT 0.00 COMMENT '二月',
@@ -1218,7 +1200,7 @@ CREATE TABLE `wk_crm_achievement`  (
   `october` decimal(18, 2) NULL DEFAULT 0.00 COMMENT '十月',
   `november` decimal(18, 2) NULL DEFAULT 0.00 COMMENT '十一月',
   `december` decimal(18, 2) NULL DEFAULT 0.00 COMMENT '十二月',
-  `status` int(2) NULL DEFAULT NULL COMMENT '1销售（目标）2回款（目标）',
+  `status` int(0) NULL DEFAULT NULL COMMENT '1销售（目标）2回款（目标）',
   `yeartarget` decimal(18, 2) NULL DEFAULT 0.00 COMMENT '年目标',
   PRIMARY KEY (`achievement_id`) USING BTREE,
   INDEX `obj_id`(`obj_id`, `type`) USING BTREE
@@ -1233,14 +1215,14 @@ CREATE TABLE `wk_crm_achievement`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_action_record`;
 CREATE TABLE `wk_crm_action_record`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `create_user_id` bigint(20) NOT NULL COMMENT '操作人ID',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `create_user_id` bigint(0) NOT NULL COMMENT '操作人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `ip_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'ip地址',
-  `types` int(4) NOT NULL COMMENT '模块类型',
-  `action_id` int(11) NULL DEFAULT NULL COMMENT '被操作对象ID',
+  `types` int(0) NOT NULL COMMENT '模块类型',
+  `action_id` int(0) NULL DEFAULT NULL COMMENT '被操作对象ID',
   `object` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '对象',
-  `behavior` int(4) NULL DEFAULT NULL COMMENT '行为',
+  `behavior` int(0) NULL DEFAULT NULL COMMENT '行为',
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '内容',
   `detail` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '详情',
   PRIMARY KEY (`id`) USING BTREE,
@@ -1256,20 +1238,20 @@ CREATE TABLE `wk_crm_action_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_activity`;
 CREATE TABLE `wk_crm_activity`  (
-  `activity_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '活动id',
-  `type` int(1) NULL DEFAULT NULL COMMENT '活动类型 1 跟进记录 2 创建记录 3 商机阶段变更 4 外勤签到',
+  `activity_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '活动id',
+  `type` int(0) NULL DEFAULT NULL COMMENT '活动类型 1 跟进记录 2 创建记录 3 商机阶段变更 4 外勤签到',
   `category` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '跟进类型',
-  `activity_type` int(1) NOT NULL COMMENT '活动类型 1 线索 2 客户 3 联系人 4 产品 5 商机 6 合同 7回款 8日志 9审批 10日程 11任务 12 发邮件',
-  `activity_type_id` int(11) NOT NULL COMMENT '活动类型Id',
+  `activity_type` int(0) NOT NULL COMMENT '活动类型 1 线索 2 客户 3 联系人 4 产品 5 商机 6 合同 7回款 8日志 9审批 10日程 11任务 12 发邮件',
+  `activity_type_id` int(0) NOT NULL COMMENT '活动类型Id',
   `content` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '活动内容',
   `business_ids` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '关联商机',
   `contacts_ids` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '关联联系人',
   `next_time` datetime(0) NULL DEFAULT NULL COMMENT '下次联系时间',
-  `status` int(2) NULL DEFAULT 1 COMMENT '0 删除 1 未删除',
+  `status` int(0) NULL DEFAULT 1 COMMENT '0 删除 1 未删除',
   `lng` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '经度',
   `lat` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '纬度',
   `address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '签到地址',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人id',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人id',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '批次id',
   PRIMARY KEY (`activity_id`) USING BTREE,
@@ -1286,10 +1268,10 @@ CREATE TABLE `wk_crm_activity`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_activity_relation`;
 CREATE TABLE `wk_crm_activity_relation`  (
-  `r_id` int(11) NOT NULL AUTO_INCREMENT,
-  `activity_id` int(11) NOT NULL,
-  `type` int(1) NOT NULL COMMENT '3 联系人 5 商机',
-  `type_id` int(11) NOT NULL,
+  `r_id` int(0) NOT NULL AUTO_INCREMENT,
+  `activity_id` int(0) NOT NULL,
+  `type` int(0) NOT NULL COMMENT '3 联系人 5 商机',
+  `type_id` int(0) NOT NULL,
   PRIMARY KEY (`r_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '活动关联商机联系人表' ROW_FORMAT = Dynamic;
 
@@ -1302,8 +1284,8 @@ CREATE TABLE `wk_crm_activity_relation`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_area`;
 CREATE TABLE `wk_crm_area`  (
-  `code_id` int(11) NULL DEFAULT NULL,
-  `parent_id` int(11) NULL DEFAULT NULL,
+  `code_id` int(0) NULL DEFAULT NULL,
+  `parent_id` int(0) NULL DEFAULT NULL,
   `city_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '地名表' ROW_FORMAT = Dynamic;
 
@@ -5198,13 +5180,13 @@ INSERT INTO `wk_crm_area` VALUES (511923, 511900, '平昌县');
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_back_log_deal`;
 CREATE TABLE `wk_crm_back_log_deal`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `model` int(2) NOT NULL COMMENT '待办事项模块 1今日需联系客户 2分配给我的线索 3分配给我的客户 4待进入公海的客户 5待审核合同 6待审核回款 7待回款提醒 8即将到期的合同 9待回访合同 10待审核发票',
-  `crm_type` int(2) NOT NULL COMMENT '数据模块',
-  `type_id` int(11) NOT NULL COMMENT '数据id',
-  `pool_id` int(11) NULL DEFAULT NULL COMMENT '公海id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `model` int(0) NOT NULL COMMENT '待办事项模块 1今日需联系客户 2分配给我的线索 3分配给我的客户 4待进入公海的客户 5待审核合同 6待审核回款 7待回款提醒 8即将到期的合同 9待回访合同 10待审核发票',
+  `crm_type` int(0) NOT NULL COMMENT '数据模块',
+  `type_id` int(0) NOT NULL COMMENT '数据id',
+  `pool_id` int(0) NULL DEFAULT NULL COMMENT '公海id',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '待办事项标记处理表' ROW_FORMAT = Dynamic;
 
@@ -5217,30 +5199,30 @@ CREATE TABLE `wk_crm_back_log_deal`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_business`;
 CREATE TABLE `wk_crm_business`  (
-  `business_id` int(11) NOT NULL AUTO_INCREMENT,
-  `type_id` int(11) NULL DEFAULT NULL COMMENT '商机状态组',
-  `status_id` int(11) NULL DEFAULT NULL COMMENT '销售阶段',
+  `business_id` int(0) NOT NULL AUTO_INCREMENT,
+  `type_id` int(0) NULL DEFAULT NULL COMMENT '商机状态组',
+  `status_id` int(0) NULL DEFAULT NULL COMMENT '销售阶段',
   `next_time` datetime(0) NULL DEFAULT NULL COMMENT '下次联系时间',
-  `customer_id` int(11) NULL DEFAULT NULL COMMENT '客户ID',
-  `contacts_id` int(11) NULL DEFAULT NULL COMMENT '首要联系人ID',
+  `customer_id` int(0) NULL DEFAULT NULL COMMENT '客户ID',
+  `contacts_id` int(0) NULL DEFAULT NULL COMMENT '首要联系人ID',
   `deal_date` datetime(0) NULL DEFAULT NULL COMMENT '预计成交日期',
   `business_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '商机名称',
   `money` decimal(18, 2) NULL DEFAULT NULL COMMENT '商机金额',
   `discount_rate` decimal(10, 2) NULL DEFAULT NULL COMMENT '整单折扣',
   `total_price` decimal(17, 2) NULL DEFAULT NULL COMMENT '产品总金额',
   `remark` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT '' COMMENT '备注',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '批次 比如附件批次',
-  `ro_user_id` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '只读权限',
-  `rw_user_id` longtext CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '读写权限',
-  `is_end` int(4) NOT NULL DEFAULT 0 COMMENT '1赢单2输单3无效',
+  `ro_user_id` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '只读权限',
+  `rw_user_id` longtext CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '读写权限',
+  `is_end` int(0) NOT NULL DEFAULT 0 COMMENT '1赢单2输单3无效',
   `status_remark` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '',
-  `status` int(1) NULL DEFAULT 1 COMMENT '1正常 3  删除',
+  `status` int(0) NULL DEFAULT 1 COMMENT '1正常 3  删除',
   `last_time` datetime(0) NULL DEFAULT NULL COMMENT '最后跟进时间',
-  `followup` int(1) NULL DEFAULT NULL COMMENT '0 未跟进 1 已跟进',
+  `followup` int(0) NULL DEFAULT NULL COMMENT '0 未跟进 1 已跟进',
   PRIMARY KEY (`business_id`) USING BTREE,
   INDEX `owner_user_id`(`owner_user_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '商机表' ROW_FORMAT = Dynamic;
@@ -5254,11 +5236,11 @@ CREATE TABLE `wk_crm_business`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_business_change`;
 CREATE TABLE `wk_crm_business_change`  (
-  `change_id` int(10) NOT NULL AUTO_INCREMENT,
-  `business_id` int(10) NOT NULL COMMENT '商机ID',
-  `status_id` int(10) NOT NULL COMMENT '阶段ID',
+  `change_id` int(0) NOT NULL AUTO_INCREMENT,
+  `business_id` int(0) NOT NULL COMMENT '商机ID',
+  `status_id` int(0) NOT NULL COMMENT '阶段ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人',
   PRIMARY KEY (`change_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '商机阶段变化表' ROW_FORMAT = Dynamic;
 
@@ -5271,8 +5253,8 @@ CREATE TABLE `wk_crm_business_change`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_business_data`;
 CREATE TABLE `wk_crm_business_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field_id` int(11) NOT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
   `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
   `create_time` datetime(0) NOT NULL,
@@ -5291,13 +5273,13 @@ CREATE TABLE `wk_crm_business_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_business_product`;
 CREATE TABLE `wk_crm_business_product`  (
-  `r_id` int(11) NOT NULL AUTO_INCREMENT,
-  `business_id` int(11) NOT NULL COMMENT '商机ID',
-  `product_id` int(11) NOT NULL COMMENT '产品ID',
+  `r_id` int(0) NOT NULL AUTO_INCREMENT,
+  `business_id` int(0) NOT NULL COMMENT '商机ID',
+  `product_id` int(0) NOT NULL COMMENT '产品ID',
   `price` decimal(18, 2) NOT NULL COMMENT '产品单价',
   `sales_price` decimal(18, 2) NOT NULL COMMENT '销售价格',
   `num` decimal(10, 2) NOT NULL COMMENT '数量',
-  `discount` int(10) NOT NULL COMMENT '折扣',
+  `discount` int(0) NOT NULL COMMENT '折扣',
   `subtotal` decimal(18, 2) NOT NULL COMMENT '小计（折扣后价格）',
   `unit` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '单位',
   PRIMARY KEY (`r_id`) USING BTREE
@@ -5312,11 +5294,11 @@ CREATE TABLE `wk_crm_business_product`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_business_status`;
 CREATE TABLE `wk_crm_business_status`  (
-  `status_id` int(11) NOT NULL AUTO_INCREMENT,
-  `type_id` int(11) NOT NULL COMMENT '商机状态类别ID',
+  `status_id` int(0) NOT NULL AUTO_INCREMENT,
+  `type_id` int(0) NOT NULL COMMENT '商机状态类别ID',
   `name` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '标识',
   `rate` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '赢单率',
-  `order_num` int(4) NULL DEFAULT NULL COMMENT '排序',
+  `order_num` int(0) NULL DEFAULT NULL COMMENT '排序',
   PRIMARY KEY (`status_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 47646 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '商机状态' ROW_FORMAT = Dynamic;
 
@@ -5332,13 +5314,13 @@ INSERT INTO `wk_crm_business_status` VALUES (47645, 12366, '方案/报价', '80'
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_business_type`;
 CREATE TABLE `wk_crm_business_type`  (
-  `type_id` int(11) NOT NULL AUTO_INCREMENT,
+  `type_id` int(0) NOT NULL AUTO_INCREMENT,
   `name` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '标识',
   `dept_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '部门ID',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
-  `status` int(1) NOT NULL DEFAULT 1 COMMENT '0禁用1启用2删除',
+  `status` int(0) NOT NULL DEFAULT 1 COMMENT '0禁用1启用2删除',
   PRIMARY KEY (`type_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 12367 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '商机状态组类别' ROW_FORMAT = Dynamic;
 
@@ -5352,9 +5334,9 @@ INSERT INTO `wk_crm_business_type` VALUES (12366, '销售流程商机组', '', 3
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_business_user_star`;
 CREATE TABLE `wk_crm_business_user_star`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NOT NULL COMMENT '用户id',
-  `business_id` int(11) NOT NULL COMMENT '客户id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
+  `business_id` int(0) NOT NULL COMMENT '客户id',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `user_id`(`user_id`, `business_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户商机标星关系表 ' ROW_FORMAT = Dynamic;
@@ -5368,18 +5350,18 @@ CREATE TABLE `wk_crm_business_user_star`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_contacts`;
 CREATE TABLE `wk_crm_contacts`  (
-  `contacts_id` int(11) NOT NULL AUTO_INCREMENT,
+  `contacts_id` int(0) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '联系人名称',
   `next_time` datetime(0) NULL DEFAULT NULL COMMENT '下次联系时间',
   `mobile` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '手机',
   `telephone` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '电话',
   `email` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '电子邮箱',
   `post` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '职务',
-  `customer_id` int(11) NOT NULL COMMENT '客户ID',
+  `customer_id` int(0) NOT NULL COMMENT '客户ID',
   `address` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '地址',
   `remark` varchar(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT '' COMMENT '备注',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '批次',
@@ -5398,9 +5380,9 @@ CREATE TABLE `wk_crm_contacts`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_contacts_business`;
 CREATE TABLE `wk_crm_contacts_business`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `business_id` int(11) NOT NULL,
-  `contacts_id` int(11) NOT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `business_id` int(0) NOT NULL,
+  `contacts_id` int(0) NOT NULL,
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '商机联系人关联表' ROW_FORMAT = Dynamic;
 
@@ -5413,8 +5395,8 @@ CREATE TABLE `wk_crm_contacts_business`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_contacts_data`;
 CREATE TABLE `wk_crm_contacts_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field_id` int(11) NOT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
   `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
   `create_time` datetime(0) NOT NULL,
@@ -5433,9 +5415,9 @@ CREATE TABLE `wk_crm_contacts_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_contacts_user_star`;
 CREATE TABLE `wk_crm_contacts_user_star`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NOT NULL COMMENT '用户id',
-  `contacts_id` int(11) NOT NULL COMMENT '客户id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
+  `contacts_id` int(0) NOT NULL COMMENT '客户id',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `user_id`(`user_id`, `contacts_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户联系人标星关系表 ' ROW_FORMAT = Dynamic;
@@ -5449,15 +5431,15 @@ CREATE TABLE `wk_crm_contacts_user_star`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_contract`;
 CREATE TABLE `wk_crm_contract`  (
-  `contract_id` int(11) NOT NULL AUTO_INCREMENT,
+  `contract_id` int(0) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '合同名称',
-  `customer_id` int(11) NULL DEFAULT NULL COMMENT '客户ID',
-  `business_id` int(11) NULL DEFAULT NULL COMMENT '商机ID',
-  `check_status` int(4) NOT NULL DEFAULT 0 COMMENT '0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交 6 创建 7 已删除 8 作废',
-  `examine_record_id` int(11) NULL DEFAULT NULL COMMENT '审核记录ID',
+  `customer_id` int(0) NULL DEFAULT NULL COMMENT '客户ID',
+  `business_id` int(0) NULL DEFAULT NULL COMMENT '商机ID',
+  `check_status` int(0) NOT NULL DEFAULT 0 COMMENT '0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交 6 创建 7 已删除 8 作废',
+  `examine_record_id` int(0) NULL DEFAULT NULL COMMENT '审核记录ID',
   `order_date` datetime(0) NULL DEFAULT NULL COMMENT '下单日期',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `num` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '合同编号',
@@ -5471,13 +5453,13 @@ CREATE TABLE `wk_crm_contract`  (
   `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '批次 比如附件批次',
   `ro_user_id` longtext CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '只读权限',
   `rw_user_id` longtext CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '读写权限',
-  `contacts_id` int(11) NULL DEFAULT NULL COMMENT '客户签约人（联系人id）',
+  `contacts_id` int(0) NULL DEFAULT NULL COMMENT '客户签约人（联系人id）',
   `remark` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '备注',
   `company_user_id` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '公司签约人',
   `last_time` datetime(0) NULL DEFAULT NULL COMMENT '最后跟进时间',
   `received_money` decimal(17, 2) NULL DEFAULT 0.00,
   `unreceived_money` decimal(17, 2) NULL DEFAULT NULL,
-  `old_contract_id` int(11) NULL DEFAULT NULL,
+  `old_contract_id` int(0) NULL DEFAULT NULL,
   PRIMARY KEY (`contract_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '合同表' ROW_FORMAT = Dynamic;
 
@@ -5490,8 +5472,8 @@ CREATE TABLE `wk_crm_contract`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_contract_data`;
 CREATE TABLE `wk_crm_contract_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field_id` int(11) NOT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
   `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
   `create_time` datetime(0) NOT NULL,
@@ -5510,9 +5492,9 @@ CREATE TABLE `wk_crm_contract_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_contract_product`;
 CREATE TABLE `wk_crm_contract_product`  (
-  `r_id` int(11) NOT NULL AUTO_INCREMENT,
-  `contract_id` int(11) NOT NULL COMMENT '合同ID',
-  `product_id` int(11) NOT NULL COMMENT '产品ID',
+  `r_id` int(0) NOT NULL AUTO_INCREMENT,
+  `contract_id` int(0) NOT NULL COMMENT '合同ID',
+  `product_id` int(0) NOT NULL COMMENT '产品ID',
   `price` decimal(18, 2) NOT NULL COMMENT '产品单价',
   `sales_price` decimal(18, 2) NOT NULL COMMENT '销售价格',
   `num` decimal(10, 2) NOT NULL COMMENT '数量',
@@ -5531,21 +5513,21 @@ CREATE TABLE `wk_crm_contract_product`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer`;
 CREATE TABLE `wk_crm_customer`  (
-  `customer_id` int(11) NOT NULL AUTO_INCREMENT,
+  `customer_id` int(0) NOT NULL AUTO_INCREMENT,
   `customer_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_bin NULL DEFAULT NULL COMMENT '客户名称',
-  `followup` int(11) NULL DEFAULT NULL COMMENT '跟进状态 0未跟进1已跟进',
-  `is_lock` int(1) NOT NULL DEFAULT 0 COMMENT '1锁定',
+  `followup` int(0) NULL DEFAULT NULL COMMENT '跟进状态 0未跟进1已跟进',
+  `is_lock` int(0) NOT NULL DEFAULT 0 COMMENT '1锁定',
   `next_time` datetime(0) NULL DEFAULT NULL COMMENT '下次联系时间',
-  `deal_status` int(4) NULL DEFAULT 0 COMMENT '成交状态 0 未成交 1 已成交',
+  `deal_status` int(0) NULL DEFAULT 0 COMMENT '成交状态 0 未成交 1 已成交',
   `deal_time` datetime(0) NULL DEFAULT NULL COMMENT '成交时间',
-  `contacts_id` int(11) NULL DEFAULT NULL COMMENT '首要联系人ID',
+  `contacts_id` int(0) NULL DEFAULT NULL COMMENT '首要联系人ID',
   `mobile` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '手机',
   `telephone` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '电话',
   `website` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '网址',
   `email` varchar(225) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '邮箱',
   `remark` varchar(3000) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '备注',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `ro_user_id` longtext CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '只读权限',
   `rw_user_id` longtext CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '读写权限',
   `address` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '省市区',
@@ -5556,13 +5538,13 @@ CREATE TABLE `wk_crm_customer`  (
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '批次 比如附件批次',
-  `status` int(1) NULL DEFAULT 1 COMMENT '客户状态 1 正常 2锁定 3删除',
+  `status` int(0) NULL DEFAULT 1 COMMENT '客户状态 1 正常 2锁定 3删除',
   `last_time` datetime(0) NULL DEFAULT NULL COMMENT '最后跟进时间',
   `pool_time` datetime(0) NULL DEFAULT NULL COMMENT '放入公海时间',
-  `is_receive` int(1) NULL DEFAULT NULL COMMENT '1 分配 2 领取',
+  `is_receive` int(0) NULL DEFAULT NULL COMMENT '1 分配 2 领取',
   `last_content` varchar(1024) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '最后一条跟进记录',
   `receive_time` datetime(0) NULL DEFAULT NULL COMMENT '接收到客户时间',
-  `pre_owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '进入公海前负责人id',
+  `pre_owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '进入公海前负责人id',
   PRIMARY KEY (`customer_id`) USING BTREE,
   INDEX `update_time`(`update_time`) USING BTREE,
   INDEX `owner_user_id`(`owner_user_id`) USING BTREE
@@ -5577,8 +5559,8 @@ CREATE TABLE `wk_crm_customer`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_data`;
 CREATE TABLE `wk_crm_customer_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field_id` int(11) NOT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
   `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
   `create_time` datetime(0) NOT NULL,
@@ -5597,20 +5579,20 @@ CREATE TABLE `wk_crm_customer_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_pool`;
 CREATE TABLE `wk_crm_customer_pool`  (
-  `pool_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '公海id',
+  `pool_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '公海id',
   `pool_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '公海名称',
   `admin_user_id` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '管理员 “,”分割',
   `member_user_id` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '公海规则员工成员 “,”分割',
   `member_dept_id` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '公海规则部门成员 “,”分割',
-  `status` int(2) NOT NULL DEFAULT 1 COMMENT '状态 0 停用 1启用',
-  `pre_owner_setting` int(2) NOT NULL COMMENT '前负责人领取规则 0不限制 1限制',
-  `pre_owner_setting_day` int(4) NULL DEFAULT NULL COMMENT '前负责人领取规则限制天数',
-  `receive_setting` int(2) NOT NULL COMMENT '是否限制领取频率 0不限制 1限制',
-  `receive_num` int(4) NULL DEFAULT NULL COMMENT '领取频率规则',
-  `remind_setting` int(2) NOT NULL COMMENT '是否设置提前提醒 0不开启 1开启',
-  `remind_day` int(11) NULL DEFAULT NULL COMMENT '提醒规则天数',
-  `put_in_rule` int(2) NOT NULL COMMENT '收回规则 0不自动收回 1自动收回',
-  `create_user_id` bigint(20) NOT NULL,
+  `status` int(0) NOT NULL DEFAULT 1 COMMENT '状态 0 停用 1启用',
+  `pre_owner_setting` int(0) NOT NULL COMMENT '前负责人领取规则 0不限制 1限制',
+  `pre_owner_setting_day` int(0) NULL DEFAULT NULL COMMENT '前负责人领取规则限制天数',
+  `receive_setting` int(0) NOT NULL COMMENT '是否限制领取频率 0不限制 1限制',
+  `receive_num` int(0) NULL DEFAULT NULL COMMENT '领取频率规则',
+  `remind_setting` int(0) NOT NULL COMMENT '是否设置提前提醒 0不开启 1开启',
+  `remind_day` int(0) NULL DEFAULT NULL COMMENT '提醒规则天数',
+  `put_in_rule` int(0) NOT NULL COMMENT '收回规则 0不自动收回 1自动收回',
+  `create_user_id` bigint(0) NOT NULL,
   `create_time` datetime(0) NOT NULL,
   PRIMARY KEY (`pool_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 34553 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '公海表' ROW_FORMAT = Dynamic;
@@ -5625,13 +5607,13 @@ INSERT INTO `wk_crm_customer_pool` VALUES (34552, '系统默认公海', '14773',
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_pool_field_setting`;
 CREATE TABLE `wk_crm_customer_pool_field_setting`  (
-  `setting_id` int(11) NOT NULL AUTO_INCREMENT,
-  `pool_id` int(11) NOT NULL COMMENT '公海id',
-  `field_id` int(11) NULL DEFAULT NULL COMMENT '字段id',
+  `setting_id` int(0) NOT NULL AUTO_INCREMENT,
+  `pool_id` int(0) NOT NULL COMMENT '公海id',
+  `field_id` int(0) NULL DEFAULT NULL COMMENT '字段id',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段中文名称',
   `field_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
-  `type` int(2) NOT NULL COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
-  `is_hidden` int(2) NOT NULL DEFAULT 0 COMMENT '是否隐藏 0不隐藏 1隐藏',
+  `type` int(0) NOT NULL COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
+  `is_hidden` int(0) NOT NULL DEFAULT 0 COMMENT '是否隐藏 0不隐藏 1隐藏',
   PRIMARY KEY (`setting_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 439856 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '公海列表页字段设置表' ROW_FORMAT = Dynamic;
 
@@ -5658,15 +5640,15 @@ INSERT INTO `wk_crm_customer_pool_field_setting` VALUES (439855, 34552, NULL, '�
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_pool_field_sort`;
 CREATE TABLE `wk_crm_customer_pool_field_sort`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `pool_id` int(11) NOT NULL COMMENT '公海id',
-  `user_id` bigint(20) NOT NULL COMMENT '用户id',
-  `field_id` int(11) NULL DEFAULT NULL COMMENT '字段id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `pool_id` int(0) NOT NULL COMMENT '公海id',
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
+  `field_id` int(0) NULL DEFAULT NULL COMMENT '字段id',
   `field_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段中文名称',
-  `type` int(2) NOT NULL COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
-  `sort` int(5) NOT NULL COMMENT '字段排序',
-  `is_hidden` int(1) NOT NULL COMMENT '是否隐藏 0、不隐藏 1、隐藏',
+  `type` int(0) NOT NULL COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
+  `sort` int(0) NOT NULL COMMENT '字段排序',
+  `is_hidden` int(0) NOT NULL COMMENT '是否隐藏 0、不隐藏 1、隐藏',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '公海列表页字段排序表' ROW_FORMAT = Dynamic;
 
@@ -5679,11 +5661,11 @@ CREATE TABLE `wk_crm_customer_pool_field_sort`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_pool_field_style`;
 CREATE TABLE `wk_crm_customer_pool_field_style`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `pool_id` int(11) NOT NULL COMMENT '公海id',
-  `style` int(5) NOT NULL COMMENT '字段宽度',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `pool_id` int(0) NOT NULL COMMENT '公海id',
+  `style` int(0) NOT NULL COMMENT '字段宽度',
   `field_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
-  `user_id` bigint(20) NOT NULL COMMENT '用户id',
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE
@@ -5698,9 +5680,9 @@ CREATE TABLE `wk_crm_customer_pool_field_style`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_pool_relation`;
 CREATE TABLE `wk_crm_customer_pool_relation`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `customer_id` int(11) NOT NULL COMMENT '客户id',
-  `pool_id` int(11) NOT NULL COMMENT '公海id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `customer_id` int(0) NOT NULL COMMENT '客户id',
+  `pool_id` int(0) NOT NULL COMMENT '公海id',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `pool_id`(`pool_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '客户公海关联表' ROW_FORMAT = Dynamic;
@@ -5714,14 +5696,14 @@ CREATE TABLE `wk_crm_customer_pool_relation`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_pool_rule`;
 CREATE TABLE `wk_crm_customer_pool_rule`  (
-  `rule_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '收回规则id',
-  `pool_id` int(11) NOT NULL COMMENT '公海id',
-  `type` int(2) NOT NULL COMMENT '收回规则判断类型 1跟进记录 2商机 3成交状态',
-  `deal_handle` int(2) NULL DEFAULT NULL COMMENT '已成交客户是否进入公海 0不进入 1进入',
-  `business_handle` int(2) NULL DEFAULT NULL COMMENT '有商机客户是否进入公海 0不进入 1进入',
-  `customer_level_setting` int(2) NOT NULL COMMENT '客户级别设置 1全部 2根据级别分别设置',
+  `rule_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '收回规则id',
+  `pool_id` int(0) NOT NULL COMMENT '公海id',
+  `type` int(0) NOT NULL COMMENT '收回规则判断类型 1跟进记录 2商机 3成交状态',
+  `deal_handle` int(0) NULL DEFAULT NULL COMMENT '已成交客户是否进入公海 0不进入 1进入',
+  `business_handle` int(0) NULL DEFAULT NULL COMMENT '有商机客户是否进入公海 0不进入 1进入',
+  `customer_level_setting` int(0) NOT NULL COMMENT '客户级别设置 1全部 2根据级别分别设置',
   `level` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '客户级别 1全部',
-  `limit_day` int(4) NOT NULL COMMENT '公海规则限制天数',
+  `limit_day` int(0) NOT NULL COMMENT '公海规则限制天数',
   PRIMARY KEY (`rule_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '公海收回规则表' ROW_FORMAT = Dynamic;
 
@@ -5734,11 +5716,11 @@ CREATE TABLE `wk_crm_customer_pool_rule`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_setting`;
 CREATE TABLE `wk_crm_customer_setting`  (
-  `setting_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `setting_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `setting_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '规则名称',
-  `customer_num` int(11) NULL DEFAULT NULL COMMENT '可拥有客户数量',
-  `customer_deal` int(1) NULL DEFAULT 0 COMMENT '成交客户是否占用数量 0 不占用 1 占用',
-  `type` int(1) NULL DEFAULT NULL COMMENT '类型 1 拥有客户数限制 2 锁定客户数限制',
+  `customer_num` int(0) NULL DEFAULT NULL COMMENT '可拥有客户数量',
+  `customer_deal` int(0) NULL DEFAULT 0 COMMENT '成交客户是否占用数量 0 不占用 1 占用',
+  `type` int(0) NULL DEFAULT NULL COMMENT '类型 1 拥有客户数限制 2 锁定客户数限制',
   `create_time` datetime(0) NULL DEFAULT NULL,
   PRIMARY KEY (`setting_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '员工拥有以及锁定客户数限制' ROW_FORMAT = Dynamic;
@@ -5752,11 +5734,11 @@ CREATE TABLE `wk_crm_customer_setting`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_setting_user`;
 CREATE TABLE `wk_crm_customer_setting_user`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `setting_id` int(11) NOT NULL COMMENT '客户规则限制ID',
-  `user_id` bigint(20) NULL DEFAULT NULL COMMENT '用户id',
-  `dept_id` int(11) NULL DEFAULT NULL COMMENT '部门ID',
-  `type` int(1) NULL DEFAULT NULL COMMENT '1 员工 2 部门',
+  `id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `setting_id` int(0) NOT NULL COMMENT '客户规则限制ID',
+  `user_id` bigint(0) NULL DEFAULT NULL COMMENT '用户id',
+  `dept_id` int(0) NULL DEFAULT NULL COMMENT '部门ID',
+  `type` int(0) NULL DEFAULT NULL COMMENT '1 员工 2 部门',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '员工拥有以及锁定客户员工关联表' ROW_FORMAT = Dynamic;
 
@@ -5769,10 +5751,10 @@ CREATE TABLE `wk_crm_customer_setting_user`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_stats_2021`;
 CREATE TABLE `wk_crm_customer_stats_2021`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
-  `customer_num` bigint(20) NULL DEFAULT NULL COMMENT '客户数量',
-  `deal_status` int(2) NULL DEFAULT NULL COMMENT '成交状态 0 未成交 1 已成交',
-  `owner_user_id` int(11) NULL DEFAULT NULL COMMENT '负责人ID',
+  `id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `customer_num` bigint(0) NULL DEFAULT NULL COMMENT '客户数量',
+  `deal_status` int(0) NULL DEFAULT NULL COMMENT '成交状态 0 未成交 1 已成交',
+  `owner_user_id` int(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `create_date` varchar(8) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '创建时间 年月日',
   `deal_date` varchar(8) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '创建时间 年月日',
   PRIMARY KEY (`id`) USING BTREE,
@@ -5789,10 +5771,10 @@ CREATE TABLE `wk_crm_customer_stats_2021`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_stats_info`;
 CREATE TABLE `wk_crm_customer_stats_info`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `last_customer_id` int(11) NOT NULL COMMENT '最后同步客户ID',
+  `id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `last_customer_id` int(0) NOT NULL COMMENT '最后同步客户ID',
   `create_time` datetime(0) NOT NULL COMMENT '同步时间',
-  `sync_num` int(11) NULL DEFAULT NULL COMMENT '同步数量',
+  `sync_num` int(0) NULL DEFAULT NULL COMMENT '同步数量',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 130 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '客户数量统计汇总表' ROW_FORMAT = Dynamic;
 
@@ -5805,9 +5787,9 @@ CREATE TABLE `wk_crm_customer_stats_info`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_customer_user_star`;
 CREATE TABLE `wk_crm_customer_user_star`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NOT NULL COMMENT '用户id',
-  `customer_id` int(11) NOT NULL COMMENT '客户id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
+  `customer_id` int(0) NOT NULL COMMENT '客户id',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `user_id`(`user_id`, `customer_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户客户标星关系表 ' ROW_FORMAT = Dynamic;
@@ -5821,18 +5803,18 @@ CREATE TABLE `wk_crm_customer_user_star`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_examine`;
 CREATE TABLE `wk_crm_examine`  (
-  `examine_id` int(11) NOT NULL AUTO_INCREMENT,
-  `category_type` int(1) NOT NULL DEFAULT 1 COMMENT '1 合同 2 回款 3发票 4薪资 5 采购审核 6采购退货审核 7销售审核 8 销售退货审核 9付款单审核10 回款单审核11盘点审核12调拨审核',
-  `examine_type` int(1) NULL DEFAULT NULL COMMENT '审核类型 1 固定审批 2 授权审批',
+  `examine_id` int(0) NOT NULL AUTO_INCREMENT,
+  `category_type` int(0) NOT NULL DEFAULT 1 COMMENT '1 合同 2 回款 3发票 4薪资 5 采购审核 6采购退货审核 7销售审核 8 销售退货审核 9付款单审核10 回款单审核11盘点审核12调拨审核',
+  `examine_type` int(0) NULL DEFAULT NULL COMMENT '审核类型 1 固定审批 2 授权审批',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '审批流名称',
   `icon` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '图标',
   `dept_ids` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '0' COMMENT '部门ID（0为全部）',
   `user_ids` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '0' COMMENT '员工ID',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人',
   `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '修改时间',
-  `update_user_id` bigint(20) NULL DEFAULT NULL COMMENT '修改人',
-  `status` int(1) NULL DEFAULT NULL COMMENT '状态 1 启用 0 禁用 2 删除',
+  `update_user_id` bigint(0) NULL DEFAULT NULL COMMENT '修改人',
+  `status` int(0) NULL DEFAULT NULL COMMENT '状态 1 启用 0 禁用 2 删除',
   `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '流程说明',
   PRIMARY KEY (`examine_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 25378 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '审批流程表' ROW_FORMAT = Dynamic;
@@ -5849,17 +5831,17 @@ INSERT INTO `wk_crm_examine` VALUES (25377, 3, 2, '发票审批流程', NULL, NU
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_examine_log`;
 CREATE TABLE `wk_crm_examine_log`  (
-  `log_id` bigint(11) NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `record_id` int(11) NULL DEFAULT NULL COMMENT '审批记录ID',
-  `examine_step_id` bigint(20) NULL DEFAULT NULL COMMENT '审核步骤ID',
-  `examine_status` int(1) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝3 撤回审核',
-  `create_user` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+  `log_id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `record_id` int(0) NULL DEFAULT NULL COMMENT '审批记录ID',
+  `examine_step_id` bigint(0) NULL DEFAULT NULL COMMENT '审核步骤ID',
+  `examine_status` int(0) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝3 撤回审核',
+  `create_user` bigint(0) NULL DEFAULT NULL COMMENT '创建人',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `examine_user` bigint(20) NULL DEFAULT NULL COMMENT '审核人',
+  `examine_user` bigint(0) NULL DEFAULT NULL COMMENT '审核人',
   `examine_time` datetime(0) NULL DEFAULT NULL COMMENT '审核时间',
   `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '审核备注',
-  `is_recheck` int(1) NULL DEFAULT 0 COMMENT '是否是撤回之前的日志 0或者null为新数据 1：撤回之前的数据',
-  `order_id` int(30) NULL DEFAULT NULL,
+  `is_recheck` int(0) NULL DEFAULT 0 COMMENT '是否是撤回之前的日志 0或者null为新数据 1：撤回之前的数据',
+  `order_id` int(0) NULL DEFAULT NULL,
   PRIMARY KEY (`log_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '审核日志表' ROW_FORMAT = Dynamic;
 
@@ -5872,11 +5854,11 @@ CREATE TABLE `wk_crm_examine_log`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_examine_record`;
 CREATE TABLE `wk_crm_examine_record`  (
-  `record_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '审核记录ID',
-  `examine_id` int(11) NULL DEFAULT NULL COMMENT '审批ID',
-  `examine_step_id` bigint(20) NULL DEFAULT NULL COMMENT '当前进行的审批步骤ID',
-  `examine_status` int(1) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝 3 审核中 4 已撤回',
-  `create_user` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+  `record_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '审核记录ID',
+  `examine_id` int(0) NULL DEFAULT NULL COMMENT '审批ID',
+  `examine_step_id` bigint(0) NULL DEFAULT NULL COMMENT '当前进行的审批步骤ID',
+  `examine_status` int(0) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝 3 审核中 4 已撤回',
+  `create_user` bigint(0) NULL DEFAULT NULL COMMENT '创建人',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '审核备注',
   PRIMARY KEY (`record_id`) USING BTREE
@@ -5891,11 +5873,11 @@ CREATE TABLE `wk_crm_examine_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_examine_step`;
 CREATE TABLE `wk_crm_examine_step`  (
-  `step_id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `step_type` int(1) NULL DEFAULT NULL COMMENT '步骤类型1、负责人主管，2、指定用户（任意一人），3、指定用户（多人会签）,4、上一级审批人主管',
-  `examine_id` int(11) NOT NULL COMMENT '审批ID',
+  `step_id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `step_type` int(0) NULL DEFAULT NULL COMMENT '步骤类型1、负责人主管，2、指定用户（任意一人），3、指定用户（多人会签）,4、上一级审批人主管',
+  `examine_id` int(0) NOT NULL COMMENT '审批ID',
   `check_user_id` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '审批人ID (使用逗号隔开) ,1,2,',
-  `step_num` int(2) NULL DEFAULT 1 COMMENT '排序',
+  `step_num` int(0) NULL DEFAULT 1 COMMENT '排序',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '备注',
   PRIMARY KEY (`step_id`) USING BTREE
@@ -5910,134 +5892,135 @@ CREATE TABLE `wk_crm_examine_step`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_field`;
 CREATE TABLE `wk_crm_field`  (
-  `field_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `field_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `field_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '自定义字段英文标识',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '字段名称',
-  `type` int(2) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
-  `label` int(2) NOT NULL COMMENT '标签 1 线索 2 客户 3 联系人 4 产品 5 商机 6 合同 7回款8.回款计划',
+  `type` int(0) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
+  `label` int(0) NOT NULL COMMENT '标签 1 线索 2 客户 3 联系人 4 产品 5 商机 6 合同 7回款8.回款计划',
   `remark` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段说明',
   `input_tips` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '输入提示',
-  `max_length` int(12) NULL DEFAULT NULL COMMENT '最大长度',
+  `max_length` int(0) NULL DEFAULT NULL COMMENT '最大长度',
   `default_value` varchar(5000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '默认值',
-  `is_unique` int(1) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
-  `is_null` int(1) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
-  `sorting` int(5) NULL DEFAULT 1 COMMENT '排序 从小到大',
+  `is_unique` int(0) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
+  `is_null` int(0) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
+  `sorting` int(0) NULL DEFAULT 1 COMMENT '排序 从小到大',
   `options` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '如果类型是选项，此处不能为空，多个选项以，隔开',
-  `operating` int(1) NULL DEFAULT 255 COMMENT '是否可以删除修改',
-  `is_hidden` int(1) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
+  `operating` int(0) NULL DEFAULT 255 COMMENT '是否可以删除修改',
+  `is_hidden` int(0) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
   `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '最后修改时间',
-  `field_type` int(2) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
-  `relevant` int(11) NULL DEFAULT NULL COMMENT '只有线索需要，转换客户的自定义字段ID',
-  `style_percent` int(3) NULL DEFAULT 50 COMMENT '样式百分比%',
-  `precisions` int(2) NULL DEFAULT NULL COMMENT '精度，允许的最大小数位',
+  `field_type` int(0) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
+  `relevant` int(0) NULL DEFAULT NULL COMMENT '只有线索需要，转换客户的自定义字段ID',
+  `style_percent` int(0) NULL DEFAULT 50 COMMENT '样式百分比%',
+  `precisions` int(0) NULL DEFAULT NULL COMMENT '精度，允许的最大小数位',
   `form_position` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '表单定位 坐标格式： 1,1',
   `max_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最大数值',
   `min_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最小数值',
-  `form_assist_id` int(12) NULL DEFAULT NULL COMMENT '表单辅助id，前端生成',
+  `form_assist_id` int(0) NULL DEFAULT NULL COMMENT '表单辅助id，前端生成',
   PRIMARY KEY (`field_id`) USING BTREE,
   INDEX `label`(`label`) USING BTREE,
   INDEX `update_time`(`update_time`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1101912 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '自定义字段表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1101914 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '自定义字段表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_crm_field
 -- ----------------------------
-INSERT INTO `wk_crm_field` VALUES (1101827, 'customer_name', '客户名称', 1, 2, NULL, NULL, 255, '', 1, 1, 0, NULL, 189, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101828, 'source', '客户来源', 3, 2, NULL, NULL, NULL, '', 0, 0, 1, '促销,搜索引擎,广告,转介绍,线上注册,线上询价,预约上门,陌拜,电话咨询,邮件咨询', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101829, 'mobile', '手机', 7, 2, NULL, NULL, 255, '', 0, 0, 2, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101830, 'telephone', '电话', 1, 2, NULL, NULL, 255, '', 0, 0, 3, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101831, 'website', '网址', 1, 2, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101832, 'industry', '客户行业', 3, 2, NULL, NULL, NULL, '', 0, 0, 5, 'IT,金融业,房地产,商业服务,运输/物流,生产,政府,文化传媒', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101833, 'level', '客户级别', 3, 2, NULL, NULL, NULL, '', 0, 0, 6, 'A（重点客户）,B（普通客户）,C（非优先客户）', 63, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101834, 'next_time', '下次联系时间', 13, 2, NULL, NULL, NULL, '', 0, 0, 7, NULL, 63, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101835, 'remark', '备注', 2, 2, NULL, NULL, 255, '', 0, 0, 8, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101836, 'email', '邮箱', 14, 2, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101837, 'leads_name', '线索名称', 1, 1, NULL, NULL, 255, '', 0, 1, 0, NULL, 189, 0, '2021-02-26 15:04:24', 1, 1101827, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101838, 'email', '邮箱', 14, 1, NULL, NULL, 255, '', 0, 0, 1, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101839, 'source', '线索来源', 3, 1, NULL, NULL, NULL, '', 0, 0, 2, '促销,搜索引擎,广告,转介绍,线上注册,线上询价,预约上门,陌拜,电话咨询,邮件咨询', 191, 0, '2021-02-26 15:04:24', 2, 1101828, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101840, 'mobile', '手机', 7, 1, NULL, NULL, 255, '', 0, 0, 3, NULL, 191, 0, '2021-02-26 15:04:24', 1, 1101829, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101841, 'telephone', '电话', 1, 1, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-02-26 15:04:24', 1, 1101830, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101842, 'address', '地址', 1, 1, NULL, NULL, 255, '', 0, 0, 5, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101843, 'industry', '客户行业', 3, 1, NULL, NULL, NULL, '', 0, 0, 6, 'IT,金融业,房地产,商业服务,运输/物流,生产,政府,文化传媒', 191, 0, '2021-02-26 15:04:24', 2, 1101832, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101844, 'level', '客户级别', 3, 1, NULL, NULL, NULL, '', 0, 0, 7, 'A（重点客户）,B（普通客户）,C（非优先客户）', 191, 0, '2021-02-26 15:04:24', 2, 1101833, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101845, 'next_time', '下次联系时间', 13, 1, NULL, NULL, NULL, '', 0, 0, 8, NULL, 63, 0, '2021-02-26 15:04:24', 1, 1101834, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101846, 'remark', '备注', 2, 1, NULL, NULL, 255, '', 0, 0, 9, NULL, 191, 0, '2021-02-26 15:04:24', 1, 1101835, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101847, 'name', '姓名', 1, 3, NULL, NULL, 255, '', 0, 1, 0, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101848, 'customer_id', '客户名称', 15, 3, NULL, NULL, NULL, '', 0, 1, 1, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101849, 'mobile', '手机', 7, 3, NULL, NULL, 255, '', 0, 0, 2, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101850, 'telephone', '电话', 1, 3, NULL, NULL, 255, '', 0, 0, 3, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101851, 'email', '邮箱', 14, 3, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101852, 'post', '职务', 1, 3, NULL, NULL, 255, '', 0, 0, 5, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101853, 'policymakers', '是否关键决策人', 3, 3, NULL, NULL, NULL, '', 0, 0, 6, '是,否', 190, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101854, 'address', '地址', 1, 3, NULL, NULL, 255, '', 0, 0, 7, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101855, 'next_time', '下次联系时间', 13, 3, NULL, NULL, NULL, '', 0, 0, 8, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101856, 'remark', '备注', 2, 3, NULL, NULL, 255, '', 0, 0, 9, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101857, 'sex', '性别', 3, 3, NULL, NULL, NULL, '', 0, 0, 10, '男,女', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101858, 'name', '产品名称', 1, 4, NULL, NULL, 255, '', 0, 1, 0, NULL, 177, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101827, 'customer_name', '客户名称', 1, 2, NULL, NULL, 255, '', 1, 1, 0, NULL, 189, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101828, 'source', '客户来源', 3, 2, NULL, NULL, NULL, '', 0, 0, 1, '促销,搜索引擎,广告,转介绍,线上注册,线上询价,预约上门,陌拜,电话咨询,邮件咨询', 191, 0, '2021-03-24 16:55:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101829, 'mobile', '手机', 7, 2, NULL, NULL, 255, '', 0, 0, 2, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101830, 'telephone', '电话', 1, 2, NULL, NULL, 255, '', 0, 0, 3, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101831, 'website', '网址', 1, 2, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101832, 'industry', '客户行业', 3, 2, NULL, NULL, NULL, '', 0, 0, 5, 'IT,金融业,房地产,商业服务,运输/物流,生产,政府,文化传媒', 191, 0, '2021-03-24 16:55:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101833, 'level', '客户级别', 3, 2, NULL, NULL, NULL, '', 0, 0, 6, 'A（重点客户）,B（普通客户）,C（非优先客户）', 63, 0, '2021-03-24 16:55:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101834, 'next_time', '下次联系时间', 13, 2, NULL, NULL, NULL, '', 0, 0, 7, NULL, 63, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101835, 'remark', '备注', 2, 2, NULL, NULL, 255, '', 0, 0, 8, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101836, 'email', '邮箱', 14, 2, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101837, 'leads_name', '线索名称', 1, 1, NULL, NULL, 255, '', 0, 1, 0, NULL, 189, 0, '2021-03-24 16:55:24', 1, 1101827, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101838, 'email', '邮箱', 14, 1, NULL, NULL, 255, '', 0, 0, 1, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101839, 'source', '线索来源', 3, 1, NULL, NULL, NULL, '', 0, 0, 2, '促销,搜索引擎,广告,转介绍,线上注册,线上询价,预约上门,陌拜,电话咨询,邮件咨询', 191, 0, '2021-03-24 16:55:24', 2, 1101828, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101840, 'mobile', '手机', 7, 1, NULL, NULL, 255, '', 0, 0, 3, NULL, 191, 0, '2021-03-24 16:55:24', 1, 1101829, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101841, 'telephone', '电话', 1, 1, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-03-24 16:55:24', 1, 1101830, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101842, 'address', '地址', 1, 1, NULL, NULL, 255, '', 0, 0, 5, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101843, 'industry', '客户行业', 3, 1, NULL, NULL, NULL, '', 0, 0, 6, 'IT,金融业,房地产,商业服务,运输/物流,生产,政府,文化传媒', 191, 0, '2021-03-24 16:55:24', 2, 1101832, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101844, 'level', '客户级别', 3, 1, NULL, NULL, NULL, '', 0, 0, 7, 'A（重点客户）,B（普通客户）,C（非优先客户）', 191, 0, '2021-03-24 16:55:24', 2, 1101833, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101845, 'next_time', '下次联系时间', 13, 1, NULL, NULL, NULL, '', 0, 0, 8, NULL, 63, 0, '2021-03-24 16:55:24', 1, 1101834, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101846, 'remark', '备注', 2, 1, NULL, NULL, 255, '', 0, 0, 9, NULL, 191, 0, '2021-03-24 16:55:24', 1, 1101835, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101847, 'name', '姓名', 1, 3, NULL, NULL, 255, '', 0, 1, 0, NULL, 181, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101848, 'customer_id', '客户名称', 15, 3, NULL, NULL, NULL, '', 0, 1, 1, NULL, 159, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101849, 'mobile', '手机', 7, 3, NULL, NULL, 255, '', 0, 0, 2, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101850, 'telephone', '电话', 1, 3, NULL, NULL, 255, '', 0, 0, 3, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101851, 'email', '邮箱', 14, 3, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101852, 'post', '职务', 1, 3, NULL, NULL, 255, '', 0, 0, 5, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101853, 'policymakers', '是否关键决策人', 3, 3, NULL, NULL, NULL, '', 0, 0, 6, '是,否', 190, 0, '2021-03-24 16:55:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101854, 'address', '地址', 1, 3, NULL, NULL, 255, '', 0, 0, 7, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101855, 'next_time', '下次联系时间', 13, 3, NULL, NULL, NULL, '', 0, 0, 8, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101856, 'remark', '备注', 2, 3, NULL, NULL, 255, '', 0, 0, 9, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101857, 'sex', '性别', 3, 3, NULL, NULL, NULL, '', 0, 0, 10, '男,女', 191, 0, '2021-03-24 16:55:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101858, 'name', '产品名称', 1, 4, NULL, NULL, 255, '', 0, 1, 0, NULL, 177, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_crm_field` VALUES (1101859, 'category_id', '产品类型', 19, 4, NULL, NULL, NULL, '', 0, 1, 1, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101860, 'unit', '产品单位', 3, 4, NULL, NULL, NULL, '', 0, 0, 2, '个,块,只,把,枚,瓶,盒,台,吨,千克,米,箱,套', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101861, 'num', '产品编码', 1, 4, NULL, NULL, 255, '', 1, 1, 3, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101862, 'price', '价格', 6, 4, NULL, NULL, 255, '', 0, 1, 4, NULL, 181, 0, '2021-05-08 18:40:06', 1, NULL, 50, 2, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101863, 'description', '产品描述', 1, 4, NULL, NULL, 255, '', 0, 0, 6, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101864, 'business_name', '商机名称', 1, 5, NULL, NULL, 255, '', 0, 1, 0, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101865, 'customer_id', '客户名称', 15, 5, NULL, NULL, NULL, '', 0, 1, 1, NULL, 149, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101866, 'money', '商机金额', 6, 5, NULL, NULL, 255, '', 0, 0, 2, NULL, 189, 0, '2021-05-08 18:40:06', 1, NULL, 50, 2, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101867, 'deal_date', '预计成交日期', 13, 5, NULL, NULL, NULL, '', 0, 0, 3, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101868, 'remark', '备注', 2, 5, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101869, 'name', '合同名称', 1, 6, NULL, NULL, 255, '', 0, 1, 1, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101870, 'num', '合同编号', 1, 6, NULL, NULL, 255, '', 1, 1, 0, NULL, 177, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101871, 'customer_id', '客户名称', 15, 6, NULL, NULL, NULL, '', 0, 1, 2, NULL, 149, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101872, 'business_id', '商机名称', 16, 6, NULL, NULL, NULL, '', 0, 0, 3, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101873, 'money', '合同金额', 6, 6, NULL, NULL, 255, '', 0, 1, 4, NULL, 189, 0, '2021-05-08 18:40:06', 1, NULL, 50, 2, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101874, 'order_date', '下单时间', 4, 6, NULL, NULL, NULL, '', 0, 1, 5, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101875, 'start_time', '合同开始时间', 4, 6, NULL, NULL, NULL, '', 0, 0, 6, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101876, 'end_time', '合同结束时间', 4, 6, NULL, NULL, NULL, '', 0, 0, 7, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101877, 'contacts_id', '客户签约人', 17, 6, NULL, NULL, NULL, '', 0, 0, 8, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101878, 'company_user_id', '公司签约人', 10, 6, NULL, NULL, NULL, '', 0, 0, 9, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101879, 'remark', '备注', 2, 6, NULL, NULL, 255, '', 0, 0, 10, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101880, 'flied_xucqai', '合同类型', 3, 6, NULL, NULL, 255, '', 0, 0, 11, '直销合同,代理合同,服务合同,快销合同', 255, 0, '2021-02-26 15:04:24', 0, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101881, 'number', '回款编号', 1, 7, NULL, NULL, 255, '', 1, 1, 0, NULL, 177, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101882, 'customer_id', '客户名称', 15, 7, NULL, NULL, NULL, '', 0, 1, 1, NULL, 149, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101883, 'contract_id', '合同编号', 20, 7, NULL, NULL, NULL, '', 0, 1, 2, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101884, 'plan_id', '期数', 21, 7, NULL, NULL, NULL, '', 0, 0, 3, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101885, 'return_time', '回款日期', 4, 7, NULL, NULL, NULL, '', 0, 1, 4, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101886, 'money', '回款金额', 6, 7, NULL, NULL, 255, '', 0, 1, 5, NULL, 181, 0, '2021-05-08 18:40:06', 1, NULL, 50, 2, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101887, 'return_type', '回款方式', 3, 7, NULL, NULL, NULL, '', 0, 0, 6, '支票,现金,邮政汇款,电汇,网上转账,支付宝,微信支付,其他', 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101888, 'remark', '备注', 2, 7, NULL, NULL, 255, '', 0, 0, 7, NULL, 191, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101889, 'customer_id', '客户名称', 15, 8, NULL, NULL, NULL, '', 0, 0, 1, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101890, 'contract_id', '合同编号', 20, 8, NULL, NULL, 11, '', 0, 0, 2, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101891, 'money', '计划回款金额', 6, 8, NULL, NULL, NULL, '', 0, 0, 3, NULL, 1, 0, '2021-05-08 18:40:06', 1, NULL, 50, 2, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101892, 'return_date', '计划回款日期', 4, 8, NULL, NULL, NULL, '', 0, 0, 4, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101860, 'unit', '产品单位', 3, 4, NULL, NULL, NULL, '', 0, 0, 2, '个,块,只,把,枚,瓶,盒,台,吨,千克,米,箱,套', 191, 0, '2021-03-24 16:55:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101861, 'num', '产品编码', 1, 4, NULL, NULL, 255, '', 1, 1, 3, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101862, 'price', '价格', 6, 4, NULL, NULL, 255, '', 0, 1, 4, NULL, 181, 0, '2021-05-07 13:58:21', 1, NULL, 50, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101863, 'description', '产品描述', 1, 4, NULL, NULL, 255, '', 0, 0, 6, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101864, 'business_name', '商机名称', 1, 5, NULL, NULL, 255, '', 0, 1, 0, NULL, 181, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101865, 'customer_id', '客户名称', 15, 5, NULL, NULL, NULL, '', 0, 1, 1, NULL, 149, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101866, 'money', '商机金额', 6, 5, NULL, NULL, 255, '', 0, 0, 2, NULL, 189, 0, '2021-05-07 13:58:21', 1, NULL, 50, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101867, 'deal_date', '预计成交日期', 13, 5, NULL, NULL, NULL, '', 0, 0, 3, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101868, 'remark', '备注', 2, 5, NULL, NULL, 255, '', 0, 0, 4, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101869, 'name', '合同名称', 1, 6, NULL, NULL, 255, '', 0, 1, 1, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101870, 'num', '合同编号', 1, 6, NULL, NULL, 255, '', 1, 1, 0, NULL, 177, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101871, 'customer_id', '客户名称', 15, 6, NULL, NULL, NULL, '', 0, 1, 2, NULL, 149, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101872, 'business_id', '商机名称', 16, 6, NULL, NULL, NULL, '', 0, 0, 3, NULL, 159, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101873, 'money', '合同金额', 6, 6, NULL, NULL, 255, '', 0, 1, 4, NULL, 189, 0, '2021-05-07 13:58:21', 1, NULL, 50, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101874, 'order_date', '下单时间', 4, 6, NULL, NULL, NULL, '', 0, 1, 5, NULL, 181, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101875, 'start_time', '合同开始时间', 4, 6, NULL, NULL, NULL, '', 0, 0, 6, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101876, 'end_time', '合同结束时间', 4, 6, NULL, NULL, NULL, '', 0, 0, 7, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101877, 'contacts_id', '客户签约人', 17, 6, NULL, NULL, NULL, '', 0, 0, 8, NULL, 159, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101878, 'company_user_id', '公司签约人', 10, 6, NULL, NULL, NULL, '', 0, 0, 9, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101879, 'remark', '备注', 2, 6, NULL, NULL, 255, '', 0, 0, 10, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101880, 'flied_xucqai', '合同类型', 3, 6, NULL, NULL, 255, '', 0, 0, 11, '直销合同,代理合同,服务合同,快销合同', 255, 0, '2021-03-24 16:55:24', 0, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101881, 'number', '回款编号', 1, 7, NULL, NULL, 255, '', 1, 1, 0, NULL, 177, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101882, 'customer_id', '客户名称', 15, 7, NULL, NULL, NULL, '', 0, 1, 1, NULL, 149, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101883, 'contract_id', '合同编号', 20, 7, NULL, NULL, NULL, '', 0, 1, 2, NULL, 159, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101884, 'receivables_plan_id', '期数', 21, 7, NULL, NULL, NULL, '', 0, 0, 3, NULL, 1, 0, '2021-08-02 11:10:31', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101885, 'return_time', '回款日期', 4, 7, NULL, NULL, NULL, '', 0, 1, 4, NULL, 181, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101886, 'money', '回款金额', 6, 7, NULL, NULL, 255, '', 0, 1, 5, NULL, 181, 0, '2021-05-07 13:58:21', 1, NULL, 50, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101887, 'return_type', '回款方式', 3, 7, NULL, NULL, NULL, '', 0, 0, 6, '支票,现金,邮政汇款,电汇,网上转账,支付宝,微信支付,其他', 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101888, 'remark', '备注', 2, 7, NULL, NULL, 255, '', 0, 0, 7, NULL, 191, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101889, 'customer_id', '客户名称', 15, 8, NULL, NULL, NULL, '', 0, 1, 1, NULL, 181, 0, '2021-08-02 11:01:53', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101890, 'contract_id', '合同编号', 20, 8, NULL, NULL, 11, '', 0, 1, 2, NULL, 181, 0, '2021-08-02 11:01:53', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101891, 'money', '计划回款金额', 6, 8, NULL, NULL, NULL, '', 0, 1, 3, NULL, 181, 0, '2021-08-02 11:01:53', 1, NULL, 50, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101892, 'return_date', '计划回款日期', 4, 8, NULL, NULL, NULL, '', 0, 1, 4, NULL, 183, 0, '2021-08-02 11:01:53', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_crm_field` VALUES (1101893, 'remind', '提前几天提醒', 5, 8, NULL, NULL, 11, '', 0, 0, 5, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_crm_field` VALUES (1101894, 'remark', '备注', 2, 8, NULL, NULL, 1000, '', 0, 0, 6, NULL, 1, 0, NULL, 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101895, 'visit_number', '回访编号', 1, 17, NULL, NULL, NULL, '', 1, 1, 0, NULL, 177, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101896, 'visit_time', '回访时间', 13, 17, NULL, NULL, NULL, '', 0, 1, 1, NULL, 181, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101897, 'owner_user_id', '回访人', 28, 17, NULL, NULL, NULL, '', 0, 1, 2, NULL, 149, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101898, 'return_visit_type', '回访形式', 3, 17, NULL, NULL, NULL, '', 0, 0, 3, '见面拜访,电话,短信,邮件,微信', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101899, 'customer_id', '客户名称', 15, 17, NULL, NULL, NULL, '', 0, 1, 4, NULL, 149, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101900, 'contacts_id', '联系人', 17, 17, NULL, NULL, NULL, '', 0, 0, 5, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101901, 'contract_id', '合同编号', 20, 17, NULL, NULL, NULL, '', 0, 1, 6, NULL, 159, 0, '2021-02-26 15:04:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101902, 'satisficing', '客户满意度', 3, 17, NULL, NULL, NULL, '', 0, 0, 7, '很满意,满意,一般,不满意,很不满意', 191, 0, '2021-02-26 15:04:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101903, 'flied_itvzix', '客户反馈', 2, 17, NULL, NULL, 1000, '', 0, 0, 8, NULL, 191, 0, '2021-02-26 15:04:24', 0, NULL, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101904, 'invoice_apply_number', '发票申请编号', 1, 18, NULL, NULL, NULL, '', 1, 1, 0, NULL, 176, 0, '2021-05-08 18:40:06', 1, NULL, 50, NULL, '0,0', NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101905, 'customer_id', '客户名称', 15, 18, NULL, NULL, NULL, '', 0, 1, 1, NULL, 148, 0, '2021-05-08 18:40:06', 1, NULL, 50, NULL, '0,1', NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101906, 'contract_id', '合同编号', 20, 18, NULL, NULL, NULL, '', 0, 1, 2, NULL, 148, 0, '2021-05-08 18:40:06', 1, NULL, 50, NULL, '1,0', NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101907, 'contract_money', '合同金额', 6, 18, NULL, NULL, NULL, '', 0, 0, 3, NULL, 144, 0, '2021-05-08 18:40:06', 1, NULL, 50, 2, '1,1', NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101908, 'invoice_money', '开票金额', 6, 18, NULL, NULL, NULL, '', 0, 1, 4, NULL, 148, 0, '2021-05-08 18:40:06', 1, NULL, 50, 2, '2,0', NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101909, 'invoice_date', '开票日期', 13, 18, NULL, NULL, NULL, '', 0, 0, 5, NULL, 190, 0, '2021-05-08 18:40:06', 1, NULL, 50, NULL, '2,1', NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101910, 'invoice_type', '开票类型', 3, 18, NULL, NULL, NULL, '', 0, 1, 6, '增值税专用发票,增值税普通发票,国税通用机打发票,地税通用机打发票,收据', 158, 0, '2021-05-08 18:40:06', 1, NULL, 50, NULL, '3,0', NULL, NULL, NULL);
-INSERT INTO `wk_crm_field` VALUES (1101911, 'remark', '备注', 2, 18, NULL, NULL, 255, '', 0, 0, 7, NULL, 190, 0, '2021-05-08 18:40:06', 1, NULL, 50, NULL, '3,1', NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101895, 'visit_number', '回访编号', 1, 17, NULL, NULL, NULL, '', 1, 1, 0, NULL, 177, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101896, 'visit_time', '回访时间', 13, 17, NULL, NULL, NULL, '', 0, 1, 1, NULL, 181, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101897, 'owner_user_id', '回访人', 28, 17, NULL, NULL, NULL, '', 0, 1, 2, NULL, 149, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101898, 'return_visit_type', '回访形式', 3, 17, NULL, NULL, NULL, '', 0, 0, 3, '见面拜访,电话,短信,邮件,微信', 191, 0, '2021-03-24 16:55:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101899, 'customer_id', '客户名称', 15, 17, NULL, NULL, NULL, '', 0, 1, 4, NULL, 149, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101900, 'contacts_id', '联系人', 17, 17, NULL, NULL, NULL, '', 0, 0, 5, NULL, 159, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101901, 'contract_id', '合同编号', 20, 17, NULL, NULL, NULL, '', 0, 1, 6, NULL, 159, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101902, 'satisficing', '客户满意度', 3, 17, NULL, NULL, NULL, '', 0, 0, 7, '很满意,满意,一般,不满意,很不满意', 191, 0, '2021-03-24 16:55:24', 2, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101903, 'flied_itvzix', '客户反馈', 2, 17, NULL, NULL, 1000, '', 0, 0, 8, NULL, 191, 0, '2021-03-24 16:55:24', 0, NULL, 50, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101905, 'invoice_apply_number', '发票申请编号', 1, 18, NULL, NULL, NULL, '', 1, 1, 0, NULL, 176, 0, '2021-05-07 13:58:07', 1, NULL, 50, NULL, '0,0', NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101906, 'customer_id', '客户名称', 15, 18, NULL, NULL, NULL, '', 0, 1, 1, NULL, 148, 0, '2021-05-07 13:58:07', 1, NULL, 50, NULL, '0,1', NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101907, 'contract_id', '合同编号', 20, 18, NULL, NULL, NULL, '', 0, 1, 2, NULL, 148, 0, '2021-05-07 13:58:07', 1, NULL, 50, NULL, '1,0', NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101908, 'contract_money', '合同金额', 6, 18, NULL, NULL, NULL, '', 0, 0, 3, NULL, 144, 0, '2021-05-07 13:58:07', 1, NULL, 50, 2, '1,1', NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101909, 'invoice_money', '开票金额', 6, 18, NULL, NULL, NULL, '', 0, 1, 4, NULL, 148, 0, '2021-05-07 13:58:07', 1, NULL, 50, 2, '2,0', NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101910, 'invoice_date', '开票日期', 13, 18, NULL, NULL, NULL, '', 0, 0, 5, NULL, 190, 0, '2021-05-07 13:58:07', 1, NULL, 50, NULL, '2,1', NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101911, 'invoice_type', '开票类型', 3, 18, NULL, NULL, NULL, '', 0, 1, 6, '增值税专用发票,增值税普通发票,国税通用机打发票,地税通用机打发票,收据', 158, 0, '2021-05-07 13:58:07', 1, NULL, 50, NULL, '3,0', NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101912, 'remark', '备注', 2, 18, NULL, NULL, 255, '', 0, 0, 7, NULL, 190, 0, '2021-05-07 13:58:07', 1, NULL, 50, NULL, '3,1', NULL, NULL, NULL);
+INSERT INTO `wk_crm_field` VALUES (1101913, 'return_type', '回款方式', 3, 8, NULL, NULL, NULL, '', 0, 0, 6, '支票,现金,邮政汇款,电汇,网上转账,支付宝,微信支付,其他', 0, 0, '2021-03-24 16:55:24', 1, NULL, 50, NULL, NULL, NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for wk_crm_field_config
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_field_config`;
 CREATE TABLE `wk_crm_field_config`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `id` int(0) NOT NULL AUTO_INCREMENT COMMENT 'id',
   `field_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '字段名称',
-  `field_type` int(2) NOT NULL DEFAULT 1 COMMENT '字段类型 1 keyword 2 date 3 number 4 nested 5 datetime',
+  `field_type` int(0) NOT NULL DEFAULT 1 COMMENT '字段类型 1 keyword 2 date 3 number 4 nested 5 datetime',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
-  `label` int(2) NOT NULL COMMENT 'label',
+  `label` int(0) NOT NULL COMMENT 'label',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `field_name`(`field_name`, `label`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 100294 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '字段配置表' ROW_FORMAT = Dynamic;
@@ -6088,29 +6071,29 @@ INSERT INTO `wk_crm_field_config` VALUES (100293, 'flied_ilvojx', 1, '2020-08-19
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_field_extend`;
 CREATE TABLE `wk_crm_field_extend`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `parent_field_id` int(11) NOT NULL COMMENT '对应主字段id',
+  `id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `parent_field_id` int(0) NOT NULL COMMENT '对应主字段id',
   `field_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '自定义字段英文标识',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '字段名称',
-  `type` int(2) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
+  `type` int(0) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
   `remark` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段说明',
   `input_tips` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '输入提示',
-  `max_length` int(12) NULL DEFAULT NULL COMMENT '最大长度',
+  `max_length` int(0) NULL DEFAULT NULL COMMENT '最大长度',
   `default_value` varchar(5000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '默认值',
-  `is_unique` int(1) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
-  `is_null` int(1) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
-  `sorting` int(5) NULL DEFAULT 1 COMMENT '排序 从小到大',
+  `is_unique` int(0) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
+  `is_null` int(0) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
+  `sorting` int(0) NULL DEFAULT 1 COMMENT '排序 从小到大',
   `options` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '如果类型是选项，此处不能为空，多个选项以，隔开',
-  `operating` int(1) NULL DEFAULT 255 COMMENT '是否允许编辑',
-  `is_hidden` int(1) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
+  `operating` int(0) NULL DEFAULT 255 COMMENT '是否允许编辑',
+  `is_hidden` int(0) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
   `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '最后修改时间',
-  `field_type` int(2) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
-  `style_percent` int(3) NULL DEFAULT 50 COMMENT '样式百分比%',
-  `precisions` int(2) NULL DEFAULT NULL COMMENT '精度，允许的最大小数位',
+  `field_type` int(0) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
+  `style_percent` int(0) NULL DEFAULT 50 COMMENT '样式百分比%',
+  `precisions` int(0) NULL DEFAULT NULL COMMENT '精度，允许的最大小数位',
   `form_position` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '表单定位 坐标格式： 1,1',
   `max_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最大数值',
   `min_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最小数值',
-  `form_assist_id` int(12) NULL DEFAULT NULL COMMENT '表单辅助id，前端生成',
+  `form_assist_id` int(0) NULL DEFAULT NULL COMMENT '表单辅助id，前端生成',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `update_time`(`update_time`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 12231 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '自定义字段表' ROW_FORMAT = Dynamic;
@@ -6124,16 +6107,16 @@ CREATE TABLE `wk_crm_field_extend`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_field_sort`;
 CREATE TABLE `wk_crm_field_sort`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
-  `field_id` int(11) NULL DEFAULT NULL COMMENT '字段ID',
+  `id` int(0) NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `field_id` int(0) NULL DEFAULT NULL COMMENT '字段ID',
   `field_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段名称',
   `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '名称',
-  `label` int(2) NOT NULL COMMENT '标签 1 线索 2 客户 3 联系人 4 产品 5 商机 6 合同 7回款8.回款计划',
-  `type` int(2) NULL DEFAULT NULL COMMENT '字段类型',
-  `style` int(8) NULL DEFAULT NULL COMMENT '字段宽度',
-  `sort` int(5) NOT NULL DEFAULT 0 COMMENT '字段排序',
-  `user_id` bigint(20) NOT NULL DEFAULT 0 COMMENT '用户id',
-  `is_hide` int(1) NOT NULL DEFAULT 1 COMMENT '是否隐藏 0、不隐藏 1、隐藏',
+  `label` int(0) NOT NULL COMMENT '标签 1 线索 2 客户 3 联系人 4 产品 5 商机 6 合同 7回款8.回款计划',
+  `type` int(0) NULL DEFAULT NULL COMMENT '字段类型',
+  `style` int(0) NULL DEFAULT NULL COMMENT '字段宽度',
+  `sort` int(0) NOT NULL DEFAULT 0 COMMENT '字段排序',
+  `user_id` bigint(0) NOT NULL DEFAULT 0 COMMENT '用户id',
+  `is_hide` int(0) NOT NULL DEFAULT 1 COMMENT '是否隐藏 0、不隐藏 1、隐藏',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `label`(`user_id`, `field_name`, `label`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1961 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '字段排序表' ROW_FORMAT = Dynamic;
@@ -6147,12 +6130,12 @@ CREATE TABLE `wk_crm_field_sort`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_instrument_sort`;
 CREATE TABLE `wk_crm_instrument_sort`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NOT NULL COMMENT '用户id',
-  `model_id` int(11) NOT NULL COMMENT '模块id 1、合同金额目标及完成情况 2、数据汇总 3、回款金额目标及完成情况 4、业绩指标完成率 5、销售漏斗 6、遗忘提醒 7、排行榜',
-  `list` int(4) NOT NULL COMMENT '列 1左侧 2右侧',
-  `sort` int(4) NOT NULL COMMENT '排序',
-  `is_hidden` int(4) NOT NULL DEFAULT 0 COMMENT '是否隐藏 0显示 1隐藏',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
+  `model_id` int(0) NOT NULL COMMENT '模块id 1、合同金额目标及完成情况 2、数据汇总 3、回款金额目标及完成情况 4、业绩指标完成率 5、销售漏斗 6、遗忘提醒 7、排行榜',
+  `list` int(0) NOT NULL COMMENT '列 1左侧 2右侧',
+  `sort` int(0) NOT NULL COMMENT '排序',
+  `is_hidden` int(0) NOT NULL DEFAULT 0 COMMENT '是否隐藏 0显示 1隐藏',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '仪表盘排序表' ROW_FORMAT = Dynamic;
 
@@ -6165,15 +6148,15 @@ CREATE TABLE `wk_crm_instrument_sort`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_invoice`;
 CREATE TABLE `wk_crm_invoice`  (
-  `invoice_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '发票id',
+  `invoice_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '发票id',
   `invoice_apply_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '发票申请编号',
-  `customer_id` int(11) NOT NULL COMMENT '客户id',
-  `contract_id` int(11) NULL DEFAULT NULL COMMENT '合同id',
+  `customer_id` int(0) NOT NULL COMMENT '客户id',
+  `contract_id` int(0) NULL DEFAULT NULL COMMENT '合同id',
   `invoice_money` decimal(10, 2) NOT NULL COMMENT '开票金额',
   `invoice_date` date NULL DEFAULT NULL COMMENT '开票日期',
-  `invoice_type` int(2) NOT NULL COMMENT '开票类型',
+  `invoice_type` int(0) NOT NULL COMMENT '开票类型',
   `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '备注',
-  `title_type` int(2) NULL DEFAULT NULL COMMENT '抬头类型 1单位 2个人',
+  `title_type` int(0) NULL DEFAULT NULL COMMENT '抬头类型 1单位 2个人',
   `invoice_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '开票抬头',
   `tax_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '纳税识别号',
   `deposit_bank` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '开户行',
@@ -6183,14 +6166,14 @@ CREATE TABLE `wk_crm_invoice`  (
   `contacts_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '联系人名称',
   `contacts_mobile` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '联系方式',
   `contacts_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '邮寄地址',
-  `examine_record_id` int(11) NULL DEFAULT NULL COMMENT '审批记录id',
-  `check_status` int(2) NULL DEFAULT NULL COMMENT '审核状态 0待审核、1通过、2拒绝、3审核中、4撤回',
-  `owner_user_id` bigint(20) NOT NULL COMMENT '负责人id',
+  `examine_record_id` int(0) NULL DEFAULT NULL COMMENT '审批记录id',
+  `check_status` int(0) NULL DEFAULT NULL COMMENT '审核状态 0待审核、1通过、2拒绝、3审核中、4撤回',
+  `owner_user_id` bigint(0) NOT NULL COMMENT '负责人id',
   `invoice_number` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '发票号码',
   `real_invoice_date` date NULL DEFAULT NULL COMMENT '实际开票日期',
   `logistics_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '物流单号',
-  `invoice_status` int(2) NOT NULL DEFAULT 0 COMMENT '开票状态 0 未开票， 1 已开票',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人id',
+  `invoice_status` int(0) NOT NULL DEFAULT 0 COMMENT '开票状态 0 未开票， 1 已开票',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人id',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '批次id',
@@ -6206,16 +6189,16 @@ CREATE TABLE `wk_crm_invoice`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_invoice_data`;
 CREATE TABLE `wk_crm_invoice_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field_id` int(11) NOT NULL,
-  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
-  `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '字段名称',
+  `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
   `create_time` datetime(0) NOT NULL,
-  `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `batch_id`(`batch_id`) USING BTREE,
   INDEX `name`(`name`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2250 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '发票扩展字段数据表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2250 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '发票扩展字段数据表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_crm_invoice_data
@@ -6226,9 +6209,9 @@ CREATE TABLE `wk_crm_invoice_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_invoice_info`;
 CREATE TABLE `wk_crm_invoice_info`  (
-  `info_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '发票信息id',
-  `customer_id` int(11) NOT NULL COMMENT '客户id',
-  `title_type` int(2) NULL DEFAULT NULL COMMENT '抬头类型 1单位 2个人',
+  `info_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '发票信息id',
+  `customer_id` int(0) NOT NULL COMMENT '客户id',
+  `title_type` int(0) NULL DEFAULT NULL COMMENT '抬头类型 1单位 2个人',
   `invoice_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '开票抬头',
   `tax_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '纳税识别号',
   `deposit_bank` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '开户行',
@@ -6236,7 +6219,7 @@ CREATE TABLE `wk_crm_invoice_info`  (
   `deposit_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '开票地址',
   `telephone` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '电话',
   `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '备注',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人id',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人id',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`info_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '发票详情表' ROW_FORMAT = Dynamic;
@@ -6250,23 +6233,23 @@ CREATE TABLE `wk_crm_invoice_info`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_leads`;
 CREATE TABLE `wk_crm_leads`  (
-  `leads_id` int(11) NOT NULL AUTO_INCREMENT,
-  `is_transform` int(1) NULL DEFAULT 0 COMMENT '1已转化 0 未转化',
-  `followup` int(11) NULL DEFAULT NULL COMMENT '跟进状态 0未跟进1已跟进',
+  `leads_id` int(0) NOT NULL AUTO_INCREMENT,
+  `is_transform` int(0) NULL DEFAULT 0 COMMENT '1已转化 0 未转化',
+  `followup` int(0) NULL DEFAULT NULL COMMENT '跟进状态 0未跟进1已跟进',
   `leads_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_bin NULL DEFAULT NULL COMMENT '线索名称',
-  `customer_id` int(11) NULL DEFAULT NULL COMMENT '客户id',
+  `customer_id` int(0) NULL DEFAULT NULL COMMENT '客户id',
   `next_time` datetime(0) NULL DEFAULT NULL COMMENT '下次联系时间',
   `telephone` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '电话',
   `mobile` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '手机号',
   `email` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '邮箱',
   `address` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '地址',
   `remark` varchar(800) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '' COMMENT '备注',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '批次 比如附件批次',
-  `is_receive` int(1) NULL DEFAULT NULL COMMENT '1 分配',
+  `is_receive` int(0) NULL DEFAULT NULL COMMENT '1 分配',
   `last_time` datetime(0) NULL DEFAULT NULL COMMENT '最后跟进时间',
   `last_content` varchar(1024) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '最后一条跟进记录',
   PRIMARY KEY (`leads_id`) USING BTREE,
@@ -6282,8 +6265,8 @@ CREATE TABLE `wk_crm_leads`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_leads_data`;
 CREATE TABLE `wk_crm_leads_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field_id` int(11) NOT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
   `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
   `create_time` datetime(0) NOT NULL,
@@ -6302,9 +6285,9 @@ CREATE TABLE `wk_crm_leads_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_leads_user_star`;
 CREATE TABLE `wk_crm_leads_user_star`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NOT NULL COMMENT '用户id',
-  `leads_id` int(11) NOT NULL COMMENT '客户id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
+  `leads_id` int(0) NOT NULL COMMENT '客户id',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `user_id`(`user_id`, `leads_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户线索标星关系表 ' ROW_FORMAT = Dynamic;
@@ -6318,27 +6301,28 @@ CREATE TABLE `wk_crm_leads_user_star`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_marketing`;
 CREATE TABLE `wk_crm_marketing`  (
-  `marketing_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '营销id',
+  `marketing_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '营销id',
   `marketing_name` varchar(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '营销名称',
-  `crm_type` int(1) NOT NULL DEFAULT 1 COMMENT '1线索  2客户',
+  `crm_type` int(0) NOT NULL DEFAULT 1 COMMENT '1线索  2客户',
   `end_time` datetime(0) NOT NULL COMMENT '截止时间',
   `relation_user_id` varchar(200) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '关联人员ID',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
-  `status` int(1) NOT NULL DEFAULT 1 COMMENT '1启用  0禁用',
-  `second` int(1) NOT NULL DEFAULT 0 COMMENT '每个客户只能填写次数 0 1',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
+  `status` int(0) NOT NULL DEFAULT 1 COMMENT '1启用  0禁用',
+  `second` int(0) NOT NULL DEFAULT 0 COMMENT '每个客户只能填写次数 0 1',
   `field_data_id` text CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '营销内容填写字段',
-  `browse` int(10) NULL DEFAULT 0 COMMENT '浏览数',
+  `browse` int(0) NULL DEFAULT 0 COMMENT '浏览数',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NOT NULL COMMENT '修改时间',
   `start_time` datetime(0) NULL DEFAULT NULL COMMENT '开始时间',
-  `share_num` int(11) NULL DEFAULT 0 COMMENT '分享数',
-  `submit_num` int(11) NULL DEFAULT 0 COMMENT '提交数',
+  `share_num` int(0) NULL DEFAULT 0 COMMENT '分享数',
+  `submit_num` int(0) NULL DEFAULT 0 COMMENT '提交数',
   `synopsis` longtext CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '简介',
   `main_file_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '首图id',
   `detail_file_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
   `address` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '活动地址',
   `marketing_type` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '活动类型',
   `marketing_money` decimal(11, 2) NULL DEFAULT NULL COMMENT '活动金额',
+  `relation_dept_id` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '关联部门id',
   PRIMARY KEY (`marketing_id`) USING BTREE,
   INDEX `status`(`status`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '营销表' ROW_FORMAT = Dynamic;
@@ -6352,23 +6336,23 @@ CREATE TABLE `wk_crm_marketing`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_marketing_field`;
 CREATE TABLE `wk_crm_marketing_field`  (
-  `field_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `field_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `field_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '自定义字段英文标识',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '字段名称',
-  `type` int(2) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
+  `type` int(0) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
   `remark` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段说明',
   `input_tips` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '输入提示',
-  `max_length` int(12) NULL DEFAULT NULL COMMENT '最大长度',
+  `max_length` int(0) NULL DEFAULT NULL COMMENT '最大长度',
   `default_value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '默认值',
-  `is_unique` int(1) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
-  `is_null` int(1) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
-  `sorting` int(5) NULL DEFAULT 1 COMMENT '排序 从小到大',
+  `is_unique` int(0) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
+  `is_null` int(0) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
+  `sorting` int(0) NULL DEFAULT 1 COMMENT '排序 从小到大',
   `options` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '如果类型是选项，此处不能为空，多个选项以，隔开',
-  `operating` int(1) NULL DEFAULT 0 COMMENT '是否可以删除修改 0 改删 1 改 2 删 3 无',
-  `is_hidden` int(1) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
+  `operating` int(0) NULL DEFAULT 0 COMMENT '是否可以删除修改 0 改删 1 改 2 删 3 无',
+  `is_hidden` int(0) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
   `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '最后修改时间',
-  `form_id` int(11) NULL DEFAULT NULL COMMENT '表单Id',
-  `field_type` int(2) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
+  `form_id` int(0) NULL DEFAULT NULL COMMENT '表单Id',
+  `field_type` int(0) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
   PRIMARY KEY (`field_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 32 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '市场活动字段表' ROW_FORMAT = Dynamic;
 
@@ -6381,17 +6365,17 @@ CREATE TABLE `wk_crm_marketing_field`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_marketing_form`;
 CREATE TABLE `wk_crm_marketing_form`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
   `title` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '名称',
   `remarks` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
-  `status` int(1) NULL DEFAULT 1 COMMENT '1启用，0禁用',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `status` int(0) NULL DEFAULT 1 COMMENT '1启用，0禁用',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
-  `is_deleted` int(1) NULL DEFAULT 0 COMMENT '1已删除',
+  `is_deleted` int(0) NULL DEFAULT 0 COMMENT '1已删除',
   `delete_time` datetime(0) NULL DEFAULT NULL COMMENT '删除时间',
-  `delete_user_id` bigint(20) NULL DEFAULT NULL COMMENT '删除人ID',
-  `update_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `delete_user_id` bigint(0) NULL DEFAULT NULL COMMENT '删除人ID',
+  `update_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '市场活动表单信息' ROW_FORMAT = Dynamic;
 
@@ -6404,12 +6388,12 @@ CREATE TABLE `wk_crm_marketing_form`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_marketing_info`;
 CREATE TABLE `wk_crm_marketing_info`  (
-  `r_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
-  `marketing_id` int(11) NOT NULL COMMENT '关联ID',
-  `status` int(1) NOT NULL DEFAULT 0 COMMENT '0未同步  1同步成功  2同步失败',
+  `r_id` int(0) NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `marketing_id` int(0) NOT NULL COMMENT '关联ID',
+  `status` int(0) NOT NULL DEFAULT 0 COMMENT '0未同步  1同步成功  2同步失败',
   `field_info` text CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '营销内容填写字段内容',
   `device` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '设备号',
-  `owner_user_id` bigint(20) NOT NULL COMMENT '关联ID',
+  `owner_user_id` bigint(0) NOT NULL COMMENT '关联ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`r_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '营销数据表' ROW_FORMAT = Dynamic;
@@ -6423,17 +6407,17 @@ CREATE TABLE `wk_crm_marketing_info`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_number_setting`;
 CREATE TABLE `wk_crm_number_setting`  (
-  `setting_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '设置id',
-  `pid` int(11) NOT NULL COMMENT '父级设置id',
-  `sort` int(2) NOT NULL COMMENT '编号顺序',
-  `type` int(2) NOT NULL COMMENT '编号类型 1文本 2日期 3数字',
+  `setting_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '设置id',
+  `pid` int(0) NOT NULL COMMENT '父级设置id',
+  `sort` int(0) NOT NULL COMMENT '编号顺序',
+  `type` int(0) NOT NULL COMMENT '编号类型 1文本 2日期 3数字',
   `value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '文本内容或日期格式或起始编号',
-  `increase_number` int(11) NULL DEFAULT NULL COMMENT '递增数',
-  `reset_type` int(2) NULL DEFAULT NULL COMMENT '重新编号周期 1每天 2每月 3每年 4从不',
-  `last_number` int(10) NULL DEFAULT NULL COMMENT '上次生成的编号',
+  `increase_number` int(0) NULL DEFAULT NULL COMMENT '递增数',
+  `reset_type` int(0) NULL DEFAULT NULL COMMENT '重新编号周期 1每天 2每月 3每年 4从不',
+  `last_number` int(0) NULL DEFAULT NULL COMMENT '上次生成的编号',
   `last_date` date NULL DEFAULT NULL COMMENT '上次生成的时间',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人id',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人id',
   PRIMARY KEY (`setting_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '系统自动生成编号设置表' ROW_FORMAT = Dynamic;
 
@@ -6446,11 +6430,11 @@ CREATE TABLE `wk_crm_number_setting`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_owner_record`;
 CREATE TABLE `wk_crm_owner_record`  (
-  `record_id` int(11) NOT NULL AUTO_INCREMENT,
-  `type_id` int(11) NOT NULL COMMENT '对象id',
-  `type` int(4) NOT NULL COMMENT '对象类型',
-  `pre_owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '上一负责人',
-  `post_owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '接手负责人',
+  `record_id` int(0) NOT NULL AUTO_INCREMENT,
+  `type_id` int(0) NOT NULL COMMENT '对象id',
+  `type` int(0) NOT NULL COMMENT '对象类型',
+  `pre_owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '上一负责人',
+  `post_owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '接手负责人',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`record_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '负责人变更记录表' ROW_FORMAT = Dynamic;
@@ -6464,12 +6448,12 @@ CREATE TABLE `wk_crm_owner_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_print_record`;
 CREATE TABLE `wk_crm_print_record`  (
-  `record_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '记录id',
-  `crm_type` int(4) NOT NULL,
-  `type_id` int(11) NOT NULL,
-  `template_id` int(11) NOT NULL COMMENT '模板id',
+  `record_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '记录id',
+  `crm_type` int(0) NOT NULL,
+  `type_id` int(0) NOT NULL,
+  `template_id` int(0) NOT NULL COMMENT '模板id',
   `record_content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '打印记录',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人id',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人id',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`record_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '打印记录表' ROW_FORMAT = Dynamic;
@@ -6483,11 +6467,11 @@ CREATE TABLE `wk_crm_print_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_print_template`;
 CREATE TABLE `wk_crm_print_template`  (
-  `template_id` int(11) NOT NULL AUTO_INCREMENT,
+  `template_id` int(0) NOT NULL AUTO_INCREMENT,
   `template_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '模板名称',
-  `type` int(2) NOT NULL COMMENT '关联对象',
+  `type` int(0) NOT NULL COMMENT '关联对象',
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '模板',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人id',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人id',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`template_id`) USING BTREE
@@ -6506,20 +6490,20 @@ INSERT INTO `wk_crm_print_template` VALUES (23, '回款打印模板', 7, '<p sty
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_product`;
 CREATE TABLE `wk_crm_product`  (
-  `product_id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(0) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '产品名称',
   `num` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '产品编码',
   `unit` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '单位',
   `price` decimal(18, 2) NULL DEFAULT 0.00 COMMENT '价格',
-  `status` int(1) NULL DEFAULT NULL COMMENT '状态 1 上架 0 下架 3 删除',
-  `category_id` int(11) NULL DEFAULT NULL COMMENT '产品分类ID',
+  `status` int(0) NULL DEFAULT NULL COMMENT '状态 1 上架 0 下架 3 删除',
+  `category_id` int(0) NULL DEFAULT NULL COMMENT '产品分类ID',
   `description` text CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '产品描述',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '批次',
-  `old_product_id` int(11) NULL DEFAULT NULL,
+  `old_product_id` int(0) NULL DEFAULT NULL,
   PRIMARY KEY (`product_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '产品表' ROW_FORMAT = Dynamic;
 
@@ -6532,9 +6516,9 @@ CREATE TABLE `wk_crm_product`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_product_category`;
 CREATE TABLE `wk_crm_product_category`  (
-  `category_id` int(11) NOT NULL AUTO_INCREMENT,
+  `category_id` int(0) NOT NULL AUTO_INCREMENT,
   `name` varchar(200) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '',
-  `pid` int(11) NULL DEFAULT 0,
+  `pid` int(0) NULL DEFAULT 0,
   PRIMARY KEY (`category_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 14768 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '产品分类表' ROW_FORMAT = Dynamic;
 
@@ -6548,8 +6532,8 @@ INSERT INTO `wk_crm_product_category` VALUES (14767, '默认', 0);
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_product_data`;
 CREATE TABLE `wk_crm_product_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field_id` int(11) NOT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
   `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
   `create_time` datetime(0) NOT NULL,
@@ -6568,8 +6552,8 @@ CREATE TABLE `wk_crm_product_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_product_detail_img`;
 CREATE TABLE `wk_crm_product_detail_img`  (
-  `img_id` int(11) NOT NULL AUTO_INCREMENT,
-  `product_id` int(11) NULL DEFAULT NULL COMMENT '产品id',
+  `img_id` int(0) NOT NULL AUTO_INCREMENT,
+  `product_id` int(0) NULL DEFAULT NULL COMMENT '产品id',
   `remarks` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
   `main_file_ids` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '主图',
   `detail_file_ids` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
@@ -6585,9 +6569,9 @@ CREATE TABLE `wk_crm_product_detail_img`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_product_user`;
 CREATE TABLE `wk_crm_product_user`  (
-  `product_user_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `product_user_id` bigint(0) NOT NULL AUTO_INCREMENT,
   `product_ids` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `user_id` bigint(20) NOT NULL,
+  `user_id` bigint(0) NOT NULL,
   PRIMARY KEY (`product_user_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '产品员工小程序显示关联表' ROW_FORMAT = Dynamic;
 
@@ -6600,19 +6584,19 @@ CREATE TABLE `wk_crm_product_user`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_receivables`;
 CREATE TABLE `wk_crm_receivables`  (
-  `receivables_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '回款ID',
+  `receivables_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '回款ID',
   `number` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '回款编号',
-  `plan_id` int(11) NULL DEFAULT NULL COMMENT '回款计划ID',
-  `customer_id` int(11) NULL DEFAULT NULL COMMENT '客户ID',
-  `contract_id` int(11) NULL DEFAULT NULL COMMENT '合同ID',
-  `check_status` int(4) NULL DEFAULT NULL COMMENT '0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交',
-  `examine_record_id` int(11) NULL DEFAULT NULL COMMENT '审核记录ID',
+  `receivables_plan_id` int(0) NULL DEFAULT NULL COMMENT '回款计划ID',
+  `customer_id` int(0) NULL DEFAULT NULL COMMENT '客户ID',
+  `contract_id` int(0) NULL DEFAULT NULL COMMENT '合同ID',
+  `check_status` int(0) NULL DEFAULT NULL COMMENT '0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交',
+  `examine_record_id` int(0) NULL DEFAULT NULL COMMENT '审核记录ID',
   `return_time` date NULL DEFAULT NULL COMMENT '回款日期',
   `return_type` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '回款方式',
   `money` decimal(17, 2) NULL DEFAULT NULL COMMENT '回款金额',
   `remark` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '备注',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `remarks` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '备注',
@@ -6629,8 +6613,8 @@ CREATE TABLE `wk_crm_receivables`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_receivables_data`;
 CREATE TABLE `wk_crm_receivables_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field_id` int(11) NOT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
   `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
   `create_time` datetime(0) NOT NULL,
@@ -6649,25 +6633,28 @@ CREATE TABLE `wk_crm_receivables_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_receivables_plan`;
 CREATE TABLE `wk_crm_receivables_plan`  (
-  `plan_id` int(11) NOT NULL AUTO_INCREMENT,
+  `receivables_plan_id` int(0) NOT NULL AUTO_INCREMENT,
   `num` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '期数',
-  `receivables_id` int(11) NULL DEFAULT NULL COMMENT '回款ID',
-  `status` int(4) NULL DEFAULT NULL COMMENT '1完成 0 未完成',
+  `receivables_id` int(0) NULL DEFAULT NULL COMMENT '回款ID',
+  `status` int(0) NULL DEFAULT NULL COMMENT '1完成 0 未完成',
   `money` decimal(18, 2) NULL DEFAULT NULL COMMENT '计划回款金额',
   `return_date` datetime(0) NULL DEFAULT NULL COMMENT '计划回款日期',
   `return_type` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '计划回款方式',
-  `remind` int(4) NULL DEFAULT NULL COMMENT '提前几天提醒',
+  `remind` int(0) NULL DEFAULT NULL COMMENT '提前几天提醒',
   `remind_date` datetime(0) NULL DEFAULT NULL COMMENT '提醒日期',
   `remark` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '备注',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
-  `file_batch` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附件批次ID',
-  `contract_id` int(11) NOT NULL COMMENT '合同ID',
-  `customer_id` int(11) NULL DEFAULT NULL COMMENT '客户ID',
-  `old_plan_id` int(11) NULL DEFAULT NULL,
-  PRIMARY KEY (`plan_id`) USING BTREE
+  `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附件批次ID',
+  `real_received_money` decimal(18, 2) NULL DEFAULT NULL COMMENT '实际回款金额',
+  `real_return_date` datetime(0) NULL DEFAULT NULL COMMENT '实际回款日期',
+  `unreceived_money` decimal(18, 2) NULL DEFAULT NULL COMMENT '未回款金额',
+  `received_status` int(0) NULL DEFAULT 0 COMMENT '回款状态 0 待回款 1 回款完成 2 部分回款 3 作废 4 逾期 5 待生效',
+  `contract_id` int(0) NOT NULL COMMENT '合同ID',
+  `customer_id` int(0) NULL DEFAULT NULL COMMENT '客户ID',
+  PRIMARY KEY (`receivables_plan_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '回款计划表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
@@ -6675,18 +6662,38 @@ CREATE TABLE `wk_crm_receivables_plan`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for wk_crm_receivables_plan_data
+-- ----------------------------
+DROP TABLE IF EXISTS `wk_crm_receivables_plan_data`;
+CREATE TABLE `wk_crm_receivables_plan_data`  (
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '字段名称',
+  `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `create_time` datetime(0) NOT NULL,
+  `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `batch_id`(`batch_id`) USING BTREE,
+  INDEX `name`(`name`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '回款计划自定义字段存值表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of wk_crm_receivables_plan_data
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for wk_crm_return_visit
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_return_visit`;
 CREATE TABLE `wk_crm_return_visit`  (
-  `visit_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '回访id',
+  `visit_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '回访id',
   `visit_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '回访编号',
   `visit_time` datetime(0) NULL DEFAULT NULL COMMENT '回访时间',
-  `owner_user_id` bigint(20) NULL DEFAULT NULL COMMENT '回访人id',
-  `customer_id` int(11) NULL DEFAULT NULL COMMENT '客户id',
-  `contract_id` int(11) NULL DEFAULT NULL COMMENT '合同id',
-  `contacts_id` int(11) NULL DEFAULT NULL COMMENT '联系人id',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人id',
+  `owner_user_id` bigint(0) NULL DEFAULT NULL COMMENT '回访人id',
+  `customer_id` int(0) NULL DEFAULT NULL COMMENT '客户id',
+  `contract_id` int(0) NULL DEFAULT NULL COMMENT '合同id',
+  `contacts_id` int(0) NULL DEFAULT NULL COMMENT '联系人id',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人id',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NOT NULL COMMENT '更新时间',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '批次id',
@@ -6702,8 +6709,8 @@ CREATE TABLE `wk_crm_return_visit`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_return_visit_data`;
 CREATE TABLE `wk_crm_return_visit_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field_id` int(11) NOT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
   `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
   `create_time` datetime(0) NOT NULL,
@@ -6720,15 +6727,16 @@ CREATE TABLE `wk_crm_return_visit_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_role_field`;
 CREATE TABLE `wk_crm_role_field`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `role_id` int(11) NOT NULL COMMENT '角色id',
-  `label` int(4) NOT NULL COMMENT 'crm模块',
-  `field_id` int(11) NULL DEFAULT NULL COMMENT '字段id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `role_id` int(0) NOT NULL COMMENT '角色id',
+  `label` int(0) NOT NULL COMMENT 'crm模块',
+  `field_id` int(0) NULL DEFAULT NULL COMMENT '字段id',
   `field_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段标识',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段名称',
-  `auth_level` int(2) NOT NULL COMMENT '权限 1不可编辑不可查看 2可查看不可编辑 3可编辑可查看',
-  `operate_type` int(2) NOT NULL COMMENT '操作权限 1都可以设置 2只有查看权限可设置 3只有编辑权限可设置 4都不能设置',
-  `field_type` int(4) NULL DEFAULT NULL COMMENT '  0自定义字段 1原始字段 2原始字段但值在data表 3关联表的字段 4系统字段',
+  `auth_level` int(0) NOT NULL COMMENT '权限 1不可编辑不可查看 2可查看不可编辑 3可编辑可查看',
+  `operate_type` int(0) NOT NULL COMMENT '操作权限 1都可以设置 2只有查看权限可设置 3只有编辑权限可设置 4都不能设置',
+  `mask_type` int(0) NULL DEFAULT 0 COMMENT '掩码类型 0 都不隐藏 1 列表隐藏详情不隐藏 2 都隐藏',
+  `field_type` int(0) NULL DEFAULT NULL COMMENT '  0自定义字段 1原始字段 2原始字段但值在data表 3关联表的字段 4系统字段',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '角色字段授权表' ROW_FORMAT = Dynamic;
 
@@ -6741,14 +6749,14 @@ CREATE TABLE `wk_crm_role_field`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_scene`;
 CREATE TABLE `wk_crm_scene`  (
-  `scene_id` int(10) NOT NULL AUTO_INCREMENT,
-  `type` int(5) NOT NULL COMMENT '分类',
+  `scene_id` int(0) NOT NULL AUTO_INCREMENT,
+  `type` int(0) NOT NULL COMMENT '分类',
   `name` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '场景名称',
-  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
-  `sort` int(5) NOT NULL COMMENT '排序ID',
+  `user_id` bigint(0) NOT NULL COMMENT '用户ID',
+  `sort` int(0) NOT NULL COMMENT '排序ID',
   `data` text CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '属性值',
-  `is_hide` int(1) NOT NULL COMMENT '1隐藏',
-  `is_system` int(1) NOT NULL COMMENT '1系统0自定义',
+  `is_hide` int(0) NOT NULL COMMENT '1隐藏',
+  `is_system` int(0) NOT NULL COMMENT '1系统0自定义',
   `bydata` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '系统参数',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
@@ -6764,10 +6772,10 @@ CREATE TABLE `wk_crm_scene`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_scene_default`;
 CREATE TABLE `wk_crm_scene_default`  (
-  `default_id` int(11) NOT NULL AUTO_INCREMENT,
-  `type` int(5) NOT NULL COMMENT '类型',
-  `user_id` bigint(20) NOT NULL COMMENT '人员ID',
-  `scene_id` int(11) NOT NULL COMMENT '场景ID',
+  `default_id` int(0) NOT NULL AUTO_INCREMENT,
+  `type` int(0) NOT NULL COMMENT '类型',
+  `user_id` bigint(0) NOT NULL COMMENT '人员ID',
+  `scene_id` int(0) NOT NULL COMMENT '场景ID',
   PRIMARY KEY (`default_id`) USING BTREE,
   UNIQUE INDEX `default_id`(`default_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '场景默认关系表' ROW_FORMAT = Dynamic;
@@ -6781,11 +6789,11 @@ CREATE TABLE `wk_crm_scene_default`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_crm_team_members`;
 CREATE TABLE `wk_crm_team_members`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `type` int(1) NOT NULL COMMENT '类型，同crm类型',
-  `type_id` int(11) NOT NULL COMMENT '对应类型主键ID',
-  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
-  `power` int(1) NULL DEFAULT NULL COMMENT '1 只读 2 读写 3 负责人',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `type` int(0) NOT NULL COMMENT '类型，同crm类型',
+  `type_id` int(0) NOT NULL COMMENT '对应类型主键ID',
+  `user_id` bigint(0) NOT NULL COMMENT '用户ID',
+  `power` int(0) NULL DEFAULT NULL COMMENT '1 只读 2 读写 3 负责人',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `expires_time` datetime(0) NULL DEFAULT NULL COMMENT '过期时间',
   PRIMARY KEY (`id`) USING BTREE,
@@ -6802,23 +6810,23 @@ CREATE TABLE `wk_crm_team_members`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_email_account`;
 CREATE TABLE `wk_email_account`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
   `email_account` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '邮箱账号',
   `email_password` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '邮箱密码',
   `send_nick` varchar(225) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '发送昵称',
-  `configuration_mode` int(2) NULL DEFAULT 1 COMMENT '配置邮箱方式 1：自动配置 2：手动配置',
+  `configuration_mode` int(0) NULL DEFAULT 1 COMMENT '配置邮箱方式 1：自动配置 2：手动配置',
   `service_type` varchar(11) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '收信服务类型 :POP3、IMAP',
   `receiving_server` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '收信服务器地址',
-  `is_receiving` int(2) NULL DEFAULT 1 COMMENT '收信服务器是否启用ssl 代理 0：未启用 1：已启用',
+  `is_receiving` int(0) NULL DEFAULT 1 COMMENT '收信服务器是否启用ssl 代理 0：未启用 1：已启用',
   `receiving_ssl` varchar(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '收信服务器 SSL 端口',
   `smtp_server` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT 'SMTP服务器',
-  `is_smtp` int(2) NULL DEFAULT 1 COMMENT 'smtp服务器是否启用ssl 代理 0：未启用 1：已启用',
+  `is_smtp` int(0) NULL DEFAULT 1 COMMENT 'smtp服务器是否启用ssl 代理 0：未启用 1：已启用',
   `smtp_ssl` varchar(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT 'smtp端口号',
   `signature` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL COMMENT '个性签名',
-  `email_count` int(11) NULL DEFAULT NULL COMMENT '邮件总数量',
+  `email_count` int(0) NULL DEFAULT NULL COMMENT '邮件总数量',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '邮箱账号' ROW_FORMAT = Dynamic;
 
@@ -6831,11 +6839,11 @@ CREATE TABLE `wk_email_account`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_email_file`;
 CREATE TABLE `wk_email_file`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
   `file_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '文件名称',
-  `file_size` bigint(20) NULL DEFAULT NULL COMMENT '文件大小',
+  `file_size` bigint(0) NULL DEFAULT NULL COMMENT '文件大小',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '文件批次ID',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `batch_id`(`batch_id`) USING BTREE
@@ -6850,13 +6858,13 @@ CREATE TABLE `wk_email_file`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_email_lately`;
 CREATE TABLE `wk_email_lately`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `customer_id` int(11) NULL DEFAULT NULL COMMENT '客户id 为空时表示不是列表客户 不为空时表示客户',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `customer_id` int(0) NULL DEFAULT NULL COMMENT '客户id 为空时表示不是列表客户 不为空时表示客户',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL,
   `email` varchar(225) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '邮箱',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '修改时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '邮箱最近联系人' ROW_FORMAT = Dynamic;
 
@@ -6869,8 +6877,8 @@ CREATE TABLE `wk_email_lately`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_email_record`;
 CREATE TABLE `wk_email_record`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `email_account_id` int(11) NULL DEFAULT NULL COMMENT '发送账号id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `email_account_id` int(0) NULL DEFAULT NULL COMMENT '发送账号id',
   `sender` varchar(225) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '发送人昵称',
   `sender_email` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL COMMENT '发送人邮箱',
   `receipt_name` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL,
@@ -6880,16 +6888,16 @@ CREATE TABLE `wk_email_record`  (
   `theme` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '主题',
   `attachment` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '附件',
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL COMMENT '内容',
-  `email_type` int(2) NULL DEFAULT NULL COMMENT '邮箱类型 1：收件箱 2：发件箱 3：草稿箱 4：删除箱 5：垃圾箱',
-  `is_read` int(2) NULL DEFAULT 0 COMMENT '是否已读取 0：未读 1：已读',
-  `is_start` int(2) NULL DEFAULT 0 COMMENT '是否标星 0：未标星  1：已标星',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `email_type` int(0) NULL DEFAULT NULL COMMENT '邮箱类型 1：收件箱 2：发件箱 3：草稿箱 4：删除箱 5：垃圾箱',
+  `is_read` int(0) NULL DEFAULT 0 COMMENT '是否已读取 0：未读 1：已读',
+  `is_start` int(0) NULL DEFAULT 0 COMMENT '是否标星 0：未标星  1：已标星',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `record_type` int(2) NULL DEFAULT NULL COMMENT '记录类型 1：发送 2：保存草稿 3：删除邮件 4：星标邮件 5：垃圾邮件 ',
-  `message_id` int(2) NULL DEFAULT NULL COMMENT '邮件id',
+  `record_type` int(0) NULL DEFAULT NULL COMMENT '记录类型 1：发送 2：保存草稿 3：删除邮件 4：星标邮件 5：垃圾邮件 ',
+  `message_id` int(0) NULL DEFAULT NULL COMMENT '邮件id',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL,
-  `is_del` int(2) NULL DEFAULT 0 COMMENT '0:未删除 1：已删除',
-  `email_uid` bigint(32) NULL DEFAULT NULL COMMENT '邮件uid',
+  `is_del` int(0) NULL DEFAULT 0 COMMENT '0:未删除 1：已删除',
+  `email_uid` bigint(0) NULL DEFAULT NULL COMMENT '邮件uid',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '邮件记录' ROW_FORMAT = Dynamic;
 
@@ -6902,49 +6910,49 @@ CREATE TABLE `wk_email_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine`;
 CREATE TABLE `wk_examine`  (
-  `examine_id` bigint(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '审批ID',
-  `examine_init_id` bigint(20) NULL DEFAULT NULL COMMENT '审批初始化Id',
-  `label` int(2) UNSIGNED NULL DEFAULT NULL COMMENT '0 OA 1 合同 2 回款 3发票 4薪资 5 采购审核 6采购退货审核 7销售审核 8 销售退货审核 9付款单审核10 回款单审核11盘点审核12调拨审核',
+  `examine_id` bigint(0) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '审批ID',
+  `examine_init_id` bigint(0) NULL DEFAULT NULL COMMENT '审批初始化Id',
+  `label` int(0) UNSIGNED NULL DEFAULT NULL COMMENT '0 OA 1 合同 2 回款 3发票 4薪资 5 采购审核 6采购退货审核 7销售审核 8 销售退货审核 9付款单审核10 回款单审核11盘点审核12调拨审核',
   `examine_icon` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '图标',
   `examine_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '审批名称',
-  `recheck_type` int(1) NULL DEFAULT NULL COMMENT '撤回之后重新审核操作 1 从第一层开始 2 从拒绝的层级开始',
+  `recheck_type` int(0) NULL DEFAULT NULL COMMENT '撤回之后重新审核操作 1 从第一层开始 2 从拒绝的层级开始',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
-  `status` int(1) NULL DEFAULT NULL COMMENT '1 正常 2 停用 3 删除 ',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人',
+  `status` int(0) NULL DEFAULT NULL COMMENT '1 正常 2 停用 3 删除 ',
   `batch_id` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
   `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '备注',
   `update_time` datetime(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '修改时间',
-  `update_user_id` bigint(20) NULL DEFAULT NULL COMMENT '修改人',
+  `update_user_id` bigint(0) NULL DEFAULT NULL COMMENT '修改人',
   `user_ids` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '可见范围（员工）',
   `dept_ids` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '可见范围（部门）',
-  `oa_type` int(1) NULL DEFAULT 0 COMMENT '1 普通审批 2 请假审批 3 出差审批 4 加班审批 5 差旅报销 6 借款申请 0 自定义审批',
+  `oa_type` int(0) NULL DEFAULT 0 COMMENT '1 普通审批 2 请假审批 3 出差审批 4 加班审批 5 差旅报销 6 借款申请 0 自定义审批',
   PRIMARY KEY (`examine_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1164178 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of wk_examine
 -- ----------------------------
-INSERT INTO `wk_examine` VALUES (25375, 25375, 2, NULL, '回款审批流程', 1, NULL, 3, 1, '38e4ecd1525111ebbe7418c04d26d688', '', '2021-05-08 18:40:06', 3, NULL, NULL, 0);
-INSERT INTO `wk_examine` VALUES (25376, 25376, 1, NULL, '合同审批流程', 1, NULL, 3, 1, '38e4f6e4525111ebbe7418c04d26d688', '说明', '2021-05-08 18:40:06', 3, NULL, NULL, 0);
-INSERT INTO `wk_examine` VALUES (25377, 25377, 3, NULL, '发票审批流程', 1, NULL, 0, 1, '38e4f798525111ebbe7418c04d26d688', '', '2021-05-08 18:40:06', 0, NULL, NULL, 0);
-INSERT INTO `wk_examine` VALUES (1072979, 1072979, 0, 'wk wk-l-record,#3ABCFB', '普通审批', 1, '2019-04-26 15:06:34', 3, 1, '38efbcd2525111ebbe7418c04d26d688', '普通审批', '2021-05-08 18:40:06', 3, '', '', 1);
-INSERT INTO `wk_examine` VALUES (1072980, 1072980, 0, 'wk wk-leave,#00CAAB', '请假审批', 1, '2019-04-17 18:52:44', 3, 1, '38efbdd4525111ebbe7418c04d26d688', '请假审批', '2021-05-08 18:40:06', 3, '', '', 2);
-INSERT INTO `wk_examine` VALUES (1072981, 1072981, 0, 'wk wk-trip,#3ABCFB', '出差审批', 1, '2019-04-17 18:52:50', 3, 1, '38efbe57525111ebbe7418c04d26d688', '出差审批', '2021-05-08 18:40:06', 3, '', '', 3);
-INSERT INTO `wk_examine` VALUES (1072982, 1072982, 0, 'wk wk-overtime,#FAAD14', '加班审批', 1, '2019-04-17 18:52:59', 3, 1, '38efbe9f525111ebbe7418c04d26d688', '加班审批', '2021-05-08 18:40:06', 3, '', '', 4);
-INSERT INTO `wk_examine` VALUES (1072983, 1072983, 0, 'wk wk-reimbursement,#3ABCFB', '差旅报销', 1, '2019-04-17 18:53:13', 3, 1, '38efbee2525111ebbe7418c04d26d688', '差旅报销', '2021-05-08 18:40:06', 3, '', '', 5);
-INSERT INTO `wk_examine` VALUES (1072984, 1072984, 0, 'wk wk-go-out,#FF6033', '借款申请', 1, '2019-04-17 18:54:44', 3, 1, '38efbf24525111ebbe7418c04d26d688', '借款申请', '2021-05-08 18:40:06', 3, '', '', 6);
+INSERT INTO `wk_examine` VALUES (25375, 25375, 2, NULL, '回款审批流程', 1, NULL, 3, 1, '38e4ecd1525111ebbe7418c04d26d688', '', '2021-05-07 14:00:50', 3, NULL, NULL, 0);
+INSERT INTO `wk_examine` VALUES (25376, 25376, 1, NULL, '合同审批流程', 1, NULL, 3, 1, '38e4f6e4525111ebbe7418c04d26d688', '说明', '2021-05-07 14:00:50', 3, NULL, NULL, 0);
+INSERT INTO `wk_examine` VALUES (25377, 25377, 3, NULL, '发票审批流程', 1, NULL, 0, 1, '38e4f798525111ebbe7418c04d26d688', '', '2021-05-07 14:00:50', 0, NULL, NULL, 0);
+INSERT INTO `wk_examine` VALUES (1072979, 1072979, 0, 'wk wk-l-record,#3ABCFB', '普通审批', 1, '2019-04-26 15:06:34', 3, 1, '38efbcd2525111ebbe7418c04d26d688', '普通审批', '2021-05-07 14:00:50', 3, '', '', 1);
+INSERT INTO `wk_examine` VALUES (1072980, 1072980, 0, 'wk wk-leave,#00CAAB', '请假审批', 1, '2019-04-17 18:52:44', 3, 1, '38efbdd4525111ebbe7418c04d26d688', '请假审批', '2021-05-07 14:00:50', 3, '', '', 2);
+INSERT INTO `wk_examine` VALUES (1072981, 1072981, 0, 'wk wk-trip,#3ABCFB', '出差审批', 1, '2019-04-17 18:52:50', 3, 1, '38efbe57525111ebbe7418c04d26d688', '出差审批', '2021-05-07 14:00:50', 3, '', '', 3);
+INSERT INTO `wk_examine` VALUES (1072982, 1072982, 0, 'wk wk-overtime,#FAAD14', '加班审批', 1, '2019-04-17 18:52:59', 3, 1, '38efbe9f525111ebbe7418c04d26d688', '加班审批', '2021-05-07 14:00:50', 3, '', '', 4);
+INSERT INTO `wk_examine` VALUES (1072983, 1072983, 0, 'wk wk-reimbursement,#3ABCFB', '差旅报销', 1, '2019-04-17 18:53:13', 3, 1, '38efbee2525111ebbe7418c04d26d688', '差旅报销', '2021-05-07 14:00:50', 3, '', '', 5);
+INSERT INTO `wk_examine` VALUES (1072984, 1072984, 0, 'wk wk-go-out,#FF6033', '借款申请', 1, '2019-04-17 18:54:44', 3, 1, '38efbf24525111ebbe7418c04d26d688', '借款申请', '2021-05-07 14:00:50', 3, '', '', 6);
 
 -- ----------------------------
 -- Table structure for wk_examine_condition
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_condition`;
 CREATE TABLE `wk_examine_condition`  (
-  `condition_id` int(11) NOT NULL AUTO_INCREMENT,
+  `condition_id` int(0) NOT NULL AUTO_INCREMENT,
   `condition_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '条件名称',
-  `flow_id` int(11) NOT NULL COMMENT '审批流程ID',
-  `priority` int(4) NOT NULL COMMENT '优先级 数字越低优先级越高',
+  `flow_id` int(0) NOT NULL COMMENT '审批流程ID',
+  `priority` int(0) NOT NULL COMMENT '优先级 数字越低优先级越高',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
   `batch_id` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
   PRIMARY KEY (`condition_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1490 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批条件表' ROW_FORMAT = Dynamic;
@@ -6958,16 +6966,16 @@ CREATE TABLE `wk_examine_condition`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_condition_data`;
 CREATE TABLE `wk_examine_condition_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `condition_id` int(11) NOT NULL COMMENT '条件ID',
-  `flow_id` int(11) NOT NULL COMMENT '审批流程ID',
-  `field_id` int(11) NULL DEFAULT NULL COMMENT '字段ID',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `condition_id` int(0) NOT NULL COMMENT '条件ID',
+  `flow_id` int(0) NOT NULL COMMENT '审批流程ID',
+  `field_id` int(0) NULL DEFAULT NULL COMMENT '字段ID',
   `field_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '字段名称',
-  `condition_type` int(2) NULL DEFAULT NULL COMMENT '连接条件 1 等于 2 大于 3 小于 4 大于等于 5 小于等于 6 两者之间 7 包含 8 员工 9 部门 10 角色',
+  `condition_type` int(0) NULL DEFAULT NULL COMMENT '连接条件 1 等于 2 大于 3 小于 4 大于等于 5 小于等于 6 两者之间 7 包含 8 员工 9 部门 10 角色',
   `value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '值，json数组格式',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
   `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '字段中文名称',
-  `type` int(2) NULL DEFAULT NULL COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
+  `type` int(0) NULL DEFAULT NULL COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1506 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批条件扩展字段表' ROW_FORMAT = Dynamic;
 
@@ -6980,15 +6988,15 @@ CREATE TABLE `wk_examine_condition_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_flow`;
 CREATE TABLE `wk_examine_flow`  (
-  `flow_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '审核流程ID',
+  `flow_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '审核流程ID',
   `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '名称',
-  `examine_id` bigint(10) UNSIGNED NULL DEFAULT NULL COMMENT '审批ID',
-  `examine_type` int(2) NOT NULL COMMENT '0 条件 1 指定成员 2 主管 3 角色 4 发起人自选 5 连续多级主管',
-  `examine_error_handling` int(1) NOT NULL DEFAULT 1 COMMENT '审批找不到用户或者条件均不满足时怎么处理 1 自动通过 2 管理员审批',
-  `condition_id` int(11) NOT NULL DEFAULT 0 COMMENT '条件ID',
-  `sort` int(11) NOT NULL COMMENT '执行顺序，不可为空',
+  `examine_id` bigint(0) UNSIGNED NULL DEFAULT NULL COMMENT '审批ID',
+  `examine_type` int(0) NOT NULL COMMENT '0 条件 1 指定成员 2 主管 3 角色 4 发起人自选 5 连续多级主管',
+  `examine_error_handling` int(0) NOT NULL DEFAULT 1 COMMENT '审批找不到用户或者条件均不满足时怎么处理 1 自动通过 2 管理员审批',
+  `condition_id` int(0) NOT NULL DEFAULT 0 COMMENT '条件ID',
+  `sort` int(0) NOT NULL COMMENT '执行顺序，不可为空',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '用户ID',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '用户ID',
   `batch_id` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
   PRIMARY KEY (`flow_id`) USING BTREE,
   INDEX `examine_id`(`examine_id`) USING BTREE
@@ -7012,11 +7020,11 @@ INSERT INTO `wk_examine_flow` VALUES (1163341, '办公审批8180', 1072984, 4, 2
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_flow_continuous_superior`;
 CREATE TABLE `wk_examine_flow_continuous_superior`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `flow_id` int(11) NOT NULL COMMENT '审批流程ID',
-  `role_id` int(11) NULL DEFAULT NULL COMMENT '角色ID',
-  `max_level` int(2) NULL DEFAULT NULL COMMENT '角色审批的最高级别或者组织架构的第N级',
-  `type` int(1) NULL DEFAULT NULL COMMENT '1 指定角色 2 组织架构的最上级',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `flow_id` int(0) NOT NULL COMMENT '审批流程ID',
+  `role_id` int(0) NULL DEFAULT NULL COMMENT '角色ID',
+  `max_level` int(0) NULL DEFAULT NULL COMMENT '角色审批的最高级别或者组织架构的第N级',
+  `type` int(0) NULL DEFAULT NULL COMMENT '1 指定角色 2 组织架构的最上级',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 143 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程连续多级主管审批记录表' ROW_FORMAT = Dynamic;
@@ -7030,11 +7038,11 @@ CREATE TABLE `wk_examine_flow_continuous_superior`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_flow_member`;
 CREATE TABLE `wk_examine_flow_member`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `flow_id` int(11) NOT NULL COMMENT '审批流程ID',
-  `user_id` bigint(20) NULL DEFAULT NULL COMMENT '审批人ID',
-  `type` int(1) NULL DEFAULT NULL COMMENT '1 依次审批 2 会签 3 或签',
-  `sort` int(1) NOT NULL DEFAULT 0 COMMENT '排序规则',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `flow_id` int(0) NOT NULL COMMENT '审批流程ID',
+  `user_id` bigint(0) NULL DEFAULT NULL COMMENT '审批人ID',
+  `type` int(0) NULL DEFAULT NULL COMMENT '1 依次审批 2 会签 3 或签',
+  `sort` int(0) NOT NULL DEFAULT 0 COMMENT '排序规则',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 4448 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程指定成员记录表' ROW_FORMAT = Dynamic;
@@ -7048,15 +7056,15 @@ CREATE TABLE `wk_examine_flow_member`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_flow_optional`;
 CREATE TABLE `wk_examine_flow_optional`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `flow_id` int(11) NOT NULL COMMENT '审核流程ID',
-  `user_id` bigint(20) NULL DEFAULT NULL COMMENT '审批人ID',
-  `role_id` int(11) NULL DEFAULT NULL COMMENT '角色ID',
-  `choose_type` int(1) NULL DEFAULT NULL COMMENT '选择类型 1 自选一人 2 自选多人',
-  `type` int(1) NULL DEFAULT NULL COMMENT '1 依次审批 2 会签 3 或签',
-  `sort` int(1) NOT NULL DEFAULT 0 COMMENT '排序规则',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `flow_id` int(0) NOT NULL COMMENT '审核流程ID',
+  `user_id` bigint(0) NULL DEFAULT NULL COMMENT '审批人ID',
+  `role_id` int(0) NULL DEFAULT NULL COMMENT '角色ID',
+  `choose_type` int(0) NULL DEFAULT NULL COMMENT '选择类型 1 自选一人 2 自选多人',
+  `type` int(0) NULL DEFAULT NULL COMMENT '1 依次审批 2 会签 3 或签',
+  `sort` int(0) NOT NULL DEFAULT 0 COMMENT '排序规则',
   `batch_id` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
-  `range_type` int(1) NULL DEFAULT NULL COMMENT '选择范围 1 全公司 2 指定成员 3 指定角色 ',
+  `range_type` int(0) NULL DEFAULT NULL COMMENT '选择范围 1 全公司 2 指定成员 3 指定角色 ',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `flow_id`(`flow_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1313998 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程自选成员记录表' ROW_FORMAT = Dynamic;
@@ -7082,10 +7090,10 @@ INSERT INTO `wk_examine_flow_optional` VALUES (1313991, 1163341, NULL, NULL, 2, 
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_flow_role`;
 CREATE TABLE `wk_examine_flow_role`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `flow_id` int(11) NOT NULL COMMENT '审核流程ID',
-  `role_id` int(11) NULL DEFAULT NULL COMMENT '角色ID',
-  `type` int(1) NULL DEFAULT NULL COMMENT '2 会签 3 或签',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `flow_id` int(0) NOT NULL COMMENT '审核流程ID',
+  `role_id` int(0) NULL DEFAULT NULL COMMENT '角色ID',
+  `type` int(0) NULL DEFAULT NULL COMMENT '2 会签 3 或签',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 311 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程角色审批记录表' ROW_FORMAT = Dynamic;
@@ -7099,10 +7107,10 @@ CREATE TABLE `wk_examine_flow_role`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_flow_superior`;
 CREATE TABLE `wk_examine_flow_superior`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `flow_id` int(11) NOT NULL COMMENT '审核流程ID',
-  `parent_level` int(2) NULL DEFAULT NULL COMMENT '直属上级级别 1 代表直属上级 2 代表 直属上级的上级',
-  `type` int(1) NULL DEFAULT NULL COMMENT '找不到上级时，是否由上一级上级代审批 0 否 1 是',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `flow_id` int(0) NOT NULL COMMENT '审核流程ID',
+  `parent_level` int(0) NULL DEFAULT NULL COMMENT '直属上级级别 1 代表直属上级 2 代表 直属上级的上级',
+  `type` int(0) NULL DEFAULT NULL COMMENT '找不到上级时，是否由上一级上级代审批 0 否 1 是',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '批次ID',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 2478 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批流程主管审批记录表' ROW_FORMAT = Dynamic;
@@ -7116,10 +7124,10 @@ CREATE TABLE `wk_examine_flow_superior`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_manager_user`;
 CREATE TABLE `wk_examine_manager_user`  (
-  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `examine_id` bigint(10) UNSIGNED NOT NULL COMMENT '审批ID',
-  `user_id` bigint(20) NOT NULL COMMENT '管理员ID',
-  `sort` int(5) NOT NULL DEFAULT 0 COMMENT '从小到大',
+  `id` int(0) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `examine_id` bigint(0) UNSIGNED NOT NULL COMMENT '审批ID',
+  `user_id` bigint(0) NOT NULL COMMENT '管理员ID',
+  `sort` int(0) NOT NULL DEFAULT 0 COMMENT '从小到大',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `examine_id`(`examine_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 527852 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审批管理员设置表' ROW_FORMAT = Dynamic;
@@ -7142,16 +7150,16 @@ INSERT INTO `wk_examine_manager_user` VALUES (527845, 1072984, 14773, 0);
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_record`;
 CREATE TABLE `wk_examine_record`  (
-  `record_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '审核记录ID',
-  `examine_id` bigint(11) NOT NULL COMMENT '审核ID',
-  `label` int(1) NULL DEFAULT NULL COMMENT '业务类型',
-  `flow_id` int(11) NOT NULL COMMENT '流程ID',
-  `type_id` int(11) NULL DEFAULT NULL COMMENT '关联业务主键ID',
-  `examine_status` int(1) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝 3 审核中 4 已撤回',
+  `record_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '审核记录ID',
+  `examine_id` bigint(0) NOT NULL COMMENT '审核ID',
+  `label` int(0) NULL DEFAULT NULL COMMENT '业务类型',
+  `flow_id` int(0) NOT NULL COMMENT '流程ID',
+  `type_id` int(0) NULL DEFAULT NULL COMMENT '关联业务主键ID',
+  `examine_status` int(0) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝 3 审核中 4 已撤回',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人',
   `update_time` datetime(0) NOT NULL COMMENT '修改时间',
-  `update_user_id` bigint(20) NOT NULL COMMENT '修改人',
+  `update_user_id` bigint(0) NOT NULL COMMENT '修改人',
   PRIMARY KEY (`record_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1004974 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审核记录表' ROW_FORMAT = Dynamic;
 
@@ -7164,16 +7172,16 @@ CREATE TABLE `wk_examine_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_record_log`;
 CREATE TABLE `wk_examine_record_log`  (
-  `log_id` int(11) NOT NULL AUTO_INCREMENT,
-  `examine_id` bigint(11) NOT NULL COMMENT '审批ID',
-  `flow_id` int(11) NOT NULL COMMENT '审批流程ID',
-  `record_id` int(11) NOT NULL COMMENT '审批记录ID',
-  `type` int(1) NULL DEFAULT NULL COMMENT '1 依次审批 2 会签 3 或签',
-  `sort` int(6) NULL DEFAULT NULL COMMENT '排序',
-  `examine_status` int(1) NOT NULL COMMENT '审核状态0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交 6 创建 7 已删除 8 作废',
-  `examine_user_id` bigint(20) NULL DEFAULT 0 COMMENT '审核人ID',
-  `examine_role_id` int(11) NULL DEFAULT 0 COMMENT '审核角色ID',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `log_id` int(0) NOT NULL AUTO_INCREMENT,
+  `examine_id` bigint(0) NOT NULL COMMENT '审批ID',
+  `flow_id` int(0) NOT NULL COMMENT '审批流程ID',
+  `record_id` int(0) NOT NULL COMMENT '审批记录ID',
+  `type` int(0) NULL DEFAULT NULL COMMENT '1 依次审批 2 会签 3 或签',
+  `sort` int(0) NULL DEFAULT NULL COMMENT '排序',
+  `examine_status` int(0) NOT NULL COMMENT '审核状态0待审核、1通过、2拒绝、3审核中 4:撤回 5 未提交 6 创建 7 已删除 8 作废',
+  `examine_user_id` bigint(0) NULL DEFAULT 0 COMMENT '审核人ID',
+  `examine_role_id` int(0) NULL DEFAULT 0 COMMENT '审核角色ID',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '修改时间',
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '批次ID',
@@ -7190,11 +7198,11 @@ CREATE TABLE `wk_examine_record_log`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_examine_record_optional`;
 CREATE TABLE `wk_examine_record_optional`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `flow_id` int(11) NOT NULL COMMENT '流程ID',
-  `record_id` int(11) NOT NULL COMMENT '审核记录ID',
-  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
-  `sort` int(2) NOT NULL DEFAULT 1 COMMENT '排序。从小到大',
+  `id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `flow_id` int(0) NOT NULL COMMENT '流程ID',
+  `record_id` int(0) NOT NULL COMMENT '审核记录ID',
+  `user_id` bigint(0) NOT NULL COMMENT '用户ID',
+  `sort` int(0) NOT NULL DEFAULT 1 COMMENT '排序。从小到大',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 326 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '审核自选成员选择成员表' ROW_FORMAT = Dynamic;
 
@@ -7207,11 +7215,11 @@ CREATE TABLE `wk_examine_record_optional`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_action_record`;
 CREATE TABLE `wk_km_action_record`  (
-  `record_id` int(11) NOT NULL AUTO_INCREMENT,
-  `status` int(1) NULL DEFAULT NULL COMMENT '1 浏览 2 删除',
-  `type` int(1) NOT NULL COMMENT '1 知识库 2 文件夹 3 文档 4 文件 ',
-  `type_id` int(11) NOT NULL,
-  `create_user_id` bigint(20) NOT NULL,
+  `record_id` int(0) NOT NULL AUTO_INCREMENT,
+  `status` int(0) NULL DEFAULT NULL COMMENT '1 浏览 2 删除',
+  `type` int(0) NOT NULL COMMENT '1 知识库 2 文件夹 3 文档 4 文件 ',
+  `type_id` int(0) NOT NULL,
+  `create_user_id` bigint(0) NOT NULL,
   `create_time` datetime(0) NOT NULL,
   PRIMARY KEY (`record_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '知识库操作记录（最近使用）' ROW_FORMAT = Dynamic;
@@ -7225,9 +7233,9 @@ CREATE TABLE `wk_km_action_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_auth`;
 CREATE TABLE `wk_km_auth`  (
-  `auth_id` int(11) NOT NULL AUTO_INCREMENT,
-  `is_open` int(1) NULL DEFAULT NULL COMMENT '是否公开 0 私有 1 公开',
-  `open_auth` int(1) NULL DEFAULT NULL COMMENT '公开权限 2 均可编辑 3 均可见，不可编辑',
+  `auth_id` int(0) NOT NULL AUTO_INCREMENT,
+  `is_open` int(0) NULL DEFAULT NULL COMMENT '是否公开 0 私有 1 公开',
+  `open_auth` int(0) NULL DEFAULT NULL COMMENT '公开权限 2 均可编辑 3 均可见，不可编辑',
   PRIMARY KEY (`auth_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 92 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '文档文件夹权限表' ROW_FORMAT = Dynamic;
 
@@ -7245,12 +7253,12 @@ INSERT INTO `wk_km_auth` VALUES (91, 1, 2);
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_auth_user`;
 CREATE TABLE `wk_km_auth_user`  (
-  `r_id` int(11) NOT NULL AUTO_INCREMENT,
-  `auth_id` int(11) NULL DEFAULT NULL,
-  `user_id` bigint(20) NULL DEFAULT NULL,
-  `auth` int(1) NULL DEFAULT NULL COMMENT '私有权限 1 所有权限 2 编辑权限 3只读权限',
+  `r_id` int(0) NOT NULL AUTO_INCREMENT,
+  `auth_id` int(0) NULL DEFAULT NULL,
+  `user_id` bigint(0) NULL DEFAULT NULL,
+  `auth` int(0) NULL DEFAULT NULL COMMENT '私有权限 1 所有权限 2 编辑权限 3只读权限',
   `create_time` datetime(0) NULL DEFAULT NULL,
-  `create_user_id` bigint(20) NULL DEFAULT NULL,
+  `create_user_id` bigint(0) NULL DEFAULT NULL,
   PRIMARY KEY (`r_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 147 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '知识库权限用户关联表' ROW_FORMAT = Dynamic;
 
@@ -7268,11 +7276,11 @@ INSERT INTO `wk_km_auth_user` VALUES (146, 91, 14773, 1, '2020-08-22 16:11:27', 
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_collect`;
 CREATE TABLE `wk_km_collect`  (
-  `collect_id` int(11) NOT NULL AUTO_INCREMENT,
-  `type` int(1) NOT NULL COMMENT '1 知识库 2 文件夹 3 文件',
-  `type_id` int(11) NOT NULL,
+  `collect_id` int(0) NOT NULL AUTO_INCREMENT,
+  `type` int(0) NOT NULL COMMENT '1 知识库 2 文件夹 3 文件',
+  `type_id` int(0) NOT NULL,
   `create_time` datetime(0) NOT NULL,
-  `create_user_id` bigint(20) NULL DEFAULT NULL,
+  `create_user_id` bigint(0) NULL DEFAULT NULL,
   PRIMARY KEY (`collect_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '知识库收藏表' ROW_FORMAT = Dynamic;
 
@@ -7285,20 +7293,20 @@ CREATE TABLE `wk_km_collect`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_document`;
 CREATE TABLE `wk_km_document`  (
-  `document_id` int(11) NOT NULL AUTO_INCREMENT,
+  `document_id` int(0) NOT NULL AUTO_INCREMENT,
   `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '文档标题',
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL,
-  `type` int(1) NOT NULL COMMENT '3 富文本 4 文件',
-  `parent_id` int(20) NULL DEFAULT 0,
-  `status` int(1) NULL DEFAULT 1 COMMENT '-1 删除 0 草稿 1 正常 2 模板',
-  `library_id` int(20) NULL DEFAULT NULL,
-  `folder_id` int(20) NOT NULL COMMENT '文件夹id',
-  `auth_id` int(20) NULL DEFAULT NULL,
+  `type` int(0) NOT NULL COMMENT '3 富文本 4 文件',
+  `parent_id` int(0) NULL DEFAULT 0,
+  `status` int(0) NULL DEFAULT 1 COMMENT '-1 删除 0 草稿 1 正常 2 模板',
+  `library_id` int(0) NULL DEFAULT NULL,
+  `folder_id` int(0) NOT NULL COMMENT '文件夹id',
+  `auth_id` int(0) NULL DEFAULT NULL,
   `label_ids` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '标签id',
   `create_time` datetime(0) NOT NULL,
-  `create_user_id` bigint(20) NOT NULL,
+  `create_user_id` bigint(0) NOT NULL,
   `update_time` datetime(0) NULL DEFAULT NULL,
-  `delete_user_id` bigint(20) NULL DEFAULT NULL,
+  `delete_user_id` bigint(0) NULL DEFAULT NULL,
   `delete_time` datetime(0) NULL DEFAULT NULL,
   PRIMARY KEY (`document_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 90 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '知识库文档表' ROW_FORMAT = Dynamic;
@@ -7317,9 +7325,9 @@ INSERT INTO `wk_km_document` VALUES (89, '产品规划', '<div id=\"wk-knowledge
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_document_favor`;
 CREATE TABLE `wk_km_document_favor`  (
-  `favor_id` int(11) NOT NULL AUTO_INCREMENT,
-  `document_id` int(11) NULL DEFAULT NULL,
-  `create_user_id` bigint(20) NULL DEFAULT NULL,
+  `favor_id` int(0) NOT NULL AUTO_INCREMENT,
+  `document_id` int(0) NULL DEFAULT NULL,
+  `create_user_id` bigint(0) NULL DEFAULT NULL,
   `create_time` datetime(0) NULL DEFAULT NULL,
   PRIMARY KEY (`favor_id`) USING BTREE,
   UNIQUE INDEX `wk_km_document_favor_document_id_create_user_id_uindex`(`document_id`, `create_user_id`) USING BTREE
@@ -7334,10 +7342,10 @@ CREATE TABLE `wk_km_document_favor`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_document_label`;
 CREATE TABLE `wk_km_document_label`  (
-  `label_id` int(11) NOT NULL AUTO_INCREMENT,
+  `label_id` int(0) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL,
   `color` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL,
-  `create_user_id` bigint(20) NULL DEFAULT NULL,
+  `create_user_id` bigint(0) NULL DEFAULT NULL,
   `create_time` datetime(0) NULL DEFAULT NULL,
   PRIMARY KEY (`label_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '文档标签表' ROW_FORMAT = Dynamic;
@@ -7351,15 +7359,15 @@ CREATE TABLE `wk_km_document_label`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_document_share`;
 CREATE TABLE `wk_km_document_share`  (
-  `share_id` int(11) NOT NULL AUTO_INCREMENT,
-  `document_id` int(11) NULL DEFAULT NULL COMMENT '文档id',
+  `share_id` int(0) NOT NULL AUTO_INCREMENT,
+  `document_id` int(0) NULL DEFAULT NULL COMMENT '文档id',
   `share_user_ids` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '分享内部成员id',
   `share_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '外部分享链接',
   `token` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '外部查看文档的唯一标识',
-  `status` int(1) NULL DEFAULT NULL COMMENT '1 启用 0 关闭分享',
-  `create_user_id` bigint(20) NULL DEFAULT NULL,
+  `status` int(0) NULL DEFAULT NULL COMMENT '1 启用 0 关闭分享',
+  `create_user_id` bigint(0) NULL DEFAULT NULL,
   `create_time` datetime(0) NULL DEFAULT NULL,
-  `close_user_id` bigint(20) NULL DEFAULT NULL,
+  `close_user_id` bigint(0) NULL DEFAULT NULL,
   `close_time` datetime(0) NULL DEFAULT NULL,
   PRIMARY KEY (`share_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '文档分享' ROW_FORMAT = Dynamic;
@@ -7373,15 +7381,15 @@ CREATE TABLE `wk_km_document_share`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_folder`;
 CREATE TABLE `wk_km_folder`  (
-  `folder_id` int(11) NOT NULL AUTO_INCREMENT,
-  `library_id` int(11) NULL DEFAULT NULL COMMENT '知识库id',
-  `parent_id` int(11) NULL DEFAULT 0 COMMENT '父id',
+  `folder_id` int(0) NOT NULL AUTO_INCREMENT,
+  `library_id` int(0) NULL DEFAULT NULL COMMENT '知识库id',
+  `parent_id` int(0) NULL DEFAULT 0 COMMENT '父id',
   `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-  `status` int(1) NULL DEFAULT 1 COMMENT '-1 删除 1 正常',
-  `create_user_id` bigint(20) NULL DEFAULT NULL,
+  `status` int(0) NULL DEFAULT 1 COMMENT '-1 删除 1 正常',
+  `create_user_id` bigint(0) NULL DEFAULT NULL,
   `create_time` datetime(0) NULL DEFAULT NULL,
-  `auth_id` int(11) NULL DEFAULT NULL,
-  `delete_user_id` bigint(20) NULL DEFAULT NULL,
+  `auth_id` int(0) NULL DEFAULT NULL,
+  `delete_user_id` bigint(0) NULL DEFAULT NULL,
   `delete_time` datetime(0) NULL DEFAULT NULL,
   PRIMARY KEY (`folder_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '知识库文件夹' ROW_FORMAT = Dynamic;
@@ -7395,17 +7403,17 @@ CREATE TABLE `wk_km_folder`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_knowledge_library`;
 CREATE TABLE `wk_km_knowledge_library`  (
-  `library_id` int(11) NOT NULL AUTO_INCREMENT,
+  `library_id` int(0) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '知识库名称',
   `description` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '简介',
-  `is_open` int(1) NOT NULL COMMENT '是否公开 1 公开 2 私有',
-  `status` int(1) NULL DEFAULT 1 COMMENT '-1 删除 1 正常 2 模板',
-  `is_system_cover` int(1) NULL DEFAULT NULL COMMENT '0 否 1 是',
+  `is_open` int(0) NOT NULL COMMENT '是否公开 1 公开 2 私有',
+  `status` int(0) NULL DEFAULT 1 COMMENT '-1 删除 1 正常 2 模板',
+  `is_system_cover` int(0) NULL DEFAULT NULL COMMENT '0 否 1 是',
   `cover_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '知识库封面',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人',
   `create_time` datetime(0) NULL DEFAULT NULL,
   `update_time` datetime(0) NULL DEFAULT NULL,
-  `delete_user_id` bigint(20) NULL DEFAULT NULL,
+  `delete_user_id` bigint(0) NULL DEFAULT NULL,
   `delete_time` datetime(0) NULL DEFAULT NULL,
   PRIMARY KEY (`library_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '知识库' ROW_FORMAT = Dynamic;
@@ -7420,10 +7428,10 @@ INSERT INTO `wk_km_knowledge_library` VALUES (25, '产品研发', '提供完善�
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_km_knowledge_library_user`;
 CREATE TABLE `wk_km_knowledge_library_user`  (
-  `r_id` int(11) NOT NULL AUTO_INCREMENT,
-  `library_id` int(11) NOT NULL,
-  `user_id` bigint(20) NOT NULL,
-  `role` int(1) NULL DEFAULT NULL COMMENT '1 创建人 2 管理员 3 成员',
+  `r_id` int(0) NOT NULL AUTO_INCREMENT,
+  `library_id` int(0) NOT NULL,
+  `user_id` bigint(0) NOT NULL,
+  `role` int(0) NULL DEFAULT NULL COMMENT '1 创建人 2 管理员 3 成员',
   PRIMARY KEY (`r_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 56 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '知识库成员' ROW_FORMAT = Dynamic;
 
@@ -7437,10 +7445,10 @@ INSERT INTO `wk_km_knowledge_library_user` VALUES (55, 25, 14773, 1);
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_announcement`;
 CREATE TABLE `wk_oa_announcement`  (
-  `announcement_id` int(11) NOT NULL AUTO_INCREMENT,
+  `announcement_id` int(0) NOT NULL AUTO_INCREMENT,
   `title` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '标题',
   `content` longtext CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '内容',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `start_time` datetime(0) NULL DEFAULT NULL COMMENT '开始时间',
@@ -7460,14 +7468,14 @@ CREATE TABLE `wk_oa_announcement`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_calendar_type`;
 CREATE TABLE `wk_oa_calendar_type`  (
-  `type_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '日历类型id',
+  `type_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '日历类型id',
   `type_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '类型名称',
   `color` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '颜色',
-  `type` int(1) NULL DEFAULT NULL COMMENT '1 系统类型 2 自定义类型',
+  `type` int(0) NULL DEFAULT NULL COMMENT '1 系统类型 2 自定义类型',
   `create_time` datetime(0) NULL DEFAULT NULL,
-  `create_user_id` bigint(20) NULL DEFAULT NULL,
+  `create_user_id` bigint(0) NULL DEFAULT NULL,
   `update_time` datetime(0) NULL DEFAULT NULL,
-  `sort` int(2) NULL DEFAULT 1,
+  `sort` int(0) NULL DEFAULT 1,
   PRIMARY KEY (`type_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 500 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '日历类型' ROW_FORMAT = Dynamic;
 
@@ -7488,9 +7496,9 @@ INSERT INTO `wk_oa_calendar_type` VALUES (499, '开会', '#53D397', 2, '2020-01-
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_calendar_type_user`;
 CREATE TABLE `wk_oa_calendar_type_user`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NOT NULL COMMENT '用户id',
-  `type_id` int(11) NOT NULL COMMENT '日历类型id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
+  `type_id` int(0) NOT NULL COMMENT '日历类型id',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 8738 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '用户关联日历类型' ROW_FORMAT = Dynamic;
 
@@ -7508,19 +7516,19 @@ INSERT INTO `wk_oa_calendar_type_user` VALUES (8737, 14773, 491);
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_event`;
 CREATE TABLE `wk_oa_event`  (
-  `event_id` int(11) NOT NULL AUTO_INCREMENT,
+  `event_id` int(0) NOT NULL AUTO_INCREMENT,
   `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '标题',
-  `type_id` int(1) NOT NULL COMMENT '日程类型',
+  `type_id` int(0) NOT NULL COMMENT '日程类型',
   `start_time` datetime(0) NOT NULL COMMENT '开始时间',
   `end_time` datetime(0) NOT NULL COMMENT '结束时间',
   `owner_user_ids` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '参与人',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
-  `repetition_type` int(1) NULL DEFAULT 1 COMMENT '重复类型 1从不重复 2每天 3每周 4每月 5每年',
-  `repeat_rate` int(10) NULL DEFAULT NULL COMMENT '重复频率',
+  `repetition_type` int(0) NULL DEFAULT 1 COMMENT '重复类型 1从不重复 2每天 3每周 4每月 5每年',
+  `repeat_rate` int(0) NULL DEFAULT NULL COMMENT '重复频率',
   `repeat_time` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '3:周/4:月',
-  `end_type` int(1) NULL DEFAULT NULL COMMENT '结束类型 1从不 2重复次数 3结束日期',
+  `end_type` int(0) NULL DEFAULT NULL COMMENT '结束类型 1从不 2重复次数 3结束日期',
   `end_type_config` varchar(40) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '2:次数/3:时间',
   `repeat_start_time` datetime(0) NOT NULL COMMENT '循环开始时间',
   `repeat_end_time` datetime(0) NULL DEFAULT NULL COMMENT '循环结束时间',
@@ -7537,10 +7545,10 @@ CREATE TABLE `wk_oa_event`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_event_notice`;
 CREATE TABLE `wk_oa_event_notice`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `event_id` int(11) NOT NULL COMMENT '日程ID',
-  `type` int(1) NOT NULL COMMENT '1分钟 2小时 3天',
-  `value` int(2) NOT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `event_id` int(0) NOT NULL COMMENT '日程ID',
+  `type` int(0) NOT NULL COMMENT '1分钟 2小时 3天',
+  `value` int(0) NOT NULL,
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '日程提醒设置表' ROW_FORMAT = Dynamic;
 
@@ -7553,8 +7561,8 @@ CREATE TABLE `wk_oa_event_notice`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_event_relation`;
 CREATE TABLE `wk_oa_event_relation`  (
-  `eventrelation_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '日程关联业务表',
-  `event_id` int(11) NOT NULL COMMENT '日程ID',
+  `eventrelation_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '日程关联业务表',
+  `event_id` int(0) NOT NULL COMMENT '日程ID',
   `customer_ids` varchar(200) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '客户IDs',
   `contacts_ids` varchar(200) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '联系人IDs',
   `business_ids` varchar(200) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '商机IDs',
@@ -7572,11 +7580,11 @@ CREATE TABLE `wk_oa_event_relation`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_event_update_record`;
 CREATE TABLE `wk_oa_event_update_record`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `event_id` int(11) NOT NULL,
-  `time` bigint(20) NOT NULL COMMENT '标题',
-  `status` int(1) NULL DEFAULT NULL COMMENT '1 删除本次 2 修改本次 3 修改本次及以后',
-  `new_event_id` int(11) NULL DEFAULT NULL,
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `event_id` int(0) NOT NULL,
+  `time` bigint(0) NOT NULL COMMENT '标题',
+  `status` int(0) NULL DEFAULT NULL COMMENT '1 删除本次 2 修改本次 3 修改本次及以后',
+  `new_event_id` int(0) NULL DEFAULT NULL,
   `batch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '日程表' ROW_FORMAT = Dynamic;
@@ -7590,8 +7598,8 @@ CREATE TABLE `wk_oa_event_update_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine`;
 CREATE TABLE `wk_oa_examine`  (
-  `examine_id` int(11) NOT NULL AUTO_INCREMENT,
-  `category_id` int(11) NOT NULL DEFAULT 1 COMMENT '审批类型',
+  `examine_id` int(0) NOT NULL AUTO_INCREMENT,
+  `category_id` int(0) NOT NULL DEFAULT 1 COMMENT '审批类型',
   `content` varchar(800) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '内容',
   `remark` varchar(800) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '备注',
   `type_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '请假类型',
@@ -7599,12 +7607,12 @@ CREATE TABLE `wk_oa_examine`  (
   `start_time` datetime(0) NULL DEFAULT NULL COMMENT '开始时间',
   `end_time` datetime(0) NULL DEFAULT NULL COMMENT '结束时间',
   `duration` decimal(18, 2) NULL DEFAULT NULL COMMENT '时长',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附件批次id',
-  `examine_record_id` int(11) NULL DEFAULT NULL COMMENT '审核记录ID',
-  `examine_status` int(1) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝 3 审核中 4 已撤回',
+  `examine_record_id` int(0) NULL DEFAULT NULL COMMENT '审核记录ID',
+  `examine_status` int(0) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝 3 审核中 4 已撤回',
   PRIMARY KEY (`examine_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '审批表' ROW_FORMAT = Dynamic;
 
@@ -7617,22 +7625,22 @@ CREATE TABLE `wk_oa_examine`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_category`;
 CREATE TABLE `wk_oa_examine_category`  (
-  `category_id` int(11) NOT NULL AUTO_INCREMENT,
+  `category_id` int(0) NOT NULL AUTO_INCREMENT,
   `title` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '名称',
   `remarks` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '描述',
   `icon` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '图标',
-  `type` int(1) NULL DEFAULT 0 COMMENT '1 普通审批 2 请假审批 3 出差审批 4 加班审批 5 差旅报销 6 借款申请 0 自定义审批',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
-  `status` int(1) NULL DEFAULT 1 COMMENT '1启用，0禁用',
-  `is_sys` int(1) NULL DEFAULT NULL COMMENT '1为系统类型，不能删除',
-  `examine_type` int(1) NULL DEFAULT NULL COMMENT '1固定2自选',
+  `type` int(0) NULL DEFAULT 0 COMMENT '1 普通审批 2 请假审批 3 出差审批 4 加班审批 5 差旅报销 6 借款申请 0 自定义审批',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `status` int(0) NULL DEFAULT 1 COMMENT '1启用，0禁用',
+  `is_sys` int(0) NULL DEFAULT NULL COMMENT '1为系统类型，不能删除',
+  `examine_type` int(0) NULL DEFAULT NULL COMMENT '1固定2自选',
   `user_ids` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '可见范围（员工）',
   `dept_ids` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '可见范围（部门）',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
-  `is_deleted` int(1) NULL DEFAULT 0 COMMENT '1已删除',
+  `is_deleted` int(0) NULL DEFAULT 0 COMMENT '1已删除',
   `delete_time` datetime(0) NULL DEFAULT NULL COMMENT '删除时间',
-  `delete_user_id` bigint(20) NULL DEFAULT NULL COMMENT '删除人ID',
+  `delete_user_id` bigint(0) NULL DEFAULT NULL COMMENT '删除人ID',
   PRIMARY KEY (`category_id`) USING BTREE,
   INDEX `create_time`(`create_time`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 72985 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '审批类型表' ROW_FORMAT = Dynamic;
@@ -7652,8 +7660,8 @@ INSERT INTO `wk_oa_examine_category` VALUES (72984, '借款申请', '借款申�
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_data`;
 CREATE TABLE `wk_oa_examine_data`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field_id` int(11) NOT NULL COMMENT '字段id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `field_id` int(0) NOT NULL COMMENT '字段id',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '字段名称',
   `value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
   `create_time` datetime(0) NOT NULL,
@@ -7670,29 +7678,29 @@ CREATE TABLE `wk_oa_examine_data`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_field`;
 CREATE TABLE `wk_oa_examine_field`  (
-  `field_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `field_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `field_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '自定义字段英文标识',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '字段名称',
-  `type` int(2) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
+  `type` int(0) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
   `remark` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段说明',
   `input_tips` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '输入提示',
-  `max_length` int(12) NULL DEFAULT NULL COMMENT '最大长度',
+  `max_length` int(0) NULL DEFAULT NULL COMMENT '最大长度',
   `default_value` varchar(5000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '默认值',
-  `is_unique` int(1) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
-  `is_null` int(1) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
-  `sorting` int(5) NULL DEFAULT 1 COMMENT '排序 从小到大',
+  `is_unique` int(0) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
+  `is_null` int(0) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
+  `sorting` int(0) NULL DEFAULT 1 COMMENT '排序 从小到大',
   `options` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '如果类型是选项，此处不能为空，多个选项以，隔开',
-  `operating` int(1) NULL DEFAULT 255 COMMENT '是否可以删除修改',
-  `is_hidden` int(1) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
+  `operating` int(0) NULL DEFAULT 255 COMMENT '是否可以删除修改',
+  `is_hidden` int(0) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
   `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '最后修改时间',
-  `examine_category_id` int(11) NULL DEFAULT NULL COMMENT '审批ID label为10需要',
-  `field_type` int(2) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
-  `style_percent` int(3) NULL DEFAULT 50 COMMENT '样式百分比%',
-  `precisions` int(2) NULL DEFAULT NULL COMMENT '精度，允许的最大小数位',
+  `examine_category_id` int(0) NULL DEFAULT NULL COMMENT '审批ID label为10需要',
+  `field_type` int(0) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
+  `style_percent` int(0) NULL DEFAULT 50 COMMENT '样式百分比%',
+  `precisions` int(0) NULL DEFAULT NULL COMMENT '精度，允许的最大小数位',
   `form_position` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '表单定位 坐标格式： 1,1',
   `max_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最大数值',
   `min_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最小数值',
-  `form_assist_id` int(12) NULL DEFAULT NULL COMMENT '表单辅助id，前端生成',
+  `form_assist_id` int(0) NULL DEFAULT NULL COMMENT '表单辅助id，前端生成',
   PRIMARY KEY (`field_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 572 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '自定义字段表' ROW_FORMAT = Dynamic;
 
@@ -7705,23 +7713,23 @@ INSERT INTO `wk_oa_examine_field` VALUES (550, 'type_id', '请假类型', 3, NUL
 INSERT INTO `wk_oa_examine_field` VALUES (551, 'content', '审批内容', 1, NULL, '', NULL, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (552, 'start_time', '开始时间', 13, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (553, 'end_time', '结束时间', 13, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_oa_examine_field` VALUES (554, 'duration', '时长（天）', 6, NULL, '', NULL, '', 0, 1, 4, NULL, 3, 0, '2021-05-08 18:40:06', 1072980, 1, 50, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (554, 'duration', '时长（天）', 6, NULL, '', NULL, '', 0, 1, 4, NULL, 3, 0, '2021-05-07 13:58:14', 1072980, 1, 50, 2, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (555, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 5, NULL, 3, 0, '2021-01-09 16:03:54', 1072980, 1, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (556, 'content', '出差事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (557, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_oa_examine_field` VALUES (558, 'duration', '出差总天数', 6, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-05-08 18:40:06', 1072981, 1, 50, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (558, 'duration', '出差总天数', 6, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-05-07 13:58:14', 1072981, 1, 50, 2, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (559, 'cause', '行程明细', 22, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072981, 1, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (560, 'content', '加班原因', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (561, 'start_time', '开始时间', 13, NULL, '', NULL, '', 0, 1, 1, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (562, 'end_time', '结束时间', 13, NULL, '', NULL, '', 0, 1, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_oa_examine_field` VALUES (563, 'duration', '加班总天数', 6, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, '2021-05-08 18:40:06', 1072982, 1, 50, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (563, 'duration', '加班总天数', 6, NULL, '', NULL, '', 0, 1, 3, NULL, 3, 0, '2021-05-07 13:58:14', 1072982, 1, 50, 2, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (564, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 4, NULL, 3, 0, '2021-01-09 16:03:54', 1072982, 1, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (565, 'content', '差旅事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_oa_examine_field` VALUES (566, 'money', '报销总金额', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2021-05-08 18:40:06', 1072983, 1, 50, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (566, 'money', '报销总金额', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2021-05-07 13:58:14', 1072983, 1, 50, 2, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (567, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (568, 'cause', '费用明细', 23, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072983, 1, 50, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (569, 'content', '借款事由', 1, NULL, '', NULL, '', 0, 1, 0, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1, 50, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `wk_oa_examine_field` VALUES (570, 'money', '借款金额（元）', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2021-05-08 18:40:06', 1072984, 1, 50, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `wk_oa_examine_field` VALUES (570, 'money', '借款金额（元）', 6, NULL, '', 0, '', 0, 1, 1, NULL, 3, 0, '2021-05-07 13:58:14', 1072984, 1, 50, 2, NULL, NULL, NULL, NULL);
 INSERT INTO `wk_oa_examine_field` VALUES (571, 'remark', '备注', 2, NULL, '', 1000, '', 0, 0, 2, NULL, 3, 0, '2021-01-09 16:03:54', 1072984, 1, 50, NULL, NULL, NULL, NULL, NULL);
 
 -- ----------------------------
@@ -7729,29 +7737,29 @@ INSERT INTO `wk_oa_examine_field` VALUES (571, 'remark', '备注', 2, NULL, '', 
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_field_extend`;
 CREATE TABLE `wk_oa_examine_field_extend`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `parent_field_id` int(11) NOT NULL COMMENT '对应主字段id',
+  `id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `parent_field_id` int(0) NOT NULL COMMENT '对应主字段id',
   `field_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '自定义字段英文标识',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '字段名称',
-  `type` int(2) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
+  `type` int(0) NOT NULL DEFAULT 1 COMMENT '字段类型 1 单行文本 2 多行文本 3 单选 4日期 5 数字 6 小数 7 手机  8 文件 9 多选 10 人员 11 附件 12 部门 13 日期时间 14 邮箱 15客户 16 商机 17 联系人 18 地图 19 产品类型 20 合同 21 回款计划',
   `remark` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段说明',
   `input_tips` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '输入提示',
-  `max_length` int(12) NULL DEFAULT NULL COMMENT '最大长度',
+  `max_length` int(0) NULL DEFAULT NULL COMMENT '最大长度',
   `default_value` varchar(3000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '默认值',
-  `is_unique` int(1) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
-  `is_null` int(1) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
-  `sorting` int(5) NULL DEFAULT 1 COMMENT '排序 从小到大',
+  `is_unique` int(0) NULL DEFAULT 0 COMMENT '是否唯一 1 是 0 否',
+  `is_null` int(0) NULL DEFAULT 0 COMMENT '是否必填 1 是 0 否',
+  `sorting` int(0) NULL DEFAULT 1 COMMENT '排序 从小到大',
   `options` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '如果类型是选项，此处不能为空，多个选项以，隔开',
-  `operating` int(1) NULL DEFAULT 255 COMMENT '是否可以删除修改',
-  `is_hidden` int(1) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
+  `operating` int(0) NULL DEFAULT 255 COMMENT '是否可以删除修改',
+  `is_hidden` int(0) NOT NULL DEFAULT 0 COMMENT '是否隐藏  0不隐藏 1隐藏',
   `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '最后修改时间',
-  `field_type` int(2) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
-  `style_percent` int(3) NULL DEFAULT 50 COMMENT '样式百分比%',
-  `precisions` int(2) NULL DEFAULT NULL COMMENT '精度，允许的最大小数位',
+  `field_type` int(0) NOT NULL DEFAULT 0 COMMENT '字段来源  0.自定义 1.原始固定 2原始字段但值存在扩展表中',
+  `style_percent` int(0) NULL DEFAULT 50 COMMENT '样式百分比%',
+  `precisions` int(0) NULL DEFAULT NULL COMMENT '精度，允许的最大小数位',
   `form_position` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '表单定位 坐标格式： 1,1',
   `max_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最大数值',
   `min_num_restrict` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '限制的最小数值',
-  `form_assist_id` int(12) NULL DEFAULT NULL COMMENT '表单辅助id，前端生成',
+  `form_assist_id` int(0) NULL DEFAULT NULL COMMENT '表单辅助id，前端生成',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 5645 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '自定义字段表' ROW_FORMAT = Dynamic;
 
@@ -7764,17 +7772,17 @@ CREATE TABLE `wk_oa_examine_field_extend`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_log`;
 CREATE TABLE `wk_oa_examine_log`  (
-  `log_id` bigint(11) NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `record_id` int(11) NULL DEFAULT NULL COMMENT '审批记录ID',
-  `examine_step_id` bigint(20) NULL DEFAULT NULL COMMENT '审核步骤ID',
-  `examine_status` int(1) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝4 撤回审核',
-  `create_user` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+  `log_id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `record_id` int(0) NULL DEFAULT NULL COMMENT '审批记录ID',
+  `examine_step_id` bigint(0) NULL DEFAULT NULL COMMENT '审核步骤ID',
+  `examine_status` int(0) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝4 撤回审核',
+  `create_user` bigint(0) NULL DEFAULT NULL COMMENT '创建人',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `examine_user` bigint(20) NULL DEFAULT NULL COMMENT '审核人',
+  `examine_user` bigint(0) NULL DEFAULT NULL COMMENT '审核人',
   `examine_time` datetime(0) NULL DEFAULT NULL COMMENT '审核时间',
   `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '审核备注',
-  `is_recheck` int(1) NULL DEFAULT 0 COMMENT '是否是撤回之前的日志 0或者null为新数据 1：撤回之前的数据',
-  `order_id` int(30) NULL DEFAULT NULL COMMENT '排序id',
+  `is_recheck` int(0) NULL DEFAULT 0 COMMENT '是否是撤回之前的日志 0或者null为新数据 1：撤回之前的数据',
+  `order_id` int(0) NULL DEFAULT NULL COMMENT '排序id',
   PRIMARY KEY (`log_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '审核日志表' ROW_FORMAT = Dynamic;
 
@@ -7787,11 +7795,11 @@ CREATE TABLE `wk_oa_examine_log`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_record`;
 CREATE TABLE `wk_oa_examine_record`  (
-  `record_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '审核记录ID',
-  `examine_id` int(11) NULL DEFAULT NULL COMMENT '审批ID',
-  `examine_step_id` bigint(20) NULL DEFAULT NULL COMMENT '当前进行的审批步骤ID',
-  `examine_status` int(1) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝 3 审核中 4 已撤回',
-  `create_user` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+  `record_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '审核记录ID',
+  `examine_id` int(0) NULL DEFAULT NULL COMMENT '审批ID',
+  `examine_step_id` bigint(0) NULL DEFAULT NULL COMMENT '当前进行的审批步骤ID',
+  `examine_status` int(0) NULL DEFAULT NULL COMMENT '审核状态 0 未审核 1 审核通过 2 审核拒绝 3 审核中 4 已撤回',
+  `create_user` bigint(0) NULL DEFAULT NULL COMMENT '创建人',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '审核备注',
   PRIMARY KEY (`record_id`) USING BTREE
@@ -7806,13 +7814,13 @@ CREATE TABLE `wk_oa_examine_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_relation`;
 CREATE TABLE `wk_oa_examine_relation`  (
-  `r_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '审批关联业务表',
-  `examine_id` int(11) NULL DEFAULT NULL COMMENT '审批ID',
+  `r_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '审批关联业务表',
+  `examine_id` int(0) NULL DEFAULT NULL COMMENT '审批ID',
   `customer_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '客户IDs',
   `contacts_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '联系人IDs',
   `business_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '商机IDs',
   `contract_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '合同IDs',
-  `status` int(2) NULL DEFAULT 1 COMMENT '状态1可用',
+  `status` int(0) NULL DEFAULT 1 COMMENT '状态1可用',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`r_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '审批关联业务表' ROW_FORMAT = Dynamic;
@@ -7826,10 +7834,10 @@ CREATE TABLE `wk_oa_examine_relation`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_sort`;
 CREATE TABLE `wk_oa_examine_sort`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `category_id` int(11) NULL DEFAULT NULL COMMENT '审批类型id',
-  `sort` int(6) NULL DEFAULT NULL COMMENT '排序',
-  `user_id` bigint(20) NULL DEFAULT NULL COMMENT '用户id',
+  `id` int(0) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `category_id` int(0) NULL DEFAULT NULL COMMENT '审批类型id',
+  `sort` int(0) NULL DEFAULT NULL COMMENT '排序',
+  `user_id` bigint(0) NULL DEFAULT NULL COMMENT '用户id',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE
@@ -7844,11 +7852,11 @@ CREATE TABLE `wk_oa_examine_sort`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_step`;
 CREATE TABLE `wk_oa_examine_step`  (
-  `step_id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `step_type` int(1) NULL DEFAULT NULL COMMENT '步骤类型1、负责人主管，2、指定用户（任意一人），3、指定用户（多人会签）,4、上一级审批人主管',
-  `category_id` int(11) NOT NULL COMMENT '审批ID',
+  `step_id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `step_type` int(0) NULL DEFAULT NULL COMMENT '步骤类型1、负责人主管，2、指定用户（任意一人），3、指定用户（多人会签）,4、上一级审批人主管',
+  `category_id` int(0) NOT NULL COMMENT '审批ID',
   `check_user_id` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '审批人ID (使用逗号隔开) ,1,2,',
-  `step_num` int(2) NULL DEFAULT 1 COMMENT '排序',
+  `step_num` int(0) NULL DEFAULT 1 COMMENT '排序',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`step_id`) USING BTREE,
   INDEX `category_id`(`category_id`) USING BTREE
@@ -7863,8 +7871,8 @@ CREATE TABLE `wk_oa_examine_step`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_examine_travel`;
 CREATE TABLE `wk_oa_examine_travel`  (
-  `travel_id` int(11) NOT NULL AUTO_INCREMENT,
-  `examine_id` int(11) NOT NULL COMMENT '审批ID',
+  `travel_id` int(0) NOT NULL AUTO_INCREMENT,
+  `examine_id` int(0) NOT NULL COMMENT '审批ID',
   `start_address` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '出发地',
   `start_time` datetime(0) NULL DEFAULT NULL COMMENT '出发时间',
   `end_address` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '目的地',
@@ -7891,13 +7899,13 @@ CREATE TABLE `wk_oa_examine_travel`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_log`;
 CREATE TABLE `wk_oa_log`  (
-  `log_id` int(11) NOT NULL AUTO_INCREMENT,
-  `category_id` int(2) NOT NULL DEFAULT 1 COMMENT '日志类型（1日报，2周报，3月报）',
+  `log_id` int(0) NOT NULL AUTO_INCREMENT,
+  `category_id` int(0) NOT NULL DEFAULT 1 COMMENT '日志类型（1日报，2周报，3月报）',
   `title` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '日志标题',
   `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '日志内容',
   `tomorrow` varchar(1000) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '明日工作内容',
   `question` varchar(1000) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '遇到问题',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人ID',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人ID',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   `update_time` timestamp(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '更新时间',
   `send_user_ids` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '通知人',
@@ -7916,10 +7924,10 @@ CREATE TABLE `wk_oa_log`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_log_bulletin`;
 CREATE TABLE `wk_oa_log_bulletin`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `log_id` int(11) NULL DEFAULT NULL COMMENT '日志ID',
-  `type` int(1) NULL DEFAULT NULL COMMENT '关联类型 1 客户 2 商机 3 合同 4 回款 5 跟进记录 ',
-  `type_id` int(11) NULL DEFAULT NULL COMMENT '类型ID',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `log_id` int(0) NULL DEFAULT NULL COMMENT '日志ID',
+  `type` int(0) NULL DEFAULT NULL COMMENT '关联类型 1 客户 2 商机 3 合同 4 回款 5 跟进记录 ',
+  `type_id` int(0) NULL DEFAULT NULL COMMENT '类型ID',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '工作日志与业务ID关联表' ROW_FORMAT = Dynamic;
@@ -7933,13 +7941,13 @@ CREATE TABLE `wk_oa_log_bulletin`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_log_record`;
 CREATE TABLE `wk_oa_log_record`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `log_id` int(11) NOT NULL,
-  `customer_num` int(5) NULL DEFAULT 0 COMMENT '客户数量',
-  `business_num` int(11) NULL DEFAULT 0 COMMENT '商机数量',
-  `contract_num` int(11) NULL DEFAULT 0 COMMENT '合同数量',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `log_id` int(0) NOT NULL,
+  `customer_num` int(0) NULL DEFAULT 0 COMMENT '客户数量',
+  `business_num` int(0) NULL DEFAULT 0 COMMENT '商机数量',
+  `contract_num` int(0) NULL DEFAULT 0 COMMENT '合同数量',
   `receivables_money` decimal(10, 2) NULL DEFAULT 0.00 COMMENT '回款金额',
-  `activity_num` int(11) NULL DEFAULT 0 COMMENT '跟进记录',
+  `activity_num` int(0) NULL DEFAULT 0 COMMENT '跟进记录',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '日志关联销售简报表' ROW_FORMAT = Dynamic;
@@ -7953,13 +7961,13 @@ CREATE TABLE `wk_oa_log_record`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_log_relation`;
 CREATE TABLE `wk_oa_log_relation`  (
-  `r_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '日志关联业务表',
-  `log_id` int(11) NULL DEFAULT NULL COMMENT '日志ID',
+  `r_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '日志关联业务表',
+  `log_id` int(0) NULL DEFAULT NULL COMMENT '日志ID',
   `customer_ids` varchar(512) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '客户IDs',
   `contacts_ids` varchar(512) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '联系人IDs',
   `business_ids` varchar(512) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '商机IDs',
   `contract_ids` varchar(512) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '合同IDs',
-  `status` int(2) NULL DEFAULT NULL COMMENT '状态1可用',
+  `status` int(0) NULL DEFAULT NULL COMMENT '状态1可用',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`r_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '日志关联业务表' ROW_FORMAT = Dynamic;
@@ -7973,16 +7981,16 @@ CREATE TABLE `wk_oa_log_relation`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_log_rule`;
 CREATE TABLE `wk_oa_log_rule`  (
-  `rule_id` int(11) NOT NULL AUTO_INCREMENT,
-  `status` int(2) NOT NULL DEFAULT 1 COMMENT '状态 0停用 1启用',
+  `rule_id` int(0) NOT NULL AUTO_INCREMENT,
+  `status` int(0) NOT NULL DEFAULT 1 COMMENT '状态 0停用 1启用',
   `member_user_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '需要提交的员工id，“,”分割',
-  `type` int(2) NULL DEFAULT NULL COMMENT '日志类型 1日报 2周报 3月报',
+  `type` int(0) NULL DEFAULT NULL COMMENT '日志类型 1日报 2周报 3月报',
   `effective_day` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '每周需要统计的日期 1-6是周一到周六 7是周日',
-  `start_day` int(2) NULL DEFAULT NULL COMMENT '开始日期',
+  `start_day` int(0) NULL DEFAULT NULL COMMENT '开始日期',
   `start_time` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '开始时间',
-  `end_day` int(2) NULL DEFAULT NULL COMMENT '结束日期',
+  `end_day` int(0) NULL DEFAULT NULL COMMENT '结束日期',
   `end_time` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '结束时间',
-  `create_user_id` bigint(20) NOT NULL COMMENT '创建人',
+  `create_user_id` bigint(0) NOT NULL COMMENT '创建人',
   `create_time` datetime(0) NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`rule_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 268 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = 'oa日志规则表' ROW_FORMAT = Dynamic;
@@ -7999,9 +8007,9 @@ INSERT INTO `wk_oa_log_rule` VALUES (267, 1, NULL, 3, NULL, 1, NULL, 31, NULL, 0
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_oa_log_user_favour`;
 CREATE TABLE `wk_oa_log_user_favour`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` bigint(20) NOT NULL COMMENT '用户id',
-  `log_id` int(11) NOT NULL COMMENT '日志id',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
+  `log_id` int(0) NOT NULL COMMENT '日志id',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `user_id`(`user_id`, `log_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户点赞日志关系表 ' ROW_FORMAT = Dynamic;
@@ -8015,18 +8023,18 @@ CREATE TABLE `wk_oa_log_user_favour`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work`;
 CREATE TABLE `wk_work`  (
-  `work_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '项目ID',
+  `work_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '项目ID',
   `name` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '项目名字',
-  `status` int(2) NULL DEFAULT 1 COMMENT '状态 1启用 3归档 2 删除',
+  `status` int(0) NULL DEFAULT 1 COMMENT '状态 1启用 3归档 2 删除',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
   `description` text CHARACTER SET utf8 COLLATE utf8_bin NULL COMMENT '描述',
   `color` varchar(15) CHARACTER SET utf8 COLLATE utf8_bin NULL DEFAULT NULL COMMENT '颜色',
-  `is_open` int(2) NOT NULL DEFAULT 1 COMMENT '是否所有人可见 1 是 0 否',
-  `owner_role` int(20) NULL DEFAULT NULL COMMENT '公开项目成员角色id',
+  `is_open` int(0) NOT NULL DEFAULT 1 COMMENT '是否所有人可见 1 是 0 否',
+  `owner_role` int(0) NULL DEFAULT NULL COMMENT '公开项目成员角色id',
   `archive_time` datetime(0) NULL DEFAULT NULL COMMENT '归档时间',
   `delete_time` datetime(0) NULL DEFAULT NULL COMMENT '删除时间',
-  `is_system_cover` int(2) NULL DEFAULT NULL COMMENT '是否是系统自带封面 0不是 1是',
+  `is_system_cover` int(0) NULL DEFAULT NULL COMMENT '是否是系统自带封面 0不是 1是',
   `cover_url` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '项目封面路径 仅系统自带封面需要',
   `batch_id` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
   `owner_user_id` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '项目成员',
@@ -8043,9 +8051,9 @@ CREATE TABLE `wk_work`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work_collect`;
 CREATE TABLE `wk_work_collect`  (
-  `collect_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '项目收藏id',
-  `work_id` int(11) NOT NULL COMMENT '项目id',
-  `user_id` bigint(11) NOT NULL COMMENT '用户id',
+  `collect_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '项目收藏id',
+  `work_id` int(0) NOT NULL COMMENT '项目id',
+  `user_id` bigint(0) NOT NULL COMMENT '用户id',
   `create_time` timestamp(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0) ON UPDATE CURRENT_TIMESTAMP(0),
   PRIMARY KEY (`collect_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '项目收藏表' ROW_FORMAT = Dynamic;
@@ -8059,10 +8067,10 @@ CREATE TABLE `wk_work_collect`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work_order`;
 CREATE TABLE `wk_work_order`  (
-  `order_id` int(11) NOT NULL AUTO_INCREMENT,
-  `work_id` int(11) NOT NULL,
-  `user_id` bigint(11) NOT NULL,
-  `order_num` int(4) NOT NULL DEFAULT 999,
+  `order_id` int(0) NOT NULL AUTO_INCREMENT,
+  `work_id` int(0) NOT NULL,
+  `user_id` bigint(0) NOT NULL,
+  `order_num` int(0) NOT NULL DEFAULT 999,
   PRIMARY KEY (`order_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '项目排序表' ROW_FORMAT = Dynamic;
 
@@ -8075,31 +8083,31 @@ CREATE TABLE `wk_work_order`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work_task`;
 CREATE TABLE `wk_work_task`  (
-  `task_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '任务表',
+  `task_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '任务表',
   `name` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '任务名称',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
-  `main_user_id` bigint(20) NULL DEFAULT NULL COMMENT '负责人ID',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `main_user_id` bigint(0) NULL DEFAULT NULL COMMENT '负责人ID',
   `owner_user_id` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '团队成员ID',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '新建时间',
   `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
-  `status` int(2) NULL DEFAULT 1 COMMENT '完成状态 1正在进行2延期3归档 5结束',
-  `class_id` int(5) NULL DEFAULT -1 COMMENT '分类id',
+  `status` int(0) NULL DEFAULT 1 COMMENT '完成状态 1正在进行2延期3归档 5结束',
+  `class_id` int(0) NULL DEFAULT -1 COMMENT '分类id',
   `label_id` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '标签 ,号拼接',
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL COMMENT '描述',
-  `pid` int(11) NULL DEFAULT 0 COMMENT '上级ID',
+  `pid` int(0) NULL DEFAULT 0 COMMENT '上级ID',
   `start_time` datetime(0) NULL DEFAULT NULL COMMENT '开始时间',
   `stop_time` datetime(0) NULL DEFAULT NULL COMMENT '结束时间',
-  `priority` int(2) NULL DEFAULT 0 COMMENT '优先级 从大到小 3高 2中 1低 0无',
-  `work_id` int(11) NULL DEFAULT 0 COMMENT '项目ID',
-  `is_top` int(2) NULL DEFAULT 0 COMMENT '工作台展示 0收件箱 1今天要做，2下一步要做，3以后要做',
-  `is_open` int(2) NULL DEFAULT 1 COMMENT '是否公开',
-  `order_num` int(4) NULL DEFAULT 999 COMMENT '排序ID',
-  `top_order_num` int(4) NULL DEFAULT 999 COMMENT '我的任务排序ID',
+  `priority` int(0) NULL DEFAULT 0 COMMENT '优先级 从大到小 3高 2中 1低 0无',
+  `work_id` int(0) NULL DEFAULT 0 COMMENT '项目ID',
+  `is_top` int(0) NULL DEFAULT 0 COMMENT '工作台展示 0收件箱 1今天要做，2下一步要做，3以后要做',
+  `is_open` int(0) NULL DEFAULT 1 COMMENT '是否公开',
+  `order_num` int(0) NULL DEFAULT 999 COMMENT '排序ID',
+  `top_order_num` int(0) NULL DEFAULT 999 COMMENT '我的任务排序ID',
   `archive_time` datetime(0) NULL DEFAULT NULL COMMENT '归档时间',
-  `ishidden` int(2) NULL DEFAULT 0 COMMENT '是否删除 0 未删除 1 删除',
+  `ishidden` int(0) NULL DEFAULT 0 COMMENT '是否删除 0 未删除 1 删除',
   `hidden_time` datetime(0) NULL DEFAULT NULL COMMENT '删除时间',
   `batch_id` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '批次',
-  `is_archive` int(2) NULL DEFAULT 0 COMMENT '1归档',
+  `is_archive` int(0) NULL DEFAULT 0 COMMENT '1归档',
   PRIMARY KEY (`task_id`) USING BTREE,
   INDEX `pid`(`pid`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '任务表' ROW_FORMAT = Dynamic;
@@ -8113,13 +8121,13 @@ CREATE TABLE `wk_work_task`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work_task_class`;
 CREATE TABLE `wk_work_task_class`  (
-  `class_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '任务分类表',
+  `class_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '任务分类表',
   `name` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '分类名',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
-  `status` int(2) NULL DEFAULT 0 COMMENT '状态1正常',
-  `work_id` int(11) NULL DEFAULT NULL COMMENT '项目ID',
-  `order_num` int(4) NULL DEFAULT NULL COMMENT '排序',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `status` int(0) NULL DEFAULT 0 COMMENT '状态1正常',
+  `work_id` int(0) NULL DEFAULT NULL COMMENT '项目ID',
+  `order_num` int(0) NULL DEFAULT NULL COMMENT '排序',
   PRIMARY KEY (`class_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '任务分类表' ROW_FORMAT = Dynamic;
 
@@ -8132,16 +8140,16 @@ CREATE TABLE `wk_work_task_class`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work_task_comment`;
 CREATE TABLE `wk_work_task_comment`  (
-  `comment_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '评论表',
-  `user_id` bigint(20) NOT NULL COMMENT '评论人ID',
+  `comment_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '评论表',
+  `user_id` bigint(0) NOT NULL COMMENT '评论人ID',
   `content` varchar(2000) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '内容(答案)',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '新建时间',
-  `main_id` int(11) NULL DEFAULT 0 COMMENT '主评论的id',
-  `pid` bigint(20) NULL DEFAULT 0 COMMENT '回复对象ID',
-  `status` int(2) NULL DEFAULT 1 COMMENT '状态 ',
-  `type_id` int(11) NULL DEFAULT 0 COMMENT '评论项目任务ID 或评论其他模块ID',
-  `favour` int(7) NULL DEFAULT 0 COMMENT '赞',
-  `type` int(2) NULL DEFAULT 0 COMMENT '评论分类 1：任务评论  2：日志评论',
+  `main_id` int(0) NULL DEFAULT 0 COMMENT '主评论的id',
+  `pid` bigint(0) NULL DEFAULT 0 COMMENT '回复对象ID',
+  `status` int(0) NULL DEFAULT 1 COMMENT '状态 ',
+  `type_id` int(0) NULL DEFAULT 0 COMMENT '评论项目任务ID 或评论其他模块ID',
+  `favour` int(0) NULL DEFAULT 0 COMMENT '赞',
+  `type` int(0) NULL DEFAULT 0 COMMENT '评论分类 1：任务评论  2：日志评论',
   PRIMARY KEY (`comment_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '任务评论表' ROW_FORMAT = Dynamic;
 
@@ -8154,11 +8162,11 @@ CREATE TABLE `wk_work_task_comment`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work_task_label`;
 CREATE TABLE `wk_work_task_label`  (
-  `label_id` int(11) NOT NULL AUTO_INCREMENT,
+  `label_id` int(0) NOT NULL AUTO_INCREMENT,
   `name` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '标签名',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `create_user_id` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
-  `status` int(2) NULL DEFAULT 0 COMMENT '状态',
+  `create_user_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `status` int(0) NULL DEFAULT 0 COMMENT '状态',
   `color` varchar(15) CHARACTER SET utf8 COLLATE utf8_bin NULL DEFAULT NULL COMMENT '颜色',
   PRIMARY KEY (`label_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '任务标签表' ROW_FORMAT = Dynamic;
@@ -8172,10 +8180,10 @@ CREATE TABLE `wk_work_task_label`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work_task_label_order`;
 CREATE TABLE `wk_work_task_label_order`  (
-  `order_id` int(11) NOT NULL AUTO_INCREMENT,
-  `label_id` int(11) NOT NULL,
-  `user_id` bigint(11) NOT NULL,
-  `order_num` int(4) NOT NULL DEFAULT 999,
+  `order_id` int(0) NOT NULL AUTO_INCREMENT,
+  `label_id` int(0) NOT NULL,
+  `user_id` bigint(0) NOT NULL,
+  `order_num` int(0) NOT NULL DEFAULT 999,
   PRIMARY KEY (`order_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '项目标签排序表' ROW_FORMAT = Dynamic;
 
@@ -8188,13 +8196,13 @@ CREATE TABLE `wk_work_task_label_order`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work_task_log`;
 CREATE TABLE `wk_work_task_log`  (
-  `log_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '项目日志表',
-  `user_id` bigint(20) NOT NULL COMMENT '操作人ID',
+  `log_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '项目日志表',
+  `user_id` bigint(0) NOT NULL COMMENT '操作人ID',
   `content` text CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '内容',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
-  `status` int(2) NULL DEFAULT 0 COMMENT '状态 4删除',
-  `task_id` int(11) NULL DEFAULT 0 COMMENT '任务ID',
-  `work_id` int(11) NULL DEFAULT 0 COMMENT '项目ID',
+  `status` int(0) NULL DEFAULT 0 COMMENT '状态 4删除',
+  `task_id` int(0) NULL DEFAULT 0 COMMENT '任务ID',
+  `work_id` int(0) NULL DEFAULT 0 COMMENT '项目ID',
   PRIMARY KEY (`log_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '任务日志表' ROW_FORMAT = Dynamic;
 
@@ -8207,13 +8215,13 @@ CREATE TABLE `wk_work_task_log`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work_task_relation`;
 CREATE TABLE `wk_work_task_relation`  (
-  `r_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '任务关联业务表',
-  `task_id` int(11) NULL DEFAULT NULL COMMENT '任务ID',
+  `r_id` int(0) NOT NULL AUTO_INCREMENT COMMENT '任务关联业务表',
+  `task_id` int(0) NULL DEFAULT NULL COMMENT '任务ID',
   `customer_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '客户IDs',
   `contacts_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '联系人IDs',
   `business_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '商机IDs',
   `contract_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '合同IDs',
-  `status` int(2) NULL DEFAULT NULL COMMENT '状态1可用',
+  `status` int(0) NULL DEFAULT NULL COMMENT '状态1可用',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`r_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '任务关联业务表' ROW_FORMAT = Dynamic;
@@ -8227,10 +8235,10 @@ CREATE TABLE `wk_work_task_relation`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `wk_work_user`;
 CREATE TABLE `wk_work_user`  (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `work_id` int(11) NOT NULL COMMENT '项目ID',
-  `user_id` bigint(20) NOT NULL COMMENT '成员ID',
-  `role_id` int(11) NOT NULL COMMENT '角色ID',
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `work_id` int(0) NOT NULL COMMENT '项目ID',
+  `user_id` bigint(0) NOT NULL COMMENT '成员ID',
+  `role_id` int(0) NOT NULL COMMENT '角色ID',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '项目成员表' ROW_FORMAT = Dynamic;
 

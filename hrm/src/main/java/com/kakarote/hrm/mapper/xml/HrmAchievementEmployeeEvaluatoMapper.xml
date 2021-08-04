@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmAchievementEmployeeEvaluatoMapper">
+
+    <select id="queryEvaluatoList"
+            resultType="com.kakarote.hrm.entity.VO.EvaluatoResultVO">
+        select  a.level_id, a.score, c.level_name, a.evaluate,a.weight,b.employee_id,b.employee_name,a.status,a.create_time
+        from `wk_hrm_achievement_employee_evaluato` a
+                 left join `wk_hrm_employee` b on a.employee_id = b.employee_id
+                 left join `wk_hrm_achievement_appraisal_score_level` c on a.level_id = c.level_id
+        where a.employee_appraisal_id = #{employeeAppraisalId} and a.score is not null;
+    </select>
+</mapper>

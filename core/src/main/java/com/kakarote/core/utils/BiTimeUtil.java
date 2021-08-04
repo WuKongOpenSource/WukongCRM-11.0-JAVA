@@ -46,7 +46,12 @@ public class BiTimeUtil {
     }
 
     public static BiTimeEntity analyzeType(BiParams biParams) {
-        BiTimeEntity biTimeEntity = analyzeTime(biParams);
+        BiTimeEntity biTimeEntity;
+        if (biParams.getYear() != null){
+            biTimeEntity = analyzeTimeByYear(biParams);
+        }else {
+            biTimeEntity = analyzeTime(biParams);
+        }
         biTimeEntity.setUserIds(analyzeAuth(biParams));
         return biTimeEntity;
     }
@@ -281,6 +286,164 @@ public class BiTimeUtil {
         Integer finalTime = Integer.valueOf(DateUtil.format(endDate, dateFormat));
         return new BiTimeEntity(sqlDateFormat, dateFormat, beginDate, endDate, cycleNum, beginTime, finalTime, new ArrayList<>());
     }
+
+    public static BiTimeEntity analyzeTimeByYear(BiParams biParams) {
+        Date date = DateUtil.parse(biParams.getYear().toString(), "yyyy");
+        Date beginDate = DateUtil.beginOfYear(date);
+        Date endDate = DateUtil.endOfYear(date);
+        int cycleNum = 12;
+        String sqlDateFormat = "%Y%m";
+        String dateFormat = "yyyyMM";
+        String type = biParams.getType();
+        String startTime = biParams.getStartTime();
+        String endTime = biParams.getEndTime();
+        if (StrUtil.isNotEmpty(type)) {
+            if (type.matches("^[\\d]{8}$")){
+                sqlDateFormat = "%Y%m%d";
+                dateFormat = "yyyyMMdd";
+            }
+            switch (type) {
+                case "year":
+                    beginDate = DateUtil.beginOfYear(date);
+                    endDate = DateUtil.endOfYear(date);
+                    break;
+                case "lastYear":
+                    beginDate = DateUtil.beginOfYear(DateUtil.offsetMonth(date, -12));
+                    endDate = DateUtil.endOfYear(DateUtil.offsetMonth(date, -12));
+                    break;
+                case "quarter":
+                    beginDate = DateUtil.beginOfQuarter(date);
+                    endDate = DateUtil.endOfQuarter(date);
+                    cycleNum = 3;
+                    break;
+                case "lastQuarter":
+                    beginDate = DateUtil.beginOfQuarter(DateUtil.offsetMonth(date, -3));
+                    endDate = DateUtil.endOfQuarter(DateUtil.offsetMonth(date, -3));
+                    cycleNum = 3;
+                    break;
+                case "month":
+                    beginDate = DateUtil.beginOfMonth(DateUtil.date());
+                    endDate = DateUtil.endOfMonth(DateUtil.date());
+                    sqlDateFormat = "%Y%m%d";
+                    dateFormat = "yyyyMMdd";
+                    cycleNum = (int) DateUtil.between(beginDate, endDate, DateUnit.DAY) + 1;
+                    break;
+                case "lastMonth":
+                    beginDate = DateUtil.beginOfMonth(DateUtil.offsetMonth(DateUtil.date(), -1));
+                    endDate = DateUtil.endOfMonth(DateUtil.offsetMonth(DateUtil.date(), -1));
+                    sqlDateFormat = "%Y%m%d";
+                    dateFormat = "yyyyMMdd";
+                    cycleNum = (int) DateUtil.between(beginDate, endDate, DateUnit.DAY) + 1;
+                    break;
+                case "week":
+                    beginDate = DateUtil.beginOfWeek(DateUtil.date());
+                    endDate = DateUtil.endOfWeek(DateUtil.date());
+                    sqlDateFormat = "%Y%m%d";
+                    dateFormat = "yyyyMMdd";
+                    cycleNum = 7;
+                    break;
+                case "lastWeek":
+                    beginDate = DateUtil.beginOfWeek(DateUtil.offsetWeek(DateUtil.date(), -1));
+                    endDate = DateUtil.endOfWeek(DateUtil.offsetWeek(DateUtil.date(), -1));
+                    sqlDateFormat = "%Y%m%d";
+                    dateFormat = "yyyyMMdd";
+                    cycleNum = 7;
+                    break;
+                case "today":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date());
+                    endDate = DateUtil.endOfDay(DateUtil.date());
+                    sqlDateFormat = "%Y%m%d";
+                    dateFormat = "yyyyMMdd";
+                    cycleNum = 1;
+                    break;
+                case "yesterday":
+                    beginDate = DateUtil.beginOfDay(new Date(System.currentTimeMillis() - 86400000));
+                    endDate = DateUtil.endOfDay(new Date(System.currentTimeMillis() - 86400000));
+                    sqlDateFormat = "%Y%m%d";
+                    dateFormat = "yyyyMMdd";
+                    cycleNum = 1;
+                    break;
+                case "nextYear":
+                    beginDate = DateUtil.beginOfYear(DateUtil.date());
+                    beginDate =  DateUtil.offset(beginDate, DateField.YEAR,1);
+                    endDate = DateUtil.endOfYear(DateUtil.date());
+                    endDate = DateUtil.offset(endDate, DateField.YEAR,1);
+                    break;
+                case "firstHalfYear":
+                    beginDate = DateUtil.beginOfYear(DateUtil.date());
+                    endDate = DateUtil.offsetMonth(DateUtil.endOfYear(DateUtil.date()),-6);
+                    break;
+                case "nextHalfYear":
+                    beginDate = DateUtil.offsetMonth(DateUtil.beginOfYear(DateUtil.date()),6);
+                    endDate = DateUtil.endOfYear(DateUtil.date());
+                    break;
+                case "nextQuarter":
+                    beginDate = DateUtil.beginOfQuarter(DateUtil.date().offset(DateField.MONTH,3));
+                    endDate = DateUtil.endOfQuarter(DateUtil.date().offset(DateField.MONTH,3));
+                    break;
+                case "nextMonth":
+                    beginDate = DateUtil.beginOfMonth(DateUtil.date().offset(DateField.MONTH,1));
+                    endDate = DateUtil.beginOfMonth(DateUtil.date().offset(DateField.MONTH,1));
+                    break;
+                case "nextWeek":
+                    beginDate = DateUtil.beginOfWeek(DateUtil.date().offset(DateField.DAY_OF_YEAR,7));
+                    endDate = DateUtil.endOfWeek(DateUtil.date().offset(DateField.DAY_OF_YEAR,7));
+                    break;
+                case "tomorrow":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,1));
+                    endDate = DateUtil.endOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,1));
+                    break;
+                case "previous7day":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,-7));
+                    endDate = DateUtil.endOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,-1));
+                    break;
+                case "previous30day":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,-30));
+                    endDate = DateUtil.endOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,-1));
+                    break;
+                case "future7day":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,1));
+                    endDate = DateUtil.endOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,7));
+                    break;
+                case "future30day":
+                    beginDate = DateUtil.beginOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,1));
+                    endDate = DateUtil.endOfDay(DateUtil.date().offset(DateField.DAY_OF_YEAR,30));
+                    break;
+                default:
+                    break;
+            }
+        } else if (StrUtil.isNotEmpty(startTime) && StrUtil.isNotEmpty(endTime)) {
+            Date start;
+            Date end;
+            if (startTime.length() == 6) {
+                start = DateUtil.parse(startTime, "yyyyMM");
+                end = DateUtil.endOfMonth(DateUtil.parse(endTime, "yyyyMM"));
+            } else {
+                start = DateUtil.parse(startTime);
+                end = DateUtil.parse(endTime);
+            }
+            Integer startMonth = Integer.valueOf(DateUtil.format(start, "yyyyMM"));
+            Integer endMonth = Integer.valueOf(DateUtil.format(end, "yyyyMM"));
+            if (startMonth.equals(endMonth)) {
+                sqlDateFormat = "%Y%m%d";
+                dateFormat = "yyyyMMdd";
+                Long diffDay = DateUtil.between(start, end, DateUnit.DAY);
+                cycleNum = diffDay.intValue() + 1;
+            } else {
+                sqlDateFormat = "%Y%m";
+                dateFormat = "yyyyMM";
+                int diffYear = Integer.valueOf(endMonth.toString().substring(0, 4)) - Integer.valueOf(startMonth.toString().substring(0, 4));
+                int diffMonth = endMonth % 100 - startMonth % 100 + 1;
+                cycleNum = diffYear * 12 + diffMonth;
+            }
+            beginDate = start;
+            endDate = end;
+        }
+        Integer beginTime = Integer.valueOf(DateUtil.format(beginDate, dateFormat));
+        Integer finalTime = Integer.valueOf(DateUtil.format(endDate, dateFormat));
+        return new BiTimeEntity(sqlDateFormat, dateFormat, beginDate, endDate, cycleNum, beginTime, finalTime, new ArrayList<>());
+    }
+
 
     public static Integer estimateTime(Integer beginTime) {
         if (beginTime < 1000000 && beginTime % 100 == 12) {

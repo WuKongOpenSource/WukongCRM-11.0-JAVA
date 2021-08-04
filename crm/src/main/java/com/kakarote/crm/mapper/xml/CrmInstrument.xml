@@ -96,7 +96,7 @@
         <for collection="map.customerUserIds" index="i" item="id" open="(" separator="," close=")">
             #{id}
         </for>) as customerCount,
-        (SELECT IFNULL(SUM(money),0) FROM wk_crm_receivables as c WHERE check_status='1' and
+        (SELECT IFNULL(SUM(money),0) FROM wk_crm_receivables as c WHERE check_status in ('1','10') and
         DATE_FORMAT(c.return_time,#{time.sqlDateFormat})
         <choose>
             <when test="time.cycleNum==1">
@@ -140,7 +140,7 @@
             #{id}
         </for>) as businessMoney
         from wk_crm_contract as a
-        WHERE a.check_status = '1' and
+        WHERE a.check_status in ('1','10') and
         DATE_FORMAT(a.order_date,#{time.sqlDateFormat})
         <choose>
             <when test="time.cycleNum==1">
@@ -308,12 +308,8 @@
     </select>
 
     <select id="dataInfoContract" resultType="java.util.HashMap">
-        SELECT COUNT(*) as allContract,IFNULL(SUM(CASE WHEN a.check_status = 1 THEN a.money END),0) as contractMoney,
-        IFNULL(SUM(b.planMoney),0) as planMoney
+        SELECT COUNT(*) as allContract,IFNULL(SUM(CASE WHEN a.check_status = 1 or a.check_status = 10 THEN a.money END),0) as contractMoney
         FROM wk_crm_contract as a
-        left join (
-          SELECT IFNULL(SUM(money),0) as planMoney,contract_id FROM wk_crm_receivables_plan group by contract_id
-        ) AS b on b.contract_id = a.contract_id and a.check_status='1'
         WHERE a.check_status != 7
         and
         DATE_FORMAT(a.order_date,#{time.sqlDateFormat})
@@ -330,9 +326,28 @@
             #{id}
         </for>
     </select>
-
+    <select id="dataInfoReceivablesPlan" resultType="java.util.Map">
+        select IFNULL(SUM(a.unreceived_money),0) as planMoney
+        from wk_crm_receivables_plan as a
+        left join wk_crm_contract as b on a.contract_id = b.contract_id
+        where b.check_status in (0,1,3,10)
+        and
+        DATE_FORMAT(a.return_date,#{time.sqlDateFormat})
+        <choose>
+            <when test="time.cycleNum==1">
+                = #{time.beginTime}
+            </when>
+            <otherwise>
+                BETWEEN #{time.beginTime} and #{time.finalTime}
+            </otherwise>
+        </choose>
+        AND a.owner_user_id in
+        <for collection="ids" index="i" item="id" open="(" separator="," close=")">
+            #{id}
+        </for>
+    </select>
     <select id="dataInfoReceivables" resultType="java.util.HashMap">
-        SELECT IFNULL(SUM(CASE WHEN check_status='1' THEN money ELSE 0 END),0) as receivablesMoney
+        SELECT IFNULL(SUM(CASE WHEN check_status='1' or a.check_status = 10 THEN money ELSE 0 END),0) as receivablesMoney
         FROM wk_crm_receivables as a
         where DATE_FORMAT(a.return_time,#{time.sqlDateFormat})
         <choose>
@@ -351,8 +366,7 @@
 
     <select id="dataInfoActivity" resultType="java.util.HashMap">
         SELECT COUNT(*) as activityNum,
-        COUNT(CASE WHEN b.activity_type_id in (SELECT customer_id FROM wk_crm_customer where
-        status != 3 and
+        COUNT(CASE WHEN b.activity_type_id in (SELECT customer_id FROM wk_crm_customer where status != 3 and
         DATE_FORMAT(create_time,#{time.sqlDateFormat})
         <choose>
             <when test="time.cycleNum==1">
@@ -451,8 +465,7 @@
     </select>
     <select id="queryRecordCount" resultType="com.alibaba.fastjson.JSONObject">
         SELECT activity_type as crmType,COUNT(activity_type) as count FROM wk_crm_activity
-        WHERE
-        type in (1,4) and create_user_id in
+        WHERE type in (1,4) and create_user_id in
         <for collection="data.recordUserIds" index="i" item="id" open="(" separator="," close=")">
             #{id}
         </for>
@@ -494,4 +507,5 @@
         </choose>
         group by activity_type
     </select>
+
 </mapper>

@@ -30,10 +30,7 @@ import com.kakarote.admin.entity.VO.HrmSimpleUserVO;
 import com.kakarote.admin.entity.VO.UserBookVO;
 import com.kakarote.admin.mapper.AdminUserMapper;
 import com.kakarote.admin.service.*;
-import com.kakarote.core.common.BaseStatusEnum;
-import com.kakarote.core.common.Const;
-import com.kakarote.core.common.Result;
-import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.common.*;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
@@ -43,10 +40,7 @@ import com.kakarote.core.feign.hrm.entity.HrmEmployee;
 import com.kakarote.core.feign.hrm.service.HrmService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
-import com.kakarote.core.utils.RecursionUtil;
-import com.kakarote.core.utils.TransferUtil;
-import com.kakarote.core.utils.UserCacheUtil;
-import com.kakarote.core.utils.UserUtil;
+import com.kakarote.core.utils.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +50,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,7 +86,7 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
     private CrmService crmService;
 
     @CreateCache(name = Const.ADMIN_USER_NAME_CACHE_NAME, expire = 3, timeUnit = TimeUnit.DAYS)
-    private Cache<Long, String> userCache;
+    private Cache<Long, SimpleUser> userCache;
 
     @Override
     public List<Map<String, Object>> findByUsername(String username) {
@@ -234,7 +229,7 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         updateById(adminUser);
         crmService.batchUpdateEsData(adminUser.getUserId().toString(), adminUser.getRealname());
         Long key = adminUser.getUserId();
-        userCache.put(key, adminUser.getRealname());
+        userCache.put(key, new SimpleUser(adminUser.getUserId(),adminUser.getImg(),adminUser.getRealname(),adminUser.getDeptId(),adminDeptService.getNameByDeptId(adminUser.getDeptId())));
     }
 
     @Override
@@ -249,6 +244,14 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
             throw new CrmException(AdminCodeEnum.ADMIN_DEPT_NOT_EXIST_ERROR);
         }
         this.lambdaUpdate().set(AdminUser::getDeptId, deptId).in(AdminUser::getUserId, userIdList).update();
+        for (Long userId : userIdList) {
+            SimpleUser simpleUser = userCache.get(userId);
+            if(simpleUser != null) {
+                simpleUser.setDeptId(deptId);
+                simpleUser.setDeptName(dept.getName());
+                userCache.put(userId,simpleUser);
+            }
+        }
     }
 
     @Override
@@ -279,7 +282,7 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         adminUserConfigService.initUserConfig(adminUserPO.getUserId());
         adminUserRoleService.saveByUserId(adminUserPO.getUserId(), false, StrUtil.splitTrim(adminUser.getRoleId(), Const.SEPARATOR));
         Long key = adminUserPO.getUserId();
-        userCache.put(key, adminUserPO.getRealname());
+        userCache.put(key, new SimpleUser(adminUserPO.getUserId(),adminUserPO.getImg(),adminUserPO.getRealname(),adminUserPO.getDeptId(),adminDeptService.getNameByDeptId(adminUserPO.getDeptId())));
     }
 
     /**
@@ -302,6 +305,7 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
             adminUser.setSalt(IdUtil.simpleUUID());
             adminUser.setPassword(UserUtil.sign((adminUser.getUsername().trim() + adminUser.getPassword().trim()), adminUser.getSalt()));
         }
+        adminUser.setStatus(null);
         boolean update = updateById(adminUser);
         crmService.batchUpdateEsData(adminUser.getUserId().toString(), adminUser.getRealname());
         if (b && update) {
@@ -397,25 +401,64 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                     return;
                 }
                 AdminUser adminUser = new AdminUser();
-                String parentName = Optional.ofNullable(rowList.get(6)).orElse("").toString().trim();
-                if (!StrUtil.isEmpty(parentName)) {
-                    AdminUser user = lambdaQuery().select(AdminUser::getUserId)
-                            .eq(AdminUser::getRealname, parentName)
-                            .last("limit 1")
-                            .one();
-                    if (user == null) {
-                        rowList.add(0, "直属上级不存在");
+                if(rowList.size() < 6){
+                    rowList.add(0, "部门不能为空");
+                    errList.add(rowList);
+                    return;
+                }
+                String deptNames = Optional.ofNullable(rowList.get(5)).orElse("").toString().trim();
+                if(!StrUtil.isEmpty(deptNames)){
+                    String[] strArr = deptNames.split("/");
+                    Integer deptId = null;
+                    for (int i = 0; i < strArr.length; i++) {
+                        AdminDept dept;
+                        if (i == 0) {
+                             dept = adminDeptService.lambdaQuery().select(AdminDept::getDeptId)
+                                    .eq(AdminDept::getName, strArr[0])
+                                    .last("limit 1").one();
+
+                        }else {
+                            dept = adminDeptService.lambdaQuery().select(AdminDept::getDeptId)
+                                    .eq(AdminDept::getName, strArr[i]).eq(AdminDept::getPid,deptId)
+                                    .last("limit 1").one();
+                        }
+                        if(dept == null){
+                            Integer a = i + 1;
+                            rowList.add(0, a +"级部门不存在");
+                            errList.add(rowList);
+                            return;
+                        }
+                        deptId = dept.getDeptId();
+                    }
+
+                    if(deptId == null){
+                        rowList.add(0, "部门不存在");
                         errList.add(rowList);
                         return;
                     }
-                    adminUser.setParentId(user.getUserId());
+                    adminUser.setDeptId(deptId);
+
+                }else {
+                    rowList.add(0, "部门不能为空");
+                    errList.add(rowList);
+                    return;
                 }
 
                 String password = rowList.get(1).toString().trim();
                 String realname = rowList.get(2).toString().trim();
-                String sex = Optional.ofNullable(rowList.get(3)).orElse("").toString().trim();
-                String email = Optional.ofNullable(rowList.get(4)).orElse("").toString().trim();
-                String post = Optional.ofNullable(rowList.get(5)).orElse("").toString().trim();
+                String sex = null;
+                if (rowList.get(3) != null){
+                     sex = Optional.ofNullable(rowList.get(3)).orElse("").toString().trim();
+                }
+
+                String email = null;
+                if (rowList.get(4) != null){
+                    email = Optional.ofNullable(rowList.get(4)).orElse("").toString().trim();
+                }
+                String post = null;
+                if (rowList.size() > 6){
+                    post = Optional.ofNullable(rowList.get(6)).orElse("").toString().trim();
+                }
                 String salt = IdUtil.fastSimpleUUID();
                 adminUser.setUsername(username);
                 adminUser.setPassword(UserUtil.sign((adminUser.getUsername().trim() + password.trim()), salt));
@@ -436,32 +479,62 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                 }
                 save(adminUser);
                 adminUserConfigService.initUserConfig(UserUtil.getUserId());
+            }else {
+                if (rowIndex == 1){
+                    rowList.add(0,"错误信息");
+                }
+                errList.add(rowIndex, rowList);
             }
         });
         FileUtil.del(filePath);
         JSONObject result = new JSONObject().fluentPut("totalSize", num.get()).fluentPut("errSize", 0);
-        if (errList.size() > 0) {
+        if (errList.size() > 2) {
             BigExcelWriter writer = null;
             try {
                 String token = IdUtil.simpleUUID();
                 writer = ExcelUtil.getBigWriter(FileUtil.getTmpDirPath() + "/" + token);
-                writer.merge(6, "系统用户导入模板(*)为必填项");
-                for (int i = 0; i < 7; i++) {
-                    writer.setColumnWidth(i, 20);
+                // 取消数据的黑色边框以及数据左对齐
+                CellStyle cellStyle = writer.getCellStyle();
+                cellStyle.setFillBackgroundColor(IndexedColors.BLACK.getIndex());
+                cellStyle.setBorderTop(BorderStyle.NONE);
+                cellStyle.setBorderBottom(BorderStyle.NONE);
+                cellStyle.setBorderLeft(BorderStyle.NONE);
+                cellStyle.setBorderRight(BorderStyle.NONE);
+                cellStyle.setAlignment(HorizontalAlignment.LEFT);
+                Font defaultFont = writer.createFont();
+                defaultFont.setFontHeightInPoints((short) 11);
+                cellStyle.setFont(defaultFont);
+                // 取消数字格式的数据的黑色边框以及数据左对齐
+                CellStyle cellStyleForNumber = writer.getStyleSet().getCellStyleForNumber();
+                cellStyleForNumber.setBorderTop(BorderStyle.NONE);
+                cellStyleForNumber.setBorderBottom(BorderStyle.NONE);
+                cellStyleForNumber.setBorderLeft(BorderStyle.NONE);
+                cellStyleForNumber.setBorderRight(BorderStyle.NONE);
+                cellStyleForNumber.setAlignment(HorizontalAlignment.LEFT);
+                cellStyleForNumber.setFillBackgroundColor(IndexedColors.BLACK.getIndex());
+                cellStyleForNumber.setFont(defaultFont);
+
+                CellStyle textStyle = writer.getWorkbook().createCellStyle();
+                DataFormat format = writer.getWorkbook().createDataFormat();
+                textStyle.setDataFormat(format.getFormat("@"));
+
+                writer.merge(errList.get(1).size() + 1, errList.get(0).get(0).toString().trim(), true);
+                writer.getHeadCellStyle().setAlignment(HorizontalAlignment.LEFT);
+                writer.getHeadCellStyle().setWrapText(true);
+                Font headFont = writer.createFont();
+                headFont.setFontHeightInPoints((short) 11);
+                writer.getHeadCellStyle().setFont(headFont);
+                writer.getHeadCellStyle().setFillPattern(FillPatternType.NO_FILL);
+                writer.getOrCreateRow(0).setHeightInPoints(120);
+                writer.setRowHeight(-1, 20);
+
+                //writer.merge(6, "系统用户导入模板(*)为必填项");
+                for (int i = 0; i < errList.get(1).size(); i++) {
+                    writer.getSheet().setDefaultColumnStyle(i, textStyle);
                 }
-                writer.setDefaultRowHeight(20);
-                Cell cell = writer.getCell(0, 0);
-                CellStyle cellStyle = cell.getCellStyle();
-                cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-                cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-                Font font = writer.createFont();
-                font.setBold(true);
-                font.setFontHeightInPoints((short) 16);
-                cellStyle.setFont(font);
-                cell.setCellStyle(cellStyle);
-                writer.writeHeadRow(Arrays.asList("错误信息", "手机号(*)", "登录密码(*)", "姓名(*)", "性别", "邮箱", "岗位"));
+                errList.remove(0);
                 writer.write(errList);
-                result.fluentPut("errSize", errList.size()).fluentPut("token", token);
+                result.fluentPut("errSize", errList.size() - 1).fluentPut("token", token);
             } finally {
                 if (writer != null) {
                     writer.close();
@@ -505,6 +578,35 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
                 if (adminUser.getDeptId() == null) {
                     throw new CrmException(AdminCodeEnum.ADMIN_USER_NOT_DEPT_ERROR);
                 }
+            }
+            lambdaUpdate().set(AdminUser::getStatus, adminUserStatusBO.getStatus()).eq(AdminUser::getUserId, id).update();
+        }
+    }
+    /**
+     * 设置状态
+     *
+     * @param adminUserStatusBO status
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void activateUser(AdminUserStatusBO adminUserStatusBO) {
+
+        for (Long id : adminUserStatusBO.getIds()) {
+            if (BaseStatusEnum.CLOSE.getStatus().equals(adminUserStatusBO.getStatus())) {
+                if (id.equals(UserUtil.getSuperUser())) {
+                    throw new CrmException(AdminCodeEnum.ADMIN_SUPER_USER_DISABLED_ERROR);
+                }
+                UserUtil.userExit(id, null);
+            } else if (BaseStatusEnum.OPEN.getStatus().equals(adminUserStatusBO.getStatus())) {
+                Integer roleCount = adminUserRoleService.lambdaQuery().eq(AdminUserRole::getUserId, id).count();
+                if (roleCount == 0) {
+                    throw new CrmException(AdminCodeEnum.ADMIN_USER_NOT_ROLE_ERROR);
+                }
+                AdminUser adminUser = getById(id);
+                if (adminUser.getDeptId() == null) {
+                    throw new CrmException(AdminCodeEnum.ADMIN_USER_NOT_DEPT_ERROR);
+                }
+
             }
             lambdaUpdate().set(AdminUser::getStatus, adminUserStatusBO.getStatus()).eq(AdminUser::getUserId, id).update();
         }
@@ -586,26 +688,6 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
             attention.setAttentionUserId(UserUtil.getUserId());
             adminAttentionService.save(attention);
         }
-    }
-
-    /**
-     * 通过用户ID查询用户昵称
-     *
-     * @param userId 用户ID
-     * @return data
-     */
-    @Override
-    public String getNameByUserId(Long userId) {
-        String name = userCache.get(userId);
-        if (name != null) {
-            return name;
-        }
-        AdminUser adminUser = query().select("realname").eq("user_id", userId).one();
-        if (adminUser == null) {
-            return "";
-        }
-        userCache.put(userId, adminUser.getRealname());
-        return adminUser.getRealname();
     }
 
     /**
@@ -892,4 +974,39 @@ public class AdminUserServiceImpl extends BaseServiceImpl<AdminUserMapper, Admin
         }
         return userInfoList;
     }
+
+    @Override
+    public void downloadExcel(HttpServletResponse response) throws IOException {
+        List<JSONObject> list = queryField();
+        ExcelParseUtil.importExcel(new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+
+            }
+            @Override
+            public String getExcelName() {
+                return "员工";
+            }
+        }, list, response,"user");
+    }
+
+    private List<JSONObject> queryField(){
+        List<JSONObject> list = new ArrayList<>();
+        list.add(queryField("username",FieldEnum.TEXT.getFormType(),FieldEnum.TEXT.getType(),"手机号",1));
+        list.add(queryField("password",FieldEnum.TEXT.getFormType(),FieldEnum.TEXT.getType(),"登录密码",1));
+        list.add(queryField("realname",FieldEnum.TEXT.getFormType(),FieldEnum.TEXT.getType(),"姓名",1));
+        list.add(queryField("sex",FieldEnum.TEXT.getFormType(),FieldEnum.TEXT.getType(),"性别",0));
+        list.add(queryField("email",FieldEnum.TEXT.getFormType(),FieldEnum.TEXT.getType(),"邮箱",0));
+        list.add(queryField("deptName",FieldEnum.TEXT.getFormType(),FieldEnum.TEXT.getType(),"部门",1));
+        list.add(queryField("post",FieldEnum.TEXT.getFormType(),FieldEnum.TEXT.getType(),"岗位",0));
+        return list;
+    }
+     private JSONObject queryField(String fieldName, String formType, Integer type ,String name,Integer isNull){
+         JSONObject json = new JSONObject();
+         json.fluentPut("fieldName",fieldName)
+                 .fluentPut("formType", formType)
+                 .fluentPut("type", type)
+                 .fluentPut("name",name).fluentPut("isNull",isNull);
+         return json;
+     }
 }

@@ -1,5 +1,7 @@
 package com.kakarote.crm.constant;
 
+import cn.hutool.core.util.StrUtil;
+
 /**
  * @author zhangzhiwei
  * crm模块枚举
@@ -98,8 +100,30 @@ public enum CrmEnum {
         return "wk_single_" + name().toLowerCase();
     }
 
-    public String getTable() {
+    public String getTableName() {
         return name().toLowerCase();
+    }
+
+    /**
+     * 获取主键ID
+     * @param camelCase 是否驼峰
+     * @return primaryKey
+     */
+    public String getPrimaryKey(boolean camelCase) {
+        String name;
+        if(this == CrmEnum.RETURN_VISIT){
+            name = "visit";
+        }else {
+            name = name().toLowerCase();
+        }
+        if(camelCase){
+            return StrUtil.toCamelCase(name) + "Id";
+        }
+        return name + "_id";
+    }
+
+    public String getPrimaryKey() {
+        return getPrimaryKey(true);
     }
 
     @Override

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmSalaryGroupMapper">
+
+    <select id="querySalaryGroupPageList" resultType="com.kakarote.hrm.entity.VO.SalaryGroupPageListVO">
+        select a.*,b.rule_name
+        from wk_hrm_salary_group as a
+        left join wk_hrm_salary_tax_rule b on a.rule_id = b.rule_id
+        order by a.create_time desc
+    </select>
+    <select id="queryEmployeeSalaryGroupByEmpId" resultType="com.kakarote.hrm.entity.PO.HrmSalaryGroup">
+        select * from wk_hrm_salary_group where   find_in_set(#{employeeId},employee_ids)
+    </select>
+    <select id="queryEmployeeSalaryGroupByDId" resultType="com.kakarote.hrm.entity.PO.HrmSalaryGroup">
+        select * from wk_hrm_salary_group where
+        <foreach collection="deptIds" item="deptId" separator="or" index="index" >
+            find_in_set(#{deptId},dept_ids)
+        </foreach>
+    </select>
+    <select id="querySalaryGroupByTaxType" resultType="com.kakarote.hrm.entity.PO.HrmSalaryGroup">
+        select a.* from wk_hrm_salary_group a
+        left join wk_hrm_salary_tax_rule b on a.rule_id = b.rule_id
+        where b.tax_type = #{taxType}
+    </select>
+</mapper>

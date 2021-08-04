@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmSalarySlipRecordMapper">
+
+    <select id="querySlipEmployeePageList" resultType="com.kakarote.hrm.entity.VO.SlipEmployeeVO">
+            select a.s_emp_record_id,a.employee_id,b.employee_name,b.mobile,b.job_number,b.post,c.name as deptName,if(d.employee_id is null,0,1) as sendStatus from wk_hrm_salary_month_emp_record a
+            left join wk_hrm_employee b on a.employee_id = b.employee_id
+            left join wk_hrm_dept c on b.dept_id = c.dept_id
+            left join wk_hrm_salary_slip d on a.s_emp_record_id = d.s_emp_record_id
+            <include refid="condition"/>
+    </select>
+    <select id="querySendRecordList" resultType="com.kakarote.hrm.entity.VO.QuerySendRecordListVO">
+        select b.id,b.salary_num,b.pay_num,b.`year`,b.`month`,b.create_time,b.create_user_id,
+        (select count(*) from wk_hrm_salary_slip a where b.id = a.record_id and a.read_status = 1) as readNum
+         from wk_hrm_salary_slip_record b
+        where 1=1
+        <if test="data.year != null and data.year != ''">
+            and b.year = #{data.year} and b.month = #{data.month}
+        </if>
+         order by b.create_time desc
+    </select>
+    <select id="querySendDetailList" resultType="com.kakarote.hrm.entity.VO.QuerySendDetailListVO">
+        select id,a.employee_id,b.employee_name,b.job_number,b.post,b.mobile,c.name as deptName,a.read_status,a.remarks from wk_hrm_salary_slip as a
+        left join wk_hrm_employee as b on a.employee_id = b.employee_id
+        left join wk_hrm_dept as c on b.dept_id = c.dept_id
+        where a.record_id = #{data.id}
+        <if test="data.search != null and data.search != ''">
+            and (b.employee_name like concat('%',#{data.search},'%') or b.job_number like concat('%',#{data.search},'%'))
+        </if>
+        <if test="data.readStatus != null and data.readStatus != ''">
+            and a.read_status = #{data.readStatus}
+        </if>
+        <if test="data.remarks != null and data.remarks != ''">
+            and a.remarks like concat('%',#{data.remarks},'%')
+        </if>
+        <if test="data.deptId != null and data.deptId != ''">
+            and b.dept_id = #{data.deptId}
+        </if>
+    </select>
+    <select id="querySlipEmployeeIds" resultType="java.lang.Integer">
+        select a.s_emp_record_id from wk_hrm_salary_month_emp_record a
+        left join wk_hrm_employee b on a.employee_id = b.employee_id
+        left join wk_hrm_salary_slip d on a.s_emp_record_id = d.s_emp_record_id
+        <include refid="condition"/>
+    </select>
+
+    <sql id="condition">
+        where a.s_record_id = #{sRecordId}
+        <if test="data.employeeName != null and data.employeeName != ''">
+            and b.employee_name like concat('%',#{data.employeeName},'%')
+        </if>
+        <if test="data.deptId != null and data.deptId != ''">
+            and b.dept_id = #{data.deptId}
+        </if>
+        <if test="data.sendStatus != null and data.sendStatus != ''">
+            <if test="data.sendStatus == 1">
+                and d.employee_id is not null
+            </if>
+            <if test="data.sendStatus == 0">
+                and d.employee_id is null
+            </if>
+        </if>
+        group by a.employee_id
+    </sql>
+</mapper>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmSalarySlipMapper">
+
+    <select id="querySalarySlipList" resultType="com.kakarote.hrm.entity.VO.QuerySalarySlipListVO">
+        select a.id,
+        employee_id,
+        `year`,
+        `month`,
+        read_status,
+        remarks,
+        create_time,
+        create_user_id
+        from wk_hrm_salary_slip a
+        join (
+        SELECT max(id) as id
+        FROM wk_hrm_salary_slip
+        where employee_id = #{employeeId}
+        <if test="data.startTime != null and data.endTime != null">
+            and concat(`year`, '-', `month`) between #{data.startTime} and #{data.endTime}
+        </if>
+        group by s_emp_record_id
+        <choose>
+            <when test="data.orderType == 1">
+                order by id
+            </when>
+            <otherwise>
+                order by real_salary
+            </otherwise>
+        </choose>
+        <choose>
+            <when test="data.order == 1">
+                desc
+            </when>
+            <otherwise>
+                asc
+            </otherwise>
+        </choose>
+        ) b on a.id = b.id
+
+    </select>
+</mapper>

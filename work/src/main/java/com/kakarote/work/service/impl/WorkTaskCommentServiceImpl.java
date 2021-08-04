@@ -10,6 +10,7 @@ import com.kakarote.core.feign.admin.service.AdminMessageService;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.work.entity.PO.WorkTaskComment;
 import com.kakarote.work.mapper.WorkTaskCommentMapper;
@@ -53,11 +54,11 @@ public class WorkTaskCommentServiceImpl extends BaseServiceImpl<WorkTaskCommentM
         }
         taskCommentList.forEach(record -> {
             if (record.getUserId() != null) {
-                List<SimpleUser> data = adminService.queryUserByIds(Collections.singleton(record.getUserId())).getData();
+                List<SimpleUser> data = UserCacheUtil.getSimpleUsers(Collections.singleton(record.getUserId()));
                 record.setUser(data.size() > 0 ? data.get(0) : null);
             }
             if (!Objects.equals(0L, record.getPid())) {
-                List<SimpleUser> data = adminService.queryUserByIds(Collections.singleton(record.getPid())).getData();
+                List<SimpleUser> data = UserCacheUtil.getSimpleUsers(Collections.singleton(record.getPid()));
                 record.setReplyUser(data.size() > 0 ? data.get(0) : null);
             }
         });

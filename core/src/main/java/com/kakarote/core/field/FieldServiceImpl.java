@@ -13,6 +13,7 @@ import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.feign.crm.entity.CrmFieldPatch;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.TagUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -39,7 +40,7 @@ public class FieldServiceImpl implements FieldService {
         Object newValue = null;
         switch (typeEnum) {
             case USER:
-                newValue = adminService.queryUserByIds(TagUtil.toLongSet(value.toString())).getData();
+                newValue = UserCacheUtil.getSimpleUsers((TagUtil.toLongSet(value.toString())));
                 break;
             case STRUCTURE:
                 newValue = adminService.queryDeptByIds(TagUtil.toSet(value.toString())).getData();
@@ -51,7 +52,7 @@ public class FieldServiceImpl implements FieldService {
                 newValue = value.toString();
                 break;
             case SINGLE_USER:
-                newValue = adminService.queryUserById((Long) value).getData();
+                newValue = UserCacheUtil.getSimpleUser((Long) value);
                 break;
             case AREA:
             case CURRENT_POSITION:
@@ -103,7 +104,7 @@ public class FieldServiceImpl implements FieldService {
                         }
                         break;
                     case USER:
-                        crmFieldPatch.setValue(adminService.queryUserByIds(TagUtil.toLongSet(valueData.toString())).getData());
+                        crmFieldPatch.setValue(UserCacheUtil.getSimpleUsers(TagUtil.toLongSet(valueData.toString())));
                         break;
                     case STRUCTURE:
                         crmFieldPatch.setValue(adminService.queryDeptByIds(TagUtil.toSet(valueData.toString())).getData());
@@ -112,7 +113,7 @@ public class FieldServiceImpl implements FieldService {
                         crmFieldPatch.setValue(ApplicationContextHolder.getBean(AdminFileService.class).queryFileList(valueData.toString()).getData());
                         break;
                     case SINGLE_USER:
-                        crmFieldPatch.setValue(adminService.queryUserById((Long) value).getData());
+                        crmFieldPatch.setValue(UserCacheUtil.getSimpleUser((Long) value));
                         break;
                     default:
                         break;

@@ -33,16 +33,6 @@ public class AdminServiceImpl implements AdminService {
     }
 
     /**
-     * 根据用户ID获取用户名
-     * @param userId 用户ID
-     * @return data
-     */
-    @Override
-    public Result<String> queryUserName(Long userId) {
-        return Result.ok("");
-    }
-
-    /**
      *
      * 根据部门ID获取部门名称
      * @param deptId 部门ID
@@ -105,17 +95,6 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public Result<AdminConfig> queryFirstConfigByName(String name) {
         return R.ok((AdminConfig) null);
-    }
-
-    /**
-     * 根据ids查询用户信息
-     *
-     * @param ids id列表
-     * @return data
-     */
-    @Override
-    public Result<List<SimpleUser>> queryUserByIds(Collection<Long> ids) {
-        return R.ok(new ArrayList<>());
     }
 
     @Override

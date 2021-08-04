@@ -101,12 +101,17 @@ public interface ICrmCustomerPoolService extends BaseService<CrmCustomerPool> {
     /**
      * 查询公海客户列表
      */
-    public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search);
+    public BasePage<Map<String, Object>> queryPageList(CrmSearchBO search, boolean isExcel);
 
     /**
      * 查询前台公海列表
      */
     public List<CrmCustomerPool> queryPoolNameListByAuth();
+
+    /**
+     * 判断当前员工是否是公海管理员
+     */
+    public Boolean queryAuthListByPoolId(Integer poolId);
 
     /**
      * 查询前台公海字段

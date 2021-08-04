@@ -47,10 +47,10 @@ public class QncFileServiceImpl implements FileService {
     @Override
     public UploadEntity uploadFile(InputStream inputStream, UploadEntity entity) {
         String key = BaseUtil.getDate() + "/" + entity.getFileId() + JOIN_STR + entity.getName();
-        entity.setType(UploadFileEnum.ALI_COS.getConfig());
+        entity.setType(UploadFileEnum.ALI_QNC.getConfig());
         if ("1".equals(entity.getIsPublic())) {
-            entity.setPath(config.getPublicUrl()+key);
-        }else {
+            entity.setPath(config.getPublicUrl() + key);
+        } else {
             entity.setPath(key);
         }
         try {
@@ -58,11 +58,11 @@ public class QncFileServiceImpl implements FileService {
             Configuration cfg = new Configuration(Region.autoRegion());
             UploadManager uploadManager = new UploadManager(cfg);
             String upToken = clint.uploadToken(config.getBucketName().get(entity.getIsPublic()));
-            uploadManager.put(inputStream,key,upToken,null, null);
+            uploadManager.put(inputStream, key, upToken, null, null);
             return entity;
         } catch (QiniuException e) {
-            log.error("文件【{}】上传到七牛云失败！",key);
-            log.error("失败的原因可能是：{}",e.response.toString());
+            log.error("文件【{}】上传到七牛云失败！", key);
+            log.error("失败的原因可能是：{}", e.response.toString());
             return null;
         }
     }
@@ -81,8 +81,8 @@ public class QncFileServiceImpl implements FileService {
             BucketManager bucketManager = new BucketManager(clint, cfg);
             bucketManager.delete(config.getBucketName().get(entity.getIsPublic()), key);
         } catch (QiniuException e) {
-            log.error("七牛云文件【{}】删除失败！",key);
-            log.error("失败的原因可能是：{}",e.response.toString());
+            log.error("七牛云文件【{}】删除失败！", key);
+            log.error("失败的原因可能是：{}", e.response.toString());
         }
     }
 
@@ -94,8 +94,8 @@ public class QncFileServiceImpl implements FileService {
             BucketManager bucketManager = new BucketManager(clint, cfg);
             bucketManager.delete(config.getBucketName().get("1"), key);
         } catch (QiniuException e) {
-            log.error("七牛云文件【{}】删除失败！",key);
-            log.error("失败的原因可能是：{}",e.response.toString());
+            log.error("七牛云文件【{}】删除失败！", key);
+            log.error("失败的原因可能是：{}", e.response.toString());
         }
     }
 
@@ -114,8 +114,8 @@ public class QncFileServiceImpl implements FileService {
             BucketManager bucketManager = new BucketManager(clint, cfg);
             bucketManager.move(config.getBucketName().get(entity.getIsPublic()), key + entity.getName(), config.getBucketName().get(entity.getIsPublic()), key + fileName);
         } catch (QiniuException e) {
-            log.error("七牛云文件【{}】重命名失败！",key);
-            log.error("失败的原因可能是：{}",e.response.toString());
+            log.error("七牛云文件【{}】重命名失败！", key);
+            log.error("失败的原因可能是：{}", e.response.toString());
         }
         deleteFile(entity);
     }
@@ -129,49 +129,59 @@ public class QncFileServiceImpl implements FileService {
     @Override
     public InputStream downFile(UploadEntity entity) {
         InputStream inputStream = null;
+        OkHttpClient client = new OkHttpClient();
+        okhttp3.Response resp = null;
         try {
             // 获取下载输入流
             String encodedFileName = URLEncoder.encode(entity.getPath(), "utf-8").replace("+", "%20");
-            String finalUrl= String.format("%s/%s", config.getBucketName().get(entity.getIsPublic()), encodedFileName);
+            String finalUrl = String.format("%s%s", "1".equals(entity.getIsPublic()) ? config.getPublicUrl() : config.getPrivateUrl(), encodedFileName);
             if (!"1".equals(entity.getIsPublic())) {
                 finalUrl = clint.privateDownloadUrl(finalUrl);
             }
-            OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder().url(finalUrl).build();
-            okhttp3.Response resp = client.newCall(request).execute();
+            resp = client.newCall(request).execute();
             if (resp.isSuccessful()) {
                 ResponseBody body = resp.body();
-                if (body != null){
+                if (body != null) {
                     inputStream = body.byteStream();
                 }
             }
             return inputStream;
         } catch (UnsupportedEncodingException e) {
-            log.error("文件【{}】进行URLEncoder编码失败！",entity.getPath());
+            log.error("文件【{}】进行URLEncoder编码失败！", entity.getPath());
         } catch (IOException e) {
-            log.error("七牛云文件【{}】下载失败！",entity.getPath());
+            log.error("七牛云文件【{}】下载失败！", entity.getPath());
+        } finally {
+            if (resp != null && inputStream == null) {
+                resp.close();
+            }
         }
         return null;
     }
 
     @Override
-    public void downFileByUrl(String url,File file) {
+    public void downFileByUrl(String url, File file) {
         InputStream inputStream = null;
+        okhttp3.Response resp = null;
         try {
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder().url(url).build();
-            okhttp3.Response resp = client.newCall(request).execute();
+            resp = client.newCall(request).execute();
             if (resp.isSuccessful()) {
                 ResponseBody body = resp.body();
-                if (body != null){
+                if (body != null) {
                     inputStream = body.byteStream();
                 }
             }
-            FileUtil.writeFromStream(inputStream,file);
+            FileUtil.writeFromStream(inputStream, file);
         } catch (UnsupportedEncodingException e) {
-            log.error("文件【{}】进行URLEncoder编码失败！",e.getMessage());
+            log.error("文件【{}】进行URLEncoder编码失败！", e.getMessage());
         } catch (IOException e) {
-            log.error("七牛云文件【{}】下载失败！",e.getMessage());
+            log.error("七牛云文件【{}】下载失败！", e.getMessage());
+        } finally {
+            if (resp != null && inputStream == null) {
+                resp.close();
+            }
         }
     }
 }

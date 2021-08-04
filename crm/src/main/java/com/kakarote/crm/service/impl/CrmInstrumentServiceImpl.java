@@ -27,6 +27,7 @@ import com.kakarote.core.feign.crm.entity.BiAuthority;
 import com.kakarote.core.feign.crm.entity.BiParams;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.utils.BiTimeUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.ActionRecordUtil;
 import com.kakarote.crm.common.AuthUtil;
@@ -182,7 +183,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             searchBO.getSearchList().add(new CrmSearchBO.Search("createTime", "datetime", CrmSearchBO.FieldSearchEnum.RANGE, Arrays.asList(DateUtil.formatDateTime(biTimeEntity.getBeginDate()), DateUtil.formatDateTime(DateUtil.endOfDay(biTimeEntity.getEndDate())))));
         }
         if (biParams.getCheckStatus() != null && biParams.getCheckStatus() == 1) {
-            searchBO.getSearchList().add(new CrmSearchBO.Search("checkStatus", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
+            searchBO.getSearchList().add(new CrmSearchBO.Search("checkStatus", "text", CrmSearchBO.FieldSearchEnum.IS, Arrays.asList("1","10")));
         }
         switch (crmEnum) {
             case CUSTOMER:
@@ -192,7 +193,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             case BUSINESS:
                 return ApplicationContextHolder.getBean(ICrmBusinessService.class).queryPageList(searchBO);
             case CONTRACT:
-                searchBO.getSearchList().add(new CrmSearchBO.Search("checkStatus", "text", CrmSearchBO.FieldSearchEnum.IS, Collections.singletonList("1")));
+                searchBO.getSearchList().add(new CrmSearchBO.Search("checkStatus", "text", CrmSearchBO.FieldSearchEnum.IS, Arrays.asList("1","10")));
                 return ApplicationContextHolder.getBean(ICrmContractService.class).queryPageList(searchBO);
             case RECEIVABLES:
                 return ApplicationContextHolder.getBean(ICrmReceivablesService.class).queryPageList(searchBO);
@@ -363,6 +364,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         Map<String, Object> business = crmInstrumentMapper.dataInfoBusiness(timeEntity, AuthUtil.filterUserIdList(CrmEnum.BUSINESS,CrmAuthEnum.LIST, biAuthority.getUserIds()));
         Map<String, Object> contract = crmInstrumentMapper.dataInfoContract(timeEntity, AuthUtil.filterUserIdList(CrmEnum.CONTRACT,CrmAuthEnum.LIST, biAuthority.getUserIds()));
         Map<String, Object> receivables = crmInstrumentMapper.dataInfoReceivables(timeEntity, AuthUtil.filterUserIdList(CrmEnum.RECEIVABLES,CrmAuthEnum.LIST, biAuthority.getUserIds()));
+        Map<String, Object> receivablesPlan = crmInstrumentMapper.dataInfoReceivablesPlan(timeEntity, AuthUtil.filterUserIdList(CrmEnum.CONTRACT,CrmAuthEnum.LIST, biAuthority.getUserIds()));
         timeEntity.setEndDate(DateUtil.endOfDay(timeEntity.getEndDate()));
         costumer.put("receiveNum",crmInstrumentMapper.dataInfoCustomerPoolNum(timeEntity,AuthUtil.filterUserIdList(CrmEnum.CUSTOMER,CrmAuthEnum.LIST, biAuthority.getUserIds()),2));
         costumer.put("putInPoolNum",crmInstrumentMapper.dataInfoCustomerPoolNum(timeEntity,AuthUtil.filterUserIdList(CrmEnum.CUSTOMER,CrmAuthEnum.LIST, biAuthority.getUserIds()),1));
@@ -378,6 +380,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         object.putAll(business);
         object.putAll(contract);
         object.putAll(receivables);
+        object.putAll(receivablesPlan);
         return object;
     }
 
@@ -405,7 +408,14 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
             }
         } else {
             if (1 == biParams.getIsUser()) {
-                if (biParams.getUserId() == null) {
+                List<Long> userIds = biParams.getUserIds();
+                if(userIds == null) {
+                    userIds = new ArrayList<>();
+                }
+                if (biParams.getUserId() != null){
+                    userIds.add(biParams.getUserId());
+                }
+                if (userIds.size() == 0) {
                     if (UserUtil.isAdmin()) {
                         userIdList.addAll(adminService.queryUserList(1).getData());
                     } else {
@@ -414,12 +424,14 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
                     }
                 } else {
                     if (UserUtil.isAdmin()) {
-                        userIdList.add(biParams.getUserId());
+                        userIdList.addAll(userIds);
                     } else {
-                        UserInfo userInfo = adminService.queryLoginUserInfo(biParams.getUserId()).getData();
-                        boolean isAdmin = userInfo.getUserId().equals(UserUtil.getSuperUser()) || Optional.ofNullable(userInfo.getRoles()).orElse(new ArrayList<>()).contains(userInfo.getSuperRoleId());
-                        if (!isAdmin) {
-                            userIdList.add(biParams.getUserId());
+                        for (Long userId: userIds) {
+                            UserInfo userInfo = adminService.queryLoginUserInfo(userId).getData();
+                            boolean isAdmin = userInfo.getUserId().equals(UserUtil.getSuperUser()) || Optional.ofNullable(userInfo.getRoles()).orElse(new ArrayList<>()).contains(userInfo.getSuperRoleId());
+                            if (!isAdmin) {
+                                userIdList.add(userId);
+                            }
                         }
                     }
                 }
@@ -518,7 +530,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
         BasePage<CrmActivity> page = crmActivityMapper.queryRecordList(biParams.parse(), Dict.create().set("crmType", crmType).set("type", type).set("userIds", userIds).set("startTime", startTime)
                 .set("endTime", endTime).set("queryType", queryType).set("search", search));
         for (CrmActivity crmActivity : page.getList()) {
-            SimpleUser data = adminService.queryUserById(crmActivity.getCreateUserId()).getData();
+            SimpleUser data = UserCacheUtil.getSimpleUser(crmActivity.getCreateUserId());
             crmActivity.setUserImg(data.getImg());
             crmActivity.setRealname(data.getRealname());
             crmActivityService.buildActivityRelation(crmActivity);
@@ -527,7 +539,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
     }
 
     @Override
-    public List<CrmActivity> exportRecordList(BiParams biParams) {
+    public List<Map<String,Object>> exportRecordList(BiParams biParams) {
         Integer crmType = biParams.getLabel();
         String endTime = biParams.getEndTime();
         String startTime = biParams.getStartTime();
@@ -557,7 +569,7 @@ public class CrmInstrumentServiceImpl implements CrmInstrumentService {
                 userIds = Collections.singletonList(UserUtil.getUserId());
             }
         }
-        if (UserUtil.isAdmin() && ObjectUtil.isAllEmpty(userId, deptId) && subUser == null && dataType == null) {
+        if (UserUtil.isAdmin() && ObjectUtil.isAllEmpty(userId, deptId) && subUser == null && dataType == null && userIds.isEmpty()) {
             userIds = adminService.queryUserList(1).getData();
         }
         if (!UserUtil.isAdmin()) {

@@ -155,7 +155,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
                 work.setCoverUrl(fileEntity.getUrl());
             }
         }
-        work.setOwnerUser(adminService.queryUserByIds(TagUtil.toLongSet(work.getOwnerUserId())).getData());
+        work.setOwnerUser(UserCacheUtil.getSimpleUsers(TagUtil.toLongSet(work.getOwnerUserId())));
         int isUpdate = 0;
         UserInfo user = UserUtil.getUser();
         if (workAuthUtil.isWorkAdmin() || user.getRoles().contains(workAuthUtil.getSmallAdminRole())) {
@@ -471,7 +471,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
             Map<Long, List<TaskInfoVO>> map = taskList.stream().collect(Collectors.groupingBy(TaskInfoVO::getMainUserId));
             List<Long> userIdList = new ArrayList<>(map.keySet());
             List<WorkTaskTemplateUserVO> userList = new ArrayList<>();
-            List<SimpleUser> data = adminService.queryUserByIds(userIdList).getData();
+            List<SimpleUser> data = UserCacheUtil.getSimpleUsers(userIdList);
             data.forEach(simpleUser -> {
                 WorkTaskTemplateUserVO userVO = new WorkTaskTemplateUserVO();
                 userVO.setRealname(simpleUser.getRealname());
@@ -525,7 +525,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
                     taskStatistics.setUnfinished(0).setOverdue(0).setComplete(0).setArchive(0).setCompletionRate("0").setOverdueRate("0");
                 } else {
                     taskStatistics = getBaseMapper().workStatistics(null, workIds, null, null);
-                    List<SimpleUser> simpleUserList = adminService.queryUserByIds(workTaskService.lambdaQuery().eq(WorkTask::getIshidden, 0).in(WorkTask::getWorkId, workIds).list().stream().map(WorkTask::getMainUserId).collect(Collectors.toList())).getData();
+                    List<SimpleUser> simpleUserList = UserCacheUtil.getSimpleUsers(workTaskService.lambdaQuery().eq(WorkTask::getIshidden, 0).in(WorkTask::getWorkId, workIds).list().stream().map(WorkTask::getMainUserId).collect(Collectors.toList()));
                     for (SimpleUser simpleUser : simpleUserList) {
                         memberTaskStatistics.add(BeanUtil.copyProperties(simpleUser, WorkUserStatsVO.class));
                     }
@@ -544,8 +544,8 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         Integer smallAdminRoleId = adminService.queryWorkRole(2).getData();
         List<Long> workAdminUserIds = workUserService.lambdaQuery().select(WorkUser::getUserId).eq(WorkUser::getRoleId, smallAdminRoleId).eq(WorkUser::getWorkId, workId)
                 .list().stream().map(WorkUser::getUserId).collect(Collectors.toList());
-        List<SimpleUser> ownerList = new ArrayList<>(adminService.queryUserByIds(workAdminUserIds).getData());
-        List<SimpleUser> userList = new ArrayList<>(adminService.queryUserByIds(SeparatorUtil.toLongSet(ownerUserId)).getData());
+        List<SimpleUser> ownerList = new ArrayList<>(UserCacheUtil.getSimpleUsers(workAdminUserIds));
+        List<SimpleUser> userList = new ArrayList<>(UserCacheUtil.getSimpleUsers(SeparatorUtil.toLongSet(ownerUserId)));
         List<WorkClassStatsVO> classStatistics = new ArrayList<>();
         List<WorkLabelStatsVO> labelStatistics = new ArrayList<>();
         List<WorkTaskClass> recordList = workTaskClassService.list(new QueryWrapper<WorkTaskClass>().select("class_id", "name").eq("work_id", workId));
@@ -589,7 +589,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         List<WorkUserStatsVO> list = new ArrayList<>();
         Work work = getById(workId);
         if (work.getIsOpen() == 1) {
-            List<SimpleUser> simpleUserList = adminService.queryUserByIds(workTaskService.lambdaQuery().eq(WorkTask::getIshidden, 0).eq(WorkTask::getWorkId, workId).list().stream().map(WorkTask::getMainUserId).collect(Collectors.toList())).getData();
+            List<SimpleUser> simpleUserList = UserCacheUtil.getSimpleUsers(workTaskService.lambdaQuery().eq(WorkTask::getIshidden, 0).eq(WorkTask::getWorkId, workId).list().stream().map(WorkTask::getMainUserId).collect(Collectors.toList()));
             for (SimpleUser simpleUser : simpleUserList) {
                 list.add(BeanUtil.copyProperties(simpleUser, WorkUserStatsVO.class));
             }
@@ -607,7 +607,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
                 if (StrUtil.isEmpty(userId)) {
                     continue;
                 }
-                SimpleUser user = adminService.queryUserById(Long.valueOf(userId)).getData();
+                SimpleUser user = UserCacheUtil.getSimpleUser(Long.valueOf(userId));
                 WorkTaskStatsVO first = getBaseMapper().workStatistics(workId, null, Long.parseLong(userId), null);
                 WorkUserStatsVO workUserStatsVO = BeanUtil.copyProperties(first, WorkUserStatsVO.class);
                 workUserStatsVO.setRealname(user.getRealname());
@@ -622,7 +622,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
     @Override
     public List<SimpleUser> queryWorkOwnerList(Integer workId) {
         String ownerUserId = getOne(new QueryWrapper<Work>().select("owner_user_id").eq("work_id", workId)).getOwnerUserId();
-        return adminService.queryUserByIds(SeparatorUtil.toLongSet(ownerUserId)).getData();
+        return UserCacheUtil.getSimpleUsers(SeparatorUtil.toLongSet(ownerUserId));
     }
 
     @Override
@@ -649,7 +649,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
             }
         }
         ownerUserId.append(UserUtil.getUserId()).append(Const.SEPARATOR);
-        return adminService.queryUserByIds(SeparatorUtil.toLongSet(ownerUserId.toString())).getData();
+        return UserCacheUtil.getSimpleUsers(SeparatorUtil.toLongSet(ownerUserId.toString()));
     }
 
     @Override
@@ -673,7 +673,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         Work byId = getById(workId);
         if (workId == null || byId.getIsOpen() == 1) {
             List<Long> userList = adminService.queryUserList(1).getData();
-            List<SimpleUser> data = adminService.queryUserByIds(userList).getData();
+            List<SimpleUser> data = UserCacheUtil.getSimpleUsers(userList);
             List<WorkOwnerRoleBO> collect = data.stream().map(obj -> BeanUtil.copyProperties(obj, WorkOwnerRoleBO.class)).collect(Collectors.toList());
             if (byId != null && byId.getOwnerRole() != null) {
                 Integer ownerRole = byId.getOwnerRole();
@@ -790,7 +790,7 @@ public class WorkServiceImpl extends BaseServiceImpl<WorkMapper, Work> implement
         List<List<Object>> errList = new ArrayList<>();
         Map<String, Integer> classMap = new HashMap<>();
         Work work = getById(workId);
-        List<SimpleUser> workUserList = adminService.queryUserByIds(TagUtil.toLongSet(work.getOwnerUserId())).getData();
+        List<SimpleUser> workUserList = UserCacheUtil.getSimpleUsers(TagUtil.toLongSet(work.getOwnerUserId()));
         Map<String, Long> workUserMap = workUserList.stream().collect(Collectors.toMap(SimpleUser::getRealname, SimpleUser::getUserId));
         if (file.isEmpty()) {
             return Dict.create();

@@ -24,6 +24,7 @@ import com.kakarote.core.feign.hrm.service.SalaryRecordService;
 import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.BaseUtil;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.examine.constant.*;
 import com.kakarote.examine.entity.BO.ExamineBO;
@@ -96,7 +97,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
           没有可以审批流程时直接审核通过
          */
         if (examine == null) {
-            return new ExamineRecordReturnVO(null, ExamineStatusEnum.PASS.getStatus(), null);
+            return new ExamineRecordReturnVO(null, ExamineStatusEnum.IGNORE.getStatus(), null);
         }
         //编辑审批
         Integer recordId = examineRecordSaveBO.getRecordId();
@@ -298,7 +299,13 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
                 }
             } else {
                 examineRecordLogService.lambdaUpdate().set(ExamineRecordLog::getExamineStatus, examineBO.getStatus())
-                        .eq(ExamineRecordLog::getBatchId, recordLog.getBatchId()).update();
+                        .eq(ExamineRecordLog::getBatchId, recordLog.getBatchId()).eq(ExamineRecordLog::getExamineUserId,userInfo.getUserId()).update();
+                examineRecordLogService.lambdaUpdate()
+                        .set(ExamineRecordLog::getExamineStatus, ExamineStatusEnum.INVALID.getStatus())
+                        .eq(ExamineRecordLog::getBatchId, recordLog.getBatchId())
+                        .ne(ExamineRecordLog::getExamineUserId,userInfo.getUserId())
+                        .in(ExamineRecordLog::getExamineStatus, ExamineStatusEnum.UNDERWAY.getStatus(), ExamineStatusEnum.AWAIT.getStatus())
+                        .update();
             }
             /*
              获取自定义字段列表，用于条件审核
@@ -756,7 +763,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
         List<ExamineFlowVO> examineFlowVoS = examinePreviewVO.getExamineFlowList();
         List<ExamineFlowDataVO> examineFlowDataVoS = new ArrayList<>();
         //发起人详细信息
-        SimpleUser createUser = adminService.queryUserById(examineRecord.getCreateUserId()).getData();
+        SimpleUser createUser = UserCacheUtil.getSimpleUser(examineRecord.getCreateUserId());
         for (ExamineFlowVO examineFlowVO : examineFlowVoS) {
             ExamineFlowDataVO examineFlowDataVO = new ExamineFlowDataVO();
             BeanUtil.copyProperties(examineFlowVO, examineFlowDataVO, "userList");
@@ -803,7 +810,7 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
                             continue;
                         }
                         //审核进行中或已结束 记录状态
-                        if (examineStatus != 0 && examineStatus != 1) {
+                        if ((examineStatus != 0 && examineStatus != 1) || examineFlowVO.getType() == 3 ) {
                             isEnd = examineStatus;
                         }
                         //审核结束  记录状态
@@ -835,7 +842,9 @@ public class ExamineRecordServiceImpl extends BaseServiceImpl<ExamineRecordMappe
             if (isEnd != null) {
                 examineFlowDataVO.setExamineStatus(isEnd);
             } else {
-                examineFlowDataVO.setExamineStatus(status != null ? status : ExamineStatusEnum.AWAIT.getStatus());
+                if (examineFlowVO.getType() != 3) {
+                    examineFlowDataVO.setExamineStatus(status != null ? status : ExamineStatusEnum.AWAIT.getStatus());
+                }
             }
             examineFlowDataVO.setUserList(mapList);
             if (status != null) {

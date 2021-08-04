@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmSalaryOptionMapper">
+
+    <select id="querySalaryOptionTemplateList" resultType="com.kakarote.hrm.entity.PO.HrmSalaryOptionTemplate">
+        select a.*,ifnull(b.is_open,0) as isOpen from wk_hrm_salary_option_template a
+        left join wk_hrm_salary_option b on a.code = b.code
+    </select>
+</mapper>

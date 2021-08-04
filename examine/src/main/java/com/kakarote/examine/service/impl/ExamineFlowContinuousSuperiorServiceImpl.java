@@ -16,7 +16,6 @@ import com.kakarote.examine.entity.VO.ExamineFlowVO;
 import com.kakarote.examine.mapper.ExamineFlowContinuousSuperiorMapper;
 import com.kakarote.examine.service.ExamineTypeService;
 import com.kakarote.examine.service.IExamineFlowContinuousSuperiorService;
-import com.kakarote.examine.service.IExamineManagerUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -38,9 +37,6 @@ public class ExamineFlowContinuousSuperiorServiceImpl extends BaseServiceImpl<Ex
 
     @Autowired
     private AdminService adminService;
-
-    @Autowired
-    private IExamineManagerUserService examineManagerUserService;
 
     /**
      * 保存额外的审批流程data对象
@@ -91,7 +87,6 @@ public class ExamineFlowContinuousSuperiorServiceImpl extends BaseServiceImpl<Ex
         if (userInfo == null) {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
         }
-        Integer examineErrorHandling = examineFlow.getExamineErrorHandling();
         List<Long> userList;
         if (userInfo.getParentId() == null || userInfo.getParentId() == 0){
             userList = new ArrayList<>();
@@ -129,10 +124,11 @@ public class ExamineFlowContinuousSuperiorServiceImpl extends BaseServiceImpl<Ex
     @Override
     @SuppressWarnings("unchecked")
     public ExamineFlowVO createFlowInfo(ExamineFlow examineFlow, Map<String, Object> map, List<UserInfo> userInfoList,Long ownerUserId) {
-        UserInfo userInfo;
+        UserInfo userInfo = null;
         if (ownerUserId != null){
             userInfo = adminService.getUserInfo(ownerUserId).getData();
-        }else {
+        }
+        if(userInfo == null){
             userInfo = adminService.getUserInfo(UserUtil.getUserId()).getData();
         }
         ExamineFlowVO examineFlowVO = new ExamineFlowVO();

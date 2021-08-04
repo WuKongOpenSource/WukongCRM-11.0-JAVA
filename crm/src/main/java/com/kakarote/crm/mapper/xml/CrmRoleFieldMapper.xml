@@ -2,4 +2,27 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://www.72crm.com/mybatis-3.5.3-mapper.dtd">
 <mapper namespace="com.kakarote.crm.mapper.CrmRoleFieldMapper">
 
+    <select id="queryRoleFieldList" resultType="com.kakarote.crm.entity.PO.CrmRoleField">
+        SELECT
+            a.*,
+            b.type
+        FROM
+            wk_crm_role_field as a
+            LEFT JOIN wk_crm_field as b on a.field_id = b.field_id
+        WHERE
+        a.role_id = #{roleId} and a.label = #{label}
+    </select>
+
+    <select id="queryMaskFieldList" resultType="com.kakarote.crm.entity.PO.CrmRoleField">
+        SELECT
+            a.field_name,
+            max( a.mask_type ) AS mask_type,
+            b.type
+        FROM
+            wk_crm_role_field as a
+            JOIN wk_crm_field as b on a.field_id = b.field_id
+        WHERE
+            a.mask_type >= #{maskType} and a.label = #{label}
+        GROUP BY field_name
+    </select>
 </mapper>

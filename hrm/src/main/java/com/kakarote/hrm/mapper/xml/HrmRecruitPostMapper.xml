@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmRecruitPostMapper">
+    <update id="setRecruitPost" parameterType="com.kakarote.hrm.entity.PO.HrmRecruitPost">
+        UPDATE  `wk_hrm_recruit_post`
+        SET `post_name` = #{postName},`dept_id` = #{deptId},`job_nature` = #{jobNature},`city` = #{city},
+            `recruit_num` = #{recruitNum},`reason` = #{reason},`work_time` = #{workTime},`education_require` = #{educationRequire},
+            `min_salary` = #{minSalary},`max_salary` = #{maxSalary},`salary_unit` = #{salaryUnit},`min_age` = #{minAge},
+            `max_age` = #{maxAge},`latest_entry_time` = #{latestEntryTime},`owner_employee_id` = #{ownerEmployeeId},
+            `interview_employee_ids` = #{interviewEmployeeIds},`description` = #{description},
+            `emergency_level` = #{emergencyLevel},`post_type_id` = #{postTypeId}
+        WHERE `post_id` = #{postId}
+    </update>
+
+    <select id="queryById" resultType="com.kakarote.hrm.entity.VO.RecruitPostVO">
+        <include refid="selectSql"></include>
+    where a.post_id = #{postId}
+    </select>
+    <select id="queryRecruitPostPageList" resultType="com.kakarote.hrm.entity.VO.RecruitPostVO">
+        <include refid="selectSql"></include>
+        where 1=1
+        <if test="data.postName != null">
+            and a.post_name like concat('%',#{data.postName},'%')
+        </if>
+        <if test="data.status != null">
+            and a.status = #{data.status}
+        </if>
+        <if test="data.jobNature">
+            and a.job_nature = #{data.jobNature}
+        </if>
+        <if test="data.city">
+            and a.city like concat('%',#{data.city},'%')
+        </if>
+        <if test="data.deptId">
+            and a.dept_id = #{data.deptId}
+        </if>
+        <if test="data.ownerEmployeeId">
+            and a.owner_employee_id = #{data.ownerEmployeeId}
+        </if>
+        <choose>
+            <when test="deptIds != null and deptIds.size >0">
+                and a.dept_id in
+                <foreach collection="deptIds" item="deptId" index="index" open="(" close=")" separator=",">
+                    #{deptId}
+                </foreach>
+            </when>
+            <when test="deptIds != null and deptIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        order by a.create_time desc
+    </select>
+    <select id="queryPostStatusList" resultType="java.lang.Integer">
+        select a.status
+           from `wk_hrm_recruit_post` a
+        where 1 = 1
+        <choose>
+            <when test="deptIds != null and deptIds.size >0">
+                and a.dept_id in
+                <foreach collection="deptIds" item="deptId" index="index" open="(" close=")" separator=",">
+                    #{deptId}
+                </foreach>
+            </when>
+            <when test="deptIds != null and deptIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+    </select>
+
+    <sql id="selectSql">
+        select a.*,
+        b.name as deptName,
+        c.name as postTypeName,
+        (select count(1)
+        from `wk_hrm_recruit_candidate` c
+        where c.post_id = a.post_id and c.status = 8) as hasEntryNum,
+        d.employee_name as ownerEmployeeName,
+        (select group_concat(e.employee_name) from wk_hrm_employee e where find_in_set(e.employee_id,a.interview_employee_ids) and e.is_del = 0) as interviewEmployeeName
+        from `wk_hrm_recruit_post` a
+        left join `wk_hrm_dept` b on a.dept_id = b.dept_id
+        left join wk_hrm_recruit_post_type c on a.post_type_id = c.id
+        left join wk_hrm_employee d on a.owner_employee_id = d.employee_id and d.is_del = 0
+    </sql>
+</mapper>

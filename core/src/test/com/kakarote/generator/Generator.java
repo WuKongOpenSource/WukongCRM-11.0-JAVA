@@ -35,7 +35,7 @@ public class Generator {
     private static GlobalConfig getGlobalConfig(){
         GlobalConfig globalConfig = new GlobalConfig();
         globalConfig.setOutputDir("D://generator/src/main/java");
-        globalConfig.setAuthor("author");
+        globalConfig.setAuthor("zhangzhiwei");
         globalConfig.setOpen(false);
         globalConfig.setKotlin(false);
         globalConfig.setSwagger2(true);
@@ -46,7 +46,7 @@ public class Generator {
 
     private static DataSourceConfig getDataSourceConfig(){
         DataSourceConfig dataSourceConfig = new DataSourceConfig();
-        dataSourceConfig.setUrl("jdbc:mysql://127.0.0.1:3306/wk_crm_single?characterEncoding=utf8&useSSL=false&zeroDateTimeBehavior=convertToNull&tinyInt1isBit=false&serverTimezone=Asia/Shanghai");
+        dataSourceConfig.setUrl("jdbc:mysql://127.0.0.1:3306/xxx?characterEncoding=utf8&useSSL=false&zeroDateTimeBehavior=convertToNull&tinyInt1isBit=false&serverTimezone=Asia/Shanghai");
         dataSourceConfig.setDriverName("com.mysql.cj.jdbc.Driver");
         dataSourceConfig.setUsername("root");
         dataSourceConfig.setPassword("password");

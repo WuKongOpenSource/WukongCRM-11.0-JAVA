@@ -2,6 +2,7 @@ package com.kakarote.crm.mapper;
 
 import cn.hutool.core.lang.Dict;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.annotation.SqlParser;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.servlet.BaseMapper;
 import com.kakarote.crm.entity.PO.CrmActivity;
@@ -31,9 +32,11 @@ public interface CrmActivityMapper extends BaseMapper<CrmActivity> {
 
     CrmActivity queryActivityById(Integer activityId);
 
+    @SqlParser(filter = true)
     BasePage<CrmActivity> queryRecordList(BasePage<Object> parse, @Param("data") Dict data);
 
-    List<CrmActivity> exportRecordList( @Param("data") Dict data);
+    @SqlParser(filter = true)
+    List<Map<String,Object>> exportRecordList( @Param("data") Dict data);
 
     public BasePage<JSONObject> queryOutworkStats(BasePage<JSONObject> parse, @Param("startTime") String startTime, @Param("endTime") String endTime, @Param("userIds") List<Long> userIds);
 

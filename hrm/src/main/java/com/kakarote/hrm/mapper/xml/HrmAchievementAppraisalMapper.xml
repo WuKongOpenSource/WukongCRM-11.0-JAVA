@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmAchievementAppraisalMapper">
+
+    <select id="queryAppraisalPageList" resultType="com.kakarote.hrm.entity.VO.AppraisalPageListVO">
+        SELECT a.*,
+        b.table_name,
+        concat(ifnull(GROUP_CONCAT(distinct d.name),'') ,if(GROUP_CONCAT(distinct d.name) is null or  GROUP_CONCAT(distinct c.employee_name) is null,'',','),
+        ifnull(GROUP_CONCAT(c.employee_name), '')) AS appraisalRange
+        FROM `wk_hrm_achievement_appraisal` a
+        LEFT JOIN `wk_hrm_achievement_table` b ON a.table_id = b.table_id
+        left join wk_hrm_employee c on find_in_set(c.employee_id,a.employee_ids)
+        left join wk_hrm_dept d on find_in_set(d.dept_id,a.dept_ids)
+        where 1 = 1
+        <if test="data.status != null and data.status != 5">
+            and a.status = #{data.status}
+        </if>
+        <if test="data.status == 5">
+            and a.status in(1,2,3)
+        </if>
+        GROUP BY a.appraisal_id
+        order by a.create_time desc
+    </select>
+    <select id="queryEmployeeListByAppraisalId"
+            resultType="com.kakarote.hrm.entity.VO.EmployeeListByAppraisalIdVO">
+        select
+        a.employee_appraisal_id,
+        a.employee_id,
+        a.score,
+        a.status,
+        a.level_id,
+        d.level_name,
+        a.read_status,
+        b.employee_name,
+        b.mobile,
+        b.job_number,
+        b.status as employeeStatus,
+        b.is_del,
+        c.name as deptName,
+        e.employee_name as follow_up_employee_name
+        from `wk_hrm_achievement_employee_appraisal` a
+        left join `wk_hrm_employee` b on a.employee_id = b.employee_id
+        left join `wk_hrm_dept` c on b.dept_id = c.dept_id
+        left join wk_hrm_achievement_appraisal_score_level d on a.level_id = d.level_id
+        left join `wk_hrm_employee` e on a.follow_up_employee_id = e.employee_id
+        where a.appraisal_id = #{data.appraisalId}
+        <if test="data.employeeName != null and data.employeeName != ''">
+            and b.employee_name like concat('%',#{data.employeeName},'%')
+        </if>
+        <if test="data.deptId != null  ">
+            and c.dept_id = #{data.deptId}
+        </if>
+        <if test="data.levelId != null ">
+            and a.level_id = #{data.levelId}
+        </if>
+        <if test="data.status != null ">
+            and a.status = #{data.status}
+        </if>
+    </select>
+
+    <select id="queryEmployeePageList" resultType="com.kakarote.hrm.entity.VO.AppraisalEmployeeListVO">
+        select a.employee_id,a.employee_name,a.mobile,b.name as deptName,a.post,a.status as employeeStatus,date_format(a.entry_time,'%Y-%m-%d') as become_time,a.is_del
+        from wk_hrm_employee a left join wk_hrm_dept b on a.dept_id = b.dept_id where 1 = 1 and a.entry_status in (1,3)
+        <if test="data.employeeName != null">
+            and a.employee_name like concat('%',#{data.employeeName},'%')
+        </if>
+        <if test="data.mobile != null">
+            and a.mobile like concat('%',#{data.mobile},'%')
+        </if>
+        <if test="data.employeeStatus != null">
+            and a.status = #{data.employeeStatus}
+        </if>
+        <if test="data.deptId != null">
+            and a.dept_id = #{data.deptId}
+        </if>
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        order by a.is_del
+    </select>
+    <select id="queryEmployeeLastAppraisal" resultType="java.util.Map">
+        select ifnull((select count(*) from wk_hrm_achievement_employee_appraisal g
+                                         left join wk_hrm_achievement_appraisal h on g.appraisal_id = h.appraisal_id
+                where g.employee_id = a.employee_id and h.status = 4),0) as apprailsaledCnt,
+               ifnull((select count(*) from wk_hrm_achievement_employee_appraisal g
+                                         left join wk_hrm_achievement_appraisal h on g.appraisal_id = h.appraisal_id
+                where g.employee_id = a.employee_id and h.status != 4),0) as apprailsalingCnt,
+               b.appraisal_name as lastAppraisalName,
+               if(a.level_id = null,null,concat(c.level_name,'(',a.score,')')) as lastAppraisalResult,
+               d.employee_name,d.sex,d.status as employeeStatus,d.post,e.name as deptName
+        from wk_hrm_achievement_employee_appraisal a
+        left join wk_hrm_achievement_appraisal b on a.appraisal_id = b.appraisal_id
+        left join wk_hrm_achievement_appraisal_score_level c on a.level_id = c.level_id
+        left join wk_hrm_employee d  on a.employee_id = d.employee_id
+        left join wk_hrm_dept e on d.dept_id=e.dept_id
+        where a.employee_id = #{employeeId} order by a.create_time desc limit 1
+    </select>
+    <select id="queryEmployeeAppraisal" resultType="com.kakarote.hrm.entity.VO.EmployeeAppraisalVO">
+            select a.employee_appraisal_id,
+                   a.employee_id,
+                   a.score,
+                   a.status,
+                   b.appraisal_name,
+                   b.start_time,
+                   b.end_time,
+                   c.level_name as resultLevel
+            from `wk_hrm_achievement_employee_appraisal` a
+                     left join `wk_hrm_achievement_appraisal` b on a.appraisal_id = b.appraisal_id
+                     left join `wk_hrm_achievement_appraisal_score_level` c on a.level_id = c.level_id
+            where a.employee_id = #{employeeId} order by a.create_time desc
+    </select>
+
+</mapper>

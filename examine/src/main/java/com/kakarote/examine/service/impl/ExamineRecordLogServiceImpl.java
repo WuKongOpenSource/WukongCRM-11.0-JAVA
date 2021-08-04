@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.kakarote.core.feign.admin.service.AdminService;
 import com.kakarote.core.servlet.BaseServiceImpl;
+import com.kakarote.core.utils.UserCacheUtil;
 import com.kakarote.examine.constant.ExamineStatusEnum;
 import com.kakarote.examine.entity.PO.ExamineRecordLog;
 import com.kakarote.examine.entity.VO.ExamineRecordLogVO;
@@ -91,7 +92,7 @@ public class ExamineRecordLogServiceImpl extends BaseServiceImpl<ExamineRecordLo
                 if (map.containsKey(createUserId)) {
                     examineRecordLogV0.setExamineUserName(map.get(createUserId));
                 } else {
-                    String userName = adminService.queryUserName(createUserId).getData();
+                    String userName = UserCacheUtil.getUserName(createUserId);
                     examineRecordLogV0.setExamineUserName(userName);
                     map.put(createUserId, userName);
                 }
@@ -109,7 +110,7 @@ public class ExamineRecordLogServiceImpl extends BaseServiceImpl<ExamineRecordLo
                 if (map.containsKey(examineUserId)) {
                     examineRecordLogV0.setExamineUserName(map.get(examineUserId));
                 } else {
-                    String userName = adminService.queryUserName(examineUserId).getData();
+                    String userName = UserCacheUtil.getUserName(examineUserId);
                     examineRecordLogV0.setExamineUserName(userName);
                     map.put(examineUserId, userName);
                 }

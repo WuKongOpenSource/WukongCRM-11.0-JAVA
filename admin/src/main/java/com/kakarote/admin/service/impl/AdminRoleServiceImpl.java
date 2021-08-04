@@ -467,6 +467,13 @@ public class AdminRoleServiceImpl extends BaseServiceImpl<AdminRoleMapper, Admin
     public void relatedUser(List<Long> userIds, List<Integer> roleIds) {
         if (CollUtil.isNotEmpty(roleIds)) {
             roleIds = roleIds.stream().distinct().collect(Collectors.toList());
+            if(!adminRoleAuthService.isQueryAllRole()) {
+                Set<Integer> authByUser = adminRoleAuthService.queryAuthByUser();
+                roleIds.retainAll(authByUser);
+                if(roleIds.size() == 0) {
+                    return;
+                }
+            }
         } else {
             throw new CrmException(AdminCodeEnum.ADMIN_ROLE_NOT_EXIST_ERROR);
         }

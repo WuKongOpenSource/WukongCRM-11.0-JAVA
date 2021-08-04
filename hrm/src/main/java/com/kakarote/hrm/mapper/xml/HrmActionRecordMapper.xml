@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmActionRecordMapper">
+
+    <select id="queryFieldValue" resultType="com.kakarote.hrm.entity.VO.HrmModelFiledVO">
+        select a.field_id, a.field_value,b.field_name,b.name,b.type from ${data.dataTableName} as a
+        join wk_hrm_employee_field  b on a.field_id = b.field_id
+        where a.${data.key}= #{data.value} and b.field_name is not null
+    </select>
+</mapper>

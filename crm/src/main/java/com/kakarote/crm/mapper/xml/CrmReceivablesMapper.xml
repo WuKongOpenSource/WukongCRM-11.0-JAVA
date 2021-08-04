@@ -13,7 +13,7 @@
              wk_crm_receivables AS a
                  LEFT JOIN wk_crm_customer AS b ON a.customer_id = b.customer_id
                  LEFT JOIN wk_crm_contract AS c ON a.contract_id = c.contract_id
-                 LEFT JOIN wk_crm_receivables_plan as e on a.plan_id=e.plan_id
+                 LEFT JOIN wk_crm_receivables_plan as e on a.receivables_plan_id=e.receivables_plan_id
         WHERE
                 a.receivables_id = #{id}
     </select>

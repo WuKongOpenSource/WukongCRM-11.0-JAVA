@@ -56,7 +56,7 @@ public class CrmFieldConfigServiceImpl extends BaseServiceImpl<CrmFieldConfigMap
         if (nameList.size() == 0) {
             String name;
             try {
-                name = "flied_" + RandomUtil.randomString(RandomUtil.BASE_CHAR, 6);
+                name = "field_" + RandomUtil.randomString(RandomUtil.BASE_CHAR, 6);
                 CrmFieldConfig crmFieldConfig = new CrmFieldConfig();
                 crmFieldConfig.setFieldType(parseType(fieldType));
                 crmFieldConfig.setLabel(label);

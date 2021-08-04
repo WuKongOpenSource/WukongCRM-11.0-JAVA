@@ -30,23 +30,12 @@ public interface ICrmExamineRecordService extends BaseService<CrmExamineRecord> 
      * @return data
      */
     public CrmExamineData saveExamineRecord(Integer type, Long userId, Long ownerUserId, Integer recordId, Integer status);
-    /**
-     * 删除审批记录
-     * @param recordId id
-     */
-    public void deleteExamine(Integer recordId);
 
     /**
      * 更新合同回款金额
      * @param id id
      */
     public void updateContractMoney(Integer id);
-
-    /**
-     * 更新合同未回款金额
-     * @param id id
-     */
-    public void updateUnreceivedMoney(Integer id);
 
     /**
      * 查询审批记录列表

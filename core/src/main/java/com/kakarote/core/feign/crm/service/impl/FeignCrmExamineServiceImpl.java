@@ -37,21 +37,21 @@ public class FeignCrmExamineServiceImpl implements CrmExamineService {
 
     @Override
     public Result<Map<String, Object>> getDataMapForNewExamine(ExamineConditionDataBO examineConditionDataBO) {
-        return null;
+        return Result.ok(null);
     }
 
     @Override
     public Result<Boolean> updateCheckStatusByNewExamine(ExamineConditionDataBO examineConditionDataBO) {
-        return null;
+        return Result.ok(false);
     }
 
     @Override
     public Result addMessageForNewExamine(ExamineMessageBO examineMessageBO) {
-        return null;
+        return Result.ok();
     }
 
     @Override
     public Result<SimpleCrmInfo> getCrmSimpleInfo(ExamineConditionDataBO examineConditionDataBO) {
-        return null;
+        return Result.ok(null);
     }
 }

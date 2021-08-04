@@ -288,7 +288,9 @@ public class CrmTeamMembersServiceImpl extends BaseServiceImpl<CrmTeamMembersMap
                 crmTeamMembers.setUserId(memberId);
                 teamMembers.add(crmTeamMembers);
                 addTermMessage(crmEnum, id, (String) objects[1], memberId, 1);
-                actionRecordUtil.addMemberActionRecord(CrmEnum.CUSTOMER, id, memberId, (String) objects[1]);
+            }
+            if (memberIds.size() > 0){
+                actionRecordUtil.addMemberActionRecord(crmEnum, id, memberIds, (String) objects[1]);
             }
             updateEsField(crmEnum, Collections.singletonList(id), memberIds, false);
             if (crmMemberSaveBO.getChangeType() != null && crmEnum == CrmEnum.CUSTOMER) {

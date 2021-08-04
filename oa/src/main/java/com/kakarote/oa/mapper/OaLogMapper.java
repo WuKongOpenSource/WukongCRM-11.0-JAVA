@@ -6,10 +6,12 @@ import com.kakarote.core.feign.admin.entity.SimpleUser;
 import com.kakarote.core.servlet.BaseMapper;
 import com.kakarote.oa.entity.PO.OaLog;
 import com.kakarote.oa.entity.PO.OaLogBulletin;
+import com.kakarote.oa.entity.VO.OaBusinessNumVO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -70,4 +72,6 @@ public interface OaLogMapper extends BaseMapper<OaLog> {
     public List<JSONObject> queryExportList(JSONObject object);
 
     public List<JSONObject> queryCommentList(@Param("typeId") Integer typeId);
+
+    public OaBusinessNumVO queryOaBusinessNum(Map<String,Object> map);
 }

@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -211,7 +209,7 @@ public class CrmCommonServiceImpl implements ICrmCommonService {
     private long deleteByQuery(RestHighLevelClient client) {
         List<String> indexList = new ArrayList<>();
         for (CrmEnum value : CrmEnum.values()) {
-            if (!value.equals(CrmEnum.RECEIVABLES_PLAN) && !value.equals(CrmEnum.CUSTOMER_POOL) && !value.equals(CrmEnum.MARKETING)){
+            if (!value.equals(CrmEnum.NULL) && !value.equals(CrmEnum.CUSTOMER_POOL) && !value.equals(CrmEnum.MARKETING)){
                 indexList.add(value.getIndex());
             }
         }

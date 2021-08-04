@@ -26,9 +26,8 @@ import java.util.*;
 public class AuthUtil {
 
     public static boolean isCrmAuth(CrmEnum crmEnum, Integer id,CrmAuthEnum crmAuthEnum) {
-        String name = crmEnum.getTable();
-        String conditions = name + "_id" + " = " + id + getCrmAuthSql(crmEnum, 1,crmAuthEnum);
-        Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + name, conditions);
+        String conditions = crmEnum.getPrimaryKey(false) + " = " + id + getCrmAuthSql(crmEnum, 1,crmAuthEnum);
+        Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + crmEnum.getTableName(), conditions);
         return integer == 0;
     }
 
@@ -36,9 +35,8 @@ public class AuthUtil {
      * 团队成员是否有操作权限
      */
     public static boolean isRwAuth(Integer id, CrmEnum crmEnum,CrmAuthEnum crmAuthEnum) {
-        String name = crmEnum.getTable();
-        String conditions = name + "_id" + " = " + id + getCrmAuthSql(crmEnum, 0,crmAuthEnum);
-        Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + name, conditions);
+        String conditions = crmEnum.getPrimaryKey(false) + " = " + id + getCrmAuthSql(crmEnum, 0,crmAuthEnum);
+        Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + crmEnum.getTableName(), conditions);
         return integer == 0;
     }
 
@@ -46,9 +44,8 @@ public class AuthUtil {
      * 是否具有转移客户负责人权限
      */
     public static boolean isChangeOwnerUserAuth(Integer id, CrmEnum crmEnum,CrmAuthEnum crmAuthEnum) {
-        String name = crmEnum.getTable();
-        String conditions = name + "_id" + " = " + id + getCrmAuthSql(crmEnum, 3,crmAuthEnum);
-        Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + name, conditions);
+        String conditions = crmEnum.getPrimaryKey(false) + " = " + id + getCrmAuthSql(crmEnum, 3,crmAuthEnum);
+        Integer integer = ApplicationContextHolder.getBean(CrmAuthMapper.class).queryAuthNum("wk_crm_" + crmEnum.getTableName(), conditions);
         return integer == 0;
     }
 
@@ -125,7 +122,7 @@ public class AuthUtil {
                 /* 坚持对应团队负责人权限 */
                 boolean contains = Arrays.asList(CrmEnum.CUSTOMER, CrmEnum.CONTACTS, CrmEnum.BUSINESS, CrmEnum.RECEIVABLES, CrmEnum.CONTRACT).contains(crmEnum);
                 if (contains && CrmAuthEnum.DELETE != crmAuthEnum && !Objects.equals(3,readOnly)) {
-                    conditions.append("or {alias}").append(crmEnum.getTable()).append("_id");
+                    conditions.append("or {alias}").append(crmEnum.getPrimaryKey(false));
                     conditions.append(" in (");
                     conditions.append("SELECT type_id FROM wk_crm_team_members where type = '")
                             .append(crmEnum.getType())
@@ -176,17 +173,20 @@ public class AuthUtil {
      * @param crmAuthEnum 数据操作权限类型
      * @return 用户列表
      */
+    @SuppressWarnings("unchecked")
     public static List<Long> queryAuthUserList(CrmEnum crmEnum, CrmAuthEnum crmAuthEnum) {
         Long userId = UserUtil.getUserId();
-        Integer menuId = crmAuthEnum.getMenuId(crmEnum);
-        String key = CrmCacheKey.CRM__AUTH_USER_CACHE_KEY + menuId.toString() + ":User:" + userId.toString();
         Redis redis = BaseUtil.getRedis();
-        List<Long> userIds = redis.get(key);
-        if (userIds != null && userIds.size() > 0) {
-            return userIds;
+        String key = CrmCacheKey.CRM_AUTH_USER_CACHE_KEY + userId.toString();
+        Integer menuId = crmAuthEnum.getMenuId(crmEnum);
+        Map<Object,Object> map = redis.getRedisMap(key);
+        if (map != null && map.containsKey(menuId)) {
+            return (List<Long>) map.get(menuId);
         }
-        userIds = ApplicationContextHolder.getBean(AdminService.class).queryUserByAuth(UserUtil.getUserId(), menuId).getData();
-        redis.setex(key, 60 * 30, userIds);
+        List<Long> userIds = ApplicationContextHolder.getBean(AdminService.class).queryUserByAuth(userId, menuId).getData();
+        redis.put(key, menuId, userIds);
+        //手动设置过期时间
+        redis.expire(key,30 * 60);
         return userIds;
     }
 

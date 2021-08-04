@@ -205,9 +205,6 @@
                 FIND_IN_SET(#{userId},a.owner_user_id)
             </foreach>
         </if>
-        <if test="data.status != null and data.status == 1">
-            and a.status in(1,2)
-        </if>
         <choose>
             <when test="data.status != null and data.status == 1">
                 and a.status in(1,2)
@@ -227,6 +224,12 @@
         </if>
         <if test="data.mainUserId != null">
             and a.main_user_id = #{data.mainUserId}
+        </if>
+        <if test="data.mainUserIds != null and data.mainUserIds.size()>0">
+            and a.main_user_id in
+            <foreach collection="data.mainUserIds" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
         </if>
         order by a.create_time desc
     </select>

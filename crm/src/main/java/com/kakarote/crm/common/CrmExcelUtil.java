@@ -2,17 +2,30 @@ package com.kakarote.crm.common;
 
 
 import com.alibaba.fastjson.JSONObject;
+import com.kakarote.core.common.SystemCodeEnum;
+import com.kakarote.core.exception.CrmException;
 import org.apache.poi.hssf.usermodel.DVConstraint;
 import org.apache.poi.hssf.usermodel.HSSFDataValidation;
-import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellRangeAddressList;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class CrmExcelUtil {
+
+    private static final Map<String,List<String>> areaMap;
+
+    static {
+        try {
+            areaMap = JSONObject.parseObject(Objects.requireNonNull(CrmExcelUtil.class.getClassLoader().getResourceAsStream("area.json")), HashMap.class);
+        } catch (IOException e) {
+            throw new CrmException(SystemCodeEnum.SYSTEM_ERROR);
+        }
+    }
 
     public CrmExcelUtil() {
     }
@@ -47,8 +60,8 @@ public class CrmExcelUtil {
     /**
      * offset为主列, 市引用省一列的值，区引用市一列的值
      */
-    public static void setDataValidation(String offset, HSSFSheet sheet, int rowNum, int colNum) {
-        Integer i = rowNum + 1;
+    public static void setDataValidation(String offset, Sheet sheet, int rowNum, int colNum) {
+        int i = rowNum + 1;
         DVConstraint formula = DVConstraint.createFormulaListConstraint("INDIRECT($" + offset + "$" + i + ")");
         CellRangeAddressList rangeAddressList = new CellRangeAddressList(rowNum, rowNum, colNum, colNum);
         HSSFDataValidation cacse = new HSSFDataValidation(rangeAddressList, formula);
@@ -96,14 +109,7 @@ public class CrmExcelUtil {
      * 获取市区对应关系
      * @return 对应关系
      */
-    @SuppressWarnings("unchecked")
     public static Map<String,List<String>> getAreaMap() {
-        HashMap<String,List<String>> map = null;
-        try {
-            map = JSONObject.parseObject(CrmExcelUtil.class.getClassLoader().getResourceAsStream("area.json"), HashMap.class);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return map;
+        return areaMap;
     }
 }

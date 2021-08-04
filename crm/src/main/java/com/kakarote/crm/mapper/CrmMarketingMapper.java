@@ -18,7 +18,9 @@ import java.util.List;
  */
 public interface CrmMarketingMapper extends BaseMapper<CrmMarketing> {
 
-    BasePage<CrmMarketing> queryPageList(BasePage<Object> parse, @Param("userIds") List<Long> userIds,@Param("crmType") Integer crmType,
+    BasePage<CrmMarketing> queryPageList(BasePage<Object> parse, @Param("userIds") List<Long> userIds,
+                                         @Param("deptIds") List<Integer> deptIds,
+                                         @Param("crmType") Integer crmType,
                                          @Param("search") String search,@Param("isAdmin") boolean isAdmin,
                                          @Param("timeType") Integer timeType,@Param("status") Integer status);
 

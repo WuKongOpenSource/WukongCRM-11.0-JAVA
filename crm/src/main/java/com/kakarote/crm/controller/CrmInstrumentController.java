@@ -1,7 +1,5 @@
 package com.kakarote.crm.controller;
 
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.FieldEnum;
 import com.kakarote.core.common.R;
@@ -12,6 +10,7 @@ import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.crm.entity.BiParams;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.crm.constant.CrmEnum;
 import com.kakarote.crm.entity.BO.CrmSearchParamsBO;
 import com.kakarote.crm.entity.PO.CrmActivity;
@@ -23,13 +22,14 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.hssf.util.HSSFColor;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormat;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -272,52 +272,34 @@ public class CrmInstrumentController {
             throw new CrmException(SystemCodeEnum.SYSTEM_NO_VALID);
         }
         CrmEnum crmEnum = CrmEnum.parse(crmType);
-        List<CrmActivity> list = instrumentService.exportRecordList(biParams);
-        try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            if (crmType == 2) {
-                writer.addHeaderAlias("crmTypeName", "所属客户");
-            }
-            writer.addHeaderAlias("content", "跟进内容");
-            writer.addHeaderAlias("createUserName", "跟进人");
-            if (crmType != 2) {
-                writer.addHeaderAlias("crmTypeName", "所属" + crmEnum.getRemarks());
-            }
-            writer.addHeaderAlias("createTime", "跟进时间");
-            writer.addHeaderAlias("category", "跟进方式");
-            writer.addHeaderAlias("nextTime", "下次联系时间");
-            if (crmType == 2) {
-                writer.addHeaderAlias("contactsNames", "相关联系人");
-                writer.addHeaderAlias("businessNames", "相关商机");
-            }
-            int columnNum = crmType == 2 ? 8 : 6;
-            writer.merge(columnNum - 1, "跟进记录");
-            writer.setOnlyAlias(true);
-            writer.write(list, true);
-            writer.setRowHeight(0, 20);
-            writer.setRowHeight(1, 20);
-            for (int i = 0; i < columnNum; i++) {
-                writer.setColumnWidth(i, 20);
-            }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=crm_record.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出跟进记录错误：", e);
+        List<Map<String,Object>> objectList = instrumentService.exportRecordList(biParams);
+        List<ExcelParseUtil.ExcelDataEntity> dataList = new ArrayList<>();
+        if (crmType == 2) {
+            dataList.add(ExcelParseUtil.toEntity("crmTypeName", "所属客户"));
         }
+        dataList.add(ExcelParseUtil.toEntity("content", "跟进内容"));
+        dataList.add(ExcelParseUtil.toEntity("createUserName", "跟进人"));
+        if (crmType != 2) {
+            dataList.add(ExcelParseUtil.toEntity("crmTypeName", "所属" + crmEnum.getRemarks()));
+        }
+        dataList.add(ExcelParseUtil.toEntity("createTime", "跟进时间"));
+        dataList.add(ExcelParseUtil.toEntity("category", "跟进方式"));
+        dataList.add(ExcelParseUtil.toEntity("nextTime", "下次联系时间"));
+        if (crmType == 2) {
+            dataList.add(ExcelParseUtil.toEntity("contactsNames", "相关联系人"));
+            dataList.add(ExcelParseUtil.toEntity("businessNames", "相关商机"));
+        }
+        ExcelParseUtil.exportExcel(objectList, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
+
+            }
+            @Override
+            public String getExcelName() {
+                return "跟进记录";
+            }
+        }, dataList);
+
     }
 
 }

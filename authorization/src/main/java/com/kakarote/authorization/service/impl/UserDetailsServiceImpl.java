@@ -3,6 +3,7 @@ package com.kakarote.authorization.service.impl;
 import cn.hutool.core.util.IdUtil;
 import com.kakarote.authorization.common.AuthException;
 import com.kakarote.authorization.common.AuthorizationCodeEnum;
+import com.kakarote.authorization.common.AuthorizationConst;
 import com.kakarote.authorization.common.LoginLogUtil;
 import com.kakarote.authorization.entity.AdminUserStatusBO;
 import com.kakarote.authorization.entity.AuthorizationUser;
@@ -14,12 +15,14 @@ import com.kakarote.core.common.LoginType;
 import com.kakarote.core.common.Result;
 import com.kakarote.core.common.SystemCodeEnum;
 import com.kakarote.core.common.cache.AdminCacheKey;
+import com.kakarote.core.common.cache.CrmCacheKey;
 import com.kakarote.core.entity.UserInfo;
 import com.kakarote.core.exception.CrmException;
 import com.kakarote.core.feign.admin.entity.LoginLogEntity;
 import com.kakarote.core.feign.admin.service.LogService;
 import com.kakarote.core.redis.Redis;
 import com.kakarote.core.servlet.ApplicationContextHolder;
+import com.kakarote.core.utils.BaseUtil;
 import com.kakarote.core.utils.UserUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -92,7 +95,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
         userInfo.setRoles(adminUserService.queryUserRoleIds(userInfo.getUserId()).getData());
         UserUtil.userToken(token, userInfo, user.getType());
         if (userInfo.getStatus() == 2) {
-            adminUserService.setUserStatus(AdminUserStatusBO.builder().status(1).ids(Collections.singletonList(userInfo.getUserId())).build());
+            adminUserService.activateUser(AdminUserStatusBO.builder().status(1).ids(Collections.singletonList(userInfo.getUserId())).build());
         }
         ApplicationContextHolder.getBean(LogService.class).saveLoginLog(logEntity);
         return Result.ok(new LoginVO().setAdminToken(token));
@@ -107,7 +110,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
     @Override
     public Result doLogin(AuthorizationUser user, HttpServletResponse response,HttpServletRequest request) {
         LoginType loginType = LoginType.valueOf(user.getLoginType());
-        if (loginType.equals(LoginType.PASSWORD) ){
+        if (loginType.equals(LoginType.PASSWORD) || loginType.equals(LoginType.SMS_CODE)){
             String key = AdminCacheKey.PASSWORD_ERROR_CACHE_KEY + user.getUsername().trim();
             Integer errorNum = redis.get(key);
             if (errorNum != null && errorNum > 2) {
@@ -119,7 +122,15 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
             }
         }
         try {
-            AbstractAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user.getUsername().trim(), user.getPassword().trim());
+            AbstractAuthenticationToken authenticationToken;
+            switch (loginType){
+                case PASSWORD:
+                    authenticationToken = new UsernamePasswordAuthenticationToken(user.getUsername().trim(), user.getPassword().trim());
+                    break;
+                default:
+                    authenticationToken = new UsernamePasswordAuthenticationToken(user.getUsername().trim(), user.getPassword().trim());
+                    break;
+            }
             Authentication authentication = authenticationManager.authenticate(authenticationToken);
             AuthorizationUserInfo userInfo = (AuthorizationUserInfo) authentication.getDetails();
             if (userInfo.getAuthorizationUserList().size() == 0) {
@@ -178,7 +189,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
             throw new CrmException(SystemCodeEnum.SYSTEM_NOT_LOGIN);
         }
         Long userId = userInfo.getUserId();
-        String key = userId.toString();
+        String key = userId.toString() ;
         List<String> noAuthMenuUrls = redis.get(key);
         if (noAuthMenuUrls == null) {
             noAuthMenuUrls = adminUserService.queryNoAuthMenu(userId).getData();
@@ -193,8 +204,8 @@ public class UserDetailsServiceImpl implements UserDetailsService, LoginService 
         if (data instanceof UserInfo) {
             UserInfo userInfo = (UserInfo) data;
             redis.del(authentication);
-            redis.del(userInfo.getUserId());
             redis.del(AdminCacheKey.USER_AUTH_CACHE_KET+userInfo.getUserId());
+            redis.del(CrmCacheKey.CRM_AUTH_USER_CACHE_KEY +userInfo.getUserId());
         }
         return Result.ok();
     }

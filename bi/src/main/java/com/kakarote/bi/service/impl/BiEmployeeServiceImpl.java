@@ -15,10 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class BiEmployeeServiceImpl implements BiEmployeeService {
@@ -80,6 +77,7 @@ public class BiEmployeeServiceImpl implements BiEmployeeService {
     public JSONObject totalContract(BiParams biParams) {
         Integer menuId = 106;
         biParams.setMenuId(menuId);
+        biParams.setType("year");
         BiTimeUtil.BiTimeEntity record = BiTimeUtil.analyzeType(biParams);
         Integer beginTime = record.getBeginTime();
         Integer cycleNum = record.getCycleNum();
@@ -92,7 +90,11 @@ public class BiEmployeeServiceImpl implements BiEmployeeService {
         Map<String, Object> map = record.toMap();
         map.put("timeList", timeList);
         List<JSONObject> recordList = biEmployeeMapper.totalContractTable(map);
+        if (recordList.size() == 0){
+
+        }
         BiPatch.supplementJsonList(recordList,"type",timeList, "contractNum","contractMoney","receivablesMoney");
+        recordList.sort(Comparator.comparing(jsonObject -> jsonObject.getString("type")));
         return total.fluentPut("list", recordList);
     }
 

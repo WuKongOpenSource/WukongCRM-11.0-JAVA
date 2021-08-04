@@ -2,8 +2,6 @@ package com.kakarote.crm.controller;
 
 
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.*;
 import com.kakarote.core.common.log.BehaviorEnum;
@@ -12,6 +10,7 @@ import com.kakarote.core.common.log.SysLogHandler;
 import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.crm.common.log.CrmCustomerPoolLog;
 import com.kakarote.crm.constant.CrmCodeEnum;
@@ -29,15 +28,12 @@ import com.kakarote.crm.service.ICrmCustomerService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -69,7 +65,7 @@ public class CrmCustomerPoolController {
     @ApiOperation("查看公海列表页")
     @PostMapping("/queryPageList")
     public Result<BasePage<Map<String, Object>>> queryPageList(@RequestBody CrmSearchBO crmSearchBO) {
-        BasePage<Map<String, Object>> basePage = crmCustomerPoolService.queryPageList(crmSearchBO);
+        BasePage<Map<String, Object>> basePage = crmCustomerPoolService.queryPageList(crmSearchBO,false);
         return Result.ok(basePage);
     }
 
@@ -118,6 +114,10 @@ public class CrmCustomerPoolController {
     @PostMapping("/uploadExcel")
     @ApiOperation("导入客户")
     public Result<Long> uploadExcel(@RequestParam("file") MultipartFile file, @RequestParam("repeatHandling") Integer repeatHandling, @RequestParam("poolId") Integer poolId) {
+       Boolean isAdmin = crmCustomerPoolService.queryAuthListByPoolId(poolId);
+        if (!isAdmin) {
+            throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_POOL_NOT_IS_ADMIN);
+        }
         UploadExcelBO uploadExcelBO = new UploadExcelBO();
         uploadExcelBO.setUserInfo(UserUtil.getUser());
         uploadExcelBO.setCrmEnum(CrmEnum.CUSTOMER);
@@ -131,15 +131,23 @@ public class CrmCustomerPoolController {
     @ApiOperation("公海全部导出")
     @PostMapping("/allExportExcel")
     public void allExportExcel(@RequestBody CrmSearchBO search, HttpServletResponse response) throws IOException {
+        Boolean isAdmin = crmCustomerPoolService.queryAuthListByPoolId(search.getPoolId());
+        if (!isAdmin) {
+            throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_POOL_NOT_IS_ADMIN);
+        }
         search.setPageType(0);
-        BasePage<Map<String, Object>> basePage = crmCustomerPoolService.queryPageList(search);
+        BasePage<Map<String, Object>> basePage = crmCustomerPoolService.queryPageList(search,true);
         export(basePage.getList(), search.getPoolId(), response);
     }
 
     @ApiOperation("公海批量导出")
     @PostMapping("/batchExportExcel")
-    public void batchExportExcel(@RequestBody JSONObject jsonObject, HttpServletResponse response) throws IOException {
+    public void batchExportExcel(@RequestBody JSONObject jsonObject, HttpServletResponse response) {
         Integer poolId = jsonObject.getInteger("poolId");
+        Boolean isAdmin = crmCustomerPoolService.queryAuthListByPoolId(poolId);
+        if (!isAdmin) {
+            throw new CrmException(CrmCodeEnum.CRM_CUSTOMER_POOL_NOT_IS_ADMIN);
+        }
         String ids = jsonObject.getString("ids");
         CrmSearchBO search = new CrmSearchBO();
         search.setPoolId(poolId);
@@ -151,51 +159,23 @@ public class CrmCustomerPoolController {
         entity.setValues(StrUtil.splitTrim(ids, Const.SEPARATOR));
         search.getSearchList().add(entity);
         search.setPageType(0);
-        BasePage<Map<String, Object>> basePage = crmCustomerPoolService.queryPageList(search);
+        BasePage<Map<String, Object>> basePage = crmCustomerPoolService.queryPageList(search,false);
         export(basePage.getList(), search.getPoolId(), response);
     }
 
 
-    private void export(List<Map<String, Object>> recordList, Integer poolId, HttpServletResponse response) throws IOException {
-        try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            List<CrmCustomerPoolFieldSort> headList = crmCustomerPoolService.queryPoolListHead(poolId);
-            headList.forEach(head -> writer.addHeaderAlias(head.getFieldName(), head.getName()));
-            writer.merge(headList.size() - 1, "客户信息");
-            if (recordList.size() == 0) {
-                Map<String, Object> record = new HashMap<>();
-                headList.forEach(head -> record.put(head.getFieldName(), ""));
-                recordList.add(record);
-            }
-            recordList.forEach(record -> {
+    private void export(List<Map<String, Object>> recordList, Integer poolId, HttpServletResponse response) {
+        List<CrmCustomerPoolFieldSort> headList = crmCustomerPoolService.queryPoolListHead(poolId);
+        ExcelParseUtil.exportExcel(recordList, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
                 record.put("dealStatus", Objects.equals(1, record.get("dealStatus")) ? "已成交" : "未成交");
-            });
-            writer.setOnlyAlias(true);
-            writer.write(recordList, true);
-            writer.setRowHeight(0, 20);
-            writer.setRowHeight(1, 20);
-            for (int i = 0; i < headList.size(); i++) {
-                writer.setColumnWidth(i, 20);
             }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=customer.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出公海错误：", e);
-        }
+            @Override
+            public String getExcelName() {
+                return "公海客户";
+            }
+        }, headList);
     }
 
     @ApiOperation("获取客户级别选项")

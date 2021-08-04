@@ -36,7 +36,7 @@ public class CrmReceivables implements Serializable {
     private String number;
 
     @ApiModelProperty(value = "回款计划ID")
-    private Integer planId;
+    private Integer receivablesPlanId;
 
     @ApiModelProperty(value = "客户ID")
     private Integer customerId;

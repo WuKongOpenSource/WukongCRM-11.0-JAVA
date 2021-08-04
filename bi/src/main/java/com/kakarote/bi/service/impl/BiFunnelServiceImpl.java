@@ -14,10 +14,7 @@ import com.kakarote.core.utils.UserCacheUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class BiFunnelServiceImpl implements BiFunnelService {
@@ -80,6 +77,7 @@ public class BiFunnelServiceImpl implements BiFunnelService {
         map.put("timeList", timeList);
         List<JSONObject> jsonList = biFunnelMapper.addBusinessAnalyze(map);
         BiPatch.supplementJsonList(jsonList,"type",timeList,"businessMoney","businessNum");
+        jsonList.sort(Comparator.comparing(jsonObject -> jsonObject.getString("type")));
         return jsonList;
     }
 
@@ -138,6 +136,7 @@ public class BiFunnelServiceImpl implements BiFunnelService {
         map.put("timeList", timeList);
         List<JSONObject> jsonList = biFunnelMapper.win(map);
         BiPatch.supplementJsonList(jsonList,"type",timeList,"businessNum","businessEnd","proportion");
+        jsonList.sort(Comparator.comparing(jsonObject -> jsonObject.getString("type")));
         return jsonList;
     }
 }

@@ -4,8 +4,6 @@ package com.kakarote.work.controller;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.extra.servlet.ServletUtil;
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.common.ApiExplain;
 import com.kakarote.core.common.R;
@@ -18,6 +16,7 @@ import com.kakarote.core.entity.BasePage;
 import com.kakarote.core.entity.PageEntity;
 import com.kakarote.core.servlet.upload.FileEntity;
 import com.kakarote.core.utils.BaseUtil;
+import com.kakarote.core.utils.ExcelParseUtil;
 import com.kakarote.core.utils.UserUtil;
 import com.kakarote.work.common.log.WorkLog;
 import com.kakarote.work.entity.BO.*;
@@ -36,17 +35,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * <p>
@@ -347,47 +342,28 @@ public class WorkController {
     @ApiOperation("导出任务数据")
     public void workTaskExport(@RequestParam("workId") Integer workId, HttpServletResponse response) {
         List<Map<String, Object>> list = workService.workTaskExport(workId);
-        try (ExcelWriter writer = ExcelUtil.getWriter()) {
-            writer.addHeaderAlias("name", "任务名称");
-            writer.addHeaderAlias("description", "任务描述");
-            writer.addHeaderAlias("mainUserName", "负责人");
-            writer.addHeaderAlias("startTime", "开始时间");
-            writer.addHeaderAlias("stopTime", "结束时间");
-            writer.addHeaderAlias("labelName", "标签");
-            writer.addHeaderAlias("ownerUserName", "参与人");
-            writer.addHeaderAlias("priority", "优先级");
-            writer.addHeaderAlias("createUserName", "创建人");
-            writer.addHeaderAlias("createTime", "创建时间");
-            writer.addHeaderAlias("className", "所在任务列表");
-            writer.addHeaderAlias("relateCrmWork", "关联业务");
-            writer.merge(11, "项目任务信息");
-            writer.setOnlyAlias(true);
-            writer.write(list, true);
-            writer.setRowHeight(0, 20);
-            writer.setRowHeight(1, 20);
-            for (int i = 0; i < 12; i++) {
-                writer.setColumnWidth(i, 20);
+        List<ExcelParseUtil.ExcelDataEntity> dataList = new ArrayList<>();
+        dataList.add(ExcelParseUtil.toEntity("name", "任务名称"));
+        dataList.add(ExcelParseUtil.toEntity("description", "任务描述"));
+        dataList.add(ExcelParseUtil.toEntity("mainUserName", "负责人"));
+        dataList.add(ExcelParseUtil.toEntity("startTime", "开始时间"));
+        dataList.add(ExcelParseUtil.toEntity("stopTime", "结束时间"));
+        dataList.add(ExcelParseUtil.toEntity("labelName", "标签"));
+        dataList.add(ExcelParseUtil.toEntity("ownerUserName", "参与人"));
+        dataList.add(ExcelParseUtil.toEntity("priority", "优先级"));
+        dataList.add(ExcelParseUtil.toEntity("createUserName", "创建人"));
+        dataList.add(ExcelParseUtil.toEntity("createTime", "创建时间"));
+        dataList.add(ExcelParseUtil.toEntity("className", "所在任务列表"));
+        dataList.add(ExcelParseUtil.toEntity("relateCrmWork", "关联业务"));
+        ExcelParseUtil.exportExcel(list, new ExcelParseUtil.ExcelParseService() {
+            @Override
+            public void castData(Map<String, Object> record, Map<String, Integer> headMap) {
             }
-            Cell cell = writer.getCell(0, 0);
-            CellStyle cellStyle = cell.getCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.SKY_BLUE.getIndex());
-            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            Font font = writer.createFont();
-            font.setBold(true);
-            font.setFontHeightInPoints((short) 16);
-            cellStyle.setFont(font);
-            cell.setCellStyle(cellStyle);
-            //自定义标题别名
-            //response为HttpServletResponse对象
-            response.setContentType("application/vnd.ms-excel;charset=utf-8");
-            response.setCharacterEncoding("UTF-8");
-            //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-            response.setHeader("Content-Disposition", "attachment;filename=workTask.xls");
-            ServletOutputStream out = response.getOutputStream();
-            writer.flush(out);
-        } catch (Exception e) {
-            log.error("导出项目任务信息错误：", e);
-        }
+            @Override
+            public String getExcelName() {
+                return "项目任务";
+            }
+        }, dataList,response);
     }
 
 }

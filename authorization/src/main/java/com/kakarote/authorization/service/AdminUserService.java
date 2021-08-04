@@ -41,6 +41,10 @@ public interface AdminUserService {
     @ApiOperation("禁用启用")
     Result setUserStatus(@RequestBody AdminUserStatusBO adminUserStatusBO);
 
+    @PostMapping("/adminUser/activateUser")
+    @ApiOperation("激活账号")
+    Result activateUser(@RequestBody AdminUserStatusBO adminUserStatusBO);
+
 
     /**
     * 通过用户ID查询没有权限的菜单

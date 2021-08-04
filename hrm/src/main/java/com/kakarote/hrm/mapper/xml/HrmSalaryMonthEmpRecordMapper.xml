@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kakarote.hrm.mapper.HrmSalaryMonthEmpRecordMapper">
+
+    <select id="queryPaySalaryEmployeeList" resultType="java.util.Map">
+        select a.employee_id, a.employee_name,a.post,a.job_number,a.dept_id,b.name as deptName
+        from wk_hrm_employee as a
+        left join wk_hrm_dept b on a.dept_id = b.dept_id
+        left join wk_hrm_employee_quit_info c on a.employee_id = c.employee_id
+        where a.is_del = 0 and (a.entry_status in (1,3) or (a.entry_status = 4 and c.plan_quit_time &gt;=
+        date_sub(#{endTime},interval 1 month ))) and entry_time &lt;= #{endTime}
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        group by a.employee_id
+    </select>
+    <select id="querySalaryPageList" resultType="com.kakarote.hrm.entity.VO.QuerySalaryPageListVO">
+        select a.s_emp_record_id,a.actual_work_day,a.need_work_day,
+        b.employee_name,b.employee_id,b.post,c.name as deptName,b.job_number
+        from wk_hrm_salary_month_emp_record a
+        left join wk_hrm_employee b on a.employee_id = b.employee_id
+        left join wk_hrm_dept c on b.dept_id = c.dept_id
+        left join wk_hrm_salary_month_record e on a.s_record_id = e.s_record_id
+        where a.s_record_id = #{data.sRecordId} and b.is_del = 0
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        <if test="data.employeeId != null ">
+            and b.employee_id = #{data.employeeId}
+        </if>
+        <if test="data.employeeName != null ">
+            and b.employee_name like concat('%',#{data.employeeName},'%')
+        </if>
+        <if test="data.deptId != null ">
+            and b.dept_id = #{data.deptId}
+        </if>
+        <if test="data.type == 1 ">
+            and a.employee_id in (select d.employee_id from wk_hrm_employee_abnormal_change_record d
+            where change_time BETWEEN e.start_time AND e.end_time and type = 1)
+        </if>
+        <if test="data.type == 2 ">
+            and a.employee_id in (select d.employee_id from wk_hrm_employee_abnormal_change_record d
+            where change_time BETWEEN e.start_time AND e.end_time and type = 2)
+        </if>
+        <if test="data.type == 3 ">
+            and a.employee_id in (select d.employee_id from wk_hrm_employee_abnormal_change_record d
+            where change_time BETWEEN e.start_time AND e.end_time and type = 3)
+        </if>
+        <if test="data.type == 4 ">
+            and a.employee_id in (select d.employee_id from wk_hrm_employee_abnormal_change_record d
+            where change_time BETWEEN e.start_time AND e.end_time and type = 4)
+        </if>
+    </select>
+    <select id="querySalaryPageListByRecordId" resultType="com.kakarote.hrm.entity.VO.QuerySalaryPageListVO">
+        select a.s_emp_record_id,a.actual_work_day,a.need_work_day,
+        b.employee_name,b.employee_id,b.post,c.name as deptName,b.job_number,b.is_del
+        from wk_hrm_salary_month_emp_record a
+        left join wk_hrm_employee b on a.employee_id = b.employee_id
+        left join wk_hrm_dept c on b.dept_id = c.dept_id
+        where a.s_record_id = #{data.sRecordId}
+        <if test="data.employeeName != null and data.employeeName != ''">
+            and b.employee_name like concat('%',#{data.employeeName},'%')
+        </if>
+        <if test="data.jobNumber != null and data.jobNumber != ''">
+            and b.job_number like concat('%',#{data.jobNumber},'%')
+        </if>
+        <if test="data.deptId != null and data.deptId != ''">
+            and b.dept_id = #{data.deptId}
+        </if>
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+    </select>
+    <select id="querySalaryRecord" resultType="com.kakarote.hrm.entity.VO.QuerySalaryListVO">
+        select a.s_emp_record_id, a.year, a.month, b.start_time, b.end_time
+        from wk_hrm_salary_month_emp_record a
+                 left join wk_hrm_salary_month_record b on a.s_record_id = b.s_record_id
+        where a.employee_id = #{employeeId}
+          and b.check_status = 10
+        order by a.create_time desc
+    </select>
+    <select id="queryEmployeeIds" resultType="java.lang.Integer">
+        select b.employee_id from wk_hrm_salary_month_emp_record a
+        join wk_hrm_employee b on a.employee_id = b.employee_id and b.is_del = 0
+        where a.s_record_id = #{sRecordId}
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+    </select>
+    <select id="querysEmpRecordIds" resultType="java.lang.Integer">
+        select a.s_emp_record_id
+        from wk_hrm_salary_month_emp_record a
+        left join wk_hrm_employee b on a.employee_id = b.employee_id
+        left join wk_hrm_dept c on b.dept_id = c.dept_id
+        left join wk_hrm_salary_month_record e on a.s_record_id = e.s_record_id
+        where a.s_record_id = #{data.sRecordId} and b.is_del = 0
+        <choose>
+            <when test="employeeIds != null and employeeIds.size >0">
+                and a.employee_id in
+                <foreach collection="employeeIds" index="index" item="employeeId" open="(" close=")" separator=",">
+                    #{employeeId}
+                </foreach>
+            </when>
+            <when test="employeeIds != null and employeeIds.size == 0">
+                and 1=2
+            </when>
+        </choose>
+        <if test="data.employeeId != null ">
+            and b.employee_id = #{data.employeeId}
+        </if>
+        <if test="data.employeeName != null ">
+            and b.employee_name like concat('%',#{data.employeeName},'%')
+        </if>
+        <if test="data.deptId != null ">
+            and b.dept_id = #{data.deptId}
+        </if>
+        <if test="data.type == 1 ">
+            and a.employee_id in (select d.employee_id from wk_hrm_employee_abnormal_change_record d
+            where change_time BETWEEN e.start_time AND e.end_time and type = 1)
+        </if>
+        <if test="data.type == 2 ">
+            and a.employee_id in (select d.employee_id from wk_hrm_employee_abnormal_change_record d
+            where change_time BETWEEN e.start_time AND e.end_time and type = 2)
+        </if>
+        <if test="data.type == 3 ">
+            and a.employee_id in (select d.employee_id from wk_hrm_employee_abnormal_change_record d
+            where change_time BETWEEN e.start_time AND e.end_time and type = 3)
+        </if>
+        <if test="data.type == 4 ">
+            and a.employee_id in (select d.employee_id from wk_hrm_employee_abnormal_change_record d
+            where change_time BETWEEN e.start_time AND e.end_time and type = 4)
+        </if>
+    </select>
+</mapper>

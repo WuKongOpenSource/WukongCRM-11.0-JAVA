@@ -53,3 +53,6 @@ crm:
       - /adminSuite/authReceive
       - /adminSuite/getPreAuthCode
       - /adminSuite/cpRegister
+upgradeFile:
+  #升级文件地址
+  url: D:/工具/version.json

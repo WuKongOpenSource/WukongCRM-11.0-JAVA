@@ -61,7 +61,7 @@ public class CrmReceivablesController {
     }
 
     @PostMapping("/querySimpleEntity")
-    @ApiExplain("查询简单的客户对象")
+    @ApiExplain("查询简单的回款对象")
     public Result<List<SimpleCrmEntity>> querySimpleEntity(@RequestBody List<Integer> ids) {
         List<SimpleCrmEntity> crmEntities = crmReceivablesService.querySimpleEntity(ids);
         return R.ok(crmEntities);
