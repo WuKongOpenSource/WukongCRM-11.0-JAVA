@@ -1,0 +1,16 @@
+html {
+  height: 100%;
+  background: rgb(237, 237, 237);
+  padding: 30px 0;
+}
+
+body {
+  font-family: simsun, serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  padding: 60px;
+  width: 595px;
+  margin: 0 auto;
+  border: 1px solid rgb(210, 213, 216);
+  background: white;
+  min-height: 100%;
+}
+
