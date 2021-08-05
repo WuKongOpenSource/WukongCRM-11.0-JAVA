@@ -52,13 +52,4 @@ public class CrmCustomerJob {
         XxlJobLogger.log("客户定时放入公海执行完成");
         return ReturnT.SUCCESS;
     }
-
-    @XxlJob("CompanyJob")
-    public ReturnT<String> companyJobHandler(String param) {
-        Result companyRemind = adminService.companyRemind();
-        if (companyRemind.hasSuccess()) {
-            return ReturnT.SUCCESS;
-        }
-        return ReturnT.FAIL;
-    }
 }
