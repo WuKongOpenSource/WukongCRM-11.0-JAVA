@@ -2,7 +2,7 @@
 #chkconfig: 2345 80 05
 #description: wkcrm
 #author: hmb
-server_names=('gateway' 'work' 'oa' 'authorization' 'admin' 'bi' 'crm'  'job' 'examine')
+server_names=('gateway' 'work' 'oa' 'authorization' 'admin' 'bi' 'crm' 'job' 'examine' 'hrm')
 echo "等待mysql和nacos启动..."
 sleep 180s
 case "$1" in

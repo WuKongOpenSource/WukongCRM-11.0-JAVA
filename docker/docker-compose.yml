@@ -89,7 +89,7 @@ services:
       wkcrm_network:
     restart: always
   wkcrm:
-    image: registry.cn-hangzhou.aliyuncs.com/72crm/crm:11.3.1
+    image: registry.cn-hangzhou.aliyuncs.com/72crm/crm:11.3.3
     container_name: "wkcrm"
     environment:
       - TZ=Asia/Shanghai
@@ -100,6 +100,7 @@ services:
       - ./data/wkcrm/file:/opt/upload/
     ports:
       - "8443:8443"
+      - "8079:8079"
     networks:
       wkcrm_network:
     entrypoint: /wkcrm.sh restart

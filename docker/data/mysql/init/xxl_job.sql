@@ -1,18 +1,3 @@
-/*
- Navicat Premium Data Transfer
-
- Source Server         : 47.104.76.88
- Source Server Type    : MySQL
- Source Server Version : 50731
- Source Host           : 47.104.76.88:3306
- Source Schema         : xxl_job
-
- Target Server Type    : MySQL
- Target Server Version : 50731
- File Encoding         : 65001
-
- Date: 13/10/2020 09:45:54
-*/
 create database xxl_job character set utf8mb4 collate utf8mb4_general_ci;
 use xxl_job;
 SET NAMES utf8mb4;

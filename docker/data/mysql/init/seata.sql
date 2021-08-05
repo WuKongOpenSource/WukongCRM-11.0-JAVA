@@ -1,18 +1,3 @@
-/*
- Navicat Premium Data Transfer
-
- Source Server         : 47.104.76.88
- Source Server Type    : MySQL
- Source Server Version : 50731
- Source Host           : 47.104.76.88:3306
- Source Schema         : seata
-
- Target Server Type    : MySQL
- Target Server Version : 50731
- File Encoding         : 65001
-
- Date: 13/10/2020 09:44:44
-*/
 create database seata character set utf8mb4 collate utf8mb4_general_ci;
 use seata;
 SET NAMES utf8mb4;

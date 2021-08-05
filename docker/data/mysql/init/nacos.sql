@@ -1,18 +1,3 @@
-/*
- Navicat Premium Data Transfer
-
- Source Server         : 47.104.76.88
- Source Server Type    : MySQL
- Source Server Version : 50731
- Source Host           : 47.104.76.88:3306
- Source Schema         : nacos
-
- Target Server Type    : MySQL
- Target Server Version : 50731
- File Encoding         : 65001
-
- Date: 13/10/2020 09:44:32
-*/
 create database nacos character set utf8mb4 collate utf8mb4_general_ci;
 use nacos;
 SET NAMES utf8mb4;
@@ -64,6 +49,7 @@ INSERT INTO `config_info` VALUES (15, 'store.db.lockTable', 'SEATA_GROUP', 'lock
 INSERT INTO `config_info` VALUES (16, 'store.db.maxWait', 'SEATA_GROUP', '5000', 'a35fe7f7fe8217b4369a0af4244d1fca', '2020-10-12 09:06:44', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `config_info` VALUES (17, 'service.vgroupMapping.oa_tx_group', 'SEATA_GROUP', 'default', 'c21f969b5f03d33d43e04f8f136e7682', '2020-10-12 09:06:43', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `config_info` VALUES (18, 'service.vgroupMapping.examine_tx_group', 'SEATA_GROUP', 'default', 'c21f969b5f03d33d43e04f8f136e7682', '2020-10-12 09:06:43', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `config_info` VALUES (19, 'service.vgroupMapping.hrm_tx_group', 'SEATA_GROUP', 'default', 'c21f969b5f03d33d43e04f8f136e7682', '2020-10-12 09:06:43', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for config_info_aggr
@@ -140,8 +126,12 @@ INSERT INTO `config_info_route` VALUES (103, 'login', 'lb://authorization/login'
 INSERT INTO `config_info_route` VALUES (104, 'logout', 'lb://authorization/logout', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/logout\"}}]', '[]', 100, '用户退出相关接口', 0, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
 INSERT INTO `config_info_route` VALUES (105, 'reLogin', 'lb://authorization/reLogin', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/reLogin\"}}]', '[]', 100, '用户重新登录相关接口', 0, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
 INSERT INTO `config_info_route` VALUES (106, 'crm', 'lb://crm', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/crm*/**\"}}]', '[]', 100, '客户管理相关接口', 1, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
+INSERT INTO `config_info_route` VALUES (107, 'hrm', 'lb://hrm', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/hrm*/**\"}}]', '[]', 100, '人力资源相关接口', 1, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
+INSERT INTO `config_info_route` VALUES (108, 'jxc', 'lb://jxc', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/jxc*/**\"}}]', '[]', 100, '进销存相关接口', 1, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
 INSERT INTO `config_info_route` VALUES (109, 'work', 'lb://work', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/work*/**\"}}]', '[]', 100, '项目管理相关接口', 1, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
 INSERT INTO `config_info_route` VALUES (113, 'oa', 'lb://oa', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/oa*/**\"}}]', '[]', 100, 'OA相关接口', 1, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
+INSERT INTO `config_info_route` VALUES (114, 'email', 'lb://email', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/email*/**\"}}]', '[]', 100, '邮箱相关接口', 1, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
+INSERT INTO `config_info_route` VALUES (115, 'km', 'lb://km', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/km*/**\"}}]', '[]', 100, '知识库相关接口', 1, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
 INSERT INTO `config_info_route` VALUES (116, 'bi', 'lb://bi', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/bi*/**\"}}]', '[]', 100, '商业智能相关接口', 1, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
 INSERT INTO `config_info_route` VALUES (117, 'file', 'http://127.0.0.1:8012/onlinePreview', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/onlinePreview\"}}]', '[]', 100, '文件预览相关接口', 0, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
 INSERT INTO `config_info_route` VALUES (118, 'queryShareUrl', 'lb://km', '[{\"name\":\"Path\",\"args\":{\"pattern\":\"/documentShare/queryShareUrl/*\"}}]', '[]', 100, '知识库分享接口', 0, 1, '2020-04-21 17:00:32', '2020-04-21 17:00:32');
