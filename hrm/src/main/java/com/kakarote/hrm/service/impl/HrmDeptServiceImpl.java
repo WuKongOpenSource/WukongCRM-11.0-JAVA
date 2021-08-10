@@ -19,10 +19,7 @@ import com.kakarote.hrm.entity.BO.QueryDeptListBO;
 import com.kakarote.hrm.entity.BO.QueryEmployeeByDeptIdBO;
 import com.kakarote.hrm.entity.PO.HrmDept;
 import com.kakarote.hrm.entity.PO.HrmEmployee;
-import com.kakarote.hrm.entity.VO.DeptEmployeeVO;
-import com.kakarote.hrm.entity.VO.DeptVO;
-import com.kakarote.hrm.entity.VO.QueryEmployeeListByDeptIdVO;
-import com.kakarote.hrm.entity.VO.SimpleHrmDeptVO;
+import com.kakarote.hrm.entity.VO.*;
 import com.kakarote.hrm.mapper.HrmDeptMapper;
 import com.kakarote.hrm.service.IHrmDeptService;
 import com.kakarote.hrm.service.IHrmEmployeeService;
@@ -231,6 +228,9 @@ public class HrmDeptServiceImpl extends BaseServiceImpl<HrmDeptMapper, HrmDept> 
 
     @Override
     public List<SimpleHrmDeptVO> querySimpleDeptList(Collection<Integer> deptIds) {
+        if (CollUtil.isEmpty(deptIds)) {
+            return new ArrayList<>();
+        }
         return lambdaQuery().select(HrmDept::getDeptId, HrmDept::getName)
                 .in(HrmDept::getDeptId, deptIds)
                 .list()
@@ -240,6 +240,18 @@ public class HrmDeptServiceImpl extends BaseServiceImpl<HrmDeptMapper, HrmDept> 
                     simpleHrmDeptVO.setDeptName(dept.getName());
                     return simpleHrmDeptVO;
                 }).collect(Collectors.toList());
+    }
+
+    @Override
+    public SimpleHrmDeptVO querySimpleDept(Integer deptId) {
+        if(deptId==null){ 
+            return new SimpleHrmDeptVO();
+        }
+        HrmDept hrmDept = lambdaQuery().select(HrmDept::getDeptId, HrmDept::getName).eq(HrmDept::getDeptId, deptId).one();
+        SimpleHrmDeptVO simpleHrmDeptVO = new SimpleHrmDeptVO();
+        simpleHrmDeptVO.setDeptId(hrmDept.getDeptId());
+        simpleHrmDeptVO.setDeptName(hrmDept.getName());
+        return simpleHrmDeptVO;
     }
 
     @Override

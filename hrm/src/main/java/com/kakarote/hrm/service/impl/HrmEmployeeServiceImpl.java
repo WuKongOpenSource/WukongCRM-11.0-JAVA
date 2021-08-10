@@ -21,6 +21,7 @@ import com.kakarote.core.feign.admin.entity.AdminMessage;
 import com.kakarote.core.feign.admin.entity.AdminMessageEnum;
 import com.kakarote.core.feign.admin.service.AdminFileService;
 import com.kakarote.core.feign.admin.service.AdminMessageService;
+import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.core.utils.TagUtil;
 import com.kakarote.core.utils.TransferUtil;
@@ -164,21 +165,21 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
         transferEmployee(employee);
         employee.setCompanyAgeStartTime(employee.getEntryTime());
         save(employee);
-        Integer mobileFieldCount = employeeFieldService.query().eq("field_name","flied_kwbova").eq("label_group",LabelGroupEnum.COMMUNICATION.getValue()).eq("type",FieldTypeEnum.MOBILE.getValue()).count();
-        UpdateInformationBO updateInformationBO =new UpdateInformationBO();
-        if(mobileFieldCount>0){
+        Integer mobileFieldCount = employeeFieldService.query().eq("field_name", "flied_kwbova").eq("label_group", LabelGroupEnum.COMMUNICATION.getValue()).eq("type", FieldTypeEnum.MOBILE.getValue()).count();
+        UpdateInformationBO updateInformationBO = new UpdateInformationBO();
+        if (mobileFieldCount > 0) {
             //若是存在自定义手机号码字段，则进行更新
             HrmEmployee hrmEmployee = employeeMapper.selectById(employee.getEmployeeId());
-            List<UpdateInformationBO.InformationFieldBO> dataList =new ArrayList<>();
+            List<UpdateInformationBO.InformationFieldBO> dataList = new ArrayList<>();
             JSONObject employeeModel = BeanUtil.copyProperties(hrmEmployee, JSONObject.class);
             List<HrmEmployeeData> fieldValueList = employeeDataService.queryListByEmployeeId(employee.getEmployeeId());
             List<InformationFieldVO> communicationInformation = transferInformation(employeeModel, LabelGroupEnum.COMMUNICATION, fieldValueList);
-            communicationInformation.forEach(informationFieldVO ->{
-                if (informationFieldVO.getFieldName().equals("flied_kwbova")&&informationFieldVO.getType().equals(FieldTypeEnum.MOBILE.getValue())){
+            communicationInformation.forEach(informationFieldVO -> {
+                if (informationFieldVO.getFieldName().equals("flied_kwbova") && informationFieldVO.getType().equals(FieldTypeEnum.MOBILE.getValue())) {
                     informationFieldVO.setFieldValue(employee.getMobile());
                     informationFieldVO.setFieldValueDesc(employee.getMobile());
                 }
-                dataList.add(BeanUtil.copyProperties(informationFieldVO,UpdateInformationBO.InformationFieldBO.class));
+                dataList.add(BeanUtil.copyProperties(informationFieldVO, UpdateInformationBO.InformationFieldBO.class));
             });
             updateInformationBO.setDataList(dataList);
             updateInformationBO.setEmployeeId(employee.getEmployeeId());
@@ -238,7 +239,7 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
     @Override
     public List<SimpleHrmEmployeeVO> queryAllEmployeeList() {
         LambdaQueryWrapper<HrmEmployee> wrapper = new QueryWrapper<HrmEmployee>().lambda().select(HrmEmployee::getEmployeeId, HrmEmployee::getEmployeeName, HrmEmployee::getPost,
-                HrmEmployee::getEntryStatus, HrmEmployee::getIsDel,HrmEmployee::getDeptId).eq(HrmEmployee::getIsDel, 0);
+                HrmEmployee::getEntryStatus, HrmEmployee::getIsDel, HrmEmployee::getDeptId).eq(HrmEmployee::getIsDel, 0);
         List<HrmEmployee> hrmEmployeeList = this.list(wrapper);
         List<SimpleHrmEmployeeVO> simpleHrmEmployeeVOList = new ArrayList<>();
         for (HrmEmployee employee : hrmEmployeeList) {
@@ -266,9 +267,9 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
         }
         simpleHrmEmployeeVO.setStatus(status);
         simpleHrmEmployeeVO.setPost(employee.getPost());
-        if(null!=employee.getDeptId()){
-            DeptVO deptVO =  hrmDeptService.queryById(employee.getDeptId());
-            if (deptVO != null){
+        if (null != employee.getDeptId()) {
+            DeptVO deptVO = hrmDeptService.queryById(employee.getDeptId());
+            if (deptVO != null) {
                 simpleHrmEmployeeVO.setDeptName(deptVO.getName());
             }
         }
@@ -277,13 +278,13 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
 
     @Override
     public List<SimpleHrmEmployeeVO> queryInEmployeeList() {
-        LambdaQueryWrapper<HrmEmployee> wrapper = new QueryWrapper<HrmEmployee>().lambda().select(HrmEmployee::getEmployeeId, HrmEmployee::getDeptId,HrmEmployee::getEmployeeName, HrmEmployee::getPost)
+        LambdaQueryWrapper<HrmEmployee> wrapper = new QueryWrapper<HrmEmployee>().lambda().select(HrmEmployee::getEmployeeId, HrmEmployee::getDeptId, HrmEmployee::getEmployeeName, HrmEmployee::getPost)
                 .eq(HrmEmployee::getEntryStatus, EmployeeEntryStatus.IN.getValue()).eq(HrmEmployee::getIsDel, 0);
         List<HrmEmployee> hrmEmployeeList = this.list(wrapper);
         hrmEmployeeList.forEach(employee -> {
             if (employee.getDeptId() != null) {
-                DeptVO deptVO =   hrmDeptService.queryById(employee.getDeptId());
-                if (deptVO != null){
+                DeptVO deptVO = hrmDeptService.queryById(employee.getDeptId());
+                if (deptVO != null) {
                     employee.setDeptName(deptVO.getName());
                 }
             }
@@ -432,57 +433,57 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
                 }
             } else {
                 if (fieldValueMap.get(fieldVO.getFieldId()) != null) {
-                    if (fieldVO.getType().equals(FieldEnum.AREA_POSITION.getType())){
+                    if (fieldVO.getType().equals(FieldEnum.AREA_POSITION.getType())) {
                         String value = fieldValueMap.get(fieldVO.getFieldId()).getFieldValue();
                         if (StrUtil.isNotEmpty(value)) {
                             if (value.contains("=")) {
                                 System.out.println(value);
 
-                            }else {
+                            } else {
                                 fieldVO.setFieldValue(JSON.parseArray(value));
                                 fieldVO.setFieldValueDesc(JSON.parseArray(value));
                             }
-                        }else {
+                        } else {
                             fieldVO.setFieldValue(new ArrayList<>());
                             fieldVO.setFieldValueDesc(new ArrayList<>());
                         }
-                    }else if (fieldVO.getType().equals(FieldEnum.CURRENT_POSITION.getType())){
+                    } else if (fieldVO.getType().equals(FieldEnum.CURRENT_POSITION.getType())) {
                         fieldVO.setFieldValue(JSON.parseObject(fieldValueMap.get(fieldVO.getFieldId()).getFieldValue()));
                         fieldVO.setFieldValueDesc(JSON.parseObject(fieldValueMap.get(fieldVO.getFieldId()).getFieldValueDesc()));
-                    }else if (fieldVO.getType().equals(FieldEnum.FILE.getType())){
+                    } else if (fieldVO.getType().equals(FieldEnum.FILE.getType())) {
                         if (StrUtil.isNotEmpty(fieldValueMap.get(fieldVO.getFieldId()).getFieldValue())) {
                             fieldVO.setFieldValue(adminFileService.queryFileList(fieldValueMap.get(fieldVO.getFieldId()).getFieldValue()).getData());
-                        }else {
+                        } else {
                             fieldVO.setFieldValue(new ArrayList<>());
                         }
                         if (StrUtil.isNotEmpty(fieldValueMap.get(fieldVO.getFieldId()).getFieldValueDesc())) {
                             fieldVO.setFieldValueDesc(adminFileService.queryFileList(fieldValueMap.get(fieldVO.getFieldId()).getFieldValueDesc()).getData());
-                        }else {
+                        } else {
                             fieldVO.setFieldValueDesc(new ArrayList<>());
                         }
-                    }else if (fieldVO.getType().equals(FieldEnum.STRUCTURE.getType())){
+                    } else if (fieldVO.getType().equals(FieldEnum.STRUCTURE.getType())) {
                         if (StrUtil.isNotEmpty(fieldValueMap.get(fieldVO.getFieldId()).getFieldValue())) {
                             fieldVO.setFieldValue(hrmDeptService.querySimpleDeptList(TagUtil.toSet(fieldValueMap.get(fieldVO.getFieldId()).getFieldValue())));
-                        }else {
+                        } else {
                             fieldVO.setFieldValue(new ArrayList<>());
                         }
                         if (StrUtil.isNotEmpty(fieldValueMap.get(fieldVO.getFieldId()).getFieldValueDesc())) {
                             fieldVO.setFieldValueDesc(hrmDeptService.querySimpleDeptList(TagUtil.toSet(fieldValueMap.get(fieldVO.getFieldId()).getFieldValueDesc())));
-                        }else {
+                        } else {
                             fieldVO.setFieldValueDesc(new ArrayList<>());
                         }
-                    }else if (fieldVO.getType().equals(FieldEnum.USER.getType())){
+                    } else if (fieldVO.getType().equals(FieldEnum.USER.getType())) {
                         if (StrUtil.isNotEmpty(fieldValueMap.get(fieldVO.getFieldId()).getFieldValue())) {
                             fieldVO.setFieldValue(querySimpleEmployeeList(TagUtil.toSet(fieldValueMap.get(fieldVO.getFieldId()).getFieldValue())));
-                        }else {
+                        } else {
                             fieldVO.setFieldValue(new ArrayList<>());
                         }
                         if (StrUtil.isNotEmpty(fieldValueMap.get(fieldVO.getFieldId()).getFieldValueDesc())) {
                             fieldVO.setFieldValueDesc(querySimpleEmployeeList(TagUtil.toSet(fieldValueMap.get(fieldVO.getFieldId()).getFieldValueDesc())));
-                        }else {
+                        } else {
                             fieldVO.setFieldValueDesc(new ArrayList<>());
                         }
-                    }else {
+                    } else {
                         fieldVO.setFieldValue(fieldValueMap.get(fieldVO.getFieldId()).getFieldValue());
                         fieldVO.setFieldValueDesc(fieldValueMap.get(fieldVO.getFieldId()).getFieldValueDesc());
                     }
@@ -492,7 +493,7 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
                 }
             }
             FieldEnum typeEnum = FieldEnum.parse(fieldVO.getType());
-            recordToFormType(fieldVO,typeEnum);
+            recordToFormType(fieldVO, typeEnum);
             informationFieldVOList.add(fieldVO);
 
         });
@@ -514,7 +515,7 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
         if (employeeId == null) {
             employeeId = EmployeeHolder.getEmployeeId();
         }
-        HrmEmployee oldEmployee= queryById(employeeId);
+        HrmEmployee oldEmployee = queryById(employeeId);
         List<UpdateInformationBO.InformationFieldBO> dataList = updateInformationBO.getDataList();
         Map<FiledIsFixedEnum, List<UpdateInformationBO.InformationFieldBO>> isFixedMap = getIsFixedMap(dataList);
         List<UpdateInformationBO.InformationFieldBO> fixedEmployeeData = isFixedMap.get(FiledIsFixedEnum.FIXED);
@@ -542,43 +543,46 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
         }
         List<UpdateInformationBO.InformationFieldBO> informationFieldBOS = isFixedMap.get(FiledIsFixedEnum.NO_FIXED);
         List<HrmEmployeeData> hrmEmployeeData = informationFieldBOS.stream()
-                .map(field->{
+                .map(field -> {
                     Object value = field.getFieldValue();
-                    if (value == null){
+                    if (value == null) {
                         value = "";
                     }
-                    field.setFieldValue(employeeFieldService.convertObjectValueToString(field.getType(),field.getFieldValue(),value.toString()));
-                    return BeanUtil.copyProperties(field,HrmEmployeeData.class);
+                    field.setFieldValue(employeeFieldService.convertObjectValueToString(field.getType(), field.getFieldValue(), value.toString()));
+                    return BeanUtil.copyProperties(field, HrmEmployeeData.class);
                 }).collect(Collectors.toList());
+        Dict kv = Dict.create().set("key","employee_id").set("param","label_group").set("labelGroup",LabelGroupEnum.PERSONAL.getValue()).set("value", employeeId).set("dataTableName", "wk_hrm_employee_data");
+        List<HrmModelFiledVO> oldFieldList = ApplicationContextHolder.getBean(IHrmActionRecordService.class).queryFieldValue(kv);
         employeeFieldService.saveEmployeeField(hrmEmployeeData, LabelGroupEnum.PERSONAL, employeeId);
-        if(employee.getDateOfBirth()==null){
-            lambdaUpdate().eq(HrmEmployee::getEmployeeId,employeeId).set(HrmEmployee::getDateOfBirth,null).update();
+        if (employee.getDateOfBirth() == null) {
+            lambdaUpdate().eq(HrmEmployee::getEmployeeId, employeeId).set(HrmEmployee::getDateOfBirth, null).update();
         }
         updateById(employee);
         //固定字段操作记录保存
-        employeeActionRecordService.employeeFixedFieldRecord(BeanUtil.beanToMap(oldEmployee),BeanUtil.beanToMap(employee),LabelGroupEnum.PERSONAL, employeeId);
+        employeeActionRecordService.employeeFixedFieldRecord(BeanUtil.beanToMap(oldEmployee), BeanUtil.beanToMap(employee), LabelGroupEnum.PERSONAL, employeeId);
         //非固定字段操作记录保存
-        employeeActionRecordService.employeeNOFixedFieldRecord(informationFieldBOS, Dict.create().set("key","employee_id").set("value", employeeId).set("dataTableName", "wk_hrm_employee_data"),employeeId);
+        employeeActionRecordService.employeeNOFixedFieldRecord(informationFieldBOS, oldFieldList, employeeId);
     }
 
-    private <E> Map<FiledIsFixedEnum, List<E>>  getIsFixedMap(List<E> dataList){
+    private <E> Map<FiledIsFixedEnum, List<E>> getIsFixedMap(List<E> dataList) {
         Map<FiledIsFixedEnum, List<E>> listMap =
                 dataList.stream().collect(Collectors.groupingBy(employeeData -> {
-                    if(employeeData instanceof UpdateInformationBO.InformationFieldBO){
+                    if (employeeData instanceof UpdateInformationBO.InformationFieldBO) {
                         return FiledIsFixedEnum.parse(((UpdateInformationBO.InformationFieldBO) employeeData).getIsFixed());
-                    }else if(employeeData instanceof  AddEmployeeFieldManageBO.EmployeeFieldBO){
+                    } else if (employeeData instanceof AddEmployeeFieldManageBO.EmployeeFieldBO) {
                         return FiledIsFixedEnum.parse(((AddEmployeeFieldManageBO.EmployeeFieldBO) employeeData).getIsFixed());
                     }
                     return FiledIsFixedEnum.FIXED;
                 }));
-        if(!listMap.containsKey(FiledIsFixedEnum.FIXED)) {
-            listMap.put(FiledIsFixedEnum.FIXED,new ArrayList<>());
+        if (!listMap.containsKey(FiledIsFixedEnum.FIXED)) {
+            listMap.put(FiledIsFixedEnum.FIXED, new ArrayList<>());
         }
-        if(!listMap.containsKey(FiledIsFixedEnum.NO_FIXED)) {
-            listMap.put(FiledIsFixedEnum.NO_FIXED,new ArrayList<>());
+        if (!listMap.containsKey(FiledIsFixedEnum.NO_FIXED)) {
+            listMap.put(FiledIsFixedEnum.NO_FIXED, new ArrayList<>());
         }
         return listMap;
     }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateCommunication(UpdateInformationBO updateInformationBO) {
@@ -586,10 +590,10 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
         if (employeeId == null) {
             employeeId = EmployeeHolder.getEmployeeId();
         }
-        HrmEmployee oldEmployee= queryById(employeeId);
+        HrmEmployee oldEmployee = queryById(employeeId);
         List<UpdateInformationBO.InformationFieldBO> dataList = updateInformationBO.getDataList();
         Map<FiledIsFixedEnum, List<UpdateInformationBO.InformationFieldBO>> isFixedMap = getIsFixedMap(dataList);
-                List<UpdateInformationBO.InformationFieldBO> fixedEmployeeData = isFixedMap.get(FiledIsFixedEnum.FIXED);
+        List<UpdateInformationBO.InformationFieldBO> fixedEmployeeData = isFixedMap.get(FiledIsFixedEnum.FIXED);
         JSONObject jsonObject = new JSONObject();
         fixedEmployeeData.forEach(employeeData -> jsonObject.put(employeeData.getFieldName(), employeeData.getFieldValue()));
         HrmEmployee employee = jsonObject.toJavaObject(HrmEmployee.class);
@@ -597,19 +601,21 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
         updateById(employee);
         List<UpdateInformationBO.InformationFieldBO> informationFieldBOS = isFixedMap.get(FiledIsFixedEnum.NO_FIXED);
         List<HrmEmployeeData> hrmEmployeeData = informationFieldBOS.stream()
-                .map(field->{
+                .map(field -> {
                     Object value = field.getFieldValue();
                     if (value == null){
                         value = "";
                     }
                     field.setFieldValue(employeeFieldService.convertObjectValueToString(field.getType(),field.getFieldValue(),value.toString()));
-                    return BeanUtil.copyProperties(field,HrmEmployeeData.class);
+                    return BeanUtil.copyProperties(field, HrmEmployeeData.class);
                 }).collect(Collectors.toList());
+        Dict set = Dict.create().set("key", "employee_id").set("value", employeeId).set("param","label_group").set("labelGroup",LabelGroupEnum.CONTACT_PERSON.getValue()).set("dataTableName", "wk_hrm_employee_data");
+        List<HrmModelFiledVO> oldFieldList = ApplicationContextHolder.getBean(IHrmActionRecordService.class).queryFieldValue(set);
         employeeFieldService.saveEmployeeField(hrmEmployeeData, LabelGroupEnum.CONTACT_PERSON, employeeId);
         //固定字段操作记录保存
-        employeeActionRecordService.employeeFixedFieldRecord(BeanUtil.beanToMap(oldEmployee),BeanUtil.beanToMap(employee),LabelGroupEnum.CONTACT_PERSON, employeeId);
+        employeeActionRecordService.employeeFixedFieldRecord(BeanUtil.beanToMap(oldEmployee), BeanUtil.beanToMap(employee), LabelGroupEnum.CONTACT_PERSON, employeeId);
         //非固定字段操作记录保存
-        employeeActionRecordService.employeeNOFixedFieldRecord(informationFieldBOS, Dict.create().set("key","employee_id").set("value", employeeId).set("dataTableName", "wk_hrm_employee_data"),employeeId);
+        employeeActionRecordService.employeeNOFixedFieldRecord(informationFieldBOS, oldFieldList, employeeId);
     }
 
     @Override
@@ -701,7 +707,7 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
     @Transactional(rollbackFor = Exception.class)
     public void addOrUpdateContacts(UpdateInformationBO updateInformationBO) {
         Integer contactsId = updateInformationBO.getContactsId();
-        HrmEmployeeContacts oldEmployeeContacts =contactsService.getById(contactsId);
+        HrmEmployeeContacts oldEmployeeContacts = contactsService.getById(contactsId);
         Integer employeeId = updateInformationBO.getEmployeeId();
         List<UpdateInformationBO.InformationFieldBO> fieldList = updateInformationBO.getDataList();
         Map<FiledIsFixedEnum, List<UpdateInformationBO.InformationFieldBO>> isFixedMap = getIsFixedMap(fieldList);
@@ -715,23 +721,25 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
             employeeActionRecordService.addOrDeleteRecord(HrmActionBehaviorEnum.ADD, LabelGroupEnum.CONTACT_PERSON, employeeContacts.getEmployeeId());
         } else {
             //固定字段操作记录保存
-            employeeActionRecordService.employeeFixedFieldRecord(BeanUtil.beanToMap(oldEmployeeContacts),BeanUtil.beanToMap(employeeContacts),LabelGroupEnum.CONTACT_PERSON, employeeId);
+            employeeActionRecordService.employeeFixedFieldRecord(BeanUtil.beanToMap(oldEmployeeContacts), BeanUtil.beanToMap(employeeContacts), LabelGroupEnum.CONTACT_PERSON, employeeId);
         }
         contactsService.saveOrUpdate(employeeContacts);
         List<UpdateInformationBO.InformationFieldBO> informationFieldBOS = isFixedMap.get(FiledIsFixedEnum.NO_FIXED);
-        if(null!=informationFieldBOS&& informationFieldBOS.size()>0){
-            List<HrmEmployeeContactsData> hrmEmployeeContactsData =informationFieldBOS.stream()
-                    .map(field->{
+        if (null != informationFieldBOS && informationFieldBOS.size() > 0) {
+            List<HrmEmployeeContactsData> hrmEmployeeContactsData = informationFieldBOS.stream()
+                    .map(field -> {
                         Object value = field.getFieldValue();
                         if (value == null){
                             value = "";
                         }
                         field.setFieldValue(employeeFieldService.convertObjectValueToString(field.getType(),field.getFieldValue(),value.toString()));
-                        return BeanUtil.copyProperties(field,HrmEmployeeContactsData.class);
+                        return BeanUtil.copyProperties(field, HrmEmployeeContactsData.class);
                     }).collect(Collectors.toList());
+            Dict set =  Dict.create().set("key","contacts_id").set("value", contactsId).set("param","label_group").set("labelGroup",LabelGroupEnum.CONTACT_PERSON.getValue()).set("dataTableName", "wk_hrm_employee_contacts_data");
+            List<HrmModelFiledVO> oldFieldList = ApplicationContextHolder.getBean(IHrmActionRecordService.class).queryFieldValue(set);
             employeeFieldService.saveEmployeeContactsField(hrmEmployeeContactsData, LabelGroupEnum.CONTACT_PERSON, employeeContacts.getContactsId());
             //非固定字段操作记录保存
-            employeeActionRecordService.employeeNOFixedFieldRecord(informationFieldBOS, Dict.create().set("key","employee_id").set("value", employeeId).set("dataTableName", "wk_hrm_employee_data"),employeeId);
+            employeeActionRecordService.employeeNOFixedFieldRecord(informationFieldBOS, oldFieldList, employeeId);
         }
     }
 
@@ -819,14 +827,14 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
         page.getList().forEach(map -> {
             Integer employeeId = (Integer) map.get("employeeId");
             List<JSONObject> fieldDatalist = employeeDataService.queryFiledListByEmployeeId(employeeId);
-            fieldDatalist.forEach(fieldData ->{
-                    map.put(fieldData.getString("fieldName"),employeeFieldService.convertValueByFormType(fieldData.getString("fieldValueDesc"),FieldEnum.parse(Integer.valueOf(fieldData.getString("type")))));
+            fieldDatalist.forEach(fieldData -> {
+                map.put(fieldData.getString("fieldName"), employeeFieldService.convertValueByFormType(fieldData.getString("fieldValueDesc"), FieldEnum.parse(Integer.valueOf(fieldData.getString("type")))));
             });
             if (map.get("companyAgeStartTime") != null) {
                 Date companyAgeStartTime = DateUtil.parseDate((String) map.get("companyAgeStartTime"));
                 long nowCompanyAge = DateUtil.betweenDay(companyAgeStartTime, new Date(), true) + 1;
-                if(companyAgeStartTime.getTime()>System.currentTimeMillis()){
-                  nowCompanyAge= 0;
+                if (companyAgeStartTime.getTime() > System.currentTimeMillis()) {
+                    nowCompanyAge = 0;
                 }
                 map.put("companyAge", EmployeeUtil.computeCompanyAge((int) nowCompanyAge));
             }
@@ -903,16 +911,16 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
         } else {
             //全职(正式+试用)
             Integer fullTimeCount = lambdaQuery().in(HrmEmployee::getStatus, EmployeeStatusEnum.OFFICIAL.getValue(), EmployeeStatusEnum.TRY_OUT.getValue())
-                    .in(employeeIds != null,HrmEmployee::getEmployeeId, employeeIds)
+                    .in(employeeIds != null, HrmEmployee::getEmployeeId, employeeIds)
                     .eq(HrmEmployee::getIsDel, 0)
                     .in(HrmEmployee::getEntryStatus, EmployeeEntryStatus.IN.getValue(), EmployeeEntryStatus.TO_LEAVE.getValue()).count();
             collect.put(12, Long.valueOf(fullTimeCount));
             //待入职
-            collect.put(13, Long.valueOf(lambdaQuery().in(employeeIds != null,HrmEmployee::getEmployeeId, employeeIds).in(HrmEmployee::getEntryStatus, EmployeeEntryStatus.TO_IN.getValue()).eq(HrmEmployee::getIsDel, 0).count()));
+            collect.put(13, Long.valueOf(lambdaQuery().in(employeeIds != null, HrmEmployee::getEmployeeId, employeeIds).in(HrmEmployee::getEntryStatus, EmployeeEntryStatus.TO_IN.getValue()).eq(HrmEmployee::getIsDel, 0).count()));
             //待离职
-            collect.put(14, Long.valueOf(lambdaQuery().in(employeeIds != null,HrmEmployee::getEmployeeId, employeeIds).in(HrmEmployee::getEntryStatus, EmployeeEntryStatus.TO_LEAVE.getValue()).eq(HrmEmployee::getIsDel, 0).count()));
+            collect.put(14, Long.valueOf(lambdaQuery().in(employeeIds != null, HrmEmployee::getEmployeeId, employeeIds).in(HrmEmployee::getEntryStatus, EmployeeEntryStatus.TO_LEAVE.getValue()).eq(HrmEmployee::getIsDel, 0).count()));
             //已离职
-            collect.put(15, Long.valueOf(lambdaQuery().in(employeeIds != null,HrmEmployee::getEmployeeId, employeeIds).in(HrmEmployee::getEntryStatus, EmployeeEntryStatus.ALREADY_LEAVE.getValue()).eq(HrmEmployee::getIsDel, 0).count()));
+            collect.put(15, Long.valueOf(lambdaQuery().in(employeeIds != null, HrmEmployee::getEmployeeId, employeeIds).in(HrmEmployee::getEntryStatus, EmployeeEntryStatus.ALREADY_LEAVE.getValue()).eq(HrmEmployee::getIsDel, 0).count()));
 
         }
         return collect;
@@ -925,7 +933,7 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
                 .remove();
         List<AddEmployeeFieldManageBO.EmployeeFieldBO> employeeFieldList = addEmployeeFieldManageBO.getEmployeeFieldList();//员工个人信息自定义字段列表
         List<AddEmployeeFieldManageBO.EmployeeFieldBO> postFieldList = addEmployeeFieldManageBO.getPostFieldList();//员工岗位自定义字段列表
-        List<AddEmployeeFieldManageBO.EmployeeFieldBO> employeeDataList= Stream.concat(employeeFieldList.stream(),postFieldList.stream()).collect(Collectors.toList());
+        List<AddEmployeeFieldManageBO.EmployeeFieldBO> employeeDataList = Stream.concat(employeeFieldList.stream(), postFieldList.stream()).collect(Collectors.toList());
         Map<FiledIsFixedEnum, List<AddEmployeeFieldManageBO.EmployeeFieldBO>> isFixedMap = getIsFixedMap(employeeDataList);
         List<AddEmployeeFieldManageBO.EmployeeFieldBO> fixedEmployeeData = isFixedMap.get(FiledIsFixedEnum.FIXED);
         JSONObject jsonObject = new JSONObject();
@@ -948,7 +956,7 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
     public void confirmEntry(AddEmployeeFieldManageBO addEmployeeFieldManageBO) {
         List<AddEmployeeFieldManageBO.EmployeeFieldBO> employeeFieldList = addEmployeeFieldManageBO.getEmployeeFieldList();//员工个人信息自定义字段列表
         List<AddEmployeeFieldManageBO.EmployeeFieldBO> postFieldList = addEmployeeFieldManageBO.getPostFieldList();//员工岗位自定义字段列表
-        List<AddEmployeeFieldManageBO.EmployeeFieldBO> employeeDataList= Stream.concat(employeeFieldList.stream(),postFieldList.stream()).collect(Collectors.toList());
+        List<AddEmployeeFieldManageBO.EmployeeFieldBO> employeeDataList = Stream.concat(employeeFieldList.stream(), postFieldList.stream()).collect(Collectors.toList());
         Map<FiledIsFixedEnum, List<AddEmployeeFieldManageBO.EmployeeFieldBO>> isFixedMap = getIsFixedMap(employeeDataList);
         List<AddEmployeeFieldManageBO.EmployeeFieldBO> fixedEmployeeData = isFixedMap.get(FiledIsFixedEnum.FIXED);
         JSONObject jsonObject = new JSONObject();
@@ -957,7 +965,7 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
         employee.setEmployeeId(addEmployeeFieldManageBO.getEmployeeId());
         Integer count = lambdaQuery().eq(HrmEmployee::getJobNumber, employee.getJobNumber()).ne(HrmEmployee::getEmployeeId, employee.getEmployeeId()).count();
         if (count > 0) {
-            throw new CrmException(HrmCodeEnum.JOB_NUMBER_EXISTED,employee.getJobNumber());
+            throw new CrmException(HrmCodeEnum.JOB_NUMBER_EXISTED, employee.getJobNumber());
         }
         employee.setEntryStatus(EmployeeEntryStatus.IN.getValue());
         if (employee.getEmploymentForms() == EmploymentFormsEnum.OFFICIAL.getValue()) {
@@ -1228,7 +1236,7 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
     @Transactional(rollbackFor = Exception.class)
     public void addEmployeeField(AddEmployeeFieldManageBO addEmployeeFieldManageBO) {
         String jobNumber = addEmployeeFieldManageBO.getJobNumber();
-        if(StrUtil.isNotEmpty(jobNumber)){
+        if (StrUtil.isNotEmpty(jobNumber)) {
             Integer count = lambdaQuery().eq(HrmEmployee::getIsDel, 0).eq(HrmEmployee::getJobNumber, jobNumber).count();
             if (count > 0) {
                 throw new CrmException(HrmCodeEnum.JOB_NUMBER_EXISTED, jobNumber);
@@ -1258,7 +1266,7 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
         }
         List<AddEmployeeFieldManageBO.EmployeeFieldBO> employeeFieldList = addEmployeeFieldManageBO.getEmployeeFieldList();//员工个人信息自定义字段列表
         List<AddEmployeeFieldManageBO.EmployeeFieldBO> postFieldList = addEmployeeFieldManageBO.getPostFieldList();//员工岗位自定义字段列表
-        List<AddEmployeeFieldManageBO.EmployeeFieldBO> employeeDataList= Stream.concat(employeeFieldList.stream(),postFieldList.stream()).collect(Collectors.toList());
+        List<AddEmployeeFieldManageBO.EmployeeFieldBO> employeeDataList = Stream.concat(employeeFieldList.stream(), postFieldList.stream()).collect(Collectors.toList());
         Map<FiledIsFixedEnum, List<AddEmployeeFieldManageBO.EmployeeFieldBO>> isFixedMap = getIsFixedMap(employeeDataList);
         List<AddEmployeeFieldManageBO.EmployeeFieldBO> fixedEmployeeData = isFixedMap.get(FiledIsFixedEnum.FIXED);
         JSONObject jsonObject = new JSONObject();
@@ -1270,13 +1278,13 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
             employee.setCandidateId(addEmployeeFieldManageBO.getCandidateId());
         }
         employee.setEntryStatus(addEmployeeFieldManageBO.getEntryStatus());
-        if(null==employee.getCompanyAgeStartTime()){
+        if (null == employee.getCompanyAgeStartTime()) {
             employee.setCompanyAgeStartTime(employee.getEntryTime());
         }
         transferEmployee(employee);
         save(employee);
-        List<HrmEmployeeData> hrmEmployeeData =isFixedMap.get(FiledIsFixedEnum.NO_FIXED).stream()
-                .map(field->{
+        List<HrmEmployeeData> hrmEmployeeData = isFixedMap.get(FiledIsFixedEnum.NO_FIXED).stream()
+                .map(field -> {
                     Object value = field.getFieldValue();
                     if (value == null){
                         value = "";
@@ -1284,22 +1292,22 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
                     field.setFieldValue(employeeFieldService.convertObjectValueToString(field.getType(),field.getFieldValue(),value.toString()));
                     return BeanUtil.copyProperties(field,HrmEmployeeData.class);
                 }).collect(Collectors.toList());
-        if(hrmEmployeeData.size()>0){
-            List<HrmEmployeeData> personalData= hrmEmployeeData.stream().filter(employeeData -> employeeData.getLabelGroup().equals(LabelGroupEnum.PERSONAL.getValue())).collect(Collectors.toList());
+        if (hrmEmployeeData.size() > 0) {
+            List<HrmEmployeeData> personalData = hrmEmployeeData.stream().filter(employeeData -> employeeData.getLabelGroup().equals(LabelGroupEnum.PERSONAL.getValue())).collect(Collectors.toList());
             employeeFieldService.saveEmployeeField(personalData, LabelGroupEnum.PERSONAL, employee.getEmployeeId());
-            List<HrmEmployeeData> postData= hrmEmployeeData.stream().filter(employeeData -> employeeData.getLabelGroup().equals(LabelGroupEnum.POST.getValue())).collect(Collectors.toList());
+            List<HrmEmployeeData> postData = hrmEmployeeData.stream().filter(employeeData -> employeeData.getLabelGroup().equals(LabelGroupEnum.POST.getValue())).collect(Collectors.toList());
             employeeFieldService.saveEmployeeField(postData, LabelGroupEnum.POST, employee.getEmployeeId());
         }
-        Integer mobileFieldCount = employeeFieldService.query().eq("field_name","flied_kwbova").eq("label_group",LabelGroupEnum.COMMUNICATION.getValue()).eq("type",FieldTypeEnum.MOBILE.getValue()).count();
-        if(mobileFieldCount>0){
+        Integer mobileFieldCount = employeeFieldService.query().eq("field_name", "flied_kwbova").eq("label_group", LabelGroupEnum.COMMUNICATION.getValue()).eq("type", FieldTypeEnum.MOBILE.getValue()).count();
+        if (mobileFieldCount > 0) {
             //若是存在自定义手机号码字段，则进行更新
             HrmEmployee hrmEmployee = employeeMapper.selectById(employee.getEmployeeId());
-            List<UpdateInformationBO.InformationFieldBO> dataList =new ArrayList<>();
+            List<UpdateInformationBO.InformationFieldBO> dataList = new ArrayList<>();
             JSONObject employeeModel = BeanUtil.copyProperties(hrmEmployee, JSONObject.class);
             List<HrmEmployeeData> fieldValueList = employeeDataService.queryListByEmployeeId(employee.getEmployeeId());
             List<InformationFieldVO> communicationInformation = transferInformation(employeeModel, LabelGroupEnum.COMMUNICATION, fieldValueList);
-            communicationInformation.forEach(informationFieldVO ->{
-                if (informationFieldVO.getFieldName().equals("flied_kwbova")&&informationFieldVO.getType().equals(FieldTypeEnum.MOBILE.getValue())){
+            communicationInformation.forEach(informationFieldVO -> {
+                if (informationFieldVO.getFieldName().equals("flied_kwbova") && informationFieldVO.getType().equals(FieldTypeEnum.MOBILE.getValue())) {
                     informationFieldVO.setFieldValue(employee.getMobile());
                     informationFieldVO.setFieldValueDesc(employee.getMobile());
                 }
@@ -1308,20 +1316,20 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
                     value = "";
                 }
                 informationFieldVO.setFieldValue(employeeFieldService.convertObjectValueToString(informationFieldVO.getType(),informationFieldVO.getFieldValue(),value.toString()));
-                dataList.add(BeanUtil.copyProperties(informationFieldVO,UpdateInformationBO.InformationFieldBO.class));
+                dataList.add(BeanUtil.copyProperties(informationFieldVO, UpdateInformationBO.InformationFieldBO.class));
             });
             Map<FiledIsFixedEnum, List<UpdateInformationBO.InformationFieldBO>> isInformationFixedMap = dataList.stream().collect(Collectors.groupingBy(employeeData -> FiledIsFixedEnum.parse(employeeData.getIsFixed())));
             List<UpdateInformationBO.InformationFieldBO> informationFieldBOS = isInformationFixedMap.get(FiledIsFixedEnum.NO_FIXED);
             List<HrmEmployeeData> hrmEmployeeInformationData = informationFieldBOS.stream()
-                    .map(field->{
+                    .map(field -> {
                         Object value = field.getFieldValue();
                         if (value == null){
                             value = "";
                         }
                         field.setFieldValue(employeeFieldService.convertObjectValueToString(field.getType(),field.getFieldValue(),value.toString()));
-                        return BeanUtil.copyProperties(field,HrmEmployeeData.class);
+                        return BeanUtil.copyProperties(field, HrmEmployeeData.class);
                     }).collect(Collectors.toList());
-            employeeFieldService.saveEmployeeField(hrmEmployeeInformationData, LabelGroupEnum.COMMUNICATION,employee.getEmployeeId());
+            employeeFieldService.saveEmployeeField(hrmEmployeeInformationData, LabelGroupEnum.COMMUNICATION, employee.getEmployeeId());
         }
         employeeActionRecordService.addOrDeleteRecord(HrmActionBehaviorEnum.ADD, LabelGroupEnum.PERSONAL, employee.getEmployeeId());
         if (addEmployeeFieldManageBO.getEntryStatus() == 1) {
@@ -1345,17 +1353,17 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
                 record.setDefaultValue(StrUtil.splitTrim((CharSequence) record.getDefaultValue().toString(), Const.SEPARATOR));
                 record.setFieldValue(StrUtil.splitTrim((CharSequence) record.getFieldValue(), Const.SEPARATOR));
             case SELECT:
-                if(Objects.equals(record.getRemark(),FieldEnum.OPTIONS_TYPE.getFormType())) {
+                if (Objects.equals(record.getRemark(), FieldEnum.OPTIONS_TYPE.getFormType())) {
                     if (CollUtil.isEmpty(record.getOptionsData())) {
                         JSONObject optionsData = JSON.parseObject(record.getOptions());
                         record.setOptionsData(optionsData);
                         record.setSetting(new ArrayList<>(optionsData.keySet()));
                     }
-                }else {
+                } else {
                     if (CollUtil.isEmpty(record.getSetting())) {
                         try {
                             String dtStr = Optional.ofNullable(record.getOptions()).orElse("").toString();
-                            List<Object> jsonArrayList = JSON.parseObject(dtStr,List.class);
+                            List<Object> jsonArrayList = JSON.parseObject(dtStr, List.class);
                             record.setSetting(jsonArrayList);
                         } catch (Exception e) {
                             record.setSetting(new ArrayList<>(StrUtil.splitTrim(record.getOptions(), Const.SEPARATOR)));
@@ -1366,8 +1374,8 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
             case DATE_INTERVAL:
                 String dataValueStr = Optional.ofNullable(record.getDefaultValue()).orElse("").toString();
                 record.setDefaultValue(StrUtil.split(dataValueStr, Const.SEPARATOR));
-                if (record.getFieldValue() instanceof String){
-                    record.setFieldValue(StrUtil.split((String)record.getFieldValue(), Const.SEPARATOR));
+                if (record.getFieldValue() instanceof String) {
+                    record.setFieldValue(StrUtil.split((String) record.getFieldValue(), Const.SEPARATOR));
                 }
                 break;
             case USER:
@@ -1386,7 +1394,7 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
                 if (CollUtil.isEmpty(record.getFieldExtendList())) {
                     record.setFieldExtendList(hrmFieldExtendService.queryHrmFieldExtend(record.getFieldId()));
                 }
-                record.setFieldValue(employeeFieldService.convertValueByFormType(record.getFieldValue(),typeEnum));
+                record.setFieldValue(employeeFieldService.convertValueByFormType(record.getFieldValue(), typeEnum));
                 break;
             case DESC_TEXT:
                 record.setFieldValue(record.getDefaultValue());
@@ -1395,5 +1403,15 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
                 record.setSetting(new ArrayList<>());
                 break;
         }
+    }
+
+    @Override
+    public SimpleHrmEmployeeVO querySimpleEmployee(Integer employeeId) {
+        if (employeeId==null) {
+            return new SimpleHrmEmployeeVO();
+        }
+        HrmEmployee hrmEmployee = lambdaQuery().select(HrmEmployee::getEmployeeId, HrmEmployee::getEmployeeName)
+                .eq(HrmEmployee::getEmployeeId, employeeId).eq(HrmEmployee::getIsDel, 0).one();
+        return BeanUtil.copyProperties(hrmEmployee,SimpleHrmEmployeeVO.class);
     }
 }

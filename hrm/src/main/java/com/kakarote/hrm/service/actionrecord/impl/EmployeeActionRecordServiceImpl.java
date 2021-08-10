@@ -396,16 +396,15 @@ public class EmployeeActionRecordServiceImpl extends AbstractHrmActionRecordServ
     /**
      * 保存非固定字段记录
      * @param newFieldList
-     * @param kv
+     * @param oldFieldList
      */
     @SysLogHandler(isReturn = true)
-    public Content  employeeNOFixedFieldRecord(List<UpdateInformationBO.InformationFieldBO> newFieldList, Dict kv, Integer employeeId){
+    public Content  employeeNOFixedFieldRecord(List<UpdateInformationBO.InformationFieldBO> newFieldList, List<HrmModelFiledVO> oldFieldList, Integer employeeId){
         HrmEmployee employee = employeeService.getById(employeeId);
         textList.clear();
         if (newFieldList == null) {
            return new Content(employee.getEmployeeName(),"",BehaviorEnum.UPDATE);
         }
-        List<HrmModelFiledVO> oldFieldList = ApplicationContextHolder.getBean(IHrmActionRecordService.class).queryFieldValue(kv);
         newFieldList.forEach(newField -> {
             for (HrmModelFiledVO oldField : oldFieldList) {
                 if (oldField.getFieldId().equals(newField.getFieldId())) {

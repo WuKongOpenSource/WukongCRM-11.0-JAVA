@@ -377,4 +377,10 @@ public interface IHrmEmployeeService extends BaseService<HrmEmployee> {
      */
     public void recordToFormType(InformationFieldVO record, FieldEnum typeEnum);
 
+    /**
+     * 查询员工信息
+     * @param employeeIds
+     * @return
+     */
+    SimpleHrmEmployeeVO querySimpleEmployee(Integer employeeIds);
 }

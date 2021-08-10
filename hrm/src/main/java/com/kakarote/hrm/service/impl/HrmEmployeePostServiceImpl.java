@@ -5,6 +5,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Dict;
 import com.alibaba.fastjson.JSONObject;
 import com.kakarote.core.exception.CrmException;
+import com.kakarote.core.servlet.ApplicationContextHolder;
 import com.kakarote.core.servlet.BaseServiceImpl;
 import com.kakarote.hrm.common.EmployeeHolder;
 import com.kakarote.hrm.common.HrmCodeEnum;
@@ -12,6 +13,7 @@ import com.kakarote.hrm.constant.*;
 import com.kakarote.hrm.entity.BO.DeleteLeaveInformationBO;
 import com.kakarote.hrm.entity.BO.UpdateInformationBO;
 import com.kakarote.hrm.entity.PO.*;
+import com.kakarote.hrm.entity.VO.HrmModelFiledVO;
 import com.kakarote.hrm.entity.VO.InformationFieldVO;
 import com.kakarote.hrm.entity.VO.PostInformationVO;
 import com.kakarote.hrm.mapper.HrmEmployeePostMapper;
@@ -133,6 +135,8 @@ public class HrmEmployeePostServiceImpl extends BaseServiceImpl<HrmEmployeePostM
                     field.setFieldValue(employeeFieldService.convertObjectValueToString(field.getType(),field.getFieldValue(),value.toString()));
                     return BeanUtil.copyProperties(field,HrmEmployeeData.class);
                 }).collect(Collectors.toList());
+        Dict kv = Dict.create().set("key","employee_id").set("param","label_group").set("labelGroup",LabelGroupEnum.POST.getValue()).set("value", employeeId).set("dataTableName", "wk_hrm_employee_data");
+        List<HrmModelFiledVO> oldFieldList = ApplicationContextHolder.getBean(IHrmActionRecordService.class).queryFieldValue(kv);
         employeeFieldService.saveEmployeeField(hrmEmployeeData,LabelGroupEnum.POST,employeeId);
         if(null!=oldHrmEmployee.getEntryTime()&&!oldHrmEmployee.getEntryTime().equals(employee.getEntryTime())){
             if(null==employee.getCompanyAgeStartTime()&&null==oldHrmEmployee.getCompanyAgeStartTime()){
@@ -143,7 +147,7 @@ public class HrmEmployeePostServiceImpl extends BaseServiceImpl<HrmEmployeePostM
         //固定字段操作记录保存
         employeeActionRecordService.employeeFixedFieldRecord(BeanUtil.beanToMap(oldHrmEmployee),BeanUtil.beanToMap(employee),LabelGroupEnum.POST, employeeId);
         //非固定字段操作记录保存
-        employeeActionRecordService.employeeNOFixedFieldRecord(informationFieldBOS, Dict.create().set("key","employee_id").set("value", employeeId).set("dataTableName", "wk_hrm_employee_data"),employeeId);
+        employeeActionRecordService.employeeNOFixedFieldRecord(informationFieldBOS, oldFieldList,employeeId);
     }
 
     @Override

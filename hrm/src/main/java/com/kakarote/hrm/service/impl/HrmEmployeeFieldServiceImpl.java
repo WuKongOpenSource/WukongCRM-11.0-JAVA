@@ -69,8 +69,8 @@ public class HrmEmployeeFieldServiceImpl extends BaseServiceImpl<HrmEmployeeFiel
     private static Map<Integer, List<String>> fieldColumnNameProperties = new HashMap<>();
 
     static {
-        fieldColumnNameProperties.put(LabelGroupEnum.PERSONAL.getValue(), Arrays.asList("employee_id", "employee_name", "mobile", "country", "nation", "id_type", "id_number", "sex", "email", "native_place", "date_of_birth", "birthday_type", "birthday", "age", "address", "highest_education", "entry_time", "probation", "become_time", "job_number", "dept_id", "parent_id", "post", "post_level", "work_address", "work_detail_address", "work_city", "employment_forms", "status", "company_age_start_time", "company_age", "is_del", "create_user_id", "create_time", "update_time"));
-        fieldColumnNameProperties.put(LabelGroupEnum.CONTACT_PERSON.getValue(), Arrays.asList("contacts_id", "employee_id", "contacts_name", "relation", "contacts_phone", "contacts_work_unit", "contacts_post", "contacts_address", "create_time", "sort"));
+        fieldColumnNameProperties.put(LabelGroupEnum.PERSONAL.getValue(), Arrays.asList("employee_id", "employee_name", "mobile", "country", "nation", "id_type", "id_number", "sex", "email", "native_place", "date_of_birth", "birthday_type", "birthday", "age", "address", "highest_education", "entry_time", "probation", "become_time", "job_number", "dept_id", "parent_id", "post", "post_level", "work_address", "work_detail_address", "work_city", "employment_forms", "status", "company_age_start_time", "company_age", "is_del", "create_user_id", "create_time", "update_time", "company_id"));
+        fieldColumnNameProperties.put(LabelGroupEnum.CONTACT_PERSON.getValue(), Arrays.asList("contacts_id", "employee_id", "contacts_name", "relation", "contacts_phone", "contacts_work_unit", "contacts_post", "contacts_address", "create_time", "sort", "company_id"));
     }
     private static final FieldEnum[] DEFAULT_FIELD_ENUMS = {FieldEnum.AREA,FieldEnum.AREA_POSITION,FieldEnum.CURRENT_POSITION,FieldEnum.DETAIL_TABLE};
     @Autowired
@@ -600,7 +600,7 @@ public class HrmEmployeeFieldServiceImpl extends BaseServiceImpl<HrmEmployeeFiel
                 case FILE:
                     String fileValue = Optional.ofNullable(value).orElse("").toString();
                     if(StrUtil.isNotEmpty(fileValue)){
-                        newValue = ApplicationContextHolder.getBean(AdminFileService.class).queryFileList(fileValue).getData();
+                    newValue = ApplicationContextHolder.getBean(AdminFileService.class).queryFileList(fileValue).getData();
                     }
                     break;
                 case HANDWRITING_SIGN:

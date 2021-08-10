@@ -53,6 +53,13 @@ public interface IHrmDeptService extends BaseService<HrmDept> {
     List<SimpleHrmDeptVO> querySimpleDeptList(Collection<Integer> deptIds);
 
     /**
+     * 查询部门简要字段
+     * @param deptId
+     * @return
+     */
+    SimpleHrmDeptVO querySimpleDept(Integer deptId);
+
+    /**
      * 通过部门id查询员工列表
      * @param employeeByDeptIdBO
      * @return
