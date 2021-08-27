@@ -47,7 +47,7 @@ INSERT INTO `config_info` VALUES (15, 'store.db.lockTable', 'SEATA_GROUP', 'lock
 INSERT INTO `config_info` VALUES (16, 'store.db.maxWait', 'SEATA_GROUP', '5000', 'a35fe7f7fe8217b4369a0af4244d1fca', '2020-10-12 09:06:44', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `config_info` VALUES (17, 'service.vgroupMapping.oa_tx_group', 'SEATA_GROUP', 'default', 'c21f969b5f03d33d43e04f8f136e7682', '2020-10-12 09:06:43', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `config_info` VALUES (18, 'service.vgroupMapping.examine_tx_group', 'SEATA_GROUP', 'default', 'c21f969b5f03d33d43e04f8f136e7682', '2020-10-12 09:06:43', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `config_info` VALUES (18, 'service.vgroupMapping.hrm_tx_group', 'SEATA_GROUP', 'default', 'c21f969b5f03d33d43e04f8f136e7682', '2020-10-12 09:06:43', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `config_info` VALUES (19, 'service.vgroupMapping.hrm_tx_group', 'SEATA_GROUP', 'default', 'c21f969b5f03d33d43e04f8f136e7682', '2020-10-12 09:06:43', '2020-10-12 09:10:54', NULL, '127.0.0.1', '', '', NULL, NULL, NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for config_info_aggr
