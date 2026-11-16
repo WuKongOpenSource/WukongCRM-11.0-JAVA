@@ -821,6 +821,9 @@ public class HrmEmployeeServiceImpl extends BaseServiceImpl<HrmEmployeeMapper, H
             birthdayEmpList = queryBirthdayEmp();
         }
         String sortField = StrUtil.isNotEmpty(employeePageListBO.getSortField()) ? StrUtil.toUnderlineCase(employeePageListBO.getSortField()) : null;
+        if (sortField != null && !sortField.matches("^[a-zA-Z0-9_]+$")) {
+            sortField = null;
+        }
         employeePageListBO.setSortField(sortField);
         Collection<Integer> employeeIds = employeeUtil.queryDataAuthEmpIdByMenuId(MenuIdConstant.EMPLOYEE_MENU_ID);
         BasePage<Map<String, Object>> page = employeeMapper.queryPageList(employeePageListBO.parse(), employeePageListBO, birthdayEmpList, employeeIds);
